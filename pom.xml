@@ -4,11 +4,11 @@
 
 	<groupId>edu.upf.taln.planning.textplanning</groupId>
 	<artifactId>textplanning-parent</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0</version>
     <packaging>pom</packaging>
 
 	<name>Text planning parent</name>
-	<description></description>
+	<description>Parent class for all text planning modules</description>
 
 	<organization>
 		<name>Universitat Pompeu Fabra</name>
@@ -17,7 +17,7 @@
 	
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jdk.version>1.7</jdk.version>
+        <jdk.version>1.8</jdk.version>
 
         <mvn.compiler.version>3.5.1</mvn.compiler.version>
         <mvn.war.plugin.version>2.6</mvn.war.plugin.version>

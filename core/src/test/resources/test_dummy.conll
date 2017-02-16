@@ -1,0 +1,40 @@
+0	_	_	_	_	_	_	_	_	_	_	_	_	_	slex=Sentence
+1	talk	talking	VBG	_	_	bnId=bn:00094089v|root=yes|start_string=1647|id0=14|tense=PAST|connect_check=OK|clause_type=DECL|tem_constituency=PROGR|time=applied|dpos=VB|end_string=1654|hasExtArg=yes|pred_Name=talk|word=talk|fn=Talking_into|pred_Value=01	_	0	_	ROOT	_	_	_	true
+2	follow	following	IN	_	_	bnId=bn:00088421v|start_string=1655|id0=15|connect_check=OK|vn=follow|time_type=temporal_relation|dpos=IN|hasExtArg=no|end_string=1664|pred_Name=follow|role=Time|word=follow|pred_Value=01	_	1	_	Time	_	_	_	true
+3	publication	publication	NN	_	_	bnId=bn:00065106n|start_string=1669|id0=17|number=SG|connect_check=OK|vn=publication|dpos=NN|hasExtArg=yes|end_string=1680|pred_Name=publication|definiteness=DEF|word=publication|pred_Value=01	_	2	_	Argument2	_	_	_	true
+4	slade	Slade	NNP	_	_	dpos=NN|end_string=1593|hasExtArg=no|start_string=1588|id0=1|pred_Name=slade|number=SG|word=Slade|connect_check=OK|vn=Slade|NE=YES	_	1	_	Argument1	_	_	_	true
+5	to	to	TO	_	_	dpos=TO|hasExtArg=no|end_string=1707|start_string=1705|id0=22|pred_Name=to|word=to|connect_check=OK|pred_Value=01|vn=to	_	1	_	NonCore	_	_	_	true
+6	written document	written document	NN	_	_	bnId=bn:00028015n|start_string=1720|id0=25|number=SG|connect_check=OK|dpos=NN|hasExtArg=yes|end_string=1728|pred_Name=document|word=document|fn=Documents|pred_Value=01	_	5	_	Argument2	_	_	_	true
+7	policy	policy	NN	_	_	bnId=bn:00063329n|start_string=1713|id0=24|number=SG|connect_check=OK|dpos=NN|hasExtArg=yes|end_string=1719|pred_Name=policy|word=policy|fn=Law|pred_Value=01	_	6	_	Elaboration	_	_	_	true
+
+0	_	_	_	_	_	_	_	_	_	_	_	_	_	slex=Sentence
+1	discuss	discusses	VBG	_	_	bnId=bn:00086931v|root=yes|start_string=1647|id0=14|tense=PAST|connect_check=OK|clause_type=DECL|tem_constituency=PROGR|time=applied|dpos=VB|end_string=1654|hasExtArg=yes|pred_Name=talk|word=talk|fn=Talking_into|pred_Value=01	_	0	_	ROOT	_	_	_	true
+2	follow	following	IN	_	_	bnId=bn:00088421v|start_string=1655|id0=15|connect_check=OK|vn=follow|time_type=temporal_relation|dpos=IN|hasExtArg=no|end_string=1664|pred_Name=follow|role=Time|word=follow|pred_Value=01	_	1	_	Time	_	_	_	true
+3	publication	publication	NN	_	_	bnId=bn:00065106n|start_string=1669|id0=17|number=SG|connect_check=OK|vn=publication|dpos=NN|hasExtArg=yes|end_string=1680|pred_Name=publication|definiteness=DEF|word=publication|pred_Value=01	_	2	_	Argument2	_	_	_	true
+4	slade	Slade	NNP	_	_	dpos=NN|end_string=1593|hasExtArg=no|start_string=1588|id0=1|pred_Name=slade|number=SG|word=Slade|connect_check=OK|vn=Slade|NE=YES	_	1	_	Argument1	_	_	_	true
+5	to	to	TO	_	_	dpos=TO|hasExtArg=no|end_string=1707|start_string=1705|id0=22|pred_Name=to|word=to|connect_check=OK|pred_Value=01|vn=to	_	1	_	NonCore	_	_	_	true
+6	text	text	NN	_	_	bnId=bn:00076732n|start_string=1720|id0=25|number=SG|connect_check=OK|dpos=NN|hasExtArg=yes|end_string=1728|pred_Name=document|word=document|fn=Documents|pred_Value=01	_	5	_	Argument2	_	_	_	true
+7	practice	practice	NN	_	_	bnId=bn:00024591n|start_string=1713|id0=24|number=SG|connect_check=OK|dpos=NN|hasExtArg=yes|end_string=1719|pred_Name=policy|word=policy|fn=Law|pred_Value=01	_	6	_	Elaboration	_	_	_	true
+
+0	_	_	_	_	_	_	_	_	_	_	_	_	_	slex=Sentence
+1	talk	talking	VBG	_	_	bnId=bn:00094089v|root=yes|start_string=1647|id0=14|tense=PAST|connect_check=OK|clause_type=DECL|tem_constituency=PROGR|time=applied|dpos=VB|end_string=1654|hasExtArg=yes|pred_Name=talk|word=talk|fn=Talking_into|pred_Value=01	_	0	_	ROOT	_	_	_	true
+2	follow	following	IN	_	_	bnId=bn:00088421v|start_string=1655|id0=15|connect_check=OK|vn=follow|time_type=temporal_relation|dpos=IN|hasExtArg=no|end_string=1664|pred_Name=follow|role=Time|word=follow|pred_Value=01	_	1	_	Time	_	_	_	true
+3	slade	Slade	NNP	_	_	dpos=NN|end_string=1593|hasExtArg=no|start_string=1588|id0=1|pred_Name=slade|number=SG|word=Slade|connect_check=OK|vn=Slade|NE=YES	_	1	_	Argument1	_	_	_	true
+4	to	to	TO	_	_	dpos=TO|hasExtArg=no|end_string=1707|start_string=1705|id0=22|pred_Name=to|word=to|connect_check=OK|pred_Value=01|vn=to	_	1	_	NonCore	_	_	_	true
+5	policy	policy	NN	_	_	bnId=bn:00063329n|start_string=1713|id0=24|number=SG|connect_check=OK|dpos=NN|hasExtArg=yes|end_string=1719|pred_Name=policy|word=policy|fn=Law|pred_Value=01	_	4	_	Elaboration	_	_	_	true
+
+0	_	_	_	_	_	_	_	_	_	_	_	_	_	slex=Sentence
+1	discuss	discusses	VBG	_	_	bnId=bn:00086931v|root=yes|start_string=1647|id0=14|tense=PAST|connect_check=OK|clause_type=DECL|tem_constituency=PROGR|time=applied|dpos=VB|end_string=1654|hasExtArg=yes|pred_Name=talk|word=talk|fn=Talking_into|pred_Value=01	_	0	_	ROOT	_	_	_	true
+2	follow	following	IN	_	_	bnId=bn:00088421v|start_string=1655|id0=15|connect_check=OK|vn=follow|time_type=temporal_relation|dpos=IN|hasExtArg=no|end_string=1664|pred_Name=follow|role=Time|word=follow|pred_Value=01	_	1	_	Time	_	_	_	true
+3	slade	Slade	NNP	_	_	dpos=NN|end_string=1593|hasExtArg=no|start_string=1588|id0=1|pred_Name=slade|number=SG|word=Slade|connect_check=OK|vn=Slade|NE=YES	_	1	_	Argument1	_	_	_	true
+4	to	to	TO	_	_	dpos=TO|hasExtArg=no|end_string=1707|start_string=1705|id0=22|pred_Name=to|word=to|connect_check=OK|pred_Value=01|vn=to	_	1	_	NonCore	_	_	_	true
+5	practice	practice	NN	_	_	bnId=bn:00024591n|start_string=1713|id0=24|number=SG|connect_check=OK|dpos=NN|hasExtArg=yes|end_string=1719|pred_Name=policy|word=policy|fn=Law|pred_Value=01	_	4	_	Elaboration	_	_	_	true
+
+0	_	_	_	_	_	_	_	_	_	_	_	_	_	slex=Sentence
+1	elastics	elastics	VBG	_	_	bnId=bn:00030081n|root=yes|start_string=1647|id0=14|tense=PAST|connect_check=OK|clause_type=DECL|tem_constituency=PROGR|time=applied|dpos=VB|end_string=1654|hasExtArg=yes|pred_Name=talk|word=talk|fn=Talking_into|pred_Value=01	_	0	_	ROOT	_	_	_	true
+2	hyach	hyach	IN	_	_	bnId=bn:00558352n|start_string=1655|id0=15|connect_check=OK|vn=follow|time_type=temporal_relation|dpos=IN|hasExtArg=no|end_string=1664|pred_Name=follow|role=Time|word=follow|pred_Value=01	_	1	_	Time	_	_	_	true
+3	andrew onderdonk	Andrew Onderdonk	NN	_	_	bnId=bn:03774224n|start_string=1669|id0=17|number=SG|connect_check=OK|vn=publication|dpos=NN|hasExtArg=yes|end_string=1680|pred_Name=publication|definiteness=DEF|word=publication|pred_Value=01	_	2	_	Argument2	_	_	_	true
+4	charpennes	Charpennes	NNP	_	_	dpos=NN|end_string=1593|hasExtArg=no|start_string=1588|id0=1|pred_Name=slade|number=SG|word=Slade|connect_check=OK|vn=Slade|NE=YES	_	1	_	Argument1	_	_	_	true
+5	within	within	TO	_	_	dpos=TO|hasExtArg=no|end_string=1707|start_string=1705|id0=22|pred_Name=to|word=to|connect_check=OK|pred_Value=01|vn=to	_	1	_	NonCore	_	_	_	true
+6	elected	elected	NN	_	_	bnId=bn:00087517v|start_string=1720|id0=25|number=SG|connect_check=OK|dpos=NN|hasExtArg=yes|end_string=1728|pred_Name=document|word=document|fn=Documents|pred_Value=01	_	5	_	Argument2	_	_	_	true
+7	project	project	NN	_	_	bnId=bn:00049573n|start_string=1713|id0=24|number=SG|connect_check=OK|dpos=NN|hasExtArg=yes|end_string=1719|pred_Name=policy|word=policy|fn=Law|pred_Value=01	_	6	_	Elaboration	_	_	_	true
