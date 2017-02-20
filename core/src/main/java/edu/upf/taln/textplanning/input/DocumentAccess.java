@@ -8,7 +8,7 @@ import org.jgrapht.graph.DefaultEdge;
 import java.util.List;
 
 /**
- * Base class for classes implementing read/write access to documents containing semantic structures.
+ * Base class for classes implementing read/writeSemanticDAGs access to documents containing semantic structures.
  */
 public interface DocumentAccess
 {

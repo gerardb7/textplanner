@@ -170,7 +170,7 @@ public class EmbeddingUtils
 	 */
 	public static void writeEmbeddingsToFile(Map<String, double[]> inVectors, Path inOutPath) throws FileNotFoundException
 	{
-		// Create String representation of each averaged vector and write them to a file
+		// Create String representation of each averaged vector and writeSemanticDAGs them to a file
 		log.info("Writing to file");
 		Stopwatch timer = Stopwatch.createStarted();
 		PrintWriter out = new PrintWriter(inOutPath.toFile());

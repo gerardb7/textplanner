@@ -3,22 +3,14 @@ package edu.upf.taln.textplanning;
 import Jama.Matrix;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
-import edu.upf.taln.textplanning.corpora.CorpusCounts;
-import edu.upf.taln.textplanning.corpora.SolrCounts;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
-import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.input.DocumentAccess;
-import edu.upf.taln.textplanning.input.DocumentProvider;
-import edu.upf.taln.textplanning.input.NIFAcces;
-import edu.upf.taln.textplanning.metrics.CorpusMetric;
 import edu.upf.taln.textplanning.metrics.PatternMetric;
-import edu.upf.taln.textplanning.metrics.PositionMetric;
-import edu.upf.taln.textplanning.pattern.ItemSetMining;
 import edu.upf.taln.textplanning.pattern.PatternExtractor;
-import edu.upf.taln.textplanning.pattern.PatternExtractorGraphs;
-import edu.upf.taln.textplanning.similarity.*;
+import edu.upf.taln.textplanning.similarity.EntitySharingSimilarity;
+import edu.upf.taln.textplanning.similarity.ItemSimilarity;
+import edu.upf.taln.textplanning.similarity.PatternSimilarity;
+import edu.upf.taln.textplanning.similarity.TreeEditSimilarity;
 import org.apache.commons.lang3.tuple.Pair;
-import org.eclipse.rdf4j.rio.RDFFormat;
 import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedSubgraph;
@@ -26,8 +18,6 @@ import org.jgrapht.graph.SimpleDirectedWeightedGraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -41,9 +31,8 @@ import java.util.stream.IntStream;
  */
 public final class TextPlanner
 {
-	private final DocumentAccess reader;
 	private final List<Pair<PatternMetric, Double>> metrics = new ArrayList<>();
-	private final PatternExtractor determiner;
+	private final PatternExtractor extractor;
 	private final SalientEntitiesMiner entityMiner;
 	private final ItemSimilarity wordFormSim; // used to calculate shallow similarity
 	private final ItemSimilarity wordSenseSim; // used to calculate semantic similarity
@@ -51,13 +40,7 @@ public final class TextPlanner
 
 	public static class Options
 	{
-		public enum InputType
-		{
-			Trees, Graphs
-		}
-
 		public int numPatterns = 0; // If 0, returns ranked list of all input patterns
-		public InputType input = InputType.Trees; // Are input patterns trees or graphs?
 		public int numSalientEntities = 3; // number of salient entities to be used when no entities are specified
 		public double dampingFactor = 0.1; // damping factor to control balance between relevance bias and similarity
 		public double salienceStopThreshold = 0.01; // stopping threshold for the algorithm ranking entities by salience
@@ -76,73 +59,17 @@ public final class TextPlanner
 	}
 
 	/**
-	 * Instantiates a planner that takes as input DSynt trees encoded using ConLL.
-	 * It uses the following resources:
-	 * @param inSolrUrl url of solr server containing an index of the Semantically Enriched Wikipedia (SEW)
-	 * @param inWord2VecPath path to the file containing the Word2Vec vectors obtained from the Google News Corpus
-	 * @param inSenseEmbedPath path to the file containing a merged version of the SensEmbed vectors
-	 * @return an instance of the TextPlanner class
-	 * @throws Exception
-	 */
-	public static TextPlanner createConLLPlanner(String inSolrUrl, Path inWord2VecPath, Path inSenseEmbedPath) throws Exception
-	{
-		ConLLAcces reader = new ConLLAcces();
-		CorpusCounts corpusCounts = new SolrCounts(inSolrUrl);
-		PatternMetric corpusMetric = new CorpusMetric(corpusCounts, CorpusMetric.Metric.Cooccurrence, "");
-		PatternMetric positionMetric = new PositionMetric();
-		List<Pair<PatternMetric, Double>> metrics = new ArrayList<>();
-		metrics.add(Pair.of(corpusMetric, 0.8));
-		metrics.add(Pair.of(positionMetric, 0.2));
-		ItemSimilarity wordVectors = (inWord2VecPath != null) ? new Word2VecSimilarity(inWord2VecPath) : null;
-		ItemSimilarity senseVectors = (inSenseEmbedPath != null) ? new SensEmbedSimilarity(inSenseEmbedPath) : null;
-		PatternExtractor determination = new ItemSetMining();
-		SalientEntitiesMiner miner = new SalientEntitiesMiner(senseVectors);
-		return new TextPlanner(reader, metrics, determination, wordVectors, senseVectors, miner);
-	}
-
-	/**
-	 * Instantiates a planner that takes as input a semantic graphs encoded using NIF/RDF/XML.
-	 * It uses the following resources:
-	 *
-	 * @param inSolrUrl        url of solr server containing an index of the Semantically Enriched Wikipedia (SEW)
-	 * @param inWord2VecPath   path to the file containing the Word2Vec vectors obtained from the Google News Corpus
-	 * @param inSenseEmbedPath path to the file containing a merged version of the SensEmbed vectors
-	 * @return an instance of the TextPlanner class
-	 * @throws Exception
-	 */
-	public static TextPlanner createNIFPlanner(String inSolrUrl, Path inWord2VecPath, Path inSenseEmbedPath) throws Exception
-	{
-		NIFAcces reader = new NIFAcces(RDFFormat.RDFXML);
-		CorpusCounts corpusCounts = new SolrCounts(inSolrUrl);
-		PatternMetric corpusMetric = new CorpusMetric(corpusCounts, CorpusMetric.Metric.Cooccurrence, "");
-		PatternMetric positionMetric = new PositionMetric();
-		List<Pair<PatternMetric, Double>> metrics = new ArrayList<>();
-		metrics.add(Pair.of(corpusMetric, 0.8));
-		metrics.add(Pair.of(positionMetric, 0.2));
-		ItemSimilarity wordVectors = (inWord2VecPath != null) ? new Word2VecSimilarity(inWord2VecPath) : null;
-		ItemSimilarity senseVectors = (inSenseEmbedPath != null) ? new SensEmbedSimilarity(inSenseEmbedPath) : null;
-		PatternSimilarity sim = new TreeEditSimilarity(wordVectors, senseVectors);
-		PatternExtractor determination = new PatternExtractorGraphs(sim);
-		SalientEntitiesMiner miner = new SalientEntitiesMiner(senseVectors);
-		return new TextPlanner(reader, metrics, determination, wordVectors, senseVectors, miner);
-	}
-
-	/**
-	 * @param inReader a document reader
 	 * @param inMetrics metrics used to score patterns
 	 * @param inDeterminer performs pattern determination
 	 * @param inWordFormSim similarity metric for pairs of word forms
 	 * @param inWordSenseSim similarity metric for pairs of word senses
-	 * @throws IOException
 	 */
-	public TextPlanner(DocumentAccess inReader, List<Pair<PatternMetric, Double>> inMetrics, PatternExtractor inDeterminer,
+	public TextPlanner(List<Pair<PatternMetric, Double>> inMetrics, PatternExtractor inDeterminer,
 	                   ItemSimilarity inWordFormSim, ItemSimilarity inWordSenseSim, SalientEntitiesMiner inEntityMiner)
-			throws Exception
 	{
 		entityMiner = inEntityMiner;
-		reader = inReader;
 		metrics.addAll(inMetrics);
-		determiner = inDeterminer;
+		extractor = inDeterminer;
 		wordFormSim = inWordFormSim;
 		wordSenseSim = inWordSenseSim;
 	}
@@ -150,35 +77,34 @@ public final class TextPlanner
 	/**
 	 * Generates a text plan using the most salient entities in a plan
 	 *
-	 * @param inProvider   provides docs to summarize
+	 * @param inContents contents to summarize
 	 * @param inOptions options for text planner
 	 * @return the plan in conll format
 	 */
-	public String planText(DocumentProvider inProvider, Options inOptions)
+	public List<SemanticTree> planText(List<SemanticTree> inContents, Options inOptions)
 	{
-		return planText(new HashSet<>(), inProvider, inOptions);
+		return planText(new HashSet<>(), inContents, inOptions);
 	}
 
 	/**
-	 * Generates a text plan about some entities from the contents in a set of documents
+	 * Generates a text plan about some entities from some contents encoded as semantic trees
 	 *
-	 * @param inReferences  focal entities of the plan
-	 * @param inProvider   provides docs to summarize
-	 * @param inOptions options for text planner
-	 * @return the plan in conll format
+	 * @param inReferences focal entities of the plan
+	 * @param inContents initial set of contents
+	 * @return list of patterns ranked by relevance and, optionally, according to local coherence constraints.
 	 */
-	public String planText(Set<String> inReferences, DocumentProvider inProvider, Options inOptions)
+	public List<SemanticTree> planText(Set<String> inReferences, List<SemanticTree> inContents, Options inOptions)
 	{
 		try
 		{
-			// Determine patterns
+			// 1- Extract patterns
 			log.info("***Starting planning***");
-			log.info("**Pattern determination**");
+			log.info("**Pattern extraction**");
 			Stopwatch timer = Stopwatch.createStarted();
-			Set<SemanticTree> patterns = determiner.getPatterns(inProvider, reader);
-			log.info("Pattern determination took " + timer.stop());
+			Set<SemanticTree> patterns = extractor.getPatterns(inContents);
+			log.info("Pattern extraction took " + timer.stop());
 
-			// If no references are specified, mine documents for most salient ones
+			// 2- If no references are specified, mine documents for most salient ones
 			if (inReferences.isEmpty())
 			{
 				log.info("**Salient entities mining**");
@@ -188,116 +114,96 @@ public final class TextPlanner
 				log.info("Mining for salient entities took " + timer.stop());
 			}
 
-			// Actual planning
-			List<SemanticTree> bestPatterns = planText(inReferences, patterns, inOptions);
+			// 3- Score them with relevance values and get initial distribution
+			log.info("**Scoring patterns and creating relevance matrix**");
+			timer = Stopwatch.createStarted();
 
-			// Generate conll
-			log.info("**Generating conll**");
-			timer.reset(); timer.start();
-			String conll = ConLLAcces.writeTrees(bestPatterns);
-			log.info("Generating conll took " + timer.stop());
-			log.info("***Planning ended***");
+			Map<SemanticTree, Double> scoredPatterns = patterns.stream()
+					.collect(Collectors.toMap(p -> p, p -> 0.0));
+			for (Pair<PatternMetric, Double> metric : metrics)
+			{
+				Map<SemanticTree, Double> metricScores = metric.getLeft().assess(inReferences, patterns);
+				for (SemanticTree pattern : scoredPatterns.keySet())
+				{
+					scoredPatterns.put(pattern, scoredPatterns.get(pattern) + metricScores.get(pattern) * metric.getRight());
+				}
+			}
 
-			return conll;
+			List<Pair<SemanticTree, Double>> sortedPatterns = scoredPatterns.entrySet().stream()
+					.sorted(Map.Entry.comparingByValue(Collections.reverseOrder()))
+					.map(e -> Pair.of(e.getKey(), e.getValue()))
+					.collect(Collectors.toList());
+			List<SemanticTree> sortedPatternList =
+					sortedPatterns.stream().map(Pair::getLeft).collect(Collectors.toList());
+
+			// 4- Create relevance matrix
+			List<Double> scores = patterns.stream()
+					.map(scoredPatterns::get)
+					.collect(Collectors.toList());
+			Matrix relevanceMatrix = createRelevanceMatrix(sortedPatternList, scores);
+
+			log.info("Scoring patterns took " + timer.stop());
+			log.info("Relevance scoring:");
+			IntStream.range(0, sortedPatterns.size()).forEach(i ->
+					log.info("\t" + i + " -> " + sortedPatterns.get(i).getValue() + " -> " + sortedPatterns.get(i).getKey()));
+
+			log.info("**Creating initial distribution and ranking matrix");
+			timer.reset();
+			timer.start();
+
+			// 5- Create a similarity matrix
+			PatternSimilarity rankSim = inOptions.rankingSimilarity == Options.SimilarityType.EntitySharing ?
+					new EntitySharingSimilarity() : new TreeEditSimilarity(wordFormSim, wordSenseSim);
+			Matrix similarityMatrix = createSimilarityMatrix(sortedPatternList, rankSim);
+			log.info("Creating matrices took " + timer.stop());
+
+			// 6- Create joint stochastic matrix for relevance bias and similarity
+			double d = inOptions.dampingFactor;
+			Matrix rankingMatrix = relevanceMatrix.times(d).plus(similarityMatrix.times(1-d)).transpose();
+
+			// Create initial distribution
+			double[] initialDist = IntStream.range(0, patterns.size())
+					.mapToDouble(i -> 1.0 / (double)patterns.size())
+					.toArray();
+			Matrix intialDistribution = new Matrix(initialDist, 1);
+
+			// 7- Rank patterns using biased semantic ranking and power iteration method
+			log.info("**Power iteration ranking**");
+			timer.reset();
+			timer.start();
+			Matrix finalDistribution = PowerIteration.run(intialDistribution, rankingMatrix, inOptions.rankingStopThreshold);
+			log.info("Power iteration ranking took " + timer.stop());
+			IntStream.range(0, finalDistribution.getColumnDimension())
+					.forEach(i -> log.info("\t" + i + " -> " + finalDistribution.getColumnPackedCopy()[i]));
+
+			// 8-  Get best patterns according to final distribution
+			log.info("**Selecting contents**");
+			timer.reset();
+			timer.start();
+			PatternSimilarity selSim = inOptions.selectionSimilarity == Options.SimilarityType.EntitySharing ?
+					new EntitySharingSimilarity() : new TreeEditSimilarity(wordFormSim, wordSenseSim);
+			List<SemanticTree> bestPatterns =
+					inOptions.useGraph ? getRankedGraphPatterns(sortedPatternList, finalDistribution, inOptions.numPatterns, selSim)
+							: getRankPatterns(sortedPatternList, finalDistribution, inOptions.numPatterns);
+			log.info("Selecting contents took " + timer.stop());
+
+			// 9- Generate stats
+			if (inOptions.generateStats)
+			{
+				log.info("**Generating stats**");
+				timer.reset();
+				timer.start();
+//			inOptions.stats = StatsReporter.reportStats(inPatterns, new HashSet<>(inReferences), corpora, rankSim);
+				log.info("Stats generation took " + timer.stop());
+			}
+
+			return bestPatterns;
 		}
 		catch (Exception e)
 		{
 			log.error("***Planning failed***");
 			throw new RuntimeException(e);
 		}
-	}
-
-	/**
-	 * @param inReferences focal entities of the plan
-	 * @param inPatterns initial set of patterns
-	 * @return list of patterns ranked by relevance and, optionally, according to local coherence constraints.
-	 */
-	public List<SemanticTree> planText(Set<String> inReferences,
-	                                                                Set<SemanticTree> inPatterns, Options inOptions)
-	{
-		// Score them with relevance values and get initial distribution
-		log.info("**Scoring patterns and creating relevance matrix**");
-		Stopwatch timer = Stopwatch.createStarted();
-
-		Map<SemanticTree, Double> scoredPatterns = inPatterns.stream()
-				.collect(Collectors.toMap(p -> p, p -> 0.0));
-		for (Pair<PatternMetric, Double> metric : metrics)
-		{
-			Map<SemanticTree, Double> metricScores = metric.getLeft().assess(inReferences, inPatterns);
-			for (SemanticTree pattern : scoredPatterns.keySet())
-			{
-				scoredPatterns.put(pattern, scoredPatterns.get(pattern) + metricScores.get(pattern) * metric.getRight());
-			}
-		}
-
-		List<Pair<SemanticTree, Double>> sortedPatterns = scoredPatterns.entrySet().stream()
-				.sorted(Map.Entry.comparingByValue(Collections.reverseOrder()))
-				.map(e -> Pair.of(e.getKey(), e.getValue()))
-				.collect(Collectors.toList());
-		List<SemanticTree> patterns =
-				sortedPatterns.stream().map(Pair::getLeft).collect(Collectors.toList());
-
-		// Create relevance matrix
-		List<Double> scores = patterns.stream()
-				.map(scoredPatterns::get)
-				.collect(Collectors.toList());
-		Matrix relevanceMatrix = createRelevanceMatrix(patterns, scores);
-
-		log.info("Scoring patterns took " + timer.stop());
-		log.info("Relevance scoring:");
-		IntStream.range(0, sortedPatterns.size()).forEach(i ->
-				log.info("\t" + i + " -> " + sortedPatterns.get(i).getValue() + " -> " + sortedPatterns.get(i).getKey()));
-
-		log.info("**Creating initial distribution and ranking matrix");
-		timer.reset();
-		timer.start();
-
-		// Create a similarity matrix
-		PatternSimilarity rankSim = inOptions.rankingSimilarity == Options.SimilarityType.EntitySharing ?
-				new EntitySharingSimilarity() : new TreeEditSimilarity(wordFormSim, wordSenseSim);
-		Matrix similarityMatrix = createSimilarityMatrix(patterns, rankSim);
-		log.info("Creating matrices took " + timer.stop());
-
-		// Create joint stochastic matrix for relevance bias and similarity
-		double d = inOptions.dampingFactor;
-		Matrix rankingMatrix = relevanceMatrix.times(d).plus(similarityMatrix.times(1-d)).transpose();
-
-		// Create initial distribution
-		double[] initialDist = IntStream.range(0, patterns.size())
-				.mapToDouble(i -> 1.0 / (double)patterns.size())
-				.toArray();
-		Matrix intialDistribution = new Matrix(initialDist, 1);
-
-		// Rank patterns using biased semantic ranking and power iteration method
-		log.info("**Power iteration ranking**");
-		timer.reset();
-		timer.start();
-		Matrix finalDistribution = PowerIteration.run(intialDistribution, rankingMatrix, inOptions.rankingStopThreshold);
-		log.info("Power iteration ranking took " + timer.stop());
-		IntStream.range(0, finalDistribution.getColumnDimension())
-				.forEach(i -> log.info("\t" + i + " -> " + finalDistribution.getColumnPackedCopy()[i]));
-
-		// Get best patterns according to final distribution
-		log.info("**Selecting contents**");
-		timer.reset();
-		timer.start();
-		PatternSimilarity selSim = inOptions.selectionSimilarity == Options.SimilarityType.EntitySharing ?
-				new EntitySharingSimilarity() : new TreeEditSimilarity(wordFormSim, wordSenseSim);
-		List<SemanticTree> bestPatterns =
-				inOptions.useGraph ? getRankedGraphPatterns(patterns, finalDistribution, inOptions.numPatterns, selSim)
-						: getRankPatterns(patterns, finalDistribution, inOptions.numPatterns);
-		log.info("Selecting contents took " + timer.stop());
-
-		if (inOptions.generateStats)
-		{
-			log.info("**Generating stats**");
-			timer.reset();
-			timer.start();
-//			inOptions.stats = StatsReporter.reportStats(inPatterns, new HashSet<>(inReferences), corpora, rankSim);
-			log.info("Stats generation took " + timer.stop());
-		}
-
-		return bestPatterns;
 	}
 
 

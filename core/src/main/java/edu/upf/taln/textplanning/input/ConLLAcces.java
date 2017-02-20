@@ -243,7 +243,7 @@ public class ConLLAcces implements DocumentAccess
 	 * @param inSemanticDAGs semantic DAGs
 	 * @return ConLL-formatted representation of the semantic DAGs
 	 */
-	public static String write(Collection<DirectedAcyclicGraph<AnnotationInfo, LabelledEdge>> inSemanticDAGs)
+	public String writeSemanticDAGs(Collection<DirectedAcyclicGraph<AnnotationInfo, LabelledEdge>> inSemanticDAGs)
 	{
 		// Get a topological ordering of nodes along with their governors in the graph
 		return inSemanticDAGs.stream()
@@ -257,7 +257,7 @@ public class ConLLAcces implements DocumentAccess
 								return Pair.of(i, govs);
 							})
 							.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
-					return ConLLAcces.nodesToConll(anns, governors);
+					return this.nodesToConll(anns, governors);
 				})
 				.map(s -> "0\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\tslex=Sentence\n" + s + "\n")
 				.reduce(String::concat).get();
@@ -269,7 +269,7 @@ public class ConLLAcces implements DocumentAccess
 	 * @param inTrees list of semantic trees
 	 * @return ConLL-formatted representation of the semantic trees
 	 */
-	public static String writeTrees(Collection<SemanticTree> inTrees)
+	public String writeSemanticTrees(Collection<SemanticTree> inTrees)
 	{
 		// Get a preorder list of nodes in the tree along with their parents
 		return inTrees.stream()
@@ -291,14 +291,14 @@ public class ConLLAcces implements DocumentAccess
 								return Pair.of(i, govs);
 							})
 							.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
-					return ConLLAcces.nodesToConll(anns, governors);
+					return this.nodesToConll(anns, governors);
 				})
 				.map(s -> "0\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\tslex=Sentence\n" + s + "\n")
 				.reduce(String::concat).get();
 	}
 
 
-	private static int getNumberOfStructures(String inDocumentContents) throws Exception
+	private int getNumberOfStructures(String inDocumentContents) throws Exception
 	{
 		try(StringReader reader = new StringReader(inDocumentContents); BufferedReader bufferReader = new BufferedReader(reader))
 		{
@@ -325,7 +325,7 @@ public class ConLLAcces implements DocumentAccess
 		}
 	}
 
-	private static String nodesToConll(List<AnnotationInfo> inNodes, Map<Integer, List<Pair<String, Integer>>> inGovernors)
+	private String nodesToConll(List<AnnotationInfo> inNodes, Map<Integer, List<Pair<String, Integer>>> inGovernors)
 	{
 		// Iterate entities again, this time producing conll
 		String conll = "";
@@ -379,7 +379,7 @@ public class ConLLAcces implements DocumentAccess
 	}
 
 
-	private static DirectedAcyclicGraph<AnnotationInfo, LabelledEdge> createGraph(List<AnnotationInfo> inNodes,
+	private DirectedAcyclicGraph<AnnotationInfo, LabelledEdge> createGraph(List<AnnotationInfo> inNodes,
                                                Map<Integer, List<Pair<String, Integer>>> inGovernors, double inPosition)
 	{
 		DirectedAcyclicGraph<AnnotationInfo, LabelledEdge> graph =
@@ -394,7 +394,7 @@ public class ConLLAcces implements DocumentAccess
 	}
 
 
-	private static SemanticTree createTree(int inRootId, List<AnnotationInfo> inNodes,
+	private SemanticTree createTree(int inRootId, List<AnnotationInfo> inNodes,
 	                                       Map<Integer, List<Pair<String, Integer>>> inGovernors, double inPosition)
 	{
 		AnnotationInfo root = inNodes.get(inRootId - 1);

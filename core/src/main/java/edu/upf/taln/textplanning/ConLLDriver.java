@@ -2,11 +2,21 @@ package edu.upf.taln.textplanning;
 
 import com.beust.jcommander.*;
 import com.google.common.base.Stopwatch;
+import edu.upf.taln.textplanning.corpora.CorpusCounts;
 import edu.upf.taln.textplanning.corpora.SolrCounts;
-import edu.upf.taln.textplanning.input.DocumentProvider;
-import edu.upf.taln.textplanning.input.SingleDocProvider;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.input.ConLLAcces;
+import edu.upf.taln.textplanning.metrics.CorpusMetric;
+import edu.upf.taln.textplanning.metrics.PatternMetric;
+import edu.upf.taln.textplanning.metrics.PositionMetric;
+import edu.upf.taln.textplanning.pattern.ItemSetMining;
+import edu.upf.taln.textplanning.pattern.PatternExtractor;
+import edu.upf.taln.textplanning.similarity.ItemSimilarity;
+import edu.upf.taln.textplanning.similarity.SensEmbedSimilarity;
 import edu.upf.taln.textplanning.similarity.TreeEditSimilarity;
+import edu.upf.taln.textplanning.similarity.Word2VecSimilarity;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,6 +25,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -66,28 +77,57 @@ public class ConLLDriver
 		private boolean debug;
 	}
 	private final TextPlanner planner;
+	private final ConLLAcces conll = new ConLLAcces();
 	private final static Logger log = LoggerFactory.getLogger(ConLLDriver.class);
+
+	/**
+	 * Instantiates a planner that takes as input DSynt trees encoded using ConLL
+	 * It uses the following resources:
+	 * @param inSolrUrl url of solr server containing an index of the Semantically Enriched Wikipedia (SEW)
+	 * @param inWord2VecPath path to the file containing the Word2Vec vectors obtained from the Google News Corpus
+	 * @param inSenseEmbedPath path to the file containing a merged version of the SensEmbed vectors
+	 * @return an instance of the TextPlanner class
+	 * @throws Exception
+	 */
+	public static TextPlanner createConLLPlanner(String inSolrUrl, Path inWord2VecPath, Path inSenseEmbedPath) throws Exception
+	{
+		CorpusCounts corpusCounts = new SolrCounts(inSolrUrl);
+		PatternMetric corpusMetric = new CorpusMetric(corpusCounts, CorpusMetric.Metric.Cooccurrence, "");
+		PatternMetric positionMetric = new PositionMetric();
+		List<Pair<PatternMetric, Double>> metrics = new ArrayList<>();
+		metrics.add(Pair.of(corpusMetric, 0.8));
+		metrics.add(Pair.of(positionMetric, 0.2));
+		ItemSimilarity wordVectors = (inWord2VecPath != null) ? new Word2VecSimilarity(inWord2VecPath) : null;
+		ItemSimilarity senseVectors = (inSenseEmbedPath != null) ? new SensEmbedSimilarity(inSenseEmbedPath) : null;
+		PatternExtractor extractor = new ItemSetMining();
+		SalientEntitiesMiner miner = new SalientEntitiesMiner(senseVectors);
+		return new TextPlanner(metrics, extractor, wordVectors, senseVectors, miner);
+	}
 
 	ConLLDriver(String inSolrUrl, Path inWordVectorsPath, Path inSenseVectorsPath) throws Exception
 	{
-		planner = TextPlanner.createConLLPlanner(inSolrUrl, inWordVectorsPath, inSenseVectorsPath);
+		planner = ConLLDriver.createConLLPlanner(inSolrUrl, inWordVectorsPath, inSenseVectorsPath);
 	}
 
 	public String runPlanner(Path inDoc, Set<String> inReferences, TextPlanner.Options inPlannerOptions)
 	{
 		try
 		{
-			String conll = new String(Files.readAllBytes(inDoc), Charset.forName("UTF-8"));
-			DocumentProvider provider = new SingleDocProvider(conll);
+			String inConll = new String(Files.readAllBytes(inDoc), Charset.forName("UTF-8"));
+			List<SemanticTree> semanticTrees = conll.readSemanticTrees(inConll);
 
+			List<SemanticTree> plan;
 			if (inReferences.isEmpty())
 			{
-				return planner.planText(provider, inPlannerOptions);
+				plan = planner.planText(semanticTrees, inPlannerOptions);
 			}
 			else
 			{
-				return planner.planText(inReferences, provider, inPlannerOptions);
+				plan = planner.planText(inReferences, semanticTrees, inPlannerOptions);
 			}
+
+			// Generate conll
+			return conll.writeSemanticTrees(plan);
 		}
 		catch (Exception e)
 		{

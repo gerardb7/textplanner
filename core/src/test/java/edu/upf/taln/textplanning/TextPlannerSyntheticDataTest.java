@@ -97,18 +97,18 @@ public class TextPlannerSyntheticDataTest
 		metrics.add(Pair.of(corpusMetric, 0.8));
 		ItemSimilarity vectors = new SyntheticVectors();
 		SalientEntitiesMiner miner = new SalientEntitiesMiner(vectors);
-		TextPlanner planner = new TextPlanner(null, metrics, null, vectors, null, miner);
+		TextPlanner planner = new TextPlanner(metrics, null, vectors, null, miner);
 
 		String e = scoredSenses[new Random().nextInt(scoredSenses.length)];
 		int numTrees = 10;
-		Set<SemanticTree> orderedTrees = generateSyntheticTrees(numTrees);
+		List<SemanticTree> orderedTrees = generateSyntheticTrees(numTrees);
 		TextPlanner.Options options = new TextPlanner.Options();
 		options.rankingStopThreshold = 0.0001;
 		System.out.println("Creating a plan for entity " + e);
 		planner.planText(Collections.singleton(e), orderedTrees, options);
 	}
 
-	private Set<SemanticTree> generateSyntheticTrees(int inNumTrees)
+	private List<SemanticTree> generateSyntheticTrees(int inNumTrees)
 	{
 		List<AnnotationInfo> anns = Stream.concat(Arrays.stream(scoredSenses), Arrays.stream(unscoredSenses))
 				.map(e -> new AnnotationInfo(e, null, null, "NN", "f1=v1|f2=v2", e, 0.0))
@@ -130,7 +130,7 @@ public class TextPlannerSyntheticDataTest
 							});
 					return tree;
 				})
-				.collect(Collectors.toSet());
+				.collect(Collectors.toList());
 	}
 
 	private AnnotationInfo chooseAnnotation(List<AnnotationInfo> inAnns, Random inRand)

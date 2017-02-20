@@ -1,9 +1,8 @@
 package edu.upf.taln.textplanning.pattern;
 
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
-import edu.upf.taln.textplanning.input.DocumentAccess;
-import edu.upf.taln.textplanning.input.DocumentProvider;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -11,5 +10,5 @@ import java.util.Set;
  */
 public interface PatternExtractor
 {
-	Set<SemanticTree> getPatterns(DocumentProvider inDocs, DocumentAccess inReader);
+	Set<SemanticTree> getPatterns(List<SemanticTree> inContents);
 }
