@@ -6,8 +6,6 @@ import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemsets;
 import edu.upf.taln.textplanning.datastructures.AnnotationInfo;
 import edu.upf.taln.textplanning.datastructures.OrderedTree;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
-import edu.upf.taln.textplanning.input.DocumentAccess;
-import edu.upf.taln.textplanning.input.DocumentProvider;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,15 +26,9 @@ public class ItemSetMining implements PatternExtractor
 	private final static Logger log = LoggerFactory.getLogger(ItemSetMining.class);
 
 	@Override
-	public Set<SemanticTree> getPatterns(DocumentProvider inDocs, DocumentAccess inReader)
+	public Set<SemanticTree> getPatterns(List<SemanticTree> inContents)
 	{
-		// Read the trees
-		List<SemanticTree> trees = inDocs.getAllDocuments().stream()
-				.map(inReader::readSemanticTrees)
-				.flatMap(List::stream)
-				.collect(Collectors.toList());
-
-		List<List<OrderedTree.Node<Pair<AnnotationInfo, String>>>> treeNodes = trees.stream()
+		List<List<OrderedTree.Node<Pair<AnnotationInfo, String>>>> treeNodes = inContents.stream()
 				.map(OrderedTree::getPreOrder)
 				.collect(Collectors.toList());
 
@@ -118,7 +110,7 @@ public class ItemSetMining implements PatternExtractor
 		List<Double> avgPositions = decodedMaximalSets.stream()
 				.map(m -> itemSets.stream()
 						.filter(s -> s.containsAll(m))
-						.map(s -> trees.get(itemSets.indexOf(s)))
+						.map(s -> inContents.get(itemSets.indexOf(s)))
 						.mapToDouble(SemanticTree::getPosition)
 						.average().orElse(0.0))
 				.collect(Collectors.toList());
@@ -152,7 +144,8 @@ public class ItemSetMining implements PatternExtractor
 				inAnn.getPOS().startsWith("VB") || // verbs
 				inAnn.getPOS().startsWith("JJ") || // nominal modifiers
 				inAnn.getPOS().startsWith("CD") || // cardinal numbers
-				inAnn.getPOS().startsWith("FW"));   // and foreign words
+				inAnn.getPOS().startsWith("FW")) || // and foreign words
+				inAnn.getForm().equals('_'); // some punctuation marks such as quotes end up here as underscores
 	}
 
 	/**

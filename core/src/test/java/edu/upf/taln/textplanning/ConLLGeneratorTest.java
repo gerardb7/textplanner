@@ -23,10 +23,10 @@ public class ConLLGeneratorTest
 	{
 		String read = FileUtils.readFileToString(new File("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll"), Charset.defaultCharset());
 
-		ConLLAcces reader = new ConLLAcces();
+		ConLLAcces conll = new ConLLAcces();
 		List<DirectedAcyclicGraph<AnnotationInfo, DocumentAccess.LabelledEdge>> structures =
-				reader.readSemanticDAGs("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll");
-		String written = ConLLAcces.write(structures);
+				conll.readSemanticDAGs("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll");
+		String written = conll.writeSemanticDAGs(structures);
 
 		Assert.assertEquals(read, written);
 	}
@@ -36,9 +36,9 @@ public class ConLLGeneratorTest
 	{
 		String read = FileUtils.readFileToString(new File("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll"), Charset.defaultCharset());
 
-		ConLLAcces reader = new ConLLAcces();
-		List<SemanticTree> messages = reader.readSemanticTrees("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll");
-		String written = ConLLAcces.writeTrees(messages);
+		ConLLAcces conll = new ConLLAcces();
+		List<SemanticTree> messages = conll.readSemanticTrees("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll");
+		String written = conll.writeSemanticTrees(messages);
 
 		Assert.assertEquals(read, written);
 	}

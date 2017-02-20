@@ -31,11 +31,12 @@ public class TreeEditSimilarityTest
 		ItemSimilarity senseVectors = null; //new SensEmbedSimilarity("/home/gerard/data/sensembed/babelfy_vectors_merged_senses_only");
 		TreeEditSimilarity simCalc = new TreeEditSimilarity(wordVectors, senseVectors);
 
-		System.out.println("OrderedTree 1:\n" + ConLLAcces.writeTrees(Collections.singleton(tree1)));
-		System.out.println("OrderedTree 2:\n" + ConLLAcces.writeTrees(Collections.singleton(tree2)));
-		System.out.println("OrderedTree 3:\n" + ConLLAcces.writeTrees(Collections.singleton(tree3)));
-		System.out.println("OrderedTree 4:\n" + ConLLAcces.writeTrees(Collections.singleton(tree4)));
-		System.out.println("OrderedTree 5:\n" + ConLLAcces.writeTrees(Collections.singleton(tree5)));
+		ConLLAcces conll = new ConLLAcces();
+		System.out.println("OrderedTree 1:\n" + conll.writeSemanticTrees(Collections.singleton(tree1)));
+		System.out.println("OrderedTree 2:\n" + conll.writeSemanticTrees(Collections.singleton(tree2)));
+		System.out.println("OrderedTree 3:\n" + conll.writeSemanticTrees(Collections.singleton(tree3)));
+		System.out.println("OrderedTree 4:\n" + conll.writeSemanticTrees(Collections.singleton(tree4)));
+		System.out.println("OrderedTree 5:\n" + conll.writeSemanticTrees(Collections.singleton(tree5)));
 
 		double sim12 = simCalc.getSimilarity(tree1, tree2);
 		System.out.println("Similarity 1-2 = " + sim12);

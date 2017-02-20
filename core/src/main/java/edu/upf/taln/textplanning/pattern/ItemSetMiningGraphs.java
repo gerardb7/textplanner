@@ -7,7 +7,6 @@ import edu.upf.taln.textplanning.datastructures.AnnotationInfo;
 import edu.upf.taln.textplanning.datastructures.OrderedTree;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.DocumentAccess;
-import edu.upf.taln.textplanning.input.DocumentProvider;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.AbstractGraph;
@@ -19,19 +18,13 @@ import java.util.stream.Collectors;
 /**
  * A version of the itemset mining algorithm taking as input DAGs.
  */
-public class ItemSetMiningGraphs implements PatternExtractor
+public class ItemSetMiningGraphs
 {
-	@Override
-	public Set<SemanticTree> getPatterns(DocumentProvider inDocs, DocumentAccess inReader)
+	public Set<SemanticTree> getPatterns(
+			List<DirectedAcyclicGraph<AnnotationInfo, DocumentAccess.LabelledEdge>> inContents)
 	{
-		// Read the graphs
-		List<DirectedAcyclicGraph<AnnotationInfo, DocumentAccess.LabelledEdge>> graphs = inDocs.getAllDocuments().stream()
-				.map(inReader::readSemanticDAGs)
-				.flatMap(List::stream)
-				.collect(Collectors.toList());
-
 		// Convert graphs to itemsets
-		List<Set<String>> itemSets = graphs.stream()
+		List<Set<String>> itemSets = inContents.stream()
 				.map(AbstractGraph::vertexSet)
 				.map(g -> g.stream()
 						.filter(ItemSetMiningGraphs::isItem) // filter annotations
@@ -80,15 +73,15 @@ public class ItemSetMiningGraphs implements PatternExtractor
 		List<Integer> shortestGraphs = decodedMaximalSets.stream()
 				.map(m -> itemSets.stream()
 						.filter(s -> s.containsAll(m)) // find trees that contain this maximal set
-						.map(s -> graphs.get(itemSets.indexOf(s))) // and get the shortest one
+						.map(s -> inContents.get(itemSets.indexOf(s))) // and get the shortest one
 						.min((t1, t2) -> Integer.compare(t1.vertexSet().size(), t2.vertexSet().size())))
 				.map(Optional::get)
-				.map(graphs::indexOf)
+				.map(inContents::indexOf)
 				.collect(Collectors.toList()); // yes, we actually want to preserve duplicate trees
 
 		// Find subtrees for each shortest tree and maximal set
 		return shortestGraphs.stream()
-				.map(i -> getTrees(graphs.get(i), decodedMaximalSets.get(i)))
+				.map(i -> getTrees(inContents.get(i), decodedMaximalSets.get(i)))
 				.flatMap(Set::stream)
 				.collect(Collectors.toSet());
 	}

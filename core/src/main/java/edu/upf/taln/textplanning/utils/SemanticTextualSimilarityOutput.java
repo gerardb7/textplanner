@@ -50,7 +50,7 @@ public class SemanticTextualSimilarityOutput
 			Path path = Paths.get(value);
 			if (!Files.isRegularFile(path))
 			{
-				throw new ParameterException("Cannot write to " + name + " = " + value);
+				throw new ParameterException("Cannot writeSemanticDAGs to " + name + " = " + value);
 			}
 		}
 	}
