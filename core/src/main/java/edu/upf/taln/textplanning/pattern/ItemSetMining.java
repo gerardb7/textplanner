@@ -33,22 +33,15 @@ public class ItemSetMining implements PatternExtractor
 				.map(t -> t.getPreOrder().stream()
 						.map(OrderedTree.Node::getData)
 						.map(Pair::getKey)
-						.filter(ItemSetMining::isItem)  // filter annotations
+						.filter(ItemSetMining::isItem)  // filter annotations by POS
 						.collect(Collectors.toSet()))
 				.collect(Collectors.toList());
 
-		// Now convert annotation sets to item sets
-		List<Set<String>> allItemSets = annSets.stream()
+		// Now convert annotation sets to item sets by picking the sense or lemma id for each
+		List<Set<String>> itemSets = annSets.stream()
 				.map(as -> as.stream()
 						.map(ItemSetMining::getItem)
 						.collect(Collectors.toSet()))
-				.collect(Collectors.toList());
-
-		// Filter item sets
-		List<Set<String>> itemSets = annSets.stream()
-				.filter(ItemSetMining::hasVerb)         // sets must contain at least one verb
-				.filter(ItemSetMining::hasNominalSense) // sets must contain at least a nominal sense
-				.map(as -> allItemSets.get(annSets.indexOf(as))) // find item set for annotation set
 				.collect(Collectors.toList());
 
 		// Compile alphabet of item labels
@@ -77,34 +70,36 @@ public class ItemSetMining implements PatternExtractor
 			throw new RuntimeException("Mining algorithm failed: " + e);
 		}
 
-		// Filter maximal itemsets
-		List<Itemset> filteredMaximalSets = maximalSets.getLevels().stream()
-				.flatMap(List::stream) // treat all levels as the same
-				.filter(s -> s.getItems().length > 1) // only interested in sets of size 2 or greater
-				.collect(Collectors.toList());
-
 		// Decode itemsets returned by algorithm by converting indexes to actual items
-		List<Set<String>> decodedMaximalSets = filteredMaximalSets.stream()
+		List<Set<String>> decodedMaximalSets = maximalSets.getLevels().stream()
+				.flatMap(List::stream) // treat all levels as the same
 				.map(Itemset::getItems)
 				.map(s -> Arrays.stream(s)
 						.mapToObj(alphabet::get)
 						.collect(Collectors.toSet()))
 				.collect(Collectors.toList());
 
+		// Filter item sets
+		List<Set<String>> filteredMaximalSets = decodedMaximalSets.stream()
+				.filter(s -> s.size() > 1) // only interested in sets of size 2 or greater
+				.filter(ItemSetMining::hasVerb)         // sets must contain at least one verb
+				.filter(ItemSetMining::hasNominalSense) // sets must contain at least a nominal sense
+				.collect(Collectors.toList());
+
 		// Work out the average position of each maximal set from the position of each of its supporting patterns
-		List<Double> avgPositions = decodedMaximalSets.stream()
+		List<Double> avgPositions = filteredMaximalSets.stream()
 				.map(ms -> itemSets.stream()
 						.filter(is -> is.containsAll(ms))  // find sets that contain this maximal set
-						.map(is -> inContents.get(allItemSets.indexOf(is))) // find corresponding tree
+						.map(is -> inContents.get(itemSets.indexOf(is))) // find corresponding tree
 						.mapToDouble(SemanticTree::getPosition)
 						.average().orElse(0.0))
 				.collect(Collectors.toList());
 
 		// For each maximal itemset, find the shortest tree that contains it
-		List<SemanticTree> shortestTrees = decodedMaximalSets.stream()
+		List<SemanticTree> shortestTrees = filteredMaximalSets.stream()
 				.map(m -> itemSets.stream()
 						.filter(s -> s.containsAll(m)) // find sets that contain this maximal set
-						.map(is -> inContents.get(allItemSets.indexOf(is))) // find corresponding tree
+						.map(is -> inContents.get(itemSets.indexOf(is))) // find corresponding tree
 						.min((t1, t2) -> Integer.compare(t1.getPreOrder().size(), t2.getPreOrder().size()))) // min length
 				.map(Optional::get)
 				.collect(Collectors.toList()); // yes, we do want to preserve duplicate trees
@@ -119,18 +114,23 @@ public class ItemSetMining implements PatternExtractor
 					.filter(a -> a.getReference() != null)
 					.collect(Collectors.toMap(AnnotationInfo::getReference, AnnotationInfo::getForm, (r1, r2) -> r1));
 
-			List<String> setStrings = decodedMaximalSets.stream()
+			List<String> setStrings = filteredMaximalSets.stream()
 					.map(s -> s.stream()
 							.map(i -> refsAndForms.containsKey(i) ? i + "-" + refsAndForms.get(i) : i)
 							.collect(Collectors.joining(", ")))
 					.collect(Collectors.toList());
 			IntStream.range(0, filteredMaximalSets.size())
-				.forEach(i -> log.info("itemset: [" + setStrings.get(i) + "] support=" + filteredMaximalSets.get(i).support));
+					.forEach(i -> {
+						long support = itemSets.stream()
+								.filter(s -> s.containsAll(filteredMaximalSets.get(i)))
+								.count();
+						log.info("Maximal itemset: [" + setStrings.get(i) + "] support=" + support);
+					});
 		}
 
 		// Find subtrees for each shortest tree and maximal set
-		return IntStream.range(0, decodedMaximalSets.size())
-				.mapToObj(i -> getSubTree(shortestTrees.get(i), decodedMaximalSets.get(i), avgPositions.get(i)))
+		return IntStream.range(0, filteredMaximalSets.size())
+				.mapToObj(i -> getSubTree(shortestTrees.get(i), filteredMaximalSets.get(i), avgPositions.get(i)))
 				.collect(Collectors.toSet()); // this where we remove duplicates
 	}
 
@@ -152,7 +152,7 @@ public class ItemSetMining implements PatternExtractor
 	}
 
 	/**
-	 * Gets the item for an annotation: either its sense, or its lemma if no sense is
+	 * Gets the item for an annotation: either its sense, or its lemma + POS if no sense is
 	 * associated to it.
 	 *
 	 * @param inAnn annotation to be evaluated
@@ -163,17 +163,30 @@ public class ItemSetMining implements PatternExtractor
 		if (inAnn.getReference() != null)
 			return inAnn.getReference();
 		else
-			return inAnn.getLemma();
+			return inAnn.getLemma() + "-" + inAnn.getPOS();
 	}
 
-	private static boolean hasVerb(Set<AnnotationInfo> inSet)
+	private static boolean hasVerb(Set<String> inSet)
 	{
-		return inSet.stream().filter(ItemSetMining::isInflectedVerb).findFirst().isPresent();
+		return inSet.stream().filter(ItemSetMining::isVerb).findFirst().isPresent();
 	}
 
-	private static boolean hasNominalSense(Set<AnnotationInfo> inSet)
+	private static boolean isVerb(String inItem)
+	{
+		if (inItem.endsWith("v"))
+			return true;
+		String[] verbs = {"VB", "VBD", "VBG", "VBN", "VBP", "VBZ"};
+		return Arrays.stream(verbs).anyMatch(inItem::endsWith);
+	}
+
+	private static boolean hasNominalSense(Set<String> inSet)
 	{
 		return inSet.stream().filter(ItemSetMining::isNominalSense).findFirst().isPresent();
+	}
+
+	private static boolean isNominalSense(String inItem)
+	{
+		return inItem.endsWith("n");
 	}
 
 	/**
@@ -299,11 +312,6 @@ public class ItemSetMining implements PatternExtractor
 				|| role.equals("VI") || role.equals("VII") || role.equals("VIII") || role.equals("IX") || role.equals("X");
 	}
 
-	private static boolean isNominalSense(AnnotationInfo inAnn)
-	{
-		return inAnn.getPOS().startsWith("NN") && inAnn.getReference() != null && inAnn.getReference().endsWith("n");
-	}
-
 	private static boolean isPlainModifier(OrderedTree.Node<Pair<AnnotationInfo, String>> inNode)
 	{
 		String role = inNode.getData().getRight();
@@ -331,11 +339,11 @@ public class ItemSetMining implements PatternExtractor
 		return inNode.isLeaf() && Arrays.stream(pos).anyMatch(n -> n.equals(inNode.getData().getLeft().getPOS()));
 	}
 
-	private static boolean isInflectedVerb(AnnotationInfo inAnn)
-	{
-		String[] inflectedVerbs = {"VBD", "VBP", "VBZ"};
-		return Arrays.stream(inflectedVerbs).anyMatch(pos -> pos.equals(inAnn.getPOS()));
-	}
+//	private static boolean isInflectedVerb(AnnotationInfo inAnn)
+//	{
+//		String[] inflectedVerbs = {"VBD", "VBP", "VBZ"};
+//		return Arrays.stream(inflectedVerbs).anyMatch(pos -> pos.equals(inAnn.getPOS()));
+//	}
 
 	private static boolean isVerbWithRelative(OrderedTree.Node<Pair<AnnotationInfo, String>> inNode)
 	{
