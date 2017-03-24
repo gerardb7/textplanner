@@ -1,9 +1,9 @@
 package edu.upf.taln.textplanning;
 
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.similarity.ItemSimilarity;
-import edu.upf.taln.textplanning.similarity.TreeEditSimilarity;
+import edu.upf.taln.textplanning.similarity.EntitySimilarity;
+import edu.upf.taln.textplanning.utils.TreeEditSimilarity;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -20,15 +20,15 @@ public class TreeEditSimilarityTest
 	public void testGetSimilarity() throws Exception
 	{
 		ConLLAcces reader = new ConLLAcces();
-		List<SemanticTree> trees = reader.readSemanticTrees("src/test/resources/test_dummy.conll");
-		SemanticTree tree1 = trees.get(0);
-		SemanticTree tree2 = trees.get(1);
-		SemanticTree tree3 = trees.get(2);
-		SemanticTree tree4 = trees.get(3);
-		SemanticTree tree5 = trees.get(4);
+		List<AnnotatedTree> trees = reader.readSemanticTrees("src/test/resources/test_dummy.conll");
+		AnnotatedTree tree1 = trees.get(0);
+		AnnotatedTree tree2 = trees.get(1);
+		AnnotatedTree tree3 = trees.get(2);
+		AnnotatedTree tree4 = trees.get(3);
+		AnnotatedTree tree5 = trees.get(4);
 
-		ItemSimilarity wordVectors = null; //new Word2VecSimilarity("/home/gerard/data/GoogleNews-vectors-negative300.bin");
-		ItemSimilarity senseVectors = null; //new SensEmbedSimilarity("/home/gerard/data/sensembed/babelfy_vectors_merged_senses_only");
+		EntitySimilarity wordVectors = null; //new Word2Vec("/home/gerard/data/GoogleNews-vectors-negative300.bin");
+		EntitySimilarity senseVectors = null; //new SensEmbed("/home/gerard/data/sensembed/babelfy_vectors_merged_senses_only");
 		TreeEditSimilarity simCalc = new TreeEditSimilarity(wordVectors, senseVectors);
 
 		ConLLAcces conll = new ConLLAcces();

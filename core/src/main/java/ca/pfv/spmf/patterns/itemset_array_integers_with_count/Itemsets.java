@@ -71,7 +71,7 @@ public class Itemsets
 			// for each itemset
 			for (Itemset itemset : level)
 			{
-//				Arrays.sort(itemset.getItems());
+//				Arrays.sort(itemset.getSenses());
 				// print the itemset
 				System.out.print("  pattern " + patternCount + ":  ");
 				itemset.print();

@@ -1,7 +1,8 @@
-package edu.upf.taln.textplanning.similarity;
+package edu.upf.taln.textplanning.utils;
 
-import edu.upf.taln.textplanning.datastructures.AnnotationInfo;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
+import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
+import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import unnonouno.treedist.EditScore;
 import unnonouno.treedist.TreeEditDistance;
 
@@ -9,10 +10,10 @@ import unnonouno.treedist.TreeEditDistance;
  * Semantic similarity between pairs of semantic trees.
  * This class is immutable.
  */
-public final class TreeEditSimilarity implements PatternSimilarity
+public final class TreeEditSimilarity
 {
-	private final ItemSimilarity wordSenseVectors;
-	private final ItemSimilarity wordFormVectors;
+	private final EntitySimilarity wordSenseVectors;
+	private final EntitySimilarity wordFormVectors;
 	public static long numWordSuccessfulLookups = 0; // for debugging purposes
 	public static long numWordFailedLookups = 0; // for debugging purposes
 	public static long numSenseSuccessfulLookups = 0; // for debugging purposes
@@ -20,7 +21,7 @@ public final class TreeEditSimilarity implements PatternSimilarity
 
 //	private final static Logger log = LoggerFactory.getLogger(TreeEditSimilarity.class);
 
-	public TreeEditSimilarity(ItemSimilarity inWordFormVectors, ItemSimilarity inWordSenseVectors)
+	public TreeEditSimilarity(EntitySimilarity inWordFormVectors, EntitySimilarity inWordSenseVectors)
 	{
 		wordFormVectors = inWordFormVectors;
 		wordSenseVectors = inWordSenseVectors;
@@ -36,7 +37,7 @@ public final class TreeEditSimilarity implements PatternSimilarity
 	 * @param inTree2 2nd tree
 	 * @return a similarity metric normalized to [0,1.0]
 	 */
-	public double getSimilarity(SemanticTree inTree1, SemanticTree inTree2)
+	public double getSimilarity(AnnotatedTree inTree1, AnnotatedTree inTree2)
 	{
 		SemanticTreeProxy tree1 = new SemanticTreeProxy(inTree1);
 		SemanticTreeProxy tree2 = new SemanticTreeProxy(inTree2);
@@ -68,14 +69,14 @@ public final class TreeEditSimilarity implements PatternSimilarity
 	/**
 	 * Callback method called from tree edit algorithm (i.e. SemanticScore class)
 	 */
-	public double getSimilarity(AnnotationInfo inAnn1, AnnotationInfo inAnn2)
+	public double getSimilarity(AnnotatedEntity inAnn1, AnnotatedEntity inAnn2)
 	{
 		if (wordSenseVectors != null)
 		{
-			if (wordSenseVectors.isDefinedFor(inAnn1.getReference(), inAnn2.getReference()))
+			if (wordSenseVectors.isDefinedFor(inAnn1, inAnn2))
 			{
 				++numSenseSuccessfulLookups;
-				return wordSenseVectors.computeSimilarity(inAnn1.getReference(), inAnn2.getReference());
+				return wordSenseVectors.computeSimilarity(inAnn1, inAnn2);
 			}
 			else
 			{
@@ -84,29 +85,18 @@ public final class TreeEditSimilarity implements PatternSimilarity
 		}
 		if (wordFormVectors != null)
 		{
-			if (wordFormVectors.isDefinedFor(inAnn1.getReference(), inAnn2.getReference()))
+			if (wordFormVectors.isDefinedFor(inAnn1, inAnn2))
 			{
 				++numWordSuccessfulLookups;
-				return wordFormVectors.computeSimilarity(inAnn1.getForm(), inAnn2.getForm());
+				return wordFormVectors.computeSimilarity(inAnn1, inAnn2);
 			}
 			else
 			{
 				++numWordFailedLookups;
 			}
 		}
-		return inAnn1.getLemma().equalsIgnoreCase(inAnn2.getLemma()) ? 1.0 : 0.0; // Use lemma matching
-	}
 
-
-	/**
-	 * Returns similarity between a pair of entities
-	 *
-	 * @param inEntity1 first entity
-	 * @param inEntity2 second entity
-	 * @return non-normalized similarity value
-	 */
-	public double getSimilarity(String inEntity1, String inEntity2)
-	{
-		return wordSenseVectors.computeSimilarity(inEntity1, inEntity2);
+		// Fall back to lemma matching
+		return inAnn1.getAnnotation().getLemma().equalsIgnoreCase(inAnn2.getAnnotation().getLemma()) ? 1.0 : 0.0;
 	}
 }

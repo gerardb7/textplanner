@@ -2,11 +2,10 @@ package edu.upf.taln.textplanning.utils;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
-import edu.upf.taln.textplanning.datastructures.AnnotationInfo;
+import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
+import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.datastructures.OrderedTree;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,17 +59,15 @@ public class EmbeddingUtils
 		Stopwatch timer = Stopwatch.createStarted();
 		ConLLAcces reader = new ConLLAcces();
 		String conll = new String(Files.readAllBytes(inConllPath), Charset.forName("UTF-8"));
-		List<SemanticTree> trees = reader.readSemanticTrees(conll);
+		List<AnnotatedTree> trees = reader.readSemanticTrees(conll);
 
 		//TODO consider removing code manipulating IRIs
 		// Collect all senses in conll
 		Set<String> senses = trees.stream()
-				.map(SemanticTree::getPreOrder)
+				.map(AnnotatedTree::getPreOrder)
 				.flatMap(List::stream)
 				.map(OrderedTree.Node::getData)
-				.map(Pair::getLeft)
-				.map(AnnotationInfo::getReference)
-				.filter(Objects::nonNull)
+				.map(AnnotatedEntity::getEntityLabel)
 //				.map(factory::createIRI)
 //				.map(IRI::getLocalName)
 				.map(s -> {

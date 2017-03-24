@@ -1,9 +1,11 @@
 package edu.upf.taln.textplanning.utils;
 
 import com.beust.jcommander.*;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.similarity.*;
+import edu.upf.taln.textplanning.similarity.EntitySimilarity;
+import edu.upf.taln.textplanning.similarity.SensEmbed;
+import edu.upf.taln.textplanning.similarity.Word2Vec;
 
 import java.io.StringWriter;
 import java.math.RoundingMode;
@@ -75,12 +77,12 @@ public class SemanticTextualSimilarityOutput
 	{
 		CMLArgs cmlArgs = new CMLArgs();
 		new JCommander(cmlArgs, args);
-		ItemSimilarity senseSim = new SensEmbedSimilarity(cmlArgs.senseVectorsPath);
-		ItemSimilarity wordSim = new Word2VecSimilarity(cmlArgs.wordVectorsPath);
-		PatternSimilarity msgSim = new TreeEditSimilarity(wordSim, senseSim);
+		EntitySimilarity senseSim = new SensEmbed(cmlArgs.senseVectorsPath);
+		EntitySimilarity wordSim = new Word2Vec(cmlArgs.wordVectorsPath);
+		TreeEditSimilarity msgSim = new TreeEditSimilarity(wordSim, senseSim);
 		String conll = new String(Files.readAllBytes(cmlArgs.inputConll.get(0)), Charset.forName("UTF-8"));
 		ConLLAcces reader = new ConLLAcces();
-		List<SemanticTree> trees = reader.readSemanticTrees(conll);
+		List<AnnotatedTree> trees = reader.readSemanticTrees(conll);
 		StringWriter writer = new StringWriter();
 		NumberFormat format = NumberFormat.getInstance();
 		format.setRoundingMode(RoundingMode.HALF_UP);

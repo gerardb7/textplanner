@@ -2,21 +2,23 @@ package edu.upf.taln.textplanning;
 
 import com.beust.jcommander.*;
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.corpora.CorpusCounts;
-import edu.upf.taln.textplanning.corpora.SolrCounts;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.corpora.Corpus;
+import edu.upf.taln.textplanning.corpora.SEWSolr;
+import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.SubTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.metrics.CorpusMetric;
-import edu.upf.taln.textplanning.metrics.PatternMetric;
-import edu.upf.taln.textplanning.metrics.PositionMetric;
-import edu.upf.taln.textplanning.pattern.ItemSetMining;
-import edu.upf.taln.textplanning.pattern.PatternExtractor;
-import edu.upf.taln.textplanning.similarity.ItemSimilarity;
-import edu.upf.taln.textplanning.similarity.SensEmbedSimilarity;
-import edu.upf.taln.textplanning.similarity.TreeEditSimilarity;
-import edu.upf.taln.textplanning.similarity.Word2VecSimilarity;
+import edu.upf.taln.textplanning.similarity.Combined;
+import edu.upf.taln.textplanning.similarity.EntitySimilarity;
+import edu.upf.taln.textplanning.similarity.SensEmbed;
+import edu.upf.taln.textplanning.similarity.Word2Vec;
+import edu.upf.taln.textplanning.utils.TreeEditSimilarity;
+import edu.upf.taln.textplanning.weighting.Linear;
+import edu.upf.taln.textplanning.weighting.Position;
+import edu.upf.taln.textplanning.weighting.TFIDF;
+import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,9 +28,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 /**
  * Executes the text planner from one or more ConLL encoded files.
@@ -63,8 +65,6 @@ public class ConLLDriver
 		@Parameter(description = "Input ConLL document", arity = 1, converter = PathConverter.class,
 				validateWith = PathToExistingFile.class, required = true)
 		private List<Path> doc;
-		@Parameter(names = "-ref", description = "Reference to entity/sense")
-		private List<String> refs;
 		@Parameter(names = "-solr", description = "URL of Solr index", required = true)
 		private String solrUrl;
 		@Parameter(names = "-wvec", description = "Path to file containing word vectors",
@@ -91,17 +91,24 @@ public class ConLLDriver
 	 */
 	public static TextPlanner createConLLPlanner(String inSolrUrl, Path inWord2VecPath, Path inSenseEmbedPath) throws Exception
 	{
-		CorpusCounts corpusCounts = new SolrCounts(inSolrUrl);
-		PatternMetric corpusMetric = new CorpusMetric(corpusCounts, CorpusMetric.Metric.Cooccurrence, "");
-		PatternMetric positionMetric = new PositionMetric();
-		List<Pair<PatternMetric, Double>> metrics = new ArrayList<>();
-		metrics.add(Pair.of(corpusMetric, 0.8));
-		metrics.add(Pair.of(positionMetric, 0.2));
-		ItemSimilarity wordVectors = (inWord2VecPath != null) ? new Word2VecSimilarity(inWord2VecPath) : null;
-		ItemSimilarity senseVectors = (inSenseEmbedPath != null) ? new SensEmbedSimilarity(inSenseEmbedPath) : null;
-		PatternExtractor extractor = new ItemSetMining();
-		SalientEntitiesMiner miner = new SalientEntitiesMiner(senseVectors);
-		return new TextPlanner(metrics, extractor, wordVectors, senseVectors, miner);
+		Corpus corpus = new SEWSolr(inSolrUrl);
+
+		WeightingFunction corpusMetric = new TFIDF(corpus);
+		WeightingFunction positionMetric = new Position();
+		Map<WeightingFunction, Double> functions = new HashMap<>();
+		functions.put(corpusMetric, 0.8);
+		functions.put(positionMetric, 0.2);
+		WeightingFunction linear = new Linear(functions);
+
+		EntitySimilarity senseVectors = (inSenseEmbedPath != null) ? new SensEmbed(inSenseEmbedPath) : null;
+		EntitySimilarity wordVectors = (inWord2VecPath != null) ? new Word2Vec(inWord2VecPath) : null;
+		List<EntitySimilarity> metrics = new ArrayList<>();
+		if (senseVectors != null)
+			metrics.add(senseVectors);
+		if (wordVectors != null)
+			metrics.add(wordVectors);
+		EntitySimilarity combination = new Combined(metrics);
+		return new TextPlanner(linear, combination);
 	}
 
 	ConLLDriver(String inSolrUrl, Path inWordVectorsPath, Path inSenseVectorsPath) throws Exception
@@ -109,25 +116,27 @@ public class ConLLDriver
 		planner = ConLLDriver.createConLLPlanner(inSolrUrl, inWordVectorsPath, inSenseVectorsPath);
 	}
 
-	public String runPlanner(Path inDoc, Set<String> inReferences, TextPlanner.Options inPlannerOptions)
+	public String runPlanner(Path inDoc, TextPlanner.Options inPlannerOptions)
 	{
 		try
 		{
 			String inConll = new String(Files.readAllBytes(inDoc), Charset.forName("UTF-8"));
-			List<SemanticTree> semanticTrees = conll.readSemanticTrees(inConll);
+			List<AnnotatedTree> annotatedTrees = conll.readSemanticTrees(inConll);
+			List<SubTree> plan = planner.planText(annotatedTrees, inPlannerOptions);
 
-			List<SemanticTree> plan;
-			if (inReferences.isEmpty())
+			String conll = "";
+			for (SubTree t : plan)
 			{
-				plan = planner.planText(semanticTrees, inPlannerOptions);
-			}
-			else
-			{
-				plan = planner.planText(inReferences, semanticTrees, inPlannerOptions);
+				conll += (String)t.getRoot().data;
+				for (SemanticGraph.Edge e : t.getPreOrder())
+				{
+					Node node = t.getEdgeTarget(e);
+					conll += (String)node.data;
+				}
+				conll += "\n";
 			}
 
-			// Generate conll
-			return conll.writeSemanticTrees(plan);
+			return conll;
 		}
 		catch (Exception e)
 		{
@@ -144,25 +153,20 @@ public class ConLLDriver
 		TextPlanner.Options options = new TextPlanner.Options();
 		Path inputDoc = cmlArgs.doc.get(0);
 
-		log.info("Planning from file " + inputDoc + " and refs " + cmlArgs.refs);
+		log.info("Planning from file " + inputDoc);
 		try
 		{
 			Stopwatch timer = Stopwatch.createStarted();
-			Set<String> refs = new HashSet<>();
-			if (cmlArgs.refs != null && cmlArgs.refs.isEmpty())
-			{
-				refs.addAll(cmlArgs.refs);
-			}
-			String planConll = driver.runPlanner(inputDoc, refs, options);
+			String planConll = driver.runPlanner(inputDoc, options);
 
 			log.info("Text planning took " + timer.stop());
-			log.info("Solr queries: " + SolrCounts.debug.toString());
+			log.info("Solr queries: " + SEWSolr.debug.toString());
 			log.info("Word form vector lookups: " + TreeEditSimilarity.numWordSuccessfulLookups + " successful, " +
 					TreeEditSimilarity.numWordFailedLookups + " failed");
 			log.info("Word sense vector lookups: " + TreeEditSimilarity.numSenseSuccessfulLookups + " successful, " +
 					TreeEditSimilarity.numSenseFailedLookups + " failed");
 			log.info("********************************************************");
-			SolrCounts.debug.reset();
+			SEWSolr.debug.reset();
 			System.out.println(planConll);
 
 			if (options.generateStats)
@@ -170,7 +174,7 @@ public class ConLLDriver
 				String documentFile = inputDoc.toAbsolutePath().toString();
 				final String path = FilenameUtils.getFullPath(documentFile);
 				final String fileName = FilenameUtils.getBaseName(documentFile);
-				String statsFile = path + fileName + (cmlArgs.refs.isEmpty() ? "" : "_" + cmlArgs.refs) + "_plan.stats";
+				String statsFile = path + fileName + "_plan.stats";
 				try (PrintWriter outs = new PrintWriter(statsFile))
 				{
 					outs.print(options.stats);

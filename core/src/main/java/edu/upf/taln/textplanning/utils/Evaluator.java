@@ -1,11 +1,10 @@
 package edu.upf.taln.textplanning.utils;
 
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.similarity.ItemSimilarity;
-import edu.upf.taln.textplanning.similarity.SensEmbedSimilarity;
-import edu.upf.taln.textplanning.similarity.TreeEditSimilarity;
-import edu.upf.taln.textplanning.similarity.Word2VecSimilarity;
+import edu.upf.taln.textplanning.similarity.EntitySimilarity;
+import edu.upf.taln.textplanning.similarity.SensEmbed;
+import edu.upf.taln.textplanning.similarity.Word2Vec;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,8 +58,8 @@ public class Evaluator
 				.collect(Collectors.toList());
 
 		// Set up similarity metric
-		ItemSimilarity senseSim = inSenseVectors == null ? null : new SensEmbedSimilarity(inSenseVectors);
-		Word2VecSimilarity wordSim = inWordVectors == null ? null : new Word2VecSimilarity(inWordVectors);
+		EntitySimilarity senseSim = inSenseVectors == null ? null : new SensEmbed(inSenseVectors);
+		Word2Vec wordSim = inWordVectors == null ? null : new Word2Vec(inWordVectors);
 		TreeEditSimilarity similarity = new TreeEditSimilarity(wordSim, senseSim);
 
 		int numPairsSim = 0;
@@ -93,8 +92,8 @@ public class Evaluator
 				continue;
 
 			// Read trees from files
-			List<SemanticTree> goldTrees = new ArrayList<>();
-			List<SemanticTree> systemTrees = new ArrayList<>();
+			List<AnnotatedTree> goldTrees = new ArrayList<>();
+			List<AnnotatedTree> systemTrees = new ArrayList<>();
 			try
 			{
 				goldTrees.addAll(reader.readSemanticTrees(gold));
@@ -124,13 +123,15 @@ public class Evaluator
 
 			// Calculate precision, recall and f-score of entities
 			Set<String> goldEntities = goldTrees.stream()
-					.map(SemanticTree::getEntities)
-					.flatMap(Set::stream)
+					.map(AnnotatedTree::getPreOrder)
+					.flatMap(List::stream)
+					.map(n -> n.getData().getEntityLabel())
 					.collect(Collectors.toSet());
 
 			Set<String> systemEntities = systemTrees.stream()
-					.map(SemanticTree::getEntities)
-					.flatMap(Set::stream)
+					.map(AnnotatedTree::getPreOrder)
+					.flatMap(List::stream)
+					.map(n -> n.getData().getEntityLabel())
 					.collect(Collectors.toSet());
 
 			Set<String> union = new HashSet<>(goldEntities);

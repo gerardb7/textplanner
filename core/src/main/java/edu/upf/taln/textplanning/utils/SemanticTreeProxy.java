@@ -1,11 +1,10 @@
-package edu.upf.taln.textplanning.similarity;
+package edu.upf.taln.textplanning.utils;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import edu.upf.taln.textplanning.datastructures.AnnotationInfo;
+import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
+import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.datastructures.OrderedTree;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
-import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.HashMap;
 import java.util.List;
@@ -20,22 +19,22 @@ import java.util.Optional;
  */
 public final class SemanticTreeProxy implements unnonouno.treedist.Tree
 {
-	private final ImmutableList<OrderedTree.Node<Pair<AnnotationInfo, String>>> nodes; // list of nodes in preorder
-	private final ImmutableMap<OrderedTree.Node<Pair<AnnotationInfo, String>>, Integer> index; // indexes for each node
+	private final ImmutableList<OrderedTree.Node<AnnotatedEntity>> nodes; // list of nodes in preorder
+	private final ImmutableMap<OrderedTree.Node<AnnotatedEntity>, Integer> index; // indexes for each node
 
-	public SemanticTreeProxy(SemanticTree inTree)
+	public SemanticTreeProxy(AnnotatedTree inTree)
 	{
-		List<OrderedTree.Node<Pair<AnnotationInfo, String>>> preOrder = inTree.getPreOrder();
-		ImmutableList.Builder<OrderedTree.Node<Pair<AnnotationInfo, String>>> builder = ImmutableList.builder();
+		List<OrderedTree.Node<AnnotatedEntity>> preOrder = inTree.getPreOrder();
+		ImmutableList.Builder<OrderedTree.Node<AnnotatedEntity>> builder = ImmutableList.builder();
 		nodes = builder.addAll(preOrder).build();
 
-		Map<OrderedTree.Node<Pair<AnnotationInfo, String>>, Integer> mutableIndex = new HashMap<>();
+		Map<OrderedTree.Node<AnnotatedEntity>, Integer> mutableIndex = new HashMap<>();
 		nodes.stream().forEach(e -> mutableIndex.put(e, nodes.indexOf(e)));
-		ImmutableMap.Builder<OrderedTree.Node<Pair<AnnotationInfo, String>>, Integer> mapBuilder = ImmutableMap.builder();
+		ImmutableMap.Builder<OrderedTree.Node<AnnotatedEntity>, Integer> mapBuilder = ImmutableMap.builder();
 		index = mapBuilder.putAll(mutableIndex).build();
 	}
 
-	public OrderedTree.Node<Pair<AnnotationInfo, String>> getEntity(int i)
+	public OrderedTree.Node<AnnotatedEntity> getEntity(int i)
 	{
 		if (nodes.isEmpty())
 		{
@@ -72,7 +71,7 @@ public final class SemanticTreeProxy implements unnonouno.treedist.Tree
 			return NOT_FOUND;
 		}
 
-		OrderedTree.Node<Pair<AnnotationInfo, String>> e = nodes.get(i);
+		OrderedTree.Node<AnnotatedEntity> e = nodes.get(i);
 
 		if (e.isLeaf())
 		{
@@ -92,8 +91,8 @@ public final class SemanticTreeProxy implements unnonouno.treedist.Tree
 		if (i == 0)
 			return NOT_FOUND; // root has no siblings
 
-		OrderedTree.Node<Pair<AnnotationInfo, String>> node = nodes.get(i);
-		Optional<OrderedTree.Node<Pair<AnnotationInfo, String>>> nextSibling = node.getNextSibling();
+		OrderedTree.Node<AnnotatedEntity> node = nodes.get(i);
+		Optional<OrderedTree.Node<AnnotatedEntity>> nextSibling = node.getNextSibling();
 		if (!nextSibling.isPresent())
 			return NOT_FOUND;
 		else
@@ -118,8 +117,8 @@ public final class SemanticTreeProxy implements unnonouno.treedist.Tree
 			return NOT_FOUND; // root has no parent
 		}
 
-		OrderedTree.Node<Pair<AnnotationInfo, String>> node = nodes.get(i);
-		Optional<OrderedTree.Node<Pair<AnnotationInfo, String>>> parent = node.getParent();
+		OrderedTree.Node<AnnotatedEntity> node = nodes.get(i);
+		Optional<OrderedTree.Node<AnnotatedEntity>> parent = node.getParent();
 		if (!parent.isPresent())
 		{
 			return NOT_FOUND; // no parent ?

@@ -1,9 +1,8 @@
 package edu.upf.taln.textplanning;
 
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
 import edu.upf.taln.textplanning.pattern.ItemSetMining;
-import edu.upf.taln.textplanning.pattern.PatternExtractor;
 import org.apache.commons.io.FilenameUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -15,7 +14,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -30,7 +28,6 @@ public class TextPlannerTest
 	private static final Path word2vecPath = null; //Paths.get("/home/gerard/data/GoogleNews-vectors-negative300.bin");
 	private static final Path senseEmbedPath = Paths.get("/home/gerard/data/sensembed/babelfy_vectors_merged_senses_only");
 	private static final Path inputPath = Paths.get("/home/gerard/Baixades/test/");
-	private static final Set<String> refs = new HashSet<>();//Collections.singleton("01929539n");
 	private final static Logger log = LoggerFactory.getLogger(TextPlannerTest.class);
 
 	@Test
@@ -40,9 +37,9 @@ public class TextPlannerTest
 		{
 			String inConLL = new String(Files.readAllBytes(f), Charset.forName("UTF-8"));
 			ConLLAcces conll = new ConLLAcces();
-			List<SemanticTree> semanticTrees = conll.readSemanticTrees(inConLL);
-			PatternExtractor extractor = new ItemSetMining();
-			Set<SemanticTree> patterns = extractor.getPatterns(semanticTrees);
+			List<AnnotatedTree> annotatedTrees = conll.readSemanticTrees(inConLL);
+			ItemSetMining extractor = new ItemSetMining();
+			Set<AnnotatedTree> patterns = extractor.getPatterns(annotatedTrees);
 			String outConLL = conll.writeSemanticTrees(patterns);
 			writeToFile("patterns_", f, outConLL);
 		}
@@ -58,7 +55,7 @@ public class TextPlannerTest
 		options.generateStats = true;
 
 		files.forEach(f -> {
-			String outConLL = driver.runPlanner(f, refs, options);
+			String outConLL = driver.runPlanner(f, options);
 			writeToFile("plan_", f, outConLL);
 		});
 	}

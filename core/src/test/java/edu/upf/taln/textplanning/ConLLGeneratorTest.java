@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning;
 
-import edu.upf.taln.textplanning.datastructures.AnnotationInfo;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
+import edu.upf.taln.textplanning.datastructures.Annotation;
 import edu.upf.taln.textplanning.input.ConLLAcces;
 import edu.upf.taln.textplanning.input.DocumentAccess;
 import org.apache.commons.io.FileUtils;
@@ -21,10 +21,10 @@ public class ConLLGeneratorTest
 	@Test
 	public void testConLLStructures() throws Exception
 	{
-		String read = FileUtils.readFileToString(new File("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll"), Charset.defaultCharset());
+		String read = FileUtils.readFileToString(new File("/home/gerard/data/summ/CAST-corpus/source_texts/dsynts/2287.conll"), Charset.defaultCharset());
 
 		ConLLAcces conll = new ConLLAcces();
-		List<DirectedAcyclicGraph<AnnotationInfo, DocumentAccess.LabelledEdge>> structures =
+		List<DirectedAcyclicGraph<Annotation, DocumentAccess.LabelledEdge>> structures =
 				conll.readSemanticDAGs("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll");
 		String written = conll.writeSemanticDAGs(structures);
 
@@ -37,7 +37,7 @@ public class ConLLGeneratorTest
 		String read = FileUtils.readFileToString(new File("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll"), Charset.defaultCharset());
 
 		ConLLAcces conll = new ConLLAcces();
-		List<SemanticTree> messages = conll.readSemanticTrees("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll");
+		List<AnnotatedTree> messages = conll.readSemanticTrees("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll");
 		String written = conll.writeSemanticTrees(messages);
 
 		Assert.assertEquals(read, written);

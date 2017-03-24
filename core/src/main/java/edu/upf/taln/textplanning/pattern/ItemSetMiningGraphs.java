@@ -3,11 +3,10 @@ package edu.upf.taln.textplanning.pattern;
 import ca.pfv.spmf.algorithms.frequentpatterns.fpgrowth.AlgoFPMax;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemset;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemsets;
-import edu.upf.taln.textplanning.datastructures.AnnotationInfo;
+import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
+import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.datastructures.OrderedTree;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.DocumentAccess;
-import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.AbstractGraph;
 
@@ -20,15 +19,15 @@ import java.util.stream.Collectors;
  */
 public class ItemSetMiningGraphs
 {
-	public Set<SemanticTree> getPatterns(
-			List<DirectedAcyclicGraph<AnnotationInfo, DocumentAccess.LabelledEdge>> inContents)
+	public Set<AnnotatedTree> getPatterns(
+			List<DirectedAcyclicGraph<AnnotatedEntity, DocumentAccess.LabelledEdge>> inContents)
 	{
 		// Convert graphs to itemsets
 		List<Set<String>> itemSets = inContents.stream()
 				.map(AbstractGraph::vertexSet)
 				.map(g -> g.stream()
 						.filter(ItemSetMiningGraphs::isItem) // filter annotations
-						.map(ItemSetMiningGraphs::getItem)
+						.map(AnnotatedEntity::getEntityLabel)
 						.collect(Collectors.toSet()))
 				.collect(Collectors.toList());
 
@@ -92,32 +91,13 @@ public class ItemSetMiningGraphs
 	 * @param inAnn annotation to be evaluated
 	 * @return true if it is an entity
 	 */
-	private static boolean isItem(AnnotationInfo inAnn)
+	private static boolean isItem(AnnotatedEntity inAnn)
 	{
-		return inAnn.getPOS().startsWith("NN") || // nouns
-				inAnn.getPOS().startsWith("VB") || // verbs
-				inAnn.getPOS().startsWith("JJ") || // nominal modifiers
-				inAnn.getPOS().startsWith("CD") || // cardinal numbers
-				inAnn.getPOS().startsWith("FW");   // and foreign words
-	}
-
-	/**
-	 * Gets the representation of an annotation as an item: either its sense, or its lemma if no sense was
-	 * associated.
-	 *
-	 * @param inAnn an annotation
-	 * @return item
-	 */
-	private static String getItem(AnnotationInfo inAnn)
-	{
-		if (inAnn.getReference() != null)
-		{
-			return inAnn.getReference();
-		}
-		else
-		{
-			return inAnn.getLemma();
-		}
+		return inAnn.getAnnotation().getPOS().startsWith("NN") || // nouns
+				inAnn.getAnnotation().getPOS().startsWith("VB") || // verbs
+				inAnn.getAnnotation().getPOS().startsWith("JJ") || // nominal modifiers
+				inAnn.getAnnotation().getPOS().startsWith("CD") || // cardinal numbers
+				inAnn.getAnnotation().getPOS().startsWith("FW");   // and foreign words
 	}
 
 	/**
@@ -128,24 +108,24 @@ public class ItemSetMiningGraphs
 	 * @param inItemSet an itemset where each item corresponds to one or more nodes in the tree
 	 * @return one or more subtrees
 	 */
-	private Set<SemanticTree> getTrees(DirectedAcyclicGraph<AnnotationInfo, DocumentAccess.LabelledEdge> inGraph,
-	                                   Set<String> inItemSet)
+	private Set<AnnotatedTree> getTrees(DirectedAcyclicGraph<AnnotatedEntity, DocumentAccess.LabelledEdge> inGraph,
+	                                    Set<String> inItemSet)
 	{
 		// Collect nodes which correspond to the items in the itemset
-		Set<AnnotationInfo> itemSetNodes = inItemSet.stream()
+		Set<AnnotatedEntity> itemSetNodes = inItemSet.stream()
 				.map(i -> inGraph.vertexSet().stream()
-						.filter(n -> getItem(n).equals(i)))
+						.filter(n -> n.getEntityLabel().equals(i)))
 				.flatMap(Function.identity())
 				.collect(Collectors.toSet()); // removes duplicates
 
 		// Collect all nodes in the DAG in the paths from the itemset nodes to the sources of the DAG
-		Set<AnnotationInfo> sources = new HashSet<>();
-		Set<AnnotationInfo> nodesInPaths = new HashSet<>();
+		Set<AnnotatedEntity> sources = new HashSet<>();
+		Set<AnnotatedEntity> nodesInPaths = new HashSet<>();
 		nodesInPaths.addAll(itemSetNodes);
 		boolean anyAncestors = true;
 		while (anyAncestors)
 		{
-			Set<AnnotationInfo> ancestors = nodesInPaths.stream()
+			Set<AnnotatedEntity> ancestors = nodesInPaths.stream()
 					.map(inGraph::incomingEdgesOf) // yes, we follow all paths
 					.flatMap(Set::stream)
 					.map(inGraph::getEdgeSource)
@@ -161,7 +141,7 @@ public class ItemSetMiningGraphs
 
 		// Determine subtrees for each source
 		return sources.stream()
-				.map(s -> new SemanticTree(s, 0.0)) // @Todo position information!
+				.map(s -> new AnnotatedTree(s, 0.0)) // @Todo position information!
 				.map(t -> {
 					populateSubTree(inGraph, t.getRoot(), nodesInPaths);
 					return t;
@@ -176,11 +156,11 @@ public class ItemSetMiningGraphs
 	 * @param inSubtreeRoot     the root of the subtree
 	 * @param inCompulsoryNodes set of vertices in the DAG which must be part of the subtree
 	 */
-	private void populateSubTree(DirectedAcyclicGraph<AnnotationInfo, DocumentAccess.LabelledEdge> inGraph,
-	                             OrderedTree.Node<Pair<AnnotationInfo, String>> inSubtreeRoot,
-	                             Set<AnnotationInfo> inCompulsoryNodes)
+	private void populateSubTree(DirectedAcyclicGraph<AnnotatedEntity, DocumentAccess.LabelledEdge> inGraph,
+	                             OrderedTree.Node<AnnotatedEntity> inSubtreeRoot,
+	                             Set<AnnotatedEntity> inCompulsoryNodes)
 	{
-		inGraph.outgoingEdgesOf(inSubtreeRoot.getData().getLeft()).stream()
+		inGraph.outgoingEdgesOf(inSubtreeRoot.getData()).stream()
 				.filter(e -> (inCompulsoryNodes.contains(inGraph.getEdgeTarget(e)) ||
 						isArgument(e) ||
 						isNegation(inGraph.getEdgeTarget(e)) ||
@@ -189,7 +169,7 @@ public class ItemSetMiningGraphs
 						!isVerbWithRelative(inGraph, inGraph.getEdgeTarget(e)) ||
 						isName(e)))
 				.forEach(e -> populateSubTree(inGraph,
-						inSubtreeRoot.addChild(Pair.of(inGraph.getEdgeTarget(e), e.getLabel())), inCompulsoryNodes)); // recursive call
+						inSubtreeRoot.addChild(inGraph.getEdgeTarget(e)), inCompulsoryNodes)); // recursive call
 	}
 
 	private boolean isArgument(DocumentAccess.LabelledEdge inEdge)
@@ -200,31 +180,31 @@ public class ItemSetMiningGraphs
 				|| role.equals("VI") || role.equals("VII") || role.equals("VIII") || role.equals("IX") || role.equals("X");
 	}
 
-	private boolean isNegation(AnnotationInfo inAnn)
+	private boolean isNegation(AnnotatedEntity inAnn)
 	{
 		String[] forms = {"no", "not"};
 		String[] pos = {"RB", "JJ"};
-		return Arrays.stream(pos).anyMatch(n -> n.equals(inAnn.getPOS())) &&
-				Arrays.stream(forms).anyMatch(f -> f.equals(inAnn.getForm()));
+		return Arrays.stream(pos).anyMatch(n -> n.equals(inAnn.getAnnotation().getPOS())) &&
+				Arrays.stream(forms).anyMatch(f -> f.equals(inAnn.getAnnotation().getForm()));
 	}
 
-	private boolean isNumber(AnnotationInfo inAnn)
+	private boolean isNumber(AnnotatedEntity inAnn)
 	{
 		String[] pos = {"CD"};
-		return Arrays.stream(pos).anyMatch(n -> n.equals(inAnn.getPOS()));
+		return Arrays.stream(pos).anyMatch(n -> n.equals(inAnn.getAnnotation().getPOS()));
 	}
 
-	private boolean isPlainAdverb(DirectedAcyclicGraph<AnnotationInfo, DocumentAccess.LabelledEdge> inGraph,
-	                              AnnotationInfo inAnn)
+	private boolean isPlainAdverb(DirectedAcyclicGraph<AnnotatedEntity, DocumentAccess.LabelledEdge> inGraph,
+	                              AnnotatedEntity inAnn)
 	{
 		String[] pos = {"WRB"};
-		return inGraph.outDegreeOf(inAnn) == 0 && Arrays.stream(pos).anyMatch(n -> n.equals(inAnn.getPOS()));
+		return inGraph.outDegreeOf(inAnn) == 0 && Arrays.stream(pos).anyMatch(n -> n.equals(inAnn.getAnnotation().getPOS()));
 	}
 
-	private boolean isVerbWithRelative(DirectedAcyclicGraph<AnnotationInfo, DocumentAccess.LabelledEdge> inGraph,
-	                                   AnnotationInfo inAnn)
+	private boolean isVerbWithRelative(DirectedAcyclicGraph<AnnotatedEntity, DocumentAccess.LabelledEdge> inGraph,
+	                                   AnnotatedEntity inAnn)
 	{
-		if (!inAnn.getPOS().startsWith("VB"))
+		if (!inAnn.getAnnotation().getPOS().startsWith("VB"))
 		{
 			return false;
 		}
@@ -234,7 +214,7 @@ public class ItemSetMiningGraphs
 		}
 
 		DocumentAccess.LabelledEdge e = inGraph.outgoingEdgesOf(inAnn).iterator().next();
-		return inGraph.getEdgeTarget(e).getPOS().equalsIgnoreCase("WDT");
+		return inGraph.getEdgeTarget(e).getAnnotation().getPOS().equalsIgnoreCase("WDT");
 	}
 
 	private boolean isName(DocumentAccess.LabelledEdge inEdge)

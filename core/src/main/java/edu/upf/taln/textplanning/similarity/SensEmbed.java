@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.similarity;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
+import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.utils.EmbeddingUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -15,12 +16,12 @@ import java.util.stream.Collectors;
 /**
  * Computes similarity between word senses according to SenseEmbed distributional vectors
  */
-public class SensEmbedSimilarity implements ItemSimilarity
+public class SensEmbed implements EntitySimilarity
 {
 	private final ImmutableMap<String, double[]> vectors;
-	private final static Logger log = LoggerFactory.getLogger(SensEmbedSimilarity.class);
+	private final static Logger log = LoggerFactory.getLogger(SensEmbed.class);
 
-	public SensEmbedSimilarity(Path inEmbeddingsPath) throws Exception
+	public SensEmbed(Path inEmbeddingsPath) throws Exception
 	{
 		log.info("Loading SenseEmbed vectors");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -37,23 +38,27 @@ public class SensEmbedSimilarity implements ItemSimilarity
 	}
 
 	@Override
-	public boolean isDefinedFor(String inEntry1, String inEntry2)
+	public boolean isDefinedFor(Entity inItem)
 	{
-		if (inEntry1 == null || inEntry2 == null)
-		{
-			return false;
-		}
-		String e1 = normalizeEntry(inEntry1);
-		String e2 = normalizeEntry(inEntry2);
+		String e = normalizeLabel(inItem.getEntityLabel());
+		return vectors.containsKey(e);
+	}
+
+	@Override
+	public boolean isDefinedFor(Entity inItem1, Entity inItem2)
+	{
+		String e1 = normalizeLabel(inItem1.getEntityLabel());
+		String e2 = normalizeLabel(inItem2.getEntityLabel());
 		return vectors.containsKey(e1) || vectors.containsKey(e2);
 	}
 
-	public double computeSimilarity(String inEntry1, String inEntry2)
+	@Override
+	public double computeSimilarity(Entity inItem1, Entity inItem2)
 	{
-		if (inEntry1.equals(inEntry2))
+		if (inItem1.equals(inItem2))
 			return 1.0;
-		String e1 = normalizeEntry(inEntry1);
-		String e2 = normalizeEntry(inEntry2);
+		String e1 = normalizeLabel(inItem1.getEntityLabel());
+		String e2 = normalizeLabel(inItem2.getEntityLabel());
 		if (!vectors.containsKey(e1) || !vectors.containsKey(e2))
 			return 0.0;
 
@@ -75,10 +80,10 @@ public class SensEmbedSimilarity implements ItemSimilarity
 		return 1.0 - distanceMetric;
 	}
 
-	private String normalizeEntry(String inEntry)
+	private String normalizeLabel(String inSense)
 	{
 		// Normalize BabelNet ids
-		String e = inEntry;
+		String e = inSense;
 		if (e.startsWith("s"))
 		{
 			e = "bn:" + e.substring(1, e.length());
