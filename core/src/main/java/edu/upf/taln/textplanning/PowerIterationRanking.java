@@ -56,12 +56,18 @@ public class PowerIterationRanking
 		log.info(StatsReporter.getMatrixStats(m));
 		normalize(m);
 
-		// Bias each row using relevance b and damping factor d: d*bias + (1-d)*sim
+		// Bias each row using relevance b and damping factor d:
+		// Prob i->j = d*bias(j) + (1-d)*sim(j,i)
 		// The resulting matrix is row-normalized because both b and m are normalized
 		double d = inOptions.dampingFactor;
 		IntStream.range(0, n).forEach(i ->
-			IntStream.range(0, n).forEach(j ->	m.set(i, j, d *b[i] + (1.0 - d)*m.get(i, j))));
-		normalize(m); // Normalize matrix again
+			IntStream.range(0, n).forEach(j -> {
+				double bj = b[j]; // bias of destination j
+				double sij = m.get(i, j); // sim of i and j
+				double pij = d * bj + (1.0 - d) * sij; // biased prob of going from i to j
+				m.set(i, j, pij);
+			}));
+		// No need to normalize again
 
 		log.info("Biased matrix:");
 		log.info(StatsReporter.getMatrixStats(m));
