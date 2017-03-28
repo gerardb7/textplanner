@@ -13,7 +13,7 @@ import java.util.Optional;
 
 
 /**
- * A proxy class for semantic tree objects that provides a view of them as the OrderedTree objects manipulated by the
+ * A proxy class for annotated trees that provides a view of them as the OrderedTree objects manipulated by the
  * tree edit distance library.
  * Immutable class.
  */

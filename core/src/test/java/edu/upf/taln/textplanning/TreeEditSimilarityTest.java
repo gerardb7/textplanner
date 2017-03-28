@@ -20,7 +20,7 @@ public class TreeEditSimilarityTest
 	public void testGetSimilarity() throws Exception
 	{
 		ConLLAcces reader = new ConLLAcces();
-		List<AnnotatedTree> trees = reader.readSemanticTrees("src/test/resources/test_dummy.conll");
+		List<AnnotatedTree> trees = reader.readTrees("src/test/resources/test_dummy.conll");
 		AnnotatedTree tree1 = trees.get(0);
 		AnnotatedTree tree2 = trees.get(1);
 		AnnotatedTree tree3 = trees.get(2);
@@ -32,11 +32,11 @@ public class TreeEditSimilarityTest
 		TreeEditSimilarity simCalc = new TreeEditSimilarity(wordVectors, senseVectors);
 
 		ConLLAcces conll = new ConLLAcces();
-		System.out.println("OrderedTree 1:\n" + conll.writeSemanticTrees(Collections.singleton(tree1)));
-		System.out.println("OrderedTree 2:\n" + conll.writeSemanticTrees(Collections.singleton(tree2)));
-		System.out.println("OrderedTree 3:\n" + conll.writeSemanticTrees(Collections.singleton(tree3)));
-		System.out.println("OrderedTree 4:\n" + conll.writeSemanticTrees(Collections.singleton(tree4)));
-		System.out.println("OrderedTree 5:\n" + conll.writeSemanticTrees(Collections.singleton(tree5)));
+		System.out.println("OrderedTree 1:\n" + conll.writeTrees(Collections.singleton(tree1)));
+		System.out.println("OrderedTree 2:\n" + conll.writeTrees(Collections.singleton(tree2)));
+		System.out.println("OrderedTree 3:\n" + conll.writeTrees(Collections.singleton(tree3)));
+		System.out.println("OrderedTree 4:\n" + conll.writeTrees(Collections.singleton(tree4)));
+		System.out.println("OrderedTree 5:\n" + conll.writeTrees(Collections.singleton(tree5)));
 
 		double sim12 = simCalc.getSimilarity(tree1, tree2);
 		System.out.println("Similarity 1-2 = " + sim12);

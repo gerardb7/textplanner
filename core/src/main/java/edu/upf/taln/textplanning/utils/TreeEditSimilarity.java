@@ -7,7 +7,7 @@ import unnonouno.treedist.EditScore;
 import unnonouno.treedist.TreeEditDistance;
 
 /**
- * Semantic similarity between pairs of semantic trees.
+ * Semantic similarity between pairs of annotated trees.
  * This class is immutable.
  */
 public final class TreeEditSimilarity

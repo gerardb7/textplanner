@@ -52,7 +52,7 @@ public class SemanticTextualSimilarityOutput
 			Path path = Paths.get(value);
 			if (!Files.isRegularFile(path))
 			{
-				throw new ParameterException("Cannot writeSemanticDAGs to " + name + " = " + value);
+				throw new ParameterException("Cannot writeGraphs to " + name + " = " + value);
 			}
 		}
 	}
@@ -82,7 +82,7 @@ public class SemanticTextualSimilarityOutput
 		TreeEditSimilarity msgSim = new TreeEditSimilarity(wordSim, senseSim);
 		String conll = new String(Files.readAllBytes(cmlArgs.inputConll.get(0)), Charset.forName("UTF-8"));
 		ConLLAcces reader = new ConLLAcces();
-		List<AnnotatedTree> trees = reader.readSemanticTrees(conll);
+		List<AnnotatedTree> trees = reader.readTrees(conll);
 		StringWriter writer = new StringWriter();
 		NumberFormat format = NumberFormat.getInstance();
 		format.setRoundingMode(RoundingMode.HALF_UP);

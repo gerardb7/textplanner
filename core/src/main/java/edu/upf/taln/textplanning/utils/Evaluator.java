@@ -96,8 +96,8 @@ public class Evaluator
 			List<AnnotatedTree> systemTrees = new ArrayList<>();
 			try
 			{
-				goldTrees.addAll(reader.readSemanticTrees(gold));
-				systemTrees.addAll(reader.readSemanticTrees(system));
+				goldTrees.addAll(reader.readTrees(gold));
+				systemTrees.addAll(reader.readTrees(system));
 				systemTrees = systemTrees.subList(0, Math.min(goldTrees.size(), systemTrees.size()));
 			}
 			catch (Exception e)

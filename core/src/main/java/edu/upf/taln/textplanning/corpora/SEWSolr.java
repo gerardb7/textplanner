@@ -39,27 +39,17 @@ public final class SEWSolr implements Corpus
 		}
 	}
 
-	public long getFrequency(String inSense)
+	public long getFrequency(String inItem)
 	{
 		try
 		{
-			// This method assumes that references are BabelNet ids encoded as 'bn:' followed by 8 digits and a letter
-			String e = inSense;
-			if (e.startsWith("s"))
-			{
-				e = "bn:" + e.substring(1, e.length());
-			}
-			if (!e.startsWith("bn:"))
-			{
-				e = "bn:" + e;
-			}
-
-			if (cache.containsKey(e))
-				return cache.get(e);
+			if (cache.containsKey(inItem))
+				return cache.get(inItem);
 			else
 			{
-				long freq = queryFrequency(e);
-				cache.put(e, freq);
+				boolean isSense =  inItem.startsWith("bn:");
+				long freq = queryFrequency(inItem, isSense);
+				cache.put(inItem, freq);
 				return freq;
 			}
 		}
@@ -73,9 +63,13 @@ public final class SEWSolr implements Corpus
 	@Override
 	public long getNumDocs() { return this.numDocs; }
 
-	private long queryFrequency(String inSense) throws IOException, SolrServerException
+	private long queryFrequency(String inItem, boolean isSense) throws IOException, SolrServerException
 	{
-		String queryString = "annotationId:" + inSense.replace(":", "\\:");
+		String queryString;
+		if (isSense)
+			queryString = "annotationId:" + inItem.replace(":", "\\:");
+		else
+			queryString = "text:" + inItem;
 		SolrQuery query = new SolrQuery(queryString);
 		query.setRows(0); // don't request  data
 		Stopwatch timer = Stopwatch.createStarted();

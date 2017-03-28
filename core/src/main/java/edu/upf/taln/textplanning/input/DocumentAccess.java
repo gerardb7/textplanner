@@ -8,7 +8,7 @@ import org.jgrapht.graph.DefaultEdge;
 import java.util.List;
 
 /**
- * Base class for classes implementing read/writeSemanticDAGs access to documents containing semantic structures.
+ * Base class for classes implementing read/writeGraphs access to documents containing semantic structures.
  */
 public interface DocumentAccess
 {
@@ -27,7 +27,7 @@ public interface DocumentAccess
 		}
 	}
 
-	List<DirectedAcyclicGraph<Annotation, LabelledEdge>> readSemanticDAGs(String inDocumentContents);
+	List<DirectedAcyclicGraph<Annotation, LabelledEdge>> readGraphs(String inDocumentContents);
 
-	List<AnnotatedTree> readSemanticTrees(String inDocumentContents);
+	List<AnnotatedTree> readTrees(String inDocumentContents);
 }

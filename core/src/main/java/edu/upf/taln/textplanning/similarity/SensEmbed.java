@@ -40,30 +40,25 @@ public class SensEmbed implements EntitySimilarity
 	@Override
 	public boolean isDefinedFor(Entity inItem)
 	{
-		String e = normalizeLabel(inItem.getEntityLabel());
-		return vectors.containsKey(e);
+		return vectors.containsKey(inItem.getEntityLabel());
 	}
 
 	@Override
 	public boolean isDefinedFor(Entity inItem1, Entity inItem2)
 	{
-		String e1 = normalizeLabel(inItem1.getEntityLabel());
-		String e2 = normalizeLabel(inItem2.getEntityLabel());
-		return vectors.containsKey(e1) || vectors.containsKey(e2);
+		return vectors.containsKey(inItem1.getEntityLabel()) && vectors.containsKey(inItem2.getEntityLabel());
 	}
 
 	@Override
 	public double computeSimilarity(Entity inItem1, Entity inItem2)
 	{
-		if (inItem1.equals(inItem2))
+		if (inItem1.getEntityLabel().equals(inItem2.getEntityLabel()))
 			return 1.0;
-		String e1 = normalizeLabel(inItem1.getEntityLabel());
-		String e2 = normalizeLabel(inItem2.getEntityLabel());
-		if (!vectors.containsKey(e1) || !vectors.containsKey(e2))
+		if (!isDefinedFor(inItem1, inItem2))
 			return 0.0;
 
-		double[] v1 = vectors.get(e1);
-		double[] v2 = vectors.get(e2);
+		double[] v1 = vectors.get(inItem1.getEntityLabel());
+		double[] v2 = vectors.get(inItem2.getEntityLabel());
 
 		double dotProduct = 0.0;
 		double normA = 0.0;
@@ -75,24 +70,12 @@ public class SensEmbed implements EntitySimilarity
 			normB += Math.pow(v2[i], 2);
 		}
 
-		double cosineSimilarity = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB)); // range (-1,1)
-		double distanceMetric = Math.acos(cosineSimilarity) / Math.PI; // range (0,1)
-		return 1.0 - distanceMetric;
-	}
-
-	private String normalizeLabel(String inSense)
-	{
-		// Normalize BabelNet ids
-		String e = inSense;
-		if (e.startsWith("s"))
-		{
-			e = "bn:" + e.substring(1, e.length());
-		}
-		if (!e.startsWith("bn:"))
-		{
-			e = "bn:" + e;
-		}
-
-		return e;
+		double magnitude = Math.sqrt(normA) * Math.sqrt(normB); // will normalize with magnitude in order to ignore it
+		double cosineSimilarity = dotProduct / magnitude; // range (-1,1)
+		// Negative values indicate senses cooccur less than expected by chance
+		// They seem to be unreliable, so replace with 0 (see https://web.stanford.edu/~jurafsky/slp3/15.pdf page 7)
+		return Math.max(0.0, cosineSimilarity);
+		//double distanceMetric = Math.acos(cosineSimilarity) / Math.PI; // range (0,1)
+		//return (cosineSimilarity + 1.0) / 2.0;
 	}
 }

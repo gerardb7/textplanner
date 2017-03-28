@@ -9,8 +9,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.OptionalDouble;
-import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 
@@ -21,135 +19,128 @@ public class PowerIterationRanking
 {
 	private final static Logger log = LoggerFactory.getLogger(PowerIterationRanking.class);
 
-
 	/**
-	 * Creates an initial distribution which can be used as an initial state of a Markov chain.
-	 * @param n the number of states in the chain
-	 * @return distribution
-	 */
-	public static Matrix createInitialDistribution(int n)
-	{
-		double[] initialDist = IntStream.range(0, n)
-				.mapToDouble(i -> 1.0 / (double) n)
-				.toArray();
-		return new Matrix(initialDist, 1);
-	}
-
-	/**
-	 * Creates a stochastic matrix for a list of entities where probabilities are based on a weighting function.
-	 * @param entities list of entities
-	 * @param inWeighting weighting function
-	 * @return a relevance matrix
-	 */
-	public static Matrix createRelevanceMatrix(List<Entity> entities, WeightingFunction inWeighting)
-	{
-		// Create stochastic matrix using relevance metric
-		int n = entities.size();
-		Matrix stochasticMatrix = new Matrix(n, n);
-		IntStream.range(0, n).forEach(i ->
-				IntStream.range(0, n).forEach(j ->
-				{
-					double rj = inWeighting.weight(entities.get(j));
-					stochasticMatrix.set(i, j, rj);
-				}));
-
-		// Transform into probability (stochastic) matrix by normalizing relevance scores against the sum of each row
-		IntStream.range(0, n).forEach(i ->
-		{
-			double accum = Arrays.stream(stochasticMatrix.getArray()[i]).sum();
-			IntStream.range(0, n).forEach(j -> stochasticMatrix.set(i, j, stochasticMatrix.get(i, j) / accum));
-		});
-
-		return stochasticMatrix;
-	}
-
-	/**
-	 * Creates a stochastic matrix for a set of entities where probabilities between pairs are based on
-	 * a similarity function.
+	 * Creates joint stochastic matrix for relevance bias and similarity, as described in Otterbacher et al. 2009 paper
+	 * "Biased LexRank" (p.5)
+	 *
 	 * @param entities list of entities
 	 * @param inSimilarity similarity metric for pairs of patterns
-	 * @param useLowerBound if true then entries in each row with probability below average are set to 0
+	 * @param inOptions algorithm options
 	 * @return a similarity matrix
 	 */
-	public static Matrix createSimilarityMatrix(List<Entity> entities, EntitySimilarity inSimilarity, boolean useLowerBound)
+	public static Matrix createRankingMatrix(List<Entity> entities, WeightingFunction inWeighting,
+	                                            EntitySimilarity inSimilarity, TextPlanner.Options inOptions)
 	{
-		// Create stochastic matrix using similarity metric
+		// Create relevance row vector by applying weighting function to entities
 		int n = entities.size();
-		Matrix stochasticMatrix = new Matrix(n, n);
+		double[] b = entities.stream()
+				.mapToDouble(inWeighting::weight)
+				.map(w -> w < inOptions.relevanceLowerBound ? 0.0 : w) // apply lower bound
+				.toArray();
+		log.info(StatsReporter.getMatrixStats(new Matrix(b, 1)));
+		double acum = Arrays.stream(b).sum();
+		IntStream.range(0, n).forEach(i -> b[i] /= acum); // normalize vector with sum of row
+
+		// Create similarity matrix by applying function to pairs of entities
+		Matrix m = new Matrix(n, n);
 		IntStream.range(0, n).forEach(i ->
 				IntStream.range(i, n).forEach(j -> // starting from i avoids calculating symmetric similarity twice
 				{
 					double sij = inSimilarity.computeSimilarity(entities.get(i), entities.get(j));
-					stochasticMatrix.set(i, j, sij);
-					stochasticMatrix.set(j, i, sij);
+					if (sij < inOptions.simLowerBound) // apply lower bound
+						sij = 0.0;
+					m.set(i, j, sij);
+					m.set(j, i, sij);
 				}));
+		log.info("Similarity matrix:");
+		log.info(StatsReporter.getMatrixStats(m));
+		normalize(m);
 
-		// Accumulate scores for each entity
-		List<Double> averages = IntStream.range(0, n)
-				.mapToObj(i -> IntStream.range(0, n)
-						.filter(j -> i != j) // exclude similarity to itself
-						.mapToDouble(j -> stochasticMatrix.get(i, j))
-						.average().orElse(0.0))
-				.collect(Collectors.toList());
-
-		if (useLowerBound)
-		{
-			// Set similarity of entity pairs below their respective average to 0
-			IntStream.range(0, n).forEach(i ->
-					IntStream.range(0, n)
-							.filter(j -> i != j) // exclude similarity to itself
-							.forEach(j ->
-							{
-								if (stochasticMatrix.get(i, j) < averages.get(i))
-									stochasticMatrix.set(i, j, 0.0);
-							}));
-		}
-
-		// Transform into probability (stochastic) matrix by normalizing similarity values against the sum of each row
+		// Bias each row using relevance b and damping factor d: d*bias + (1-d)*sim
+		// The resulting matrix is row-normalized because both b and m are normalized
+		double d = inOptions.dampingFactor;
 		IntStream.range(0, n).forEach(i ->
-		{
-			double accum = Arrays.stream(stochasticMatrix.getArray()[i]).sum();
-			IntStream.range(0, n).forEach(j -> stochasticMatrix.set(i, j, stochasticMatrix.get(i, j) / accum));
-		});
+			IntStream.range(0, n).forEach(j ->	m.set(i, j, d *b[i] + (1.0 - d)*m.get(i, j))));
+		normalize(m); // Normalize matrix again
 
-		return stochasticMatrix;
+		log.info("Biased matrix:");
+		log.info(StatsReporter.getMatrixStats(m));
+
+		return m;
 	}
 
 
 	/**
 	 * Power iteration method to obtain a final stationary distribution of a Markov chain
+	 * Implementation based on first method in http://introcs.cs.princeton.edu/java/95linear/MarkovChain.java.html
 	 *
-	 * @param inInitialDistribution initial state of the chain
-	 * @param inTransitionMatrix stochastic matrix of a Markov chain
-	 * @return a stationary distribution of the chain
+	 * @param a a transition stochastic matrix of a Markov chain
+	 * @param e error used as a stopping threshold for the algorithm
+	 * @return the stationary distribution of the chain
 	 */
-	public static Matrix run(Matrix inInitialDistribution, Matrix inTransitionMatrix, double inStopThreshold)
+	public static Matrix run(Matrix a, double e)
 	{
+		// Check that a is a stochastic matrix
+		assert a.getColumnDimension() == a.getRowDimension(); // Is it square?
+		assert Arrays.stream(a.getArray()).allMatch(r -> Arrays.stream(r).allMatch(i -> i >= 0.0)); // Is it positive?
+		assert Arrays.stream(a.getArray()).allMatch(r -> Math.abs(Arrays.stream(r).sum() - 1.0) < 2*2.22e-16); // Is it row-normalized?
+
+		// Turn the rows into columns so that multiplication with column vector produces probs of reaching states
+		a = a.transpose(); // See http://en.wikipedia.org/wiki/Matrix_multiplication#Square_matrix_and_column_vector
+
+		// Create initial state as 1-column vector
+		int n = a.getColumnDimension();
+		Matrix v = new Matrix(n, 1, 1.0 / n); // v is the distribution vector that will get iteratively updated
+
 		log.info("Starting power iteration");
 		int numIterations = 0;
-		Matrix oldDistribution = inInitialDistribution;
-		Matrix newDistribution;
 		double delta;
 		do
 		{
 			// Core operation: transform distribution according to stochastic matrix
-			newDistribution = oldDistribution.times(inTransitionMatrix);
+			Matrix tmp = a.times(v); // product of square matrix and column vector produces column vector
+			// Normalize distribution to obtain eigenvalue
+			tmp = tmp.times(1.0/tmp.norm1());
 
 			// Find out magnitude of change in distribution vector (delta)
-			Matrix difference = newDistribution.minus(oldDistribution);
-			OptionalDouble optDelta = DoubleStream.of(difference.getColumnPackedCopy())
+			Matrix difference = tmp.minus(v);
+			delta = DoubleStream.of(difference.getColumnPackedCopy())
 					.map(Math::abs)
-					.max();
-			delta = (optDelta.isPresent() ? optDelta.getAsDouble() : 0);
-			oldDistribution = newDistribution;
+					.max().orElse(0.0);
+			v = tmp;
 			if (++numIterations % 100 == 0)
 			{
 				log.info("..." + numIterations + " iterations");
 			}
 		}
-		while (delta >= inStopThreshold); // stopping criterion: delta falls below a certain threshold
+		while (delta >= e); // stopping criterion: delta falls below a certain threshold
 
 		log.info("Power iteration completed after " + numIterations + " iterations");
-		return newDistribution;
+		return v;
+	}
+
+	/**
+	 * Row-normalizes a matrix
+	 */
+	private static void normalize(Matrix m)
+	{
+		// Normalize matrix with sum of each row (adjacent lists)
+		int r = m.getRowDimension();
+		int c = m.getColumnDimension();
+
+		IntStream.range(0, r).forEach(i ->
+		{
+			double accum = Arrays.stream(m.getArray()[i]).sum();
+			IntStream.range(0, c).forEach(j -> m.set(i, j, m.get(i, j) / accum));
+		});
+
+		// This check accounts for precision of 64-bit doubles, as explained in
+		// http://www.ibm.com/developerworks/java/library/j-jtp0114/#N10255
+		// and http://en.wikipedia.org/wiki/Machine_epsilon#Values_for_standard_hardware_floating_point_arithmetics
+		assert Arrays.stream(m.getArray()).allMatch(row ->
+		{
+			double sum = Math.abs(Arrays.stream(row).sum() - 1.0);
+			return sum < 2*2.22e-16; //2*2.22e-16
+		});
 	}
 }

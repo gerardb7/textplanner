@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Select trees that cover frequent patterns of annotations in a collection of semantic trees
+ * Select trees that cover frequent patterns of annotations in a collection of annotated trees
  * Patterns are found using an algorithm for mining maximal sets (of annotations).
  * For each pattern found, the smallest input tree where the pattern occurs is returned.
  */

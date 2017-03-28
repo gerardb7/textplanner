@@ -13,14 +13,13 @@ import java.util.stream.Collectors;
 
 /**
  * A weighting function based on tf.idf score.
- * Augmented tf is obtained from a list of semantic trees analyzed from a collection of documents.
+ * Augmented tf is obtained from a list of annotated trees analyzed from a collection of documents.
  * IDF is obtained from a corpus.
  */
 public class TFIDF implements WeightingFunction
 {
 	private final Corpus corpus;
-	private final Map<String, Long> freqs = new HashMap<>();
-	private long maxFreq = 0;
+	private final Map<String, Double> tfidf = new HashMap<>();
 
 	public TFIDF(Corpus inCorpus)
 	{
@@ -30,27 +29,45 @@ public class TFIDF implements WeightingFunction
 	@Override
 	public void setCollection(List<AnnotatedTree> inCollection)
 	{
-		freqs.clear();
-		freqs.putAll(inCollection.stream()
+		tfidf.clear();
+
+		// Collect frequency of entities in the collection
+		Map<String, Long> freqs = inCollection.stream()
 				.map(AnnotatedTree::getPreOrder)
 				.map(p -> p.stream()
 						.map(OrderedTree.Node::getData)
 						.map(Entity::getEntityLabel)
 						.collect(Collectors.toList()))
 				.flatMap(List::stream)
-				.collect(Collectors.groupingBy(Function.identity(), Collectors.counting())));
+				.collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
-		maxFreq = freqs.values().stream().mapToLong(Long::valueOf).max().orElse(1);
+		long maxFreq = freqs.values().stream().mapToLong(Long::valueOf).max().orElse(1);
+
+		// Calculate tf*idf values of the collection relative to the corpus
+		for (String label : freqs.keySet())
+		{
+			long f = freqs.containsKey(label) ? freqs.get(label) : 0;
+			double tf = 0.5 + 0.5*(f/maxFreq); // augmented frequency
+			double idf = Math.log(corpus.getNumDocs() / (1 + corpus.getFrequency(label)));
+			tfidf.put(label, tf * idf);
+		}
+
+		// Normalize values to [0..1]
+		double maxTfidf = tfidf.values().stream().mapToDouble(Double::valueOf).max().orElse(1.0);
+		tfidf.keySet().forEach(e -> tfidf.replace(e, tfidf.get(e) / maxTfidf));
 	}
 
 	@Override
 	public double weight(Entity inEntity)
 	{
 		String label = inEntity.getEntityLabel();
-		long f = freqs.containsKey(label) ? freqs.get(label) : 0;
-		double tf = 0.5 + 0.5*(f/maxFreq); // augmented frequency
-		double idf = Math.log(corpus.getNumDocs() / (1 + corpus.getFrequency(label)));
+		if (!tfidf.containsKey(label))
+			throw new RuntimeException("Cannot calculate tfidf value for unseen entity " + label);
 
-		return tf * idf;
+		// @todo think of better treatment of '_' tokens
+		if (label.equals("_"))
+			return 0.0;
+
+		return tfidf.get(label);
 	}
 }

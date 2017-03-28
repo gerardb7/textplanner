@@ -51,7 +51,7 @@ public class AnnotatedTree extends OrderedTree<AnnotatedEntity>
 	/**
 	 * Constructor
 	 * @param inRootAnn annotation to act as root of the tree
-	 * @param inPosition position of the semantic tree in a document, dialogue, etc.
+	 * @param inPosition position of the annotated tree in a document, dialogue, etc.
 	 */
 	public AnnotatedTree(AnnotatedEntity inRootAnn, double inPosition)
 	{

@@ -25,8 +25,8 @@ public class ConLLGeneratorTest
 
 		ConLLAcces conll = new ConLLAcces();
 		List<DirectedAcyclicGraph<Annotation, DocumentAccess.LabelledEdge>> structures =
-				conll.readSemanticDAGs("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll");
-		String written = conll.writeSemanticDAGs(structures);
+				conll.readGraphs("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll");
+		String written = conll.writeGraphs(structures);
 
 		Assert.assertEquals(read, written);
 	}
@@ -37,8 +37,8 @@ public class ConLLGeneratorTest
 		String read = FileUtils.readFileToString(new File("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll"), Charset.defaultCharset());
 
 		ConLLAcces conll = new ConLLAcces();
-		List<AnnotatedTree> messages = conll.readSemanticTrees("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll");
-		String written = conll.writeSemanticTrees(messages);
+		List<AnnotatedTree> messages = conll.readTrees("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll");
+		String written = conll.writeTrees(messages);
 
 		Assert.assertEquals(read, written);
 	}

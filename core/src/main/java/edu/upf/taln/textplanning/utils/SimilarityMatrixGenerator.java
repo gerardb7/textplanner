@@ -148,7 +148,7 @@ public class SimilarityMatrixGenerator
 		Path inputDoc = cmlArgs.doc.get(0);
 		String conll = new String(Files.readAllBytes(inputDoc), Charset.forName("UTF-8"));
 		ConLLAcces reader = new ConLLAcces();
-		List<AnnotatedTree> inputPatterns = reader.readSemanticTrees(conll);
+		List<AnnotatedTree> inputPatterns = reader.readTrees(conll);
 		double[][] matrix;
 		if (cmlArgs.distance)
 		{

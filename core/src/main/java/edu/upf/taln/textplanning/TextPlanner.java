@@ -32,8 +32,10 @@ public final class TextPlanner
 	public static class Options
 	{
 		public int numPatterns = 0; // If 0, returns ranked list of all input patterns
+		public double relevanceLowerBound = 0.1; // Entities with relevance below this value have their score set to 0
+		public double simLowerBound = 0.1; // Pairs of entities with similarity below this value have their score set to 0
 		public double dampingFactor = 0.1; // damping factor to control balance between relevance bias and similarity
-		public double rankingStopThreshold = 0.01; // stopping threshold for the main ranking algorithm
+		public double rankingStopThreshold = 0.0001; // stopping threshold for the main ranking algorithm
 		public boolean generateStats = false;
 		public String stats = "";
 	}
@@ -49,7 +51,7 @@ public final class TextPlanner
 	}
 
 	/**
-	 * Generates a text plan from some contents encoded as semantic trees
+	 * Generates a text plan from some contents encoded as annotated trees
 	 * @param inContents initial set of contents
 	 * @return list of patterns
 	 */
@@ -58,7 +60,6 @@ public final class TextPlanner
 		try
 		{
 			log.info("***Planning started***");
-			weighting.setCollection(inContents);
 
 			// 1- Collect entities in trees
 			List<OrderedTree.Node<AnnotatedEntity>> nodes = inContents.stream()
@@ -71,45 +72,32 @@ public final class TextPlanner
 					.collect(Collectors.toList());
 
 			// 2- Create relevance matrix
-			log.info("**Creating relevance matrix**");
+			log.info("**Creating ranking matrix**");
 			Stopwatch timer = Stopwatch.createStarted();
-			Matrix relevanceMatrix = PowerIterationRanking.createRelevanceMatrix(entities, weighting);
-			log.info("Relevance calculations took " + timer.stop());
+			weighting.setCollection(inContents);
+			Matrix rankingMatrix = PowerIterationRanking.createRankingMatrix(entities, weighting, similarity, inOptions);
+			log.info("Creation of ranking matrix took " + timer.stop());
 
-			// 3- Create a similarity matrix
-			log.info("**Creating similarity matrix**");
-			timer.reset(); timer.start();
-			Matrix similarityMatrix = PowerIterationRanking.createSimilarityMatrix(entities, similarity, true);
-			log.info("Similarity calculations took " + timer.stop());
-
-			// 4- Create joint stochastic matrix for relevance bias and similarity
-			double d = inOptions.dampingFactor;
-			Matrix rankingMatrix = relevanceMatrix.times(d).plus(similarityMatrix.times(1-d)).transpose();
-
-			// 5- Create initial distribution
-			Matrix initialDistribution = PowerIterationRanking.createInitialDistribution(entities.size());
-
-			// 6- Rank entities using biased semantic ranking and power iteration method
+			// 3- Rank entities using biased semantic ranking and power iteration method
 			log.info("**Power iteration ranking**");
 			timer.reset(); timer.start();
-			Matrix finalDistribution = PowerIterationRanking.run(initialDistribution, rankingMatrix, inOptions.rankingStopThreshold);
+			Matrix finalDistribution = PowerIterationRanking.run(rankingMatrix, inOptions.rankingStopThreshold);
 			log.info("Power iteration ranking took " + timer.stop());
 			double[] ranking = finalDistribution.getColumnPackedCopy();
 
-			// 7- Create pattern extraction graph from ranking and cost function
-			log.info("**Creating pattern extraction graph**");
+			// 4- Create pattern extraction graph from ranking and cost function
+			log.info("**Extraction patterns**");
 			timer.reset(); timer.start();
 			Map<Entity, Double> rankedEntities = IntStream.range(0, ranking.length)
 					.boxed()
 					.collect(Collectors.toMap(entities::get, i -> ranking[i]));
 			SemanticGraph patternGraph =
 					createPatternExtractionGraph(inContents, rankedEntities);
-			log.info("Graph creation took " + timer.stop());
 
-			// 8 - Extracting patterns
 			List<SubTree> patterns = HeavySubtreeExtraction.extract(patternGraph, inOptions.numPatterns);
+			log.info("Pattern extraction took " + timer.stop());
 
-			// 9- Generate stats
+			// 5- Generate stats (optional)
 			if (inOptions.generateStats)
 			{
 				log.info("**Generating stats**");
@@ -131,7 +119,7 @@ public final class TextPlanner
 
 	/**
 	 * Creates a pattern extraction graph
-	 * @param inContents list of semantic trees
+	 * @param inContents list of annotated trees
 	 * @param rankedEntities entities in trees and their scores
 	 * @return a semantic graph
 	 */
@@ -208,6 +196,7 @@ public final class TextPlanner
 
 		// Generate conll
 		ConLLAcces conll = new ConLLAcces();
-		return conll.writeSemanticTrees(Collections.singletonList(subtree));
+		return conll.writeTrees(Collections.singletonList(subtree));
 	}
+
 }

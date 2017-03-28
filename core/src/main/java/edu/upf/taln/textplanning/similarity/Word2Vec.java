@@ -41,14 +41,10 @@ public class Word2Vec implements EntitySimilarity
 	@Override
 	public double computeSimilarity(Entity inItem1, Entity inItem2)
 	{
-		if (inItem1.equals(inItem2))
-		{
+		if (inItem1.getEntityLabel().equals(inItem2.getEntityLabel()))
 			return 1.0;
-		}
-		if (!vectors.hasWord(inItem1.getEntityLabel()) || !vectors.hasWord(inItem2.getEntityLabel()))
-		{
+		if (!isDefinedFor(inItem1, inItem2))
 			return 0.0;
-		}
 
 		return vectors.similarity(inItem1.getEntityLabel(), inItem2.getEntityLabel());
 	}

@@ -37,10 +37,10 @@ public class TextPlannerTest
 		{
 			String inConLL = new String(Files.readAllBytes(f), Charset.forName("UTF-8"));
 			ConLLAcces conll = new ConLLAcces();
-			List<AnnotatedTree> annotatedTrees = conll.readSemanticTrees(inConLL);
+			List<AnnotatedTree> annotatedTrees = conll.readTrees(inConLL);
 			ItemSetMining extractor = new ItemSetMining();
 			Set<AnnotatedTree> patterns = extractor.getPatterns(annotatedTrees);
-			String outConLL = conll.writeSemanticTrees(patterns);
+			String outConLL = conll.writeTrees(patterns);
 			writeToFile("patterns_", f, outConLL);
 		}
 	}

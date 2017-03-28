@@ -15,18 +15,18 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Immutable class, reads and writes semantic stgructures from/to Conll format
+ * Immutable class, reads and writes annotated structures from/to Conll format
  */
 public class ConLLAcces implements DocumentAccess
 {
 	/**
-	 * Reads semantic structures as DAGs from ConLL file
+	 * Reads annotated graphs (DAGs) from ConLL file
 	 *
-	 * @param inDocumentContents  String containing conll serialization of trees
-	 * @return a list of semantic structures, one per sentence
+	 * @param inDocumentContents  String containing conll serialization of DAGs
+	 * @return a list of graphs, one per sentence
 	 */
 	@Override
-	public List<DirectedAcyclicGraph<Annotation, LabelledEdge>> readSemanticDAGs(String inDocumentContents)
+	public List<DirectedAcyclicGraph<Annotation, LabelledEdge>> readGraphs(String inDocumentContents)
 	{
 		try
 		{
@@ -123,13 +123,13 @@ public class ConLLAcces implements DocumentAccess
 	}
 
 	/**
-	 * Reads semantic trees from ConLL file
+	 * Reads annotated trees from ConLL file
 	 *
 	 * @param inDocumentContents String containing conll serialization of trees
-	 * @return a list of semantic trees
+	 * @return a list of trees
 	 */
 	@Override
-	public List<AnnotatedTree> readSemanticTrees(String inDocumentContents)
+	public List<AnnotatedTree> readTrees(String inDocumentContents)
 	{
 		try
 		{
@@ -164,8 +164,9 @@ public class ConLLAcces implements DocumentAccess
 				if ((id == 0 || id == 1) && !nodes.isEmpty())
 				{
 					// Create tree from previously collected nodes
-					double position = ++sentence / numStructures;
+					double position = ((double)(numStructures - sentence)) / ((double)numStructures);
 					trees.add(createTree(rootId, nodes, governors, position));
+					++sentence;
 					nodes.clear();
 					governors.clear();
 					rootId = -1;
@@ -193,17 +194,6 @@ public class ConLLAcces implements DocumentAccess
 						}
 					}
 
-
-					//TODO consider removing code manipulating BabelNet IRIs
-					if (ref != null)
-					{
-						if (ref.startsWith("bn:"))
-						{
-							ref = ref.substring(3);
-						}
-						//ref = "http://babelnet.org/rdf/s" + ref;
-					}
-
 					double conf = features.containsKey("conf") ?
 							Double.parseDouble(features.get("conf")) : 0.0;
 					List<Integer> govns = Arrays.stream(columns[8].split(",")).map(Integer::parseInt).collect(Collectors.toList());
@@ -213,7 +203,7 @@ public class ConLLAcces implements DocumentAccess
 					if (govns.isEmpty() || roles.isEmpty())
 						throw new Exception("Conll file has no governor or role specified in line " + line);
 					if (govns.size() > 1 || roles.size() > 1)
-						throw new Exception("Conll file contains semantic graphs which cannot be read as trees: " + line);
+						throw new Exception("Conll file contains graphs which cannot be read as trees: " + line);
 					if (govns.size() != roles.size())
 						throw new Exception("Conll file contains different number of roles and governors in line: " + line);
 
@@ -226,14 +216,14 @@ public class ConLLAcces implements DocumentAccess
 					if (govns.size() == 1 && govns.get(0) == 0)
 					{
 						if (rootId != -1)
-							throw new Exception("Conll file contains semantic graphs which cannot be read as trees");
+							throw new Exception("Conll file contains graphs which cannot be read as trees");
 						rootId = id;
 					}
 				}
 			}
 
-			// Create last graph
-			double position = ++sentence / numStructures;
+			// Create last tree
+			double position = ((double)(numStructures - sentence)) / ((double)numStructures);
 			trees.add(createTree(rootId, nodes, governors, position));
 
 			return trees;
@@ -246,17 +236,17 @@ public class ConLLAcces implements DocumentAccess
 	}
 
 	/**
-	 * Converts semantic DAGs to ConLL format.
+	 * Converts graphs (DAGs) to ConLL format.
 	 * IMPORTANT: this conversion will only work properly if all nodes in the graph (instances of Annotation class)
 	 * are unique!
 	 *
-	 * @param inSemanticDAGs semantic DAGs
-	 * @return ConLL-formatted representation of the semantic DAGs
+	 * @param inGraphs DAGs
+	 * @return ConLL-formatted representation of the DAGs
 	 */
-	public String writeSemanticDAGs(Collection<DirectedAcyclicGraph<Annotation, LabelledEdge>> inSemanticDAGs)
+	public String writeGraphs(Collection<DirectedAcyclicGraph<Annotation, LabelledEdge>> inGraphs)
 	{
 		// Get a topological ordering of nodes along with their governors in the graph
-		return inSemanticDAGs.stream()
+		return inGraphs.stream()
 				.map(g -> {
 					List<Annotation> anns = g.vertexSet().stream().collect(Collectors.toList());
 					Map<Integer, List<Pair<String, Integer>>> governors = IntStream.range(0, anns.size())
@@ -274,12 +264,12 @@ public class ConLLAcces implements DocumentAccess
 	}
 
 	/**
-	 * Converts semantic trees to ConLL format
+	 * Converts annotated trees to ConLL format
 	 *
-	 * @param inTrees list of semantic trees
-	 * @return ConLL-formatted representation of the semantic trees
+	 * @param inTrees list of trees
+	 * @return ConLL-formatted representation of the trees
 	 */
-	public String writeSemanticTrees(Collection<AnnotatedTree> inTrees)
+	public String writeTrees(Collection<AnnotatedTree> inTrees)
 	{
 		// Get a preorder list of nodes in the tree along with their parents
 		return inTrees.stream()

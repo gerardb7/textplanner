@@ -1,5 +1,6 @@
 package edu.upf.taln.textplanning;
 
+import Jama.Matrix;
 import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
 import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.datastructures.OrderedTree;
@@ -13,16 +14,13 @@ import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import java.io.StringWriter;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Generates statistics about a document containing semantic trees.
+ * Generates statistics about a document containing annotations of deep syntactic trees.
  */
 public class StatsReporter
 {
@@ -38,7 +36,7 @@ public class StatsReporter
 		StringWriter writer = new StringWriter();
 
 		// Report trees
-		writer.write("Semantic trees");
+		writer.write("Annotated trees");
 		IntStream.range(0, inTrees.size())
 				.forEach(i -> writer.write("\tTree " + (i + 1) + ": " + inTrees.get(i)));
 		writer.write("\n");
@@ -89,5 +87,39 @@ public class StatsReporter
 		writer.write("\n");
 
 		return writer.toString();
+	}
+
+	public static String getMatrixStats(Matrix inMatrix)
+	{
+		NumberFormat format = NumberFormat.getInstance();
+		format.setRoundingMode(RoundingMode.UP);
+		format.setMaximumFractionDigits(3);
+		format.setMinimumFractionDigits(3);
+
+		double max = Arrays.stream(inMatrix.getColumnPackedCopy())
+				.filter(d -> d > 0.0 && d < 1.0)
+				.max().orElse(0.0);
+		double min = Arrays.stream(inMatrix.getColumnPackedCopy())
+				.filter(d -> d > 0.0 && d < 1.0)
+				.min().orElse(0.0);
+		double avg = Arrays.stream(inMatrix.getColumnPackedCopy())
+				.filter(d -> d > 0.0 && d < 1.0)
+				.average().orElse(0.0);
+		double var = Arrays.stream(inMatrix.getColumnPackedCopy())
+				.filter(d -> d > 0.0 && d < 1.0)
+				.map(d -> Math.pow(d - avg, 2))
+				.sum();
+		long zeroes = Arrays.stream(inMatrix.getColumnPackedCopy())
+				.filter(d -> d == 0.0)
+				.count();
+		long ones = Arrays.stream(inMatrix.getColumnPackedCopy())
+				.filter(d -> d == 1.0)
+				.count();
+		var /=  (double) inMatrix.getColumnDimension()*inMatrix.getRowDimension();
+		double stdDev = Math.sqrt(var);
+
+		return "items=" + inMatrix.getColumnDimension()*inMatrix.getRowDimension() + " zeroes=" + zeroes + " ones=" +
+				ones + " max=" + format.format(max) +
+				" min=" + format.format(min) + " avg=" + format.format(avg) + " stdev=" + format.format(stdDev);
 	}
 }

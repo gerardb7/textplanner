@@ -59,7 +59,7 @@ public class EmbeddingUtils
 		Stopwatch timer = Stopwatch.createStarted();
 		ConLLAcces reader = new ConLLAcces();
 		String conll = new String(Files.readAllBytes(inConllPath), Charset.forName("UTF-8"));
-		List<AnnotatedTree> trees = reader.readSemanticTrees(conll);
+		List<AnnotatedTree> trees = reader.readTrees(conll);
 
 		//TODO consider removing code manipulating IRIs
 		// Collect all senses in conll
@@ -167,7 +167,7 @@ public class EmbeddingUtils
 	 */
 	public static void writeEmbeddingsToFile(Map<String, double[]> inVectors, Path inOutPath) throws FileNotFoundException
 	{
-		// Create String representation of each averaged vector and writeSemanticDAGs them to a file
+		// Create String representation of each averaged vector and writeGraphs them to a file
 		log.info("Writing to file");
 		Stopwatch timer = Stopwatch.createStarted();
 		PrintWriter out = new PrintWriter(inOutPath.toFile());
