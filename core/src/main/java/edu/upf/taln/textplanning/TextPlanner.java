@@ -5,9 +5,9 @@ import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.datastructures.*;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph.SubTree;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.SemanticPattern;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.pattern.HeavySubtreeExtraction;
+import edu.upf.taln.textplanning.pattern.PatternExtraction;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.slf4j.Logger;
@@ -31,7 +31,7 @@ public final class TextPlanner
 
 	public static class Options
 	{
-		public int numPatterns = 0; // If 0, returns ranked list of all input patterns
+		public int numPatterns = 10; // Number of patterns to return
 		public double relevanceLowerBound = 0.1; // Entities with relevance below this value have their score set to 0
 		public double simLowerBound = 0.1; // Pairs of entities with similarity below this value have their score set to 0
 		public double dampingFactor = 0.1; // damping factor to control balance between relevance bias and similarity
@@ -55,7 +55,7 @@ public final class TextPlanner
 	 * @param inContents initial set of contents
 	 * @return list of patterns
 	 */
-	public List<SubTree> planText(List<AnnotatedTree> inContents, Options inOptions)
+	public List<SemanticPattern> planText(List<AnnotatedTree> inContents, Options inOptions)
 	{
 		try
 		{
@@ -86,7 +86,7 @@ public final class TextPlanner
 			double[] ranking = finalDistribution.getColumnPackedCopy();
 
 			// 4- Create pattern extraction graph from ranking and cost function
-			log.info("**Extraction patterns**");
+			log.info("**Extracting patterns**");
 			timer.reset(); timer.start();
 			Map<Entity, Double> rankedEntities = IntStream.range(0, ranking.length)
 					.boxed()
@@ -94,7 +94,7 @@ public final class TextPlanner
 			SemanticGraph patternGraph =
 					createPatternExtractionGraph(inContents, rankedEntities);
 
-			List<SubTree> patterns = HeavySubtreeExtraction.extract(patternGraph, inOptions.numPatterns);
+			List<SemanticPattern> patterns = PatternExtraction.extract(patternGraph, inOptions.numPatterns);
 			log.info("Pattern extraction took " + timer.stop());
 
 			// 5- Generate stats (optional)
@@ -136,30 +136,30 @@ public final class TextPlanner
 				.flatMap(List::stream)
 				.forEach(d -> {
 					// Add governing tree node to graph
-					OrderedTree.Node<AnnotatedEntity> dependent = d.getLeft();
-					Entity govEntity = dependent.getData();
+					OrderedTree.Node<AnnotatedEntity> governor = d.getLeft();
+					Entity govEntity = governor.getData();
 					double govWeight = rankedEntities.get(govEntity);
-					boolean isPredicate = AnnotatedTree.isPredicate(dependent);
+					boolean isPredicate = AnnotatedTree.isPredicate(governor);
 					String govId = govEntity.getEntityLabel();
 					if (isPredicate || govId.equals("_")) // if a predicate, make node unique by appending ann id
-						govId += "_" + dependent.getData().getAnnotation().getId();
+						govId += "_" + governor.getData().getAnnotation().getId();
 					Node<String> govNode =
-							new Node<>(govId, govEntity.getEntityLabel(), govWeight, isPredicate, generateConLLForPredicate(dependent));
+							new Node<>(govId, govEntity.getEntityLabel(), govWeight, isPredicate, generateConLLForPredicate(governor));
 					graph.addVertex(govNode); // does nothing if node existed
-					ids.computeIfAbsent(govId, v -> new HashSet<>()).add(dependent);
+					ids.computeIfAbsent(govId, v -> new HashSet<>()).add(governor);
 
 					// Add dependent tree node to graph
-					OrderedTree.Node<AnnotatedEntity> governor = d.getMiddle();
-					Entity depEntity = governor.getData();
+					OrderedTree.Node<AnnotatedEntity> dependent = d.getMiddle();
+					Entity depEntity = dependent.getData();
 					double depWeight = rankedEntities.get(depEntity);
-					boolean isDepPredicate = AnnotatedTree.isPredicate(governor);
+					boolean isDepPredicate = AnnotatedTree.isPredicate(dependent);
 					String depId = depEntity.getEntityLabel();
 					if (isDepPredicate || depId.equals("_")) // if a predicate, make node unique by appending ann id
-						depId += "_" + governor.getData().getAnnotation().getId();
+						depId += "_" + dependent.getData().getAnnotation().getId();
 					Node<String> depNode =
-							new Node<>(depId, depEntity.getEntityLabel(), depWeight, isDepPredicate, generateConLLForPredicate(governor));
+							new Node<>(depId, depEntity.getEntityLabel(), depWeight, isDepPredicate, generateConLLForPredicate(dependent));
 					graph.addVertex(depNode); // does nothing if node existed
-					ids.computeIfAbsent(depId, v -> new HashSet<>()).add(governor);
+					ids.computeIfAbsent(depId, v -> new HashSet<>()).add(dependent);
 
 					if (!govId.equals(depId))
 					{

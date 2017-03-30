@@ -1,10 +1,13 @@
 package edu.upf.taln.textplanning.datastructures;
 
+import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.SimpleDirectedGraph;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * A semantic graph is a rooted directed simple graph with weighted nodes and labels on both edges and nodes.
@@ -56,57 +59,77 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 		}
 	}
 
-	public static class SubTree extends SimpleDirectedGraph<Node, Edge>
+	/**
+	 * A SemanticPattern is a multitree formed from a subset of the nodes and edges of a semantic graph.
+	 * A multitree is a directed acyclic graph where all the nodes reachable from any node form a tree.
+	 */
+	public static class SemanticPattern extends DirectedAcyclicGraph<Node, Edge>
 	{
 		private final SemanticGraph base;
-		private final Node root;
 		private static int counter = 0;
 
-		public SubTree(SemanticGraph base, Node root)
+		public SemanticPattern(SemanticGraph base, Node inInitialNode)
 		{
 			super(Edge.class);
-
-			if (!base.containsVertex(root))
-				throw new RuntimeException("Root node must be part of base semantic graph");
 			this.base = base;
-			this.root = root;
-			addVertex(root);
+			super.addVertex(inInitialNode);
 		}
 
-		public SubTree(SubTree other)
+		public SemanticPattern(SemanticPattern other)
 		{
 			super(Edge.class);
 			this.base = other.base;
-			this.root = other.root;
-			other.getPreOrder().forEach(this::addChild);
+			other.vertexSet().forEach(this::addVertex);
+			other.edgeSet().forEach(e -> addEdge(other.getEdgeSource(e), other.getEdgeTarget(e), e));
 		}
 
-		public void addChild(Edge e)
+		/**
+		 * Expands pattern by adding an edge in the base graph.
+		 * To keep the pattern as a valid multitree, the new edge must go from a node in the pattern to a new node.
+		 * If both nodes linked by the edge are part of the pattern, then a new copy of the target node is created
+		 * and added to the pattern.
+		 */
+		public void expand(Edge e)
 		{
 			if (!base.containsEdge(e))
-				throw new RuntimeException("Edge must be part of base");
+				throw new RuntimeException("Edge in expansion is not part of base graph");
 			if (this.containsEdge(e))
-				return;
+				throw new RuntimeException("Edge in expansion is already part of pattern");
 
-			Node parent = base.getEdgeSource(e);
-			if (!containsVertex(parent))
-				throw new RuntimeException("Cannot add edge because source is not part of tree");
-
-			Node child = base.getEdgeTarget(e);
-			if (containsVertex(child))
+			Node source = base.getEdgeSource(e);
+			Node target = base.getEdgeTarget(e);
+			if (this.containsVertex(source) && !this.containsVertex(target))
+				super.addVertex(target);
+			else if (!this.containsVertex(source) && this.containsVertex(target))
+				super.addVertex(source);
+			else if (this.containsVertex(source) && this.containsVertex(target))
 			{
-				// If target of edge is part of tree, create duplicate
-				child = new Node<>(child.id + "_" + ++counter,  child.entity, child.weight, child.isPredicate, child.data);
+				// If both source and target are part of the pattern, create a new target
+				super.addVertex(new Node<>(target.id + "_" + ++counter, target.entity, target.weight,
+						target.isPredicate, target.data));
 			}
+			else if (!this.containsVertex(source) && !this.containsVertex(target))
+				throw new RuntimeException("None of the edges in expansion are in the pattern");
 
-			addVertex(child);
-			addEdge(parent, child, e);
+			super.addEdge(source, target, e);
 		}
 
-		public Node getRoot() { return this.root; }
 		public SemanticGraph getBase() { return this.base; }
 
-		public List<Edge> getPreOrder() { return getPreOrder(root);	}
+		public Set<Node> getRoots()
+		{
+			return vertexSet().stream()
+					.filter(v -> this.degreeOf(v) == 0)
+					.collect(Collectors.toSet());
+		}
+
+		public List<List<Edge>> getPreOrders()
+		{
+			return getRoots().stream()
+					.map(this::getPreOrder)
+					.collect(Collectors.toList());
+		}
+
 		private List<Edge> getPreOrder(Node node)
 		{
 			List<Edge> preorder = new ArrayList<>();
@@ -124,6 +147,8 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 		public Edge addEdge(Node s, Node t) { throw new RuntimeException("Operation not supported"); }
 		@Override
 		public boolean addEdge(Node s, Node t, Edge e) { throw new RuntimeException("Operation not supported"); }
+		@Override
+		public boolean addDagEdge(Node s, Node t, Edge e) { throw new RuntimeException("Operation not supported"); }
 	}
 
 	public SemanticGraph(Class<? extends Edge> edgeClass)

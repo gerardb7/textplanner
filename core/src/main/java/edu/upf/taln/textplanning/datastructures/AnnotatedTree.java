@@ -69,8 +69,8 @@ public class AnnotatedTree extends OrderedTree<AnnotatedEntity>
 	public List<Triple<OrderedTree.Node<AnnotatedEntity>, OrderedTree.Node<AnnotatedEntity>, String>> getDependencies()
 	{
 		return getPreOrder().stream()
-				.map(p -> p.getChildren().stream()
-						.map(c -> Triple.of(p, c, c.getData().getAnnotation().getRole()))
+				.map(gov -> gov.getChildren().stream()
+						.map(dep -> Triple.of(gov, dep, dep.getData().getAnnotation().getRole()))
 						.collect(Collectors.toList()))
 				.flatMap(List::stream)
 				.collect(Collectors.toList());

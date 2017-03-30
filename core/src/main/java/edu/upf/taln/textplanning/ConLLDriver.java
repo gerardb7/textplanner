@@ -5,9 +5,9 @@ import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
 import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph.SubTree;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.SemanticPattern;
 import edu.upf.taln.textplanning.input.ConLLAcces;
 import edu.upf.taln.textplanning.similarity.Combined;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
@@ -122,18 +122,21 @@ public class ConLLDriver
 		{
 			String inConll = new String(Files.readAllBytes(inDoc), Charset.forName("UTF-8"));
 			List<AnnotatedTree> annotatedTrees = conll.readTrees(inConll);
-			List<SubTree> plan = planner.planText(annotatedTrees, inPlannerOptions);
+			List<SemanticPattern> plan = planner.planText(annotatedTrees, inPlannerOptions);
 
 			String conll = "";
-			for (SubTree t : plan)
+			for (SemanticPattern t : plan)
 			{
-				conll += (String)t.getRoot().data;
-				for (SemanticGraph.Edge e : t.getPreOrder())
+				for (List<Edge> p : t.getPreOrders())
 				{
-					Node node = t.getEdgeTarget(e);
-					conll += (String)node.data;
+					conll += (String) t.getEdgeSource(p.get(0)).data;
+					for (Edge e : p)
+					{
+						Node node = t.getEdgeTarget(e);
+						conll += (String) node.data;
+					}
+					conll += "\n";
 				}
-				conll += "\n";
 			}
 
 			return conll;

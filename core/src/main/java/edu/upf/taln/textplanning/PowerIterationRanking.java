@@ -141,6 +141,7 @@ public class PowerIterationRanking
 		});
 
 		// This check accounts for precision of 64-bit doubles, as explained in
+		// http://stackoverflow.com/questions/6837007/comparing-float-double-values-using-operator
 		// http://www.ibm.com/developerworks/java/library/j-jtp0114/#N10255
 		// and http://en.wikipedia.org/wiki/Machine_epsilon#Values_for_standard_hardware_floating_point_arithmetics
 		assert Arrays.stream(m.getArray()).allMatch(row ->
