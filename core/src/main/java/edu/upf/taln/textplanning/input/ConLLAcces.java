@@ -99,7 +99,7 @@ public class ConLLAcces implements DocumentAccess
 							Double.parseDouble(features.get("conf")) : 0.0;
 					List<Integer> govns = Arrays.stream(columns[8].split(",")).map(Integer::parseInt).collect(Collectors.toList());
 					List<String> roles = Arrays.stream(columns[10].split(",")).collect(Collectors.toList());
-					Annotation node = new Annotation(Integer.toString(id), form, lemma, pos, feats, ref, conf,
+					Annotation node = new Annotation("s" + sentence + "-w" + id, form, lemma, pos, feats, ref, conf,
 							relationName, null);
 					// @TODO roles shouldn't be part of Annotation class for DAGs
 					nodes.add(node);
@@ -207,7 +207,7 @@ public class ConLLAcces implements DocumentAccess
 					if (govns.size() != roles.size())
 						throw new Exception("Conll file contains different number of roles and governors in line: " + line);
 
-					Annotation node = new Annotation(Integer.toString(id), form, lemma, pos, feats, ref, conf,
+					Annotation node = new Annotation("s" + sentence + "-w" + id, form, lemma, pos, feats, ref, conf,
 							relationName, roles.get(0));
 					nodes.add(node);
 					IntStream.range(0, govns.size())

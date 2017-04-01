@@ -59,7 +59,7 @@ public class PatternExtraction
 		// calculate expansions, weight them and add to sorted queue
 		getExpansions(pattern).forEach(s -> rankedExpansions.add(Pair.of(s, calculateWeight(s, inEdgeWeight))));
 
-		double q = inBaseGraph.edgeSet().size(); // Q of an empty pattern equals to the constant term D(V)
+		double q = inBaseGraph.edgeSet().size() * inEdgeWeight; // Q of an empty pattern equals to the constant term D(V)
 		boolean stop;
 		do
 		{

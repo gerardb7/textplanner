@@ -38,8 +38,8 @@ public class PowerIterationRanking
 				.map(w -> w < inOptions.relevanceLowerBound ? 0.0 : w) // apply lower bound
 				.toArray();
 		log.info(StatsReporter.getMatrixStats(new Matrix(b, 1)));
-		double acum = Arrays.stream(b).sum();
-		IntStream.range(0, n).forEach(i -> b[i] /= acum); // normalize vector with sum of row
+		double accum = Arrays.stream(b).sum();
+		IntStream.range(0, n).forEach(i -> b[i] /= accum); // normalize vector with sum of row
 
 		// Create similarity matrix by applying function to pairs of entities
 		Matrix m = new Matrix(n, n);

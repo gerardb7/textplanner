@@ -4,9 +4,7 @@ import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.SimpleDirectedGraph;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -67,6 +65,7 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 	{
 		private final SemanticGraph base;
 		private static int counter = 0;
+		private final Map<String, String> replicatedNodes =  new HashMap<>();
 
 		public SemanticPattern(SemanticGraph base, Node inInitialNode)
 		{
@@ -79,8 +78,11 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 		{
 			super(Edge.class);
 			this.base = other.base;
-			other.vertexSet().forEach(this::addVertex);
-			other.edgeSet().forEach(e -> addEdge(other.getEdgeSource(e), other.getEdgeTarget(e), e));
+			other.vertexSet().forEach(super::addVertex);
+			other.edgeSet().forEach(e -> {
+				try { super.addDagEdge(other.getEdgeSource(e), other.getEdgeTarget(e), e); } // Use the base methods
+				catch (CycleFoundException ex) { throw new IllegalArgumentException(ex); }
+			});
 		}
 
 		/**
@@ -105,13 +107,15 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 			else if (this.containsVertex(source) && this.containsVertex(target))
 			{
 				// If both source and target are part of the pattern, create a new target
-				super.addVertex(new Node<>(target.id + "_" + ++counter, target.entity, target.weight,
-						target.isPredicate, target.data));
+				String newId = target.id + "_" + ++counter;
+				super.addVertex(new Node<>(newId, target.entity, target.weight, target.isPredicate, target.data));
+				this.replicatedNodes.put(newId, target.id); // Keep track of replicated nodes
 			}
 			else if (!this.containsVertex(source) && !this.containsVertex(target))
 				throw new RuntimeException("None of the edges in expansion are in the pattern");
 
-			super.addEdge(source, target, e);
+			try	{ super.addDagEdge(source, target, e); } // Use the base methods
+			catch (CycleFoundException ex) { throw new IllegalArgumentException(ex); }
 		}
 
 		public SemanticGraph getBase() { return this.base; }
@@ -140,6 +144,8 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 			}
 			return preorder;
 		}
+
+
 
 		@Override
 		public boolean addVertex(Node v) { throw new RuntimeException("Operation not supported"); }

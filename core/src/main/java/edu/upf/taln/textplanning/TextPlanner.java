@@ -71,7 +71,7 @@ public final class TextPlanner
 					.distinct()
 					.collect(Collectors.toList());
 
-			// 2- Create relevance matrix
+			// 2- Create ranking matrix
 			log.info("**Creating ranking matrix**");
 			Stopwatch timer = Stopwatch.createStarted();
 			weighting.setCollection(inContents);
@@ -135,49 +135,50 @@ public final class TextPlanner
 				.map(AnnotatedTree::getDependencies)
 				.flatMap(List::stream)
 				.forEach(d -> {
-					// Add governing tree node to graph
 					OrderedTree.Node<AnnotatedEntity> governor = d.getLeft();
-					Entity govEntity = governor.getData();
-					double govWeight = rankedEntities.get(govEntity);
-					boolean isPredicate = AnnotatedTree.isPredicate(governor);
-					String govId = govEntity.getEntityLabel();
-					if (isPredicate || govId.equals("_")) // if a predicate, make node unique by appending ann id
-						govId += "_" + governor.getData().getAnnotation().getId();
-					Node<String> govNode =
-							new Node<>(govId, govEntity.getEntityLabel(), govWeight, isPredicate, generateConLLForPredicate(governor));
+					OrderedTree.Node<AnnotatedEntity> dependent = d.getMiddle();
+					String role = d.getRight();
+
+					// Add governing tree node to graph
+					Node<String> govNode = createGraphNode(governor, rankedEntities);
 					graph.addVertex(govNode); // does nothing if node existed
-					ids.computeIfAbsent(govId, v -> new HashSet<>()).add(governor);
+					ids.computeIfAbsent(govNode.id, v -> new HashSet<>()).add(governor);
 
 					// Add dependent tree node to graph
-					OrderedTree.Node<AnnotatedEntity> dependent = d.getMiddle();
-					Entity depEntity = dependent.getData();
-					double depWeight = rankedEntities.get(depEntity);
-					boolean isDepPredicate = AnnotatedTree.isPredicate(dependent);
-					String depId = depEntity.getEntityLabel();
-					if (isDepPredicate || depId.equals("_")) // if a predicate, make node unique by appending ann id
-						depId += "_" + dependent.getData().getAnnotation().getId();
-					Node<String> depNode =
-							new Node<>(depId, depEntity.getEntityLabel(), depWeight, isDepPredicate, generateConLLForPredicate(dependent));
+					Node<String> depNode = createGraphNode(dependent, rankedEntities);
 					graph.addVertex(depNode); // does nothing if node existed
-					ids.computeIfAbsent(depId, v -> new HashSet<>()).add(dependent);
+					ids.computeIfAbsent(depNode.id, v -> new HashSet<>()).add(dependent);
 
-					if (!govId.equals(depId))
+					// Add edge
+					if (!govNode.id.equals(depNode.id))
 					{
 						try
 						{
-							Edge e = new Edge(d.getRight(), AnnotatedTree.isArgument(dependent));
+							Edge e = new Edge(role, AnnotatedTree.isArgument(dependent));
 							graph.addEdge(govNode, depNode, e);
 						}
 						catch (Exception e)
 						{
-							throw new RuntimeException("Failed to add edge between " + govEntity + " and " + depEntity + ": " + e);
+							throw new RuntimeException("Failed to add edge between " + govNode.id + " and " + depNode.id + ": " + e);
 						}
 					}
 					else
-						log.warn("Dependency between two nodes with same id " + depId);
+						log.warn("Dependency between two nodes with same id " + depNode.id);
 				});
 
 		return graph;
+	}
+
+	private static Node<String> createGraphNode(OrderedTree.Node<AnnotatedEntity> inNode, Map<Entity, Double> rankedEntities)
+	{
+		AnnotatedEntity e = inNode.getData();
+		boolean isPredicate = AnnotatedTree.isPredicate(inNode);
+		String id = e.getEntityLabel();
+		if (isPredicate || id.equals("_")) // if a predicate, make node unique by appending ann id
+			id += ":" + e.getAnnotation().getId();
+		double govWeight = rankedEntities.get(e);
+
+		return new Node<>(id, e.getEntityLabel(), govWeight, isPredicate, generateConLLForPredicate(inNode));
 	}
 
 	/**

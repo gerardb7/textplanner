@@ -5,6 +5,7 @@ package edu.upf.taln.textplanning.datastructures;
  */
 public final class Annotation implements Comparable<Annotation>
 {
+	private static int counter = 0;
 	private final String id; // annotation id, e.g. NIF annotation URI, ConLL id, etc.
 	private final String form;
 	private final String lemma;
@@ -19,7 +20,7 @@ public final class Annotation implements Comparable<Annotation>
 	public Annotation(String inId, String inForm, String inLemma, String inPOS, String inFeats, String inSense,
 	                  double inScore, String inRelationName, String inRole)
 	{
-		this.id = inId;
+		this.id = inId + "_" + ++counter;
 		this.form = inForm;
 		this.lemma = inLemma;
 		this.pos = inPOS;
