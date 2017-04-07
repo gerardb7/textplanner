@@ -6,8 +6,7 @@ import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
 import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph.SemanticPattern;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
 import edu.upf.taln.textplanning.similarity.Combined;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
@@ -122,21 +121,16 @@ public class ConLLDriver
 		{
 			String inConll = new String(Files.readAllBytes(inDoc), Charset.forName("UTF-8"));
 			List<AnnotatedTree> annotatedTrees = conll.readTrees(inConll);
-			List<SemanticPattern> plan = planner.planText(annotatedTrees, inPlannerOptions);
+			List<SemanticTree> plan = planner.planText(annotatedTrees, inPlannerOptions);
 
 			String conll = "";
-			for (SemanticPattern t : plan)
+			for (SemanticTree t : plan)
 			{
-				for (List<Edge> p : t.getPreOrders())
+				for (Edge e : t.getPreOrder())
 				{
-					conll += (String) t.getEdgeSource(p.get(0)).data;
-					for (Edge e : p)
-					{
-						Node node = t.getEdgeTarget(e);
-						conll += (String) node.data;
-					}
-					conll += "\n";
+					conll += (String) t.getEdgeSource(e).data;
 				}
+				conll += "\n"; // Treat each pattern as a separate sentence
 			}
 
 			return conll;
