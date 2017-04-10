@@ -2,14 +2,15 @@ package edu.upf.taln.textplanning;
 
 import Jama.Matrix;
 import com.google.common.base.Stopwatch;
+import edu.upf.taln.textplanning.coherence.DiscoursePlanner;
 import edu.upf.taln.textplanning.datastructures.*;
 import edu.upf.taln.textplanning.pattern.PatternExtraction;
+import edu.upf.taln.textplanning.ranking.PowerIterationRanking;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -95,8 +96,10 @@ public final class TextPlanner
 			log.info("Pattern extraction took " + timer.stop());
 
 			// 5- Sort the trees into a coherence-optimized list
-			List<SemanticTree> patternList = new ArrayList<>();
-			patternList.addAll(patterns);
+			log.info("**Structuring patterns**");
+			timer.reset(); timer.start();
+			List<SemanticTree> patternList = DiscoursePlanner.structurePatterns(patterns, similarity, rankedEntities);
+			log.info("Pattern structuring took " + timer.stop());
 
 			// 6- Generate stats (optional)
 			if (inOptions.generateStats)

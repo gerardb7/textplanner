@@ -1,6 +1,8 @@
-package edu.upf.taln.textplanning;
+package edu.upf.taln.textplanning.ranking;
 
 import Jama.Matrix;
+import edu.upf.taln.textplanning.StatsReporter;
+import edu.upf.taln.textplanning.TextPlanner;
 import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;

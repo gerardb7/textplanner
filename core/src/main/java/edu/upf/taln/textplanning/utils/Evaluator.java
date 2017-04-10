@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.utils;
 
 import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
+import edu.upf.taln.textplanning.similarity.Combined;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.similarity.SensEmbed;
 import edu.upf.taln.textplanning.similarity.Word2Vec;
@@ -59,8 +60,12 @@ public class Evaluator
 
 		// Set up similarity metric
 		EntitySimilarity senseSim = inSenseVectors == null ? null : new SensEmbed(inSenseVectors);
-		Word2Vec wordSim = inWordVectors == null ? null : new Word2Vec(inWordVectors);
-		TreeEditSimilarity similarity = new TreeEditSimilarity(wordSim, senseSim);
+		EntitySimilarity wordSim = inWordVectors == null ? null : new Word2Vec(inWordVectors);
+		List<EntitySimilarity> functions = new ArrayList<>();
+		functions.add(senseSim);
+		functions.add(wordSim);
+		EntitySimilarity combined = new Combined(functions);
+		PatternSimilarity similarity = new PatternSimilarity(combined);
 
 		int numPairsSim = 0;
 		int numPairsStats = 0;
@@ -113,7 +118,7 @@ public class Evaluator
 			// Calculate average similarity between N sentences in gold and N first sentences in system
 			double average = systemTrees.stream()
 					.mapToDouble(st -> goldTrees.stream()
-							.mapToDouble(gt -> similarity.getSimilarity(st, gt))
+							.mapToDouble(gt -> 0.0) //similarity.getSimilarity(st, gt))
 							.average().orElse(0.0))
 					.average().orElse(0.0);
 			log.info(   "Average similarity for summary " + p.getLeft().getFileName().toString() +

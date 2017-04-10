@@ -31,7 +31,7 @@ public class Combined implements EntitySimilarity
 	@Override
 	public double computeSimilarity(Entity inItem1, Entity inItem2)
 	{
-		if (inItem1.equals(inItem2))
+		if (inItem1.getEntityLabel().equals(inItem2.getEntityLabel()))
 			return 1.0;
 		if (!isDefinedFor(inItem1, inItem2))
 			return 0.0;

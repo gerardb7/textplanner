@@ -2,14 +2,12 @@ package edu.upf.taln.textplanning.utils;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
-import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
-import edu.upf.taln.textplanning.datastructures.OrderedTree;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 
 /**
@@ -19,22 +17,32 @@ import java.util.Optional;
  */
 public final class SemanticTreeProxy implements unnonouno.treedist.Tree
 {
-	private final ImmutableList<OrderedTree.Node<AnnotatedEntity>> nodes; // list of nodes in preorder
-	private final ImmutableMap<OrderedTree.Node<AnnotatedEntity>, Integer> index; // indexes for each node
+	private final SemanticTree tree;
+	private final ImmutableList<Node> nodes; // list of nodes in preorder
+	private final ImmutableMap<Node, Integer> index; // indexes for each node
 
-	public SemanticTreeProxy(AnnotatedTree inTree)
+	public SemanticTreeProxy(SemanticTree inTree)
 	{
-		List<OrderedTree.Node<AnnotatedEntity>> preOrder = inTree.getPreOrder();
-		ImmutableList.Builder<OrderedTree.Node<AnnotatedEntity>> builder = ImmutableList.builder();
-		nodes = builder.addAll(preOrder).build();
+		tree = inTree;
 
-		Map<OrderedTree.Node<AnnotatedEntity>, Integer> mutableIndex = new HashMap<>();
-		nodes.stream().forEach(e -> mutableIndex.put(e, nodes.indexOf(e)));
-		ImmutableMap.Builder<OrderedTree.Node<AnnotatedEntity>, Integer> mapBuilder = ImmutableMap.builder();
+		// Get list of nodes in preorder
+		List<Edge> preOrder = tree.getPreOrder();
+		List<Node> preOrderNodes = new ArrayList<>();
+		preOrderNodes.add(tree.getEdgeSource(preOrder.get(0))); // add root to list
+		preOrder.stream()
+				.map(tree::getEdgeTarget)
+				.forEach(preOrderNodes::add);
+
+		ImmutableList.Builder<Node> builder = ImmutableList.builder();
+		nodes = builder.addAll(preOrderNodes).build();
+
+		Map<Node, Integer> mutableIndex = new HashMap<>();
+		nodes.stream().forEach(n -> mutableIndex.put(n, nodes.indexOf(n)));
+		ImmutableMap.Builder<Node, Integer> mapBuilder = ImmutableMap.builder();
 		index = mapBuilder.putAll(mutableIndex).build();
 	}
 
-	public OrderedTree.Node<AnnotatedEntity> getEntity(int i)
+	public Node getEntity(int i)
 	{
 		if (nodes.isEmpty())
 		{
@@ -71,9 +79,9 @@ public final class SemanticTreeProxy implements unnonouno.treedist.Tree
 			return NOT_FOUND;
 		}
 
-		OrderedTree.Node<AnnotatedEntity> e = nodes.get(i);
+		Node e = nodes.get(i);
 
-		if (e.isLeaf())
+		if (tree.outDegreeOf(e) == 0)
 		{
 			return NOT_FOUND;
 		}
@@ -91,13 +99,21 @@ public final class SemanticTreeProxy implements unnonouno.treedist.Tree
 		if (i == 0)
 			return NOT_FOUND; // root has no siblings
 
-		OrderedTree.Node<AnnotatedEntity> node = nodes.get(i);
-		Optional<OrderedTree.Node<AnnotatedEntity>> nextSibling = node.getNextSibling();
-		if (!nextSibling.isPresent())
+		Node node = nodes.get(i);
+		Node parent = tree.getEdgeSource(tree.incomingEdgesOf(node).iterator().next());
+		List<Node> siblings = tree.outgoingEdgesOf(parent).stream()
+				.map(tree::getEdgeTarget)
+				.collect(Collectors.toList());
+
+		// @todo lexicographical sort very inefficient
+		siblings.sort(Comparator.comparing(n -> n.id)); // lexicographic compare
+		int nextSibling = siblings.indexOf(node) + 1;
+
+		if (nextSibling >= siblings.size())
 			return NOT_FOUND;
 		else
 		{
-			return index.get(nextSibling.get());
+			return index.get(siblings.get(nextSibling));
 		}
 	}
 
@@ -117,13 +133,12 @@ public final class SemanticTreeProxy implements unnonouno.treedist.Tree
 			return NOT_FOUND; // root has no parent
 		}
 
-		OrderedTree.Node<AnnotatedEntity> node = nodes.get(i);
-		Optional<OrderedTree.Node<AnnotatedEntity>> parent = node.getParent();
-		if (!parent.isPresent())
-		{
-			return NOT_FOUND; // no parent ?
-		}
-		return index.get(parent.get());
+		Node node = nodes.get(i);
+		if (tree.inDegreeOf(node) == 0)
+			return NOT_FOUND;
+
+		Node parent = tree.getEdgeSource(tree.incomingEdgesOf(node).iterator().next());
+		return index.get(parent);
 	}
 
 	@Override

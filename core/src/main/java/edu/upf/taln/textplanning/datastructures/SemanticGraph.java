@@ -16,12 +16,12 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 	public static class Node<T>
 	{
 		public final String id; // unique id, determines if two nodes are the same!
-		public final String entity;
+		public final Entity entity;
 		public final double weight;
 		public final boolean isPredicate;// If true, entity denotes a situation/event
 		public final T data; // Any additional data about referred entity goes here
 
-		public Node(String id, String inEntity, double weight, boolean isPredicate, T data)
+		public Node(String id, Entity inEntity, double weight, boolean isPredicate, T data)
 		{
 			this.id = id;
 			this.entity = inEntity;

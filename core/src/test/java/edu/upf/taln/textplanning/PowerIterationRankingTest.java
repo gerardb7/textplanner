@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning;
 import Jama.Matrix;
 import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.datastructures.Entity;
+import edu.upf.taln.textplanning.ranking.PowerIterationRanking;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.junit.Test;

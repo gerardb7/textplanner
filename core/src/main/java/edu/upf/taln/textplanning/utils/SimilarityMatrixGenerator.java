@@ -2,7 +2,9 @@ package edu.upf.taln.textplanning.utils;
 
 import com.beust.jcommander.*;
 import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
+import edu.upf.taln.textplanning.similarity.Combined;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.similarity.SensEmbed;
 import edu.upf.taln.textplanning.similarity.Word2Vec;
@@ -14,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -60,7 +63,7 @@ public class SimilarityMatrixGenerator
 		private Path senseVectorsPath;
 	}
 
-	private final TreeEditSimilarity sim;
+	private final PatternSimilarity sim;
 	private final NumberFormat format;
 
 	/**
@@ -68,7 +71,7 @@ public class SimilarityMatrixGenerator
 	 *
 	 * @param inSimilarityFunction similarity function
 	 */
-	public SimilarityMatrixGenerator(TreeEditSimilarity inSimilarityFunction)
+	public SimilarityMatrixGenerator(PatternSimilarity inSimilarityFunction)
 	{
 		assert inSimilarityFunction != null;
 		sim = inSimilarityFunction;
@@ -84,7 +87,7 @@ public class SimilarityMatrixGenerator
 	 * @param inPatterns patterns to compare
 	 * @return similarity matrix
 	 */
-	public double[][] calculateSimilarityMatrix(List<AnnotatedTree> inPatterns)
+	public double[][] calculateSimilarityMatrix(List<SemanticTree> inPatterns)
 	{
 		assert inPatterns != null;
 
@@ -101,7 +104,7 @@ public class SimilarityMatrixGenerator
 	 * @param inPatterns patterns to compare
 	 * @return similarity matrix
 	 */
-	public double[][] calculateDistanceMatrix(List<AnnotatedTree> inPatterns)
+	public double[][] calculateDistanceMatrix(List<SemanticTree> inPatterns)
 	{
 		assert inPatterns != null;
 
@@ -142,21 +145,25 @@ public class SimilarityMatrixGenerator
 		new JCommander(cmlArgs, args);
 		EntitySimilarity wordVectors = (cmlArgs.wordVectorsPath != null) ? new Word2Vec(cmlArgs.wordVectorsPath) : null;
 		EntitySimilarity senseVectors = (cmlArgs.senseVectorsPath != null) ? new SensEmbed(cmlArgs.senseVectorsPath) : null;
-		TreeEditSimilarity similarity = new TreeEditSimilarity(wordVectors, senseVectors);
+		List<EntitySimilarity> functions = new ArrayList<>();
+		functions.add(senseVectors);
+		functions.add(wordVectors);
+		EntitySimilarity combined = new Combined(functions);
+		PatternSimilarity similarity = new PatternSimilarity(combined);
 		SimilarityMatrixGenerator calculator = new SimilarityMatrixGenerator(similarity);
 
 		Path inputDoc = cmlArgs.doc.get(0);
 		String conll = new String(Files.readAllBytes(inputDoc), Charset.forName("UTF-8"));
 		ConLLAcces reader = new ConLLAcces();
 		List<AnnotatedTree> inputPatterns = reader.readTrees(conll);
-		double[][] matrix;
+		double[][] matrix = null;
 		if (cmlArgs.distance)
 		{
-			matrix = calculator.calculateDistanceMatrix(inputPatterns);
+			//matrix = calculator.calculateDistanceMatrix(inputPatterns);
 		}
 		else
 		{
-			matrix = calculator.calculateSimilarityMatrix(inputPatterns);
+			//matrix = calculator.calculateSimilarityMatrix(inputPatterns);
 		}
 		String matrixString = calculator.formatMatrix(matrix);
 		System.out.println(matrixString);

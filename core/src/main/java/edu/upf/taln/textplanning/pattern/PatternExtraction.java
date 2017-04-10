@@ -81,7 +81,7 @@ public class PatternExtraction
 			id += ":" + e.getAnnotation().getId();
 		double govWeight = rankedEntities.get(e);
 
-		return new Node<>(id, e.getEntityLabel(), govWeight, isPredicate, generateConLLForPredicate(inNode));
+		return new Node<>(id, e, govWeight, isPredicate, generateConLLForPredicate(inNode));
 	}
 
 	/**

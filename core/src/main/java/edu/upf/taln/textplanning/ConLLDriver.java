@@ -12,7 +12,6 @@ import edu.upf.taln.textplanning.similarity.Combined;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.similarity.SensEmbed;
 import edu.upf.taln.textplanning.similarity.Word2Vec;
-import edu.upf.taln.textplanning.utils.TreeEditSimilarity;
 import edu.upf.taln.textplanning.weighting.Linear;
 import edu.upf.taln.textplanning.weighting.Position;
 import edu.upf.taln.textplanning.weighting.TFIDF;
@@ -158,11 +157,11 @@ public class ConLLDriver
 
 			log.info("Text planning took " + timer.stop());
 			log.info("Solr queries: " + SEWSolr.debug.toString());
-			log.info("Word form vector lookups: " + TreeEditSimilarity.numWordSuccessfulLookups + " successful, " +
-					TreeEditSimilarity.numWordFailedLookups + " failed");
-			log.info("Word sense vector lookups: " + TreeEditSimilarity.numSenseSuccessfulLookups + " successful, " +
-					TreeEditSimilarity.numSenseFailedLookups + " failed");
-			log.info("********************************************************");
+//			log.info("Word form vector lookups: " + PatternSimilarity.numWordSuccessfulLookups + " successful, " +
+//					PatternSimilarity.numWordFailedLookups + " failed");
+//			log.info("Word sense vector lookups: " + PatternSimilarity.numSenseSuccessfulLookups + " successful, " +
+//					PatternSimilarity.numSenseFailedLookups + " failed");
+//			log.info("********************************************************");
 			SEWSolr.debug.reset();
 			System.out.println(planConll);
 
