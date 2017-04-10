@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning.weighting;
 
-import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.datastructures.Entity;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 
 import java.util.List;
 
@@ -10,6 +10,6 @@ import java.util.List;
  */
 public interface WeightingFunction
 {
-	void setCollection(List<AnnotatedTree> inCollection);
+	void setCollection(List<SemanticTree> inCollection);
 	double weight(Entity inEntity);
 }

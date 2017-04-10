@@ -13,21 +13,32 @@ import java.util.List;
  */
 public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, SemanticGraph.Edge>
 {
-	public static class Node<T>
+	public static class Node
 	{
 		public final String id; // unique id, determines if two nodes are the same!
 		public final Entity entity;
 		public final double weight;
-		public final boolean isPredicate;// If true, entity denotes a situation/event
-		public final T data; // Any additional data about referred entity goes here
 
-		public Node(String id, Entity inEntity, double weight, boolean isPredicate, T data)
+		public Node(String id, Entity inEntity, double weight)
 		{
 			this.id = id;
 			this.entity = inEntity;
 			this.weight = weight;
-			this.isPredicate = isPredicate;
-			this.data = data;
+		}
+
+		public String getId()
+		{
+			return id;
+		}
+
+		public Entity getEntity()
+		{
+			return entity;
+		}
+
+		public double getWeight()
+		{
+			return weight;
 		}
 
 		@Override
@@ -56,6 +67,17 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 			this.role = role;
 			this.isArg = isArg;
 		}
+
+		public String getRole()
+		{
+			return role;
+		}
+
+		public boolean isArg()
+		{
+			return isArg;
+		}
+
 	}
 
 	public static class SubGraph extends DirectedSubgraph<Node, Edge>
@@ -88,5 +110,13 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 	public SemanticGraph(Class<? extends Edge> edgeClass)
 	{
 		super(edgeClass);
+	}
+
+	/**
+	 * @return true if node has one or more arguments
+	 */
+	public boolean isPredicate(Node n)
+	{
+		return outgoingEdgesOf(n).stream().anyMatch(Edge::isArg);
 	}
 }

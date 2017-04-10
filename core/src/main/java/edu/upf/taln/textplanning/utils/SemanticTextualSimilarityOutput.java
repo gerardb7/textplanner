@@ -1,12 +1,9 @@
 package edu.upf.taln.textplanning.utils;
 
 import com.beust.jcommander.*;
-import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.similarity.Combined;
-import edu.upf.taln.textplanning.similarity.EntitySimilarity;
-import edu.upf.taln.textplanning.similarity.SensEmbed;
-import edu.upf.taln.textplanning.similarity.Word2Vec;
+import edu.upf.taln.textplanning.similarity.*;
 
 import java.io.StringWriter;
 import java.math.RoundingMode;
@@ -88,7 +85,7 @@ public class SemanticTextualSimilarityOutput
 		PatternSimilarity msgSim = new PatternSimilarity(combined);
 		String conll = new String(Files.readAllBytes(cmlArgs.inputConll.get(0)), Charset.forName("UTF-8"));
 		ConLLAcces reader = new ConLLAcces();
-		List<AnnotatedTree> trees = reader.readTrees(conll);
+		List<SemanticTree> trees = reader.readTrees(conll);
 		StringWriter writer = new StringWriter();
 		NumberFormat format = NumberFormat.getInstance();
 		format.setRoundingMode(RoundingMode.HALF_UP);

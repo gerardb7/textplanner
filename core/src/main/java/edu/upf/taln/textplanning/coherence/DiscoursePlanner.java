@@ -3,7 +3,7 @@ package edu.upf.taln.textplanning.coherence;
 import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
-import edu.upf.taln.textplanning.utils.PatternSimilarity;
+import edu.upf.taln.textplanning.similarity.PatternSimilarity;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;

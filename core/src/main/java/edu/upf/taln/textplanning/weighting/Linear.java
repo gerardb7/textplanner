@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning.weighting;
 
-import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.datastructures.Entity;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 
 import java.util.HashMap;
 import java.util.List;
@@ -19,7 +19,7 @@ public class Linear implements WeightingFunction
 	}
 
 	@Override
-	public void setCollection(List<AnnotatedTree> inCollection)
+	public void setCollection(List<SemanticTree> inCollection)
 	{
 		functions.forEach((f, w) -> f.setCollection(inCollection));
 	}

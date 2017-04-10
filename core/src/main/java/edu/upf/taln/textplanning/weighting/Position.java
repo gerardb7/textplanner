@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning.weighting;
 
-import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.datastructures.Entity;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import org.apache.commons.collections4.ListUtils;
 
 import java.util.Collections;
@@ -19,12 +19,12 @@ public class Position implements WeightingFunction
 	private final Map<String, Double> avgPositions = new HashMap<>();
 
 	@Override
-	public void setCollection(List<AnnotatedTree> inCollection)
+	public void setCollection(List<SemanticTree> inCollection)
 	{
 		final Map<String, List<Double>> positions = new HashMap<>();
 		inCollection.forEach(t ->
-				t.getPreOrder().stream()
-						.map(n -> n.getData().getEntityLabel())
+				t.vertexSet().stream()
+						.map(n -> n.getEntity().getEntityLabel())
 						.forEach(s -> positions.merge(s, Collections.singletonList(t.getPosition()), ListUtils::union)));
 
 		avgPositions.clear();

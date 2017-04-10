@@ -5,6 +5,7 @@ import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 public class SemanticTree extends DirectedAcyclicGraph<Node, Edge>
 {
 	private final Node root;
+	private final double position;
 	private static int counter = 0;
 
 	/**
@@ -67,7 +69,7 @@ public class SemanticTree extends DirectedAcyclicGraph<Node, Edge>
 			Node s = g.getEdgeSource(st);
 			Node t = g.getEdgeTarget(st);
 			String newId = t.id + "_" + ++counter;
-			Node r = new Node<>(newId, t.entity, t.weight, t.isPredicate, t.data);
+			Node r = new Node(newId, t.entity, t.weight);
 			g.addVertex(r);
 			Edge sr = new Edge(st.role, st.isArg);
 			g.addEdge(s, r, sr);
@@ -81,6 +83,19 @@ public class SemanticTree extends DirectedAcyclicGraph<Node, Edge>
 	{
 		super(Edge.class);
 		root = inRoot;
+		position = 1; // for unannotated trees
+	}
+
+	public SemanticTree(Node inRoot, double positon)
+	{
+		super(Edge.class);
+		root = inRoot;
+		this.position = positon; // annotated trees
+	}
+
+	public double getPosition()
+	{
+		return position;
 	}
 
 	/**
@@ -102,17 +117,48 @@ public class SemanticTree extends DirectedAcyclicGraph<Node, Edge>
 	}
 
 	/**
-	 * @return list of all edges in tree in preorder
+	 * Calculates list of ndoes visited in preorder and in lexicographical order between siblings according to edge role
+	 * and node id
+	 * @return list of all edges in tree
 	 */
 	public List<Edge> getPreOrder() { return getPreOrder(root); }
 	private List<Edge> getPreOrder(Node node)
 	{
+		// Lexicographical sort of siblings by id
+
 		List<Edge> preorder = new ArrayList<>();
-		for (Edge e: outgoingEdgesOf(node))
+		List<Edge> sortedSiblings = outgoingEdgesOf(node).stream()
+				.sorted(Comparator.comparing(Edge::getRole)
+						.thenComparing(Comparator.comparing(e -> this.getEdgeTarget(e).id)))
+				.collect(Collectors.toList());
+
+		for (Edge e: sortedSiblings)
 		{
 			preorder.add(e);
 			preorder.addAll(getPreOrder(getEdgeTarget(e)));
 		}
 		return preorder;
+	}
+
+	public Node getRoot()
+	{
+		return this.root;
+	}
+
+	/**
+	 * @return true if node has one or more arguments
+	 */
+	public boolean isPredicate(Node n)
+	{
+		return outgoingEdgesOf(n).stream().anyMatch(Edge::isArg);
+	}
+
+	public String toString()
+	{
+		return root.id + (outDegreeOf(root) == 0 ? " // " : " -> ") +
+				getPreOrder().stream()
+				.map(this::getEdgeTarget)
+				.map(n -> n.id + (outDegreeOf(n) == 0 ? " // " : " -> "))
+				.reduce(String::concat).orElse("");
 	}
 }

@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.utils;
+package edu.upf.taln.textplanning.similarity;
 
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import unnonouno.treedist.EditScore;

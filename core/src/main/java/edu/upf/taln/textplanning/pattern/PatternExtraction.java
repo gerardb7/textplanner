@@ -4,7 +4,6 @@ import edu.upf.taln.textplanning.datastructures.*;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.SubGraph;
-import edu.upf.taln.textplanning.input.ConLLAcces;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.DirectedGraph;
 
@@ -26,93 +25,73 @@ public class PatternExtraction
 	 * @param rankedEntities entities in trees and their scores
 	 * @return a semantic graph
 	 */
-	public static SemanticGraph createPatternExtractionGraph(List<AnnotatedTree> inContents,
+	public static SemanticGraph createPatternExtractionGraph(List<SemanticTree> inContents,
 	                                                         Map<Entity, Double> rankedEntities)
 	{
 		// Create graph
 		SemanticGraph graph = new SemanticGraph(Edge.class);
-		Map<String, Set<OrderedTree.Node<AnnotatedEntity>>> ids = new HashMap<>();
+		Map<String, Set<Node>> ids = new HashMap<>();
 
 		// Iterate triple in each tree and populate graph from them
 		inContents.stream()
-				.map(AnnotatedTree::getDependencies)
-				.flatMap(List::stream)
-				.forEach(d -> {
-					OrderedTree.Node<AnnotatedEntity> governor = d.getLeft();
-					OrderedTree.Node<AnnotatedEntity> dependent = d.getMiddle();
-					String role = d.getRight();
-
-					// Add governing tree node to graph
-					Node<String> govNode = createGraphNode(governor, rankedEntities);
-					graph.addVertex(govNode); // does nothing if node existed
-					ids.computeIfAbsent(govNode.id, v -> new HashSet<>()).add(governor);
-
-					// Add dependent tree node to graph
-					Node<String> depNode = createGraphNode(dependent, rankedEntities);
-					graph.addVertex(depNode); // does nothing if node existed
-					ids.computeIfAbsent(depNode.id, v -> new HashSet<>()).add(dependent);
-
-					// Add edge
-					if (!govNode.id.equals(depNode.id))
+				.forEach(t -> {
+					for (Edge e : t.edgeSet())
 					{
-						try
+						Node governor = t.getEdgeSource(e);
+						Node dependent = t.getEdgeTarget(e);
+
+						// Add governing tree node to graph
+						Node govNode = createGraphNode(t, governor, rankedEntities);
+						graph.addVertex(govNode); // does nothing if node existed
+						ids.computeIfAbsent(govNode.id, v -> new HashSet<>()).add(governor);
+
+						// Add dependent tree node to graph
+						Node depNode = createGraphNode(t, dependent, rankedEntities);
+						graph.addVertex(depNode); // does nothing if node existed
+						ids.computeIfAbsent(depNode.id, v -> new HashSet<>()).add(dependent);
+
+						// Add edge
+						if (!govNode.id.equals(depNode.id))
 						{
-							Edge e = new Edge(role, AnnotatedTree.isArgument(dependent));
-							graph.addEdge(govNode, depNode, e);
+							try
+							{
+								Edge e2 = new Edge(e.role, e.isArg);
+								graph.addEdge(govNode, depNode, e2);
+							}
+							catch (Exception ex)
+							{
+								throw new RuntimeException("Failed to add edge between " + govNode.id + " and " + depNode.id + ": " + ex);
+							}
 						}
-						catch (Exception e)
-						{
-							throw new RuntimeException("Failed to add edge between " + govNode.id + " and " + depNode.id + ": " + e);
-						}
+						else
+							throw new RuntimeException("Dependency between two nodes with same id " + depNode.id);
 					}
-					else
-						throw new RuntimeException("Dependency between two nodes with same id " + depNode.id);
 				});
 
 		return graph;
 	}
 
-	private static Node<String> createGraphNode(OrderedTree.Node<AnnotatedEntity> inNode, Map<Entity, Double> rankedEntities)
+	private static Node createGraphNode(SemanticTree t, Node n, Map<Entity, Double> rankedEntities)
 	{
-		AnnotatedEntity e = inNode.getData();
-		boolean isPredicate = AnnotatedTree.isPredicate(inNode);
-		String id = e.getEntityLabel();
-		if (isPredicate || id.equals("_")) // if a predicate, make node unique by appending ann id
-			id += ":" + e.getAnnotation().getId();
-		double govWeight = rankedEntities.get(e);
+		String id = n.getEntity().getEntityLabel();
+		Annotation a = ((AnnotatedEntity)n.getEntity()).getAnnotation();
+		if (t.isPredicate(n) || id.equals("_")) // if a predicate, make node unique by appending ann id
+			id += ":" + a.getId();
+		double govWeight = rankedEntities.get(n.getEntity());
 
-		return new Node<>(id, e, govWeight, isPredicate, generateConLLForPredicate(inNode));
-	}
-
-	/**
-	 * Generates ConLL for a predicate and all its arguments and adjuncts.
-	 * @param inNode node annotating entity
-	 * @return conll
-	 */
-	private static String generateConLLForPredicate(OrderedTree.Node<AnnotatedEntity> inNode)
-	{
-		if (!AnnotatedTree.isPredicate(inNode))
-			return "";
-
-		// Create a subtree consisting of the node and its direct descendents
-		AnnotatedTree subtree = new AnnotatedTree(inNode.getData());
-		inNode.getChildrenData().forEach(a -> subtree.getRoot().addChild(a));
-
-		// Generate conll
-		ConLLAcces conll = new ConLLAcces();
-		return conll.writeTrees(Collections.singletonList(subtree));
+		return new Node(id, n.getEntity(), govWeight);
 	}
 
 	/**
 	 * Extracts patterns from a semantic graph
 	 * @return the set of extracted patterns
 	 */
-	public static Set<SemanticTree> extract(SemanticGraph inGraph, int inNumPatterns)
+	public static Set<SemanticTree> extract(SemanticGraph g, int inNumPatterns)
 	{
 		// Work out average node weight, which will be used as weight for edges
-		double avgWeight = inGraph.vertexSet().stream().mapToDouble(v -> v.weight).average().orElse(1.0);
+		double avgWeight = g.vertexSet().stream().mapToDouble(v -> v.weight).average().orElse(1.0);
 
-		List<Node> sortedNodes = inGraph.vertexSet().stream()
+		List<Node> sortedNodes = g.vertexSet().stream()
 				.sorted((v1, v2) -> Double.compare(v2.weight, v1.weight))// swapped v1 and v2 to obtain descending order
 				.collect(Collectors.toList());
 
@@ -121,13 +100,13 @@ public class PatternExtraction
 
 		// Get highest ranked nodes
 		List<Node> topEntities = sortedNodes.stream()
-				.filter(v -> !v.isPredicate)
+				.filter(v -> !g.isPredicate(v))
 				.limit(inNumPatterns)
 				.collect(Collectors.toList());
 
 		// Create a pattern for each
 		return topEntities.stream()
-				.map(n -> getSemanticPatterns(n, inGraph, avgWeight))
+				.map(n -> getSemanticPatterns(n, g, avgWeight))
 				.flatMap(Set::stream)
 				.collect(Collectors.toSet());
 	}

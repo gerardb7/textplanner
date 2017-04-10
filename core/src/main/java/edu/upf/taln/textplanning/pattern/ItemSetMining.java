@@ -4,9 +4,10 @@ import ca.pfv.spmf.algorithms.frequentpatterns.fpgrowth.AlgoFPMax;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemset;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemsets;
 import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
-import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.datastructures.Annotation;
-import edu.upf.taln.textplanning.datastructures.OrderedTree;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,12 +26,14 @@ public class ItemSetMining
 	private final boolean debug = true;
 	private final static Logger log = LoggerFactory.getLogger(ItemSetMining.class);
 
-	public Set<AnnotatedTree> getPatterns(List<AnnotatedTree> inContents)
+	public Set<SemanticTree> getPatterns(List<SemanticTree> inContents)
 	{
 		// Collect sets of relevant annotations from trees
 		List<Set<AnnotatedEntity>> annSets = inContents.stream()
-				.map(t -> t.getPreOrder().stream()
-						.map(OrderedTree.Node::getData)
+				.map(t -> t.vertexSet().stream()
+						.map(Node::getEntity)
+						.filter(AnnotatedEntity.class::isInstance)
+						.map(AnnotatedEntity.class::cast)
 						.filter(ItemSetMining::isItem)
 						.collect(Collectors.toSet()))
 				.collect(Collectors.toList());
@@ -89,12 +92,12 @@ public class ItemSetMining
 				.map(ms -> itemSets.stream()
 						.filter(is -> is.containsAll(ms))  // find sets that contain this maximal set
 						.map(is -> inContents.get(itemSets.indexOf(is))) // find corresponding tree
-						.mapToDouble(AnnotatedTree::getPosition)
+						.mapToDouble(SemanticTree::getPosition)
 						.average().orElse(0.0))
 				.collect(Collectors.toList());
 
 		// For each maximal itemset, find the shortest tree that contains it
-		List<AnnotatedTree> shortestTrees = filteredMaximalSets.stream()
+		List<SemanticTree> shortestTrees = filteredMaximalSets.stream()
 				.map(m -> itemSets.stream()
 						.filter(s -> s.containsAll(m)) // find sets that contain this maximal set
 						.map(is -> inContents.get(itemSets.indexOf(is))) // find corresponding tree
@@ -102,12 +105,15 @@ public class ItemSetMining
 				.map(Optional::get)
 				.collect(Collectors.toList()); // yes, we do want to preserve duplicate trees
 
+		//noinspection ConstantConditions
 		if (debug)
 		{
 			Map<String, String> refsAndForms = inContents.stream()
-					.map(AnnotatedTree::getPreOrder)
-					.flatMap(List::stream)
-					.map(OrderedTree.Node::getData)
+					.map(SemanticTree::vertexSet)
+					.flatMap(Set::stream)
+					.map(Node::getEntity)
+					.filter(AnnotatedEntity.class::isInstance)
+					.map(AnnotatedEntity.class::cast)
 					.map(AnnotatedEntity::getAnnotation)
 					.collect(Collectors.toMap(a -> a.getSense() != null ? a.getSense() : "none", Annotation::getForm, (r1, r2) -> r1));
 
@@ -175,34 +181,34 @@ public class ItemSetMining
 	 * Given a tree and an itemset corresponding to a subset of its nodes, return a subtree spanning over all these
 	 * nodes and satisfying certain linguistic constraints.
 	 *
-	 * @param inTree    the original tree
+	 * @param t    the original tree
 	 * @param inItemSet an itemset where each item corresponds to one or more nodes in the tree
 	 * @return a subtree
 	 */
-	private AnnotatedTree getSubTree(AnnotatedTree inTree, Set<String> inItemSet, double inPosition)
+	private SemanticTree getSubTree(SemanticTree t, Set<String> inItemSet, double inPosition)
 	{
 		// Collect nodes which correspond to the items in the itemset
-		Set<OrderedTree.Node<AnnotatedEntity>> itemSetNodes = inItemSet.stream()
-				.map(item -> inTree.getPreOrder().stream()
-						.filter(n -> n.getData().getEntityLabel().equals(item)))
+		Set<Node> itemSetNodes = inItemSet.stream()
+				.map(item -> t.vertexSet().stream()
+						.filter(n -> n.getEntity().getEntityLabel().equals(item)))
 				.flatMap(Function.identity())
 				.collect(Collectors.toSet()); // removes duplicates
 
 		// Find a common ancestor for them
-		Optional<OrderedTree.Node<AnnotatedEntity>> commonAncestor = getCommonAncestor(itemSetNodes);
+		Optional<Node> commonAncestor = getCommonAncestor(t, itemSetNodes);
 		if (!commonAncestor.isPresent())
 			throw new RuntimeException("No common ancestor found. Structure is not a tree?");
 
 		// Expand set of node to include all nodes in their paths to the root
-		Set<OrderedTree.Node<AnnotatedEntity>> nodes = itemSetNodes.stream()
-				.map(n -> getPath(commonAncestor.get(), n))
+		Set<Node> nodes = itemSetNodes.stream()
+				.map(n -> getPath(t, commonAncestor.get(), n))
 				.flatMap(List::stream)
 				.collect(Collectors.toSet());
 
 		// Determine the subtree that spans over all the nodes
-		AnnotatedTree subTree =
-				new AnnotatedTree(commonAncestor.get().getData(), inPosition);
-		populateSubTree(commonAncestor.get(), subTree.getRoot(), nodes);
+		SemanticTree subTree =
+				new SemanticTree(commonAncestor.get(), inPosition);
+		populateSubTree(t, commonAncestor.get(), subTree.getRoot(), nodes);
 
 		return subTree;
 	}
@@ -212,23 +218,23 @@ public class ItemSetMining
 	 * @param inNodes set of nodes
 	 * @return common parent, if any
 	 */
-	private static Optional<OrderedTree.Node<AnnotatedEntity>> getCommonAncestor(Set<OrderedTree.Node<AnnotatedEntity>> inNodes)
+	private static Optional<Node> getCommonAncestor(SemanticTree t, Set<Node> inNodes)
 	{
-		Optional<OrderedTree.Node<AnnotatedEntity>> commonAncestor = Optional.empty();
-		Set<OrderedTree.Node<AnnotatedEntity>> ancestors = new HashSet<>();
+		Optional<Node> commonAncestor = Optional.empty();
+		Set<Node> ancestors = new HashSet<>();
 		ancestors.addAll(inNodes);
 		while (!commonAncestor.isPresent())
 		{
 			commonAncestor = ancestors.stream()
-					.filter(OrderedTree.Node::isRoot)
+					.filter(n -> t.inDegreeOf(n) == 0)
 					.findFirst();
 
 			if (!commonAncestor.isPresent())
 			{
 				ancestors = ancestors.stream()
-						.map(OrderedTree.Node::getParent)
-						.filter(Optional::isPresent)
-						.map(Optional::get)
+						.filter(n -> t.inDegreeOf(n) > 0)
+						.map(n -> t.incomingEdgesOf(n).iterator().next())
+						.map(t::getEdgeSource)
 						.collect(Collectors.toSet());
 			}
 		}
@@ -237,28 +243,26 @@ public class ItemSetMining
 	}
 
 	/**
-	 * Given a node in a tree and one of its descendents, return the path from one to the other
+	 * Given a node in a tree and one of its descendants, return the path from one to the other
 	 *
 	 * @param inAncestor       a node
 	 * @param inDescendent a descendent of @inNode
 	 * @return the sequence of nodes in the path
 	 */
-	private static List<OrderedTree.Node<AnnotatedEntity>> getPath(
-			OrderedTree.Node<AnnotatedEntity> inAncestor,
-			OrderedTree.Node<AnnotatedEntity> inDescendent)
+	private static List<Node> getPath(SemanticTree t, Node inAncestor, Node inDescendent)
 	{
-		OrderedTree.Node<AnnotatedEntity> currentNode = inDescendent;
-		List<OrderedTree.Node<AnnotatedEntity>> path = new ArrayList<>();
+		Node currentNode = inDescendent;
+		List<Node> path = new ArrayList<>();
 		path.add(currentNode);
 
 		// Find the (unique) path to the ancestor
 		while (currentNode != inAncestor)
 		{
-			if (currentNode.isRoot())
+			if (t.getRoot() == currentNode)
 			{
-				throw new RuntimeException("Cannot find a path between nodes " + inAncestor.getData() + " and " + inDescendent.getData());
+				throw new RuntimeException("Cannot find a path between nodes " + inAncestor.getEntity() + " and " + inDescendent.getEntity());
 			}
-			currentNode = currentNode.getParent().get();
+			currentNode = t.getEdgeSource(t.incomingEdgesOf(currentNode).iterator().next());
 			path.add(currentNode);
 		}
 
@@ -272,46 +276,60 @@ public class ItemSetMining
 	 * @param inNewRoot         the root of the subtree
 	 * @param inCompulsoryNodes set of nodes in the supertree which must be part of the subtree
 	 */
-	private static void populateSubTree(OrderedTree.Node<AnnotatedEntity> inOldRoot,
-	                             OrderedTree.Node<AnnotatedEntity> inNewRoot,
-	                             Set<OrderedTree.Node<AnnotatedEntity>> inCompulsoryNodes)
+	private static void populateSubTree(SemanticTree t, Node inOldRoot, Node inNewRoot, Set<Node> inCompulsoryNodes)
 	{
-		inOldRoot.getChildren().stream()
+		t.outgoingEdgesOf(inOldRoot).stream()
+				.map(t::getEdgeTarget)
 				.filter(n ->    (inCompulsoryNodes.contains(n) ||
-								AnnotatedTree.isArgument(n) ||
-								isPlainModifier(n) ||
+								t.incomingEdgesOf(n).iterator().next().isArg ||
+								isPlainModifier(t, n) ||
 								isNegation(n) ||
 								isNumber(n) ||
-								isPlainAdverb(n) ||
-								isName(n)) && !isVerbWithRelative(n))
-				.forEach(n -> populateSubTree(n, inNewRoot.addChild(n.getData()), inCompulsoryNodes)); // recursive call
+								isPlainAdverb(t, n) ||
+								isName(n)) && !isVerbWithRelative(t, n))
+				.forEach(n -> {
+					Annotation a = ((AnnotatedEntity) n.getEntity()).getAnnotation();
+					AnnotatedEntity e = new AnnotatedEntity(a);
+					Node c = new Node(n.getEntity().getEntityLabel(), e, 0.0);
+					t.addVertex(c);
+					Edge e1 = t.incomingEdgesOf(n).iterator().next();
+					Edge e2 = new Edge(e1.role, e1.isArg);
+					t.addEdge(inNewRoot, c, e2);
+					populateSubTree(t, n, c, inCompulsoryNodes);
+				}); // recursive call
 	}
 
-	private static boolean isPlainModifier(OrderedTree.Node<AnnotatedEntity> inNode)
+	private static boolean isPlainModifier(SemanticTree t, Node n)
 	{
-		String role = inNode.getData().getAnnotation().getRole();
+		Annotation a = ((AnnotatedEntity) n.getEntity()).getAnnotation();
+		String role = a.getRole();
+		boolean isLeaf = t.outDegreeOf(n) == 0;
 		String[] pos = {"DT", "NN", "RB", "JJ"};
-		return role.equals("ATTR") && inNode.isLeaf() && Arrays.stream(pos).anyMatch(n -> n.equals(inNode.getData().getAnnotation().getPOS()));
+		return role.equals("ATTR") && isLeaf && Arrays.stream(pos).anyMatch(p -> p.equals(a.getPOS()));
 	}
 
-	private static boolean isNegation(OrderedTree.Node<AnnotatedEntity> inNode)
+	private static boolean isNegation(Node n)
 	{
+		Annotation a = ((AnnotatedEntity) n.getEntity()).getAnnotation();
 		String[] forms = {"no", "not"};
 		String[] pos = {"RB", "JJ"};
-		return Arrays.stream(pos).anyMatch(n -> n.equals(inNode.getData().getAnnotation().getPOS())) &&
-				Arrays.stream(forms).anyMatch(f -> f.equals(inNode.getData().getAnnotation().getForm()));
+		return Arrays.stream(pos).anyMatch(p -> p.equals(a.getPOS())) &&
+				Arrays.stream(forms).anyMatch(f -> f.equals(a.getForm()));
 	}
 
-	private static boolean isNumber(OrderedTree.Node<AnnotatedEntity> inNode)
+	private static boolean isNumber(Node n)
 	{
+		Annotation a = ((AnnotatedEntity) n.getEntity()).getAnnotation();
 		String[] pos = {"CD"};
-		return Arrays.stream(pos).anyMatch(n -> n.equals(inNode.getData().getAnnotation().getPOS()));
+		return Arrays.stream(pos).anyMatch(p -> p.equals(a.getPOS()));
 	}
 
-	private static boolean isPlainAdverb(OrderedTree.Node<AnnotatedEntity> inNode)
+	private static boolean isPlainAdverb(SemanticTree t, Node n)
 	{
+		Annotation a = ((AnnotatedEntity) n.getEntity()).getAnnotation();
+		boolean isLeaf = t.outDegreeOf(n) == 0;
 		String[] pos = {"WRB"};
-		return inNode.isLeaf() && Arrays.stream(pos).anyMatch(n -> n.equals(inNode.getData().getAnnotation().getPOS()));
+		return isLeaf && Arrays.stream(pos).anyMatch(p -> p.equals(a.getPOS()));
 	}
 
 //	private static boolean isInflectedVerb(Annotation inAnn)
@@ -320,16 +338,19 @@ public class ItemSetMining
 //		return Arrays.stream(inflectedVerbs).anyMatch(pos -> pos.equals(inAnn.getPOS()));
 //	}
 
-	private static boolean isVerbWithRelative(OrderedTree.Node<AnnotatedEntity> inNode)
+	private static boolean isVerbWithRelative(SemanticTree t, Node n)
 	{
-		return inNode.getData().getAnnotation().getPOS().startsWith("VB") &&
-				inNode.getChildrenData().size() == 1 &&
-				inNode.getChildrenData().get(0).getAnnotation().getPOS().equalsIgnoreCase("WDT");
+		Annotation a = ((AnnotatedEntity) n.getEntity()).getAnnotation();
+		Annotation c = ((AnnotatedEntity)t.getEdgeTarget(t.outgoingEdgesOf(n).iterator().next()).getEntity()).getAnnotation();
+		return a.getPOS().startsWith("VB") &&
+				t.outDegreeOf(n) == 1 &&
+				c.getPOS().equalsIgnoreCase("WDT");
 	}
 
-	private static boolean isName(OrderedTree.Node<AnnotatedEntity> inNode)
+	private static boolean isName(Node n)
 	{
-		return inNode.getData().getAnnotation().getRole().equals("NAME");
+		Annotation a = ((AnnotatedEntity) n.getEntity()).getAnnotation();
+		return a.getRole().equals("NAME");
 	}
 
 }

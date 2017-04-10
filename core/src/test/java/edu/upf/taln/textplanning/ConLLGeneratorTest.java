@@ -1,11 +1,8 @@
 package edu.upf.taln.textplanning;
 
-import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
-import edu.upf.taln.textplanning.datastructures.Annotation;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.input.DocumentAccess;
 import org.apache.commons.io.FileUtils;
-import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -19,25 +16,12 @@ import java.util.List;
 public class ConLLGeneratorTest
 {
 	@Test
-	public void testConLLStructures() throws Exception
-	{
-		String read = FileUtils.readFileToString(new File("/home/gerard/data/summ/CAST-corpus/source_texts/dsynts/2287.conll"), Charset.defaultCharset());
-
-		ConLLAcces conll = new ConLLAcces();
-		List<DirectedAcyclicGraph<Annotation, DocumentAccess.LabelledEdge>> structures =
-				conll.readGraphs("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll");
-		String written = conll.writeGraphs(structures);
-
-		Assert.assertEquals(read, written);
-	}
-
-	@Test
 	public void testConLLMessages() throws Exception
 	{
 		String read = FileUtils.readFileToString(new File("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll"), Charset.defaultCharset());
 
 		ConLLAcces conll = new ConLLAcces();
-		List<AnnotatedTree> messages = conll.readTrees("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll");
+		List<SemanticTree> messages = conll.readTrees("src/test/resources/test_b0b50d7481b9e1b9a2e071db654394c2c8e1fa1f.conll");
 		String written = conll.writeTrees(messages);
 
 		Assert.assertEquals(read, written);

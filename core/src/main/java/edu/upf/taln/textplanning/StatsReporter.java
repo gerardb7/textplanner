@@ -1,9 +1,9 @@
 package edu.upf.taln.textplanning;
 
 import Jama.Matrix;
-import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
-import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
-import edu.upf.taln.textplanning.datastructures.OrderedTree;
+import edu.upf.taln.textplanning.datastructures.Entity;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.pattern.ItemSetMining;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.weighting.Linear;
@@ -24,7 +24,7 @@ import java.util.stream.IntStream;
  */
 public class StatsReporter
 {
-	public static String reportStats(List<AnnotatedTree> inTrees, WeightingFunction inWeighting,
+	public static String reportStats(List<SemanticTree> inTrees, WeightingFunction inWeighting,
 	                                 EntitySimilarity inSimilarity)
 	{
 		// Set up formatting
@@ -42,9 +42,9 @@ public class StatsReporter
 		writer.write("\n");
 
 		// Collect entities
-		List<AnnotatedEntity> entities = inTrees.stream().map(AnnotatedTree::getPreOrder)
+		List<Entity> entities = inTrees.stream().map(SemanticTree::vertexSet)
 				.map(p -> p.stream()
-						.map(OrderedTree.Node::getData))
+						.map(Node::getEntity))
 				.flatMap(Function.identity())
 				.distinct()
 				.collect(Collectors.toList());
@@ -82,7 +82,7 @@ public class StatsReporter
 		// Report patterns
 		writer.write("Patterns\n");
 		ItemSetMining miner = new ItemSetMining();
-		Set<AnnotatedTree> patterns = miner.getPatterns(inTrees);
+		Set<SemanticTree> patterns = miner.getPatterns(inTrees);
 		patterns.forEach(p -> writer.write(p.toString() + "\n"));
 		writer.write("\n");
 

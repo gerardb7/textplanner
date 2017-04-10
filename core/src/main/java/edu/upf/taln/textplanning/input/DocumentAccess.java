@@ -1,8 +1,6 @@
 package edu.upf.taln.textplanning.input;
 
-import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
-import edu.upf.taln.textplanning.datastructures.Annotation;
-import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import org.jgrapht.graph.DefaultEdge;
 
 import java.util.List;
@@ -27,7 +25,5 @@ public interface DocumentAccess
 		}
 	}
 
-	List<DirectedAcyclicGraph<Annotation, LabelledEdge>> readGraphs(String inDocumentContents);
-
-	List<AnnotatedTree> readTrees(String inDocumentContents);
+	List<SemanticTree> readTrees(String inDocumentContents);
 }

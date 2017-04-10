@@ -1,9 +1,9 @@
 package edu.upf.taln.textplanning.weighting;
 
 import edu.upf.taln.textplanning.corpora.Corpus;
-import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.datastructures.Entity;
-import edu.upf.taln.textplanning.datastructures.OrderedTree;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 
 import java.util.HashMap;
 import java.util.List;
@@ -27,15 +27,15 @@ public class TFIDF implements WeightingFunction
 	}
 
 	@Override
-	public void setCollection(List<AnnotatedTree> inCollection)
+	public void setCollection(List<SemanticTree> inCollection)
 	{
 		tfidf.clear();
 
 		// Collect frequency of entities in the collection
 		Map<String, Long> freqs = inCollection.stream()
-				.map(AnnotatedTree::getPreOrder)
+				.map(SemanticTree::vertexSet)
 				.map(p -> p.stream()
-						.map(OrderedTree.Node::getData)
+						.map(Node::getEntity)
 						.map(Entity::getEntityLabel)
 						.collect(Collectors.toList()))
 				.flatMap(List::stream)

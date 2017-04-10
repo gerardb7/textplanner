@@ -4,7 +4,6 @@ import com.beust.jcommander.*;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
-import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
@@ -119,7 +118,7 @@ public class ConLLDriver
 		try
 		{
 			String inConll = new String(Files.readAllBytes(inDoc), Charset.forName("UTF-8"));
-			List<AnnotatedTree> annotatedTrees = conll.readTrees(inConll);
+			List<SemanticTree> annotatedTrees = conll.readTrees(inConll);
 			List<SemanticTree> plan = planner.planText(annotatedTrees, inPlannerOptions);
 
 			String conll = "";
@@ -127,7 +126,7 @@ public class ConLLDriver
 			{
 				for (Edge e : t.getPreOrder())
 				{
-					conll += (String) t.getEdgeSource(e).data;
+					conll += t.getEdgeSource(e).getEntity().getEntityLabel();
 				}
 				conll += "\n"; // Treat each pattern as a separate sentence
 			}

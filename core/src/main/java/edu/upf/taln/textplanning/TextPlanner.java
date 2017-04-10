@@ -3,7 +3,10 @@ package edu.upf.taln.textplanning;
 import Jama.Matrix;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.coherence.DiscoursePlanner;
-import edu.upf.taln.textplanning.datastructures.*;
+import edu.upf.taln.textplanning.datastructures.Entity;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.pattern.PatternExtraction;
 import edu.upf.taln.textplanning.ranking.PowerIterationRanking;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
@@ -55,20 +58,19 @@ public final class TextPlanner
 	 * @param inContents initial set of contents
 	 * @return list of patterns
 	 */
-	public List<SemanticTree> planText(List<AnnotatedTree> inContents, Options inOptions)
+	public List<SemanticTree> planText(List<SemanticTree> inContents, Options inOptions)
 	{
 		try
 		{
 			log.info("***Planning started***");
 
 			// 1- Collect entities in trees
-			List<OrderedTree.Node<AnnotatedEntity>> nodes = inContents.stream()
-					.map(AnnotatedTree::getPreOrder)
-					.flatMap(List::stream)
+			List<Node> nodes = inContents.stream()
+					.map(SemanticTree::vertexSet)
+					.flatMap(Set::stream)
 					.collect(Collectors.toList());
 			List<Entity> entities = nodes.stream()
-					.map(OrderedTree.Node::getData)
-					.distinct()
+					.map(Node::getEntity)
 					.collect(Collectors.toList());
 
 			// 2- Create ranking matrix

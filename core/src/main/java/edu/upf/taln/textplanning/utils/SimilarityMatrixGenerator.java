@@ -1,13 +1,9 @@
 package edu.upf.taln.textplanning.utils;
 
 import com.beust.jcommander.*;
-import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.similarity.Combined;
-import edu.upf.taln.textplanning.similarity.EntitySimilarity;
-import edu.upf.taln.textplanning.similarity.SensEmbed;
-import edu.upf.taln.textplanning.similarity.Word2Vec;
+import edu.upf.taln.textplanning.similarity.*;
 
 import java.io.StringWriter;
 import java.math.RoundingMode;
@@ -155,15 +151,15 @@ public class SimilarityMatrixGenerator
 		Path inputDoc = cmlArgs.doc.get(0);
 		String conll = new String(Files.readAllBytes(inputDoc), Charset.forName("UTF-8"));
 		ConLLAcces reader = new ConLLAcces();
-		List<AnnotatedTree> inputPatterns = reader.readTrees(conll);
-		double[][] matrix = null;
+		List<SemanticTree> inputPatterns = reader.readTrees(conll);
+		double[][] matrix;
 		if (cmlArgs.distance)
 		{
-			//matrix = calculator.calculateDistanceMatrix(inputPatterns);
+			matrix = calculator.calculateDistanceMatrix(inputPatterns);
 		}
 		else
 		{
-			//matrix = calculator.calculateSimilarityMatrix(inputPatterns);
+			matrix = calculator.calculateSimilarityMatrix(inputPatterns);
 		}
 		String matrixString = calculator.formatMatrix(matrix);
 		System.out.println(matrixString);

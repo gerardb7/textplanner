@@ -15,10 +15,11 @@ public final class Annotation implements Comparable<Annotation>
 	private final double score; // confidence score assigned to sense annotation
 	private final String relation;
 	private final String role;
+	private final String conll; // the conll line this annotation was created from
 
 	// Constructor for relations
 	public Annotation(String inId, String inForm, String inLemma, String inPOS, String inFeats, String inSense,
-	                  double inScore, String inRelationName, String inRole)
+	                  double inScore, String inRelationName, String inRole, String conll)
 	{
 		this.id = inId + "_" + ++counter;
 		this.form = inForm;
@@ -29,48 +30,51 @@ public final class Annotation implements Comparable<Annotation>
 		this.relation = inRelationName;
 		this.role = inRole;
 		this.score = inScore;
+		this.conll = conll;
 	}
 
 	public String getId()
 	{
 		return id;
 	}
-
 	public String getForm()
 	{
 		return form;
 	}
-
 	public String getLemma()
 	{
 		return lemma;
 	}
-
 	public String getPOS()
 	{
 		return pos;
 	}
-
 	public String getFeats()
 	{
 		return feats;
 	}
-
 	public String getSense()
 	{
 		return sense;
 	}
-
 	public String getRelation()
 	{
 		return relation;
 	}
-
 	public String getRole() { return role; }
-
 	public double getScore()
 	{
 		return score;
+	}
+	public String getConll() { return conll; }
+
+	/**
+	 * @return true if node has an argument role assigned to it
+	 */
+	public boolean isArgument()
+	{
+		return role.equals("I") || role.equals("II") || role.equals("III") || role.equals("IV") || role.equals("V")
+				|| role.equals("VI") || role.equals("VII") || role.equals("VIII") || role.equals("IX") || role.equals("X");
 	}
 
 	@Override
@@ -115,6 +119,7 @@ public final class Annotation implements Comparable<Annotation>
 		{
 			return false;
 		}
+		//noinspection SimplifiableIfStatement
 		if (role != null && !role.equals(that.role))
 		{
 			return false;
@@ -146,7 +151,6 @@ public final class Annotation implements Comparable<Annotation>
 				(lemma != null ? lemma : "");
 	}
 
-	@Override
 	public int compareTo(Annotation other)
 	{
 		if (this.equals(other))

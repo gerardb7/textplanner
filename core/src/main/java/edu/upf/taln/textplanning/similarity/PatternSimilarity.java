@@ -1,8 +1,7 @@
-package edu.upf.taln.textplanning.utils;
+package edu.upf.taln.textplanning.similarity;
 
 import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
-import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import unnonouno.treedist.EditScore;
 import unnonouno.treedist.TreeEditDistance;
 

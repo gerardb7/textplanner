@@ -2,11 +2,11 @@ package edu.upf.taln.textplanning.input;
 
 import com.google.common.base.Splitter;
 import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
-import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.datastructures.Annotation;
-import edu.upf.taln.textplanning.datastructures.OrderedTree;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import org.apache.commons.lang3.tuple.Pair;
-import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 
 import java.io.BufferedReader;
 import java.io.StringReader;
@@ -20,116 +20,13 @@ import java.util.stream.IntStream;
 public class ConLLAcces implements DocumentAccess
 {
 	/**
-	 * Reads annotated graphs (DAGs) from ConLL file
-	 *
-	 * @param inDocumentContents  String containing conll serialization of DAGs
-	 * @return a list of graphs, one per sentence
-	 */
-	@Override
-	public List<DirectedAcyclicGraph<Annotation, LabelledEdge>> readGraphs(String inDocumentContents)
-	{
-		try
-		{
-			int numStructures = getNumberOfStructures(inDocumentContents);
-
-			StringReader reader = new StringReader(inDocumentContents);
-			BufferedReader bufferReader = new BufferedReader(reader);
-
-			List<DirectedAcyclicGraph<Annotation, LabelledEdge>> graphs = new ArrayList<>();
-			List<Annotation> nodes = new ArrayList<>();
-			Map<Integer, List<Pair<String, Integer>>> governors = new HashMap<>();
-			int sentence = 0;
-
-			String line;
-			while ((line = bufferReader.readLine()) != null)
-			{
-				if (line.isEmpty())
-				{
-					continue;
-				}
-
-				String[] columns = line.split("\t");
-				if (columns.length != 14 && columns.length != 15)
-				{
-					throw new Exception("Cannot parse line in conll file: " + line);
-				}
-
-				int id = Integer.parseInt(columns[0]);
-				if ((id == 0 || id == 1) && !nodes.isEmpty())
-				{
-					// Create graph from previously collected nodes
-					double position = ++sentence / numStructures;
-					graphs.add(createGraph(nodes, governors, position));
-					nodes.clear();
-					governors.clear();
-				}
-
-				if (id >= 1)
-				{
-					String lemma = columns[1];
-					String form = columns[2];
-					String pos = columns[4];
-					String feats = columns[6];
-					Map<String, String> features = Splitter.on("|").withKeyValueSeparator("=").split(feats);
-					String relationName = features.containsKey("fn") ? features.get("fn") : null;
-					String ref = features.containsKey("bnId") ?
-							features.get("bnId") : null;
-					if (pos.equals("_"))
-					{
-						if (features.containsKey("dpos"))
-						{
-							pos = features.get("dpos");
-						}
-						else if (features.containsKey("spos"))
-						{
-							pos = features.get("spos");
-						}
-					}
-
-					//TODO consider removing code manipulating BabelNet IRIs
-					if (ref != null)
-					{
-						if (ref.startsWith("bn:"))
-						{
-							ref = ref.substring(3);
-						}
-						//ref = "http://babelnet.org/rdf/s" + ref;
-					}
-					double conf = features.containsKey("conf") ?
-							Double.parseDouble(features.get("conf")) : 0.0;
-					List<Integer> govns = Arrays.stream(columns[8].split(",")).map(Integer::parseInt).collect(Collectors.toList());
-					List<String> roles = Arrays.stream(columns[10].split(",")).collect(Collectors.toList());
-					Annotation node = new Annotation("s" + sentence + "-w" + id, form, lemma, pos, feats, ref, conf,
-							relationName, null);
-					// @TODO roles shouldn't be part of Annotation class for DAGs
-					nodes.add(node);
-					IntStream.range(0, govns.size())
-							.filter(i -> govns.get(i) > 0)
-							.forEach(i -> governors.computeIfAbsent(govns.get(i), v -> new ArrayList<>()).add(Pair.of(roles.get(i), id)));
-				}
-			}
-
-			// Create last graph
-			double position = ++sentence / numStructures;
-			graphs.add(createGraph(nodes, governors, position));
-
-			return graphs;
-		}
-		catch (Exception e)
-		{
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
-	}
-
-	/**
 	 * Reads annotated trees from ConLL file
 	 *
 	 * @param inDocumentContents String containing conll serialization of trees
 	 * @return a list of trees
 	 */
 	@Override
-	public List<AnnotatedTree> readTrees(String inDocumentContents)
+	public List<SemanticTree> readTrees(String inDocumentContents)
 	{
 		try
 		{
@@ -140,7 +37,7 @@ public class ConLLAcces implements DocumentAccess
 			StringReader reader = new StringReader(inDocumentContents);
 			BufferedReader bufferReader = new BufferedReader(reader);
 
-			List<AnnotatedTree> trees = new ArrayList<>();
+			List<SemanticTree> trees = new ArrayList<>();
 			List<Annotation> nodes = new ArrayList<>();
 			Map<Integer, List<Pair<String, Integer>>> governors = new HashMap<>();
 			int rootId = -1;
@@ -208,7 +105,7 @@ public class ConLLAcces implements DocumentAccess
 						throw new Exception("Conll file contains different number of roles and governors in line: " + line);
 
 					Annotation node = new Annotation("s" + sentence + "-w" + id, form, lemma, pos, feats, ref, conf,
-							relationName, roles.get(0));
+							relationName, roles.get(0), line);
 					nodes.add(node);
 					IntStream.range(0, govns.size())
 							.filter(i -> govns.get(i) > 0)
@@ -236,61 +133,46 @@ public class ConLLAcces implements DocumentAccess
 	}
 
 	/**
-	 * Converts graphs (DAGs) to ConLL format.
-	 * IMPORTANT: this conversion will only work properly if all nodes in the graph (instances of Annotation class)
-	 * are unique!
-	 *
-	 * @param inGraphs DAGs
-	 * @return ConLL-formatted representation of the DAGs
-	 */
-	public String writeGraphs(Collection<DirectedAcyclicGraph<Annotation, LabelledEdge>> inGraphs)
-	{
-		// Get a topological ordering of nodes along with their governors in the graph
-		return inGraphs.stream()
-				.map(g -> {
-					List<Annotation> anns = g.vertexSet().stream().collect(Collectors.toList());
-					Map<Integer, List<Pair<String, Integer>>> governors = IntStream.range(0, anns.size())
-							.mapToObj(i -> {
-								final List<Pair<String, Integer>> govs = g.incomingEdgesOf(anns.get(i)).stream()
-										.map(e -> Pair.of(e.getLabel(), anns.indexOf(g.getEdgeSource(e)))) // source node must be unique!
-										.collect(Collectors.toList());
-								return Pair.of(i, govs);
-							})
-							.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
-					return this.nodesToConll(anns, governors);
-				})
-				.map(s -> "0\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\tslex=Sentence\n" + s + "\n")
-				.reduce(String::concat).get();
-	}
-
-	/**
 	 * Converts annotated trees to ConLL format
 	 *
 	 * @param inTrees list of trees
 	 * @return ConLL-formatted representation of the trees
 	 */
-	public String writeTrees(Collection<AnnotatedTree> inTrees)
+	public String writeTrees(Collection<SemanticTree> inTrees)
 	{
 		// Get a preorder list of nodes in the tree along with their parents
 		return inTrees.stream()
-				.map(AnnotatedTree::getPreOrder)
 				.map(t -> {
-					List<Annotation> anns =
-							t.stream().map(n -> n.getData().getAnnotation()).collect(Collectors.toList());
-					Map<Integer, List<Pair<String, Integer>>> governors = IntStream.range(0, t.size())
+					List<Node> nodes = new ArrayList<>();
+					nodes.add(t.getRoot());
+					t.getPreOrder().stream()
+							.map(t::getEdgeTarget)
+							.forEach(nodes::add);
+
+					Map<Integer, List<Pair<String, Integer>>> governors = IntStream.range(0, nodes.size())
 							.mapToObj(i -> {
-								String role = t.get(i).getData().getAnnotation().getRole();
+								Node n = nodes.get(i);
+								Annotation a = ((AnnotatedEntity)n.entity).getAnnotation();
+								String role = a.getRole();
 								int governorIndex = -1;
 								List<Pair<String, Integer>> govs = new ArrayList<>();
-								if (t.get(i).getParent().isPresent())
+								if (t.inDegreeOf(n) > 0) // has parent
 								{
-									governorIndex = t.indexOf(t.get(i).getParent().get());
+									Node p = t.getEdgeSource(t.incomingEdgesOf(n).iterator().next());
+									governorIndex = nodes.indexOf(p);
 									govs.add(Pair.of(role, governorIndex));
 								}
 
 								return Pair.of(i, govs);
 							})
 							.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
+
+					List<Annotation> anns = nodes.stream()
+							.map(Node::getEntity)
+							.filter(AnnotatedEntity.class::isInstance)
+							.map(AnnotatedEntity.class::cast)
+							.map(AnnotatedEntity::getAnnotation)
+							.collect(Collectors.toList());
 					return nodesToConll(anns, governors);
 				})
 				.map(s -> "0\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\tslex=Sentence\n" + s + "\n")
@@ -378,40 +260,41 @@ public class ConLLAcces implements DocumentAccess
 		return conll;
 	}
 
-
-	private DirectedAcyclicGraph<Annotation, LabelledEdge> createGraph(List<Annotation> inNodes,
-	                                                                   Map<Integer, List<Pair<String, Integer>>> inGovernors, double inPosition)
-	{
-		DirectedAcyclicGraph<Annotation, LabelledEdge> graph =
-				new DirectedAcyclicGraph<>(LabelledEdge.class);
-		inNodes.forEach(graph::addVertex);
-		inGovernors.forEach((d, l) -> l.forEach(g -> {
-			LabelledEdge e = new LabelledEdge(g.getLeft()); // use role as label for edge
-			graph.addEdge(inNodes.get(d - 1), inNodes.get(g.getRight() - 1), e);
-		}));
-
-		return graph;
-	}
-
-	private AnnotatedTree createTree(int inRootId, List<Annotation> inNodes,
+	private SemanticTree createTree(int inRootId, List<Annotation> annotations,
 	                                 Map<Integer, List<Pair<String, Integer>>> inGovernors, double inPosition)
 	{
-		Annotation root = inNodes.get(inRootId - 1);
-		AnnotatedEntity rootSense = new AnnotatedEntity(root);
-		AnnotatedTree tree =	new AnnotatedTree(rootSense, inPosition);
-		List<Pair<Integer, OrderedTree.Node<AnnotatedEntity>>> currentGovernors = new ArrayList<>();
+		// Create tree with a root
+		Annotation a = annotations.get(inRootId - 1);
+		Node root = createNode(a);
+		SemanticTree tree =	new SemanticTree(root, inPosition);
+
+		List<Pair<Integer, Node>> currentGovernors = new ArrayList<>();
 		currentGovernors.add(Pair.of(inRootId, tree.getRoot()));
 
 		while (!currentGovernors.isEmpty())
 		{
-			List<Pair<Integer, OrderedTree.Node<AnnotatedEntity>>> newGovernors = currentGovernors.stream()
+			List<Pair<Integer, Node>> newGovernors = currentGovernors.stream()
 					.map(node -> {
 						int governorId = node.getLeft();
 						List<Pair<String, Integer>> dependents =
 								inGovernors.computeIfAbsent(governorId, v -> new ArrayList<>());
 						return dependents.stream()
-								.map(d -> Pair.of(d.getRight(), Pair.of(inNodes.get(d.getRight() - 1), d.getLeft())))
-								.map(d -> Pair.of(d.getLeft(), node.getRight().addChild(new AnnotatedEntity(d.getRight().getLeft()))))
+								.map(d -> Pair.of(d.getRight(), Pair.of(annotations.get(d.getRight() - 1), d.getLeft())))
+								.map(d -> {
+									// Create new node for dependent
+									Node gov = node.getRight();
+									Annotation ann = d.getRight().getLeft();
+									Node dep = createNode(ann);
+									tree.addVertex(dep);
+
+									// Create new edge between governor and dependent
+									Edge e = new Edge(ann.getRole(), ann.isArgument());
+									tree.addEdge(gov, dep, e);
+
+									// Return dependent as new governor
+									Integer depId = d.getLeft();
+									return Pair.of(depId, dep);
+								})
 								.collect(Collectors.toList());
 					})
 					.flatMap(List::stream)
@@ -422,5 +305,11 @@ public class ConLLAcces implements DocumentAccess
 		}
 
 		return tree;
+	}
+
+	private Node createNode(Annotation a)
+	{
+		AnnotatedEntity e = new AnnotatedEntity(a);
+		return new Node(e.getEntityLabel(), e, 0.0); // no weight, no conll
 	}
 }

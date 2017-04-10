@@ -1,8 +1,8 @@
 package edu.upf.taln.textplanning;
 
 import Jama.Matrix;
-import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
 import edu.upf.taln.textplanning.datastructures.Entity;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.ranking.PowerIterationRanking;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
@@ -35,7 +35,7 @@ public class PowerIterationRankingTest
 		public DummyWeighting(int exp) { this.exp = exp; }
 
 		@Override
-		public void setCollection(List<AnnotatedTree> inCollection) { }
+		public void setCollection(List<SemanticTree> inCollection) { }
 
 		@Override
 		public double weight(Entity inEntity)

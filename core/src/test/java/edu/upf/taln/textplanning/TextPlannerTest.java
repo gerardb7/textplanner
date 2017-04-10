@@ -1,6 +1,6 @@
 package edu.upf.taln.textplanning;
 
-import edu.upf.taln.textplanning.datastructures.AnnotatedTree;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
 import edu.upf.taln.textplanning.pattern.ItemSetMining;
 import org.apache.commons.io.FilenameUtils;
@@ -37,9 +37,9 @@ public class TextPlannerTest
 		{
 			String inConLL = new String(Files.readAllBytes(f), Charset.forName("UTF-8"));
 			ConLLAcces conll = new ConLLAcces();
-			List<AnnotatedTree> annotatedTrees = conll.readTrees(inConLL);
+			List<SemanticTree> annotatedTrees = conll.readTrees(inConLL);
 			ItemSetMining extractor = new ItemSetMining();
-			Set<AnnotatedTree> patterns = extractor.getPatterns(annotatedTrees);
+			Set<SemanticTree> patterns = extractor.getPatterns(annotatedTrees);
 			String outConLL = conll.writeTrees(patterns);
 			writeToFile("patterns_", f, outConLL);
 		}

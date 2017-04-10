@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.utils;
+package edu.upf.taln.textplanning.similarity;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
