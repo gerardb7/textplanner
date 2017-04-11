@@ -4,7 +4,6 @@ import Jama.Matrix;
 import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
-import edu.upf.taln.textplanning.pattern.ItemSetMining;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.weighting.Linear;
 import edu.upf.taln.textplanning.weighting.Position;
@@ -14,7 +13,10 @@ import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import java.io.StringWriter;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -80,11 +82,11 @@ public class StatsReporter
 		writer.write("\n");
 
 		// Report patterns
-		writer.write("Patterns\n");
-		ItemSetMining miner = new ItemSetMining();
-		Set<SemanticTree> patterns = miner.getPatterns(inTrees);
-		patterns.forEach(p -> writer.write(p.toString() + "\n"));
-		writer.write("\n");
+//		writer.write("Patterns\n");
+//		ItemSetMining miner = new ItemSetMining();
+//		Set<SemanticTree> patterns = miner.getPatterns(inTrees);
+//		patterns.forEach(p -> writer.write(p.toString() + "\n"));
+//		writer.write("\n");
 
 		return writer.toString();
 	}

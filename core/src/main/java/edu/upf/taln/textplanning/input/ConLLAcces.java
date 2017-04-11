@@ -38,7 +38,7 @@ public class ConLLAcces implements DocumentAccess
 			BufferedReader bufferReader = new BufferedReader(reader);
 
 			List<SemanticTree> trees = new ArrayList<>();
-			List<Annotation> nodes = new ArrayList<>();
+			List<Annotation> anns = new ArrayList<>();
 			Map<Integer, List<Pair<String, Integer>>> governors = new HashMap<>();
 			int rootId = -1;
 			int sentence = 0;
@@ -58,13 +58,13 @@ public class ConLLAcces implements DocumentAccess
 				}
 
 				int id = Integer.parseInt(columns[0]);
-				if ((id == 0 || id == 1) && !nodes.isEmpty())
+				if ((id == 0 || id == 1) && !anns.isEmpty())
 				{
 					// Create tree from previously collected nodes
 					double position = ((double)(numStructures - sentence)) / ((double)numStructures);
-					trees.add(createTree(rootId, nodes, governors, position));
+					trees.add(createTree(rootId, anns, governors, position));
 					++sentence;
-					nodes.clear();
+					anns.clear();
 					governors.clear();
 					rootId = -1;
 				}
@@ -104,9 +104,9 @@ public class ConLLAcces implements DocumentAccess
 					if (govns.size() != roles.size())
 						throw new Exception("Conll file contains different number of roles and governors in line: " + line);
 
-					Annotation node = new Annotation("s" + sentence + "-w" + id, form, lemma, pos, feats, ref, conf,
+					Annotation ann = new Annotation("s" + sentence + "-w" + id, form, lemma, pos, feats, ref, conf,
 							relationName, roles.get(0), line);
-					nodes.add(node);
+					anns.add(ann);
 					IntStream.range(0, govns.size())
 							.filter(i -> govns.get(i) > 0)
 							.forEach(i -> governors.computeIfAbsent(govns.get(i), v -> new ArrayList<>()).add(Pair.of(roles.get(i), id)));
@@ -121,7 +121,7 @@ public class ConLLAcces implements DocumentAccess
 
 			// Create last tree
 			double position = ((double)(numStructures - sentence)) / ((double)numStructures);
-			trees.add(createTree(rootId, nodes, governors, position));
+			trees.add(createTree(rootId, anns, governors, position));
 
 			return trees;
 		}
@@ -281,7 +281,7 @@ public class ConLLAcces implements DocumentAccess
 						return dependents.stream()
 								.map(d -> Pair.of(d.getRight(), Pair.of(annotations.get(d.getRight() - 1), d.getLeft())))
 								.map(d -> {
-									// Create new node for dependent
+									// Create new nodes for governor and dependent
 									Node gov = node.getRight();
 									Annotation ann = d.getRight().getLeft();
 									Node dep = createNode(ann);
@@ -310,6 +310,6 @@ public class ConLLAcces implements DocumentAccess
 	private Node createNode(Annotation a)
 	{
 		AnnotatedEntity e = new AnnotatedEntity(a);
-		return new Node(e.getEntityLabel(), e, 0.0); // no weight, no conll
+		return new Node(a.getId(), e, 0.0); // no weight, no conll
 	}
 }

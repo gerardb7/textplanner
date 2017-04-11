@@ -117,7 +117,7 @@ public class ConLLDriver
 	{
 		try
 		{
-			String inConll = new String(Files.readAllBytes(inDoc), Charset.forName("UTF-8"));
+			String inConll = new String(Files.readAllBytes(inDoc), Charset.forName("UTF-16"));
 			List<SemanticTree> annotatedTrees = conll.readTrees(inConll);
 			List<SemanticTree> plan = planner.planText(annotatedTrees, inPlannerOptions);
 

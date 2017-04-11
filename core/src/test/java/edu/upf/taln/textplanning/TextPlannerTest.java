@@ -26,7 +26,7 @@ public class TextPlannerTest
 {
 	private static final String solrUrl = "http://10.55.0.41:443/solr/sewDataAnnSen";
 	private static final Path word2vecPath = null; //Paths.get("/home/gerard/data/GoogleNews-vectors-negative300.bin");
-	private static final Path senseEmbedPath = Paths.get("/home/gerard/data/sensembed/babelfy_vectors_merged_senses_only");
+	private static final Path senseEmbedPath = null;//Paths.get("/home/gerard/data/sensembed/babelfy_vectors_merged_senses_only");
 	private static final Path inputPath = Paths.get("/home/gerard/Baixades/test/");
 	private final static Logger log = LoggerFactory.getLogger(TextPlannerTest.class);
 
@@ -35,7 +35,7 @@ public class TextPlannerTest
 	{
 		for (Path f : getInputFiles())
 		{
-			String inConLL = new String(Files.readAllBytes(f), Charset.forName("UTF-8"));
+			String inConLL = new String(Files.readAllBytes(f), Charset.forName("UTF-16"));
 			ConLLAcces conll = new ConLLAcces();
 			List<SemanticTree> annotatedTrees = conll.readTrees(inConLL);
 			ItemSetMining extractor = new ItemSetMining();

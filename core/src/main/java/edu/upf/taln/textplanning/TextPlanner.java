@@ -65,12 +65,11 @@ public final class TextPlanner
 			log.info("***Planning started***");
 
 			// 1- Collect entities in trees
-			List<Node> nodes = inContents.stream()
+			List<Entity> entities = inContents.stream()
 					.map(SemanticTree::vertexSet)
 					.flatMap(Set::stream)
-					.collect(Collectors.toList());
-			List<Entity> entities = nodes.stream()
 					.map(Node::getEntity)
+					.distinct() // equality tested through labels of objects
 					.collect(Collectors.toList());
 
 			// 2- Create ranking matrix

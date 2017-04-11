@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.coherence;
 
 import edu.upf.taln.textplanning.datastructures.Entity;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.similarity.PatternSimilarity;
@@ -36,6 +37,7 @@ public class DiscoursePlanner
 		//noinspection RedundantTypeArguments
 		List<Pair<SemanticTree, Double>> rankedPatterns = patterns.stream()
 				.map(p -> Pair.of(p, p.vertexSet().stream()
+						.map(Node::getEntity)
 						.mapToDouble(rankedEntities::get)
 						.average().orElse(0.0)))
 				.sorted(Comparator.comparing(Pair<SemanticTree, Double>::getRight).reversed())

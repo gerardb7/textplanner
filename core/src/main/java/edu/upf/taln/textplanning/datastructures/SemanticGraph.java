@@ -42,6 +42,9 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 		}
 
 		@Override
+		public String toString() { return this.entity.toString(); }
+
+		@Override
 		public boolean equals(Object obj)
 		{
 			if (!(obj instanceof Node))
@@ -78,6 +81,8 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 			return isArg;
 		}
 
+		@Override
+		public String toString() { return role; }
 	}
 
 	public static class SubGraph extends DirectedSubgraph<Node, Edge>

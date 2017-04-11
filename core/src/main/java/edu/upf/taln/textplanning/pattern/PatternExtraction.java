@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
   */
 public class PatternExtraction
 {
-	private final static double lambda = 1.0;
+	private final static double lambda = 0.8;
 
 	/**
 	 * Creates a pattern extraction graph
@@ -98,32 +98,58 @@ public class PatternExtraction
 //		Map<String, List<Node>> ids = sortedNodes.stream()
 //				.collect(Collectors.groupingBy(n -> n.entity));
 
-		// Get highest ranked nodes
-		List<Node> topEntities = sortedNodes.stream()
-				.filter(v -> !g.isPredicate(v))
-				.limit(inNumPatterns)
-				.collect(Collectors.toList());
+		Set<SemanticTree> patterns = new HashSet<>();
+		while(patterns.size() < inNumPatterns && !sortedNodes.isEmpty())
+		{
+			// Extract subgraph from top-ranked entity
+			SubGraph subgraph = null;
+			while (subgraph == null && !sortedNodes.isEmpty())
+			{
+				Node topEntity = sortedNodes.stream()
+						.max(Comparator.comparing(Node::getWeight)).get();
+				if (g.inDegreeOf(topEntity) + g.outDegreeOf(topEntity) > 0)
+				{
+					subgraph = extractHeavySubgraph(topEntity, g, avgWeight);
+				}
+				else
+				{
+					// If top entity isn't connected, discard it
+					sortedNodes.remove(topEntity);
+				}
+			}
 
-		// Create a pattern for each
-		return topEntities.stream()
-				.map(n -> getSemanticPatterns(n, g, avgWeight))
-				.flatMap(Set::stream)
-				.collect(Collectors.toSet());
+			if (subgraph != null)
+			{
+				// split graph into trees
+				patterns.addAll(SemanticTree.createTrees(subgraph));
+
+				// Remove edges in subgraph from base graph
+				subgraph.edgeSet()
+						.forEach(g::removeEdge);
+
+				// Remove unconnected nodes
+				sortedNodes.removeAll(sortedNodes.stream()
+						.filter(n -> g.inDegreeOf(n) + g.outDegreeOf(n) == 0)
+						.collect(Collectors.toList()));
+			}
+		}
+
+		return patterns;
 	}
 
 	/**
-	 * Starting from an initial node, extract patterns by greedily adding edges to directed subgraph, and then
-	 * converting the subgraph to a set of trees.
-	 * @return semantic patterns
+	 * Starting from an initial node, extract a heavy subgraph by greedily adding edges to directed subgraph
+	 * @return a heavy subgraph which is compact and has high weights
 	 */
-	private static Set<SemanticTree> getSemanticPatterns(Node inInitialNode, SemanticGraph inBaseGraph, double inEdgeWeight)
+	private static SubGraph extractHeavySubgraph(Node inInitialNode, SemanticGraph inBaseGraph, double inEdgeWeight)
 	{
 		PriorityQueue<Pair<SubGraph, Double>> rankedExpansions =
 			new PriorityQueue<>((s1, s2) -> Double.compare(s2.getRight(), s1.getRight())); // swapped s1 and s2 to obtain descending order
 		SubGraph subgraph = new SubGraph(inBaseGraph, inInitialNode);
 
 		// calculate expansions, weight them and add to sorted queue
-		getExpansions(subgraph).forEach(s -> rankedExpansions.add(Pair.of(s, calculateWeight(s, inEdgeWeight))));
+		Set<SubGraph> expansions = getExpansions(subgraph);
+		expansions.forEach(s -> rankedExpansions.add(Pair.of(s, calculateWeight(s, inEdgeWeight))));
 
 		double q = inBaseGraph.edgeSet().size() * inEdgeWeight; // Q of an empty subgraph equals to the constant term D(V)
 		boolean stop;
@@ -138,17 +164,22 @@ public class PatternExtraction
 			{
 				subgraph = bestExpansion;
 				q = newValue;
-				getExpansions(subgraph).forEach(s -> rankedExpansions.add(Pair.of(s, calculateWeight(s, inEdgeWeight))));
+
+				// recalculate and rank expansions for new subgraph
+				expansions = getExpansions(subgraph);
+				rankedExpansions.clear();
+				expansions.forEach(s -> rankedExpansions.add(Pair.of(s, calculateWeight(s, inEdgeWeight))));
 			}
 		}
 		while (!stop);
 
-		return SemanticTree.createTrees(subgraph);
+		return subgraph;
 	}
 
 	/**
 	 * Returns the set of expansions of a subgraph relative to the graph it is being extracted from.
-	 * New nodes marked as predicates are automatically expanded to incorporate all their arguments.
+	 * Candidate nodes which correspond to predicates are automatically expanded to incorporate all their arguments.
+	 * @param subgraph subgraph to be expanded
 	 * @return a set of expanded subgraphs
 	 */
 	private static Set<SubGraph> getExpansions(SubGraph subgraph)
@@ -185,9 +216,17 @@ public class PatternExtraction
 
 	private static List<Edge> expandNode(SubGraph pattern, Node node)
 	{
-		return pattern.getBase().outgoingEdgesOf(node).stream()
+		DirectedGraph<Node, Edge> g = pattern.getBase();
+		return g.outgoingEdgesOf(node).stream()
 				.filter(e -> e.isArg)
 				.filter(e -> !pattern.containsEdge(e))
+				.map(e -> {
+					List<Edge> expansion = new ArrayList<>();
+					expansion.add(e);
+					expandNode(pattern, g.getEdgeTarget(e)).forEach(expansion::add);
+					return expansion;
+				})
+				.flatMap(List::stream)
 				.collect(Collectors.toList());
 	}
 

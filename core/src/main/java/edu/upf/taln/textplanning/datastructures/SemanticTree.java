@@ -63,26 +63,32 @@ public class SemanticTree extends DirectedAcyclicGraph<Node, Edge>
 	private static void replicateNode(SemanticGraph g, Node n)
 	{
 		assert g.containsVertex(n);
+		Set<Edge> inLinks = g.incomingEdgesOf(n);
+		Set<Edge> outLinks = g.outgoingEdgesOf(n);
 
-		for (Edge st : g.incomingEdgesOf(n))
+		for (Edge i : inLinks)
 		{
-			Node s = g.getEdgeSource(st);
-			Node t = g.getEdgeTarget(st);
-			String newId = t.id + "_" + ++counter;
-			Node r = new Node(newId, t.entity, t.weight);
+			Node s = g.getEdgeSource(i);
+			String newId = n.id + "_" + ++counter;
+			Node r = new Node(newId, n.entity, n.weight);
 			g.addVertex(r);
-			Edge sr = new Edge(st.role, st.isArg);
+			Edge sr = new Edge(i.role, i.isArg);
 			g.addEdge(s, r, sr);
-			g.removeEdge(st);
-			g.outgoingEdgesOf(n).forEach(o -> g.addEdge(r, g.getEdgeTarget(o), o));
-			g.removeAllEdges(g.outgoingEdgesOf(n));
+			outLinks.forEach(o -> {
+					Edge o2 = new Edge(o.role, o.isArg);
+					g.addEdge(r, g.getEdgeTarget(o), o2);
+			});
 		}
+
+		// remove original node and edges from graph
+		g.removeVertex(n);
 	}
 
 	private SemanticTree(Node inRoot)
 	{
 		super(Edge.class);
 		root = inRoot;
+		this.addVertex(inRoot);
 		position = 1; // for unannotated trees
 	}
 
@@ -90,6 +96,7 @@ public class SemanticTree extends DirectedAcyclicGraph<Node, Edge>
 	{
 		super(Edge.class);
 		root = inRoot;
+		this.addVertex(inRoot);
 		this.position = positon; // annotated trees
 	}
 
@@ -155,10 +162,9 @@ public class SemanticTree extends DirectedAcyclicGraph<Node, Edge>
 
 	public String toString()
 	{
-		return root.id + (outDegreeOf(root) == 0 ? " // " : " -> ") +
+		return root + (outDegreeOf(root) == 0 ? " // " : "") +
 				getPreOrder().stream()
-				.map(this::getEdgeTarget)
-				.map(n -> n.id + (outDegreeOf(n) == 0 ? " // " : " -> "))
+				.map(e -> " -" + e.role + "-> " + getEdgeTarget(e) + (outDegreeOf(getEdgeTarget(e)) == 0 ? " // " : ""))
 				.reduce(String::concat).orElse("");
 	}
 }

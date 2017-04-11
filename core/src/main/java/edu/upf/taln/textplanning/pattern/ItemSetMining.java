@@ -340,8 +340,11 @@ public class ItemSetMining
 
 	private static boolean isVerbWithRelative(SemanticTree t, Node n)
 	{
+		if (t.outDegreeOf(n) != 1)
+			return false;
+		Edge dependent = t.outgoingEdgesOf(n).iterator().next();
 		Annotation a = ((AnnotatedEntity) n.getEntity()).getAnnotation();
-		Annotation c = ((AnnotatedEntity)t.getEdgeTarget(t.outgoingEdgesOf(n).iterator().next()).getEntity()).getAnnotation();
+		Annotation c = ((AnnotatedEntity)t.getEdgeTarget(dependent).getEntity()).getAnnotation();
 		return a.getPOS().startsWith("VB") &&
 				t.outDegreeOf(n) == 1 &&
 				c.getPOS().equalsIgnoreCase("WDT");
