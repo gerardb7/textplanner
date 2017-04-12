@@ -21,11 +21,13 @@ public class SemanticTree extends SimpleDirectedGraph<Node, Edge>
 	private static int counter = 0;
 
 	/**
-	 * Factory method: transforms a directed graph pattern into a set of trees
+	 * Factory method: transforms a directed graph pattern into a set of trees with the given roots
 	 * @return a set of semantic trees, one per each root in the pattern
 	 */
-	public static Set<SemanticTree> createTrees(SemanticGraph.SubGraph s)
+	public static Set<SemanticTree> createTrees(SemanticGraph.SubGraph s, Set<Node> roots)
 	{
+		roots.forEach(r -> { assert s.containsVertex(r); });
+
 		// Create copy of subgraph to be transformed
 		SemanticGraph m = new SemanticGraph(Edge.class);
 		s.vertexSet().forEach(m::addVertex);
@@ -44,11 +46,6 @@ public class SemanticTree extends SimpleDirectedGraph<Node, Edge>
 					.filter(v -> m.inDegreeOf(v) > 1)
 					.collect(Collectors.toSet());
 		}
-
-		// Collect roots of multitree
-		Set<Node> roots = m.vertexSet().stream()
-				.filter(v -> m.inDegreeOf(v) == 0)
-				.collect(Collectors.toSet());
 
 		// Create one tree per root
 		Set<SemanticTree> trees = roots.stream()

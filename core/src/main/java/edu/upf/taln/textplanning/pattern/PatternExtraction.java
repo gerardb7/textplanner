@@ -6,7 +6,12 @@ import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.SubGraph;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.DirectedGraph;
+import org.jgrapht.ext.DOTExporter;
+import org.jgrapht.ext.IntegerComponentNameProvider;
+import org.jgrapht.ext.StringComponentNameProvider;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -63,7 +68,7 @@ public class PatternExtraction
 			if (subgraph != null)
 			{
 				// split graph into trees
-				patterns.addAll(SemanticTree.createTrees(subgraph));
+				patterns.addAll(SemanticTree.createTrees(subgraph, getVerbalRoots(subgraph)));
 
 				// Remove edges in subgraph from base graph
 				subgraph.edgeSet()
@@ -128,6 +133,20 @@ public class PatternExtraction
 					}
 				});
 
+		try
+		{
+			DOTExporter<Node, Edge> exporter = new DOTExporter<>(
+					new IntegerComponentNameProvider<>(),
+					new StringComponentNameProvider<>(),
+					new StringComponentNameProvider<>());
+			File temp = File.createTempFile("semgraph", ".dot");
+			exporter.exportGraph(graph, new FileWriter(temp));
+		}
+		catch (Exception e)
+		{
+			throw new RuntimeException(e);
+		}
+
 		return graph;
 	}
 
@@ -156,7 +175,7 @@ public class PatternExtraction
 		Set<SubGraph> expansions = getExpansions(subgraph);
 		expansions.forEach(s -> rankedExpansions.add(Pair.of(s, calculateWeight(s, inEdgeWeight))));
 
-		double q = inBaseGraph.edgeSet().size() * inEdgeWeight; // Q of an empty subgraph equals to the constant term D(V)
+		//double q = inBaseGraph.edgeSet().size() * inEdgeWeight; // Q of an empty subgraph equals to the constant term D(V)
 		boolean stop;
 		do
 		{
@@ -166,14 +185,14 @@ public class PatternExtraction
 			{
 				Pair<SubGraph, Double> firstItem = rankedExpansions.poll();
 				SubGraph bestExpansion = firstItem.getKey();
-				double newValue = firstItem.getValue();
-				double delta = newValue - q;
-				stop = delta <= 0.0;
+				//double newValue = firstItem.getValue();
+				//double delta = newValue - q;
+				//stop = delta <= 0.0;
+				stop = !getVerbalRoots(bestExpansion).isEmpty();
+				subgraph = bestExpansion;
 				if (!stop)
 				{
-					subgraph = bestExpansion;
-					q = newValue;
-
+					//q = newValue;
 					// recalculate and rank expansions for new subgraph
 					expansions = getExpansions(subgraph);
 					rankedExpansions.clear();
@@ -254,5 +273,21 @@ public class PatternExtraction
 		double ds = pattern.edgeSet().size() * edgeWeight; // assign edges the average node weight
 		double dv = pattern.getBase().edgeSet().size() * edgeWeight;
 		return lambda*ws - ds + dv;
+	}
+
+
+	private static Set<Node> getVerbalRoots(SubGraph s)
+	{
+		String[] inflectedVerbs = {"VBD", "VBP", "VBZ"};
+
+		return s.vertexSet().stream()
+				.filter(v -> ((SemanticGraph)s.getBase()).isPredicate(v)) // is a predicate
+				.filter(v -> s.inDegreeOf(v) == 0) // is a root
+				.filter(v -> // is a definite verb
+				{
+					String p = ((AnnotatedEntity)v.getEntity()).getAnnotation().getPOS();
+					return Arrays.stream(inflectedVerbs).anyMatch(pos -> pos.equals(p));
+				})
+				.collect(Collectors.toSet());
 	}
 }
