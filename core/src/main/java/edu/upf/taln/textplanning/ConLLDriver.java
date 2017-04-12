@@ -4,7 +4,9 @@ import com.beust.jcommander.*;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
+import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
 import edu.upf.taln.textplanning.similarity.Combined;
@@ -119,14 +121,16 @@ public class ConLLDriver
 		{
 			String inConll = new String(Files.readAllBytes(inDoc), Charset.forName("UTF-16"));
 			List<SemanticTree> annotatedTrees = conll.readTrees(inConll);
+			conll.postProcessTrees(annotatedTrees);
 			List<SemanticTree> plan = planner.planText(annotatedTrees, inPlannerOptions);
 
 			String conll = "";
 			for (SemanticTree t : plan)
 			{
+				conll += printNode(t.getRoot());
 				for (Edge e : t.getPreOrder())
 				{
-					conll += t.getEdgeSource(e).getEntity().getEntityLabel();
+					conll += " " + printNode(t.getEdgeTarget(e));
 				}
 				conll += "\n"; // Treat each pattern as a separate sentence
 			}
@@ -138,6 +142,15 @@ public class ConLLDriver
 			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
+	}
+
+	private String printNode(Node n)
+	{
+		String lemma = ((AnnotatedEntity)n.getEntity()).getAnnotation().getLemma();
+		if (lemma.endsWith("_01"))
+			lemma = lemma.substring(0, lemma.indexOf('_'));
+
+		return lemma.replace('_', ' ');
 	}
 
 	public static void main(String[] args) throws Exception

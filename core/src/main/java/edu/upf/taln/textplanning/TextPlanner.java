@@ -4,7 +4,6 @@ import Jama.Matrix;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.coherence.DiscoursePlanner;
 import edu.upf.taln.textplanning.datastructures.Entity;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.pattern.PatternExtraction;
@@ -86,14 +85,13 @@ public final class TextPlanner
 			log.info("Power iteration ranking took " + timer.stop());
 			double[] ranking = finalDistribution.getColumnPackedCopy();
 
-			// 4- Create pattern extraction graph from ranking and cost function
+			// 4- Create semantic graph and extract patterns
 			log.info("**Extracting patterns**");
 			timer.reset(); timer.start();
 			Map<Entity, Double> rankedEntities = IntStream.range(0, ranking.length)
 					.boxed()
 					.collect(Collectors.toMap(entities::get, i -> ranking[i]));
-			SemanticGraph patternGraph = PatternExtraction.createPatternExtractionGraph(inContents, rankedEntities);
-			Set<SemanticTree> patterns = PatternExtraction.extract(patternGraph, inOptions.numPatterns);
+			Set<SemanticTree> patterns = PatternExtraction.extract(inContents, rankedEntities, inOptions.numPatterns);
 			log.info("Pattern extraction took " + timer.stop());
 
 			// 5- Sort the trees into a coherence-optimized list

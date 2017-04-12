@@ -2,7 +2,7 @@ package edu.upf.taln.textplanning.datastructures;
 
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
-import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
+import org.jgrapht.graph.SimpleDirectedGraph;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 /**
  * Patterns extracted from a semantic graph are encoded as semantic trees.
  */
-public class SemanticTree extends DirectedAcyclicGraph<Node, Edge>
+public class SemanticTree extends SimpleDirectedGraph<Node, Edge>
 {
 	private final Node root;
 	private final double position;

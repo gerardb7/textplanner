@@ -20,13 +20,73 @@ public class PatternExtraction
 	private final static double lambda = 0.8;
 
 	/**
+	 * Extracts patterns from a semantic graph
+	 * @return the set of extracted patterns
+	 */
+	public static Set<SemanticTree> extract(List<SemanticTree> inContents, Map<Entity, Double> rankedEntities,
+	                                        int inNumPatterns)
+	{
+		// Create semantic graph
+		SemanticGraph g = createPatternExtractionGraph(inContents, rankedEntities);
+
+		// Work out average node weight, which will be used as weight for edges
+		double avgWeight = g.vertexSet().stream().mapToDouble(v -> v.weight).average().orElse(1.0);
+		// Get list of non-predicative nodes sorted by ranking
+		List<Node> sortedNodes = g.vertexSet().stream()
+				.filter(n -> !g.isPredicate(n))
+				.sorted((v1, v2) -> Double.compare(v2.weight, v1.weight))// swapped v1 and v2 to obtain descending order
+				.collect(Collectors.toList());
+
+//		Map<String, List<Node>> ids = sortedNodes.stream()
+//				.collect(Collectors.groupingBy(n -> n.entity));
+
+		Set<SemanticTree> patterns = new HashSet<>();
+		while(patterns.size() < inNumPatterns && !sortedNodes.isEmpty())
+		{
+			// Extract subgraph from top-ranked entity
+			SubGraph subgraph = null;
+			while (subgraph == null && !sortedNodes.isEmpty())
+			{
+				Node topEntity = sortedNodes.stream()
+						.max(Comparator.comparing(Node::getWeight)).get();
+				if (g.inDegreeOf(topEntity) + g.outDegreeOf(topEntity) > 0)
+				{
+					subgraph = extractHeavySubgraph(topEntity, g, avgWeight);
+				}
+				else
+				{
+					// If top entity isn't connected, discard it
+					sortedNodes.remove(topEntity);
+				}
+			}
+
+			if (subgraph != null)
+			{
+				// split graph into trees
+				patterns.addAll(SemanticTree.createTrees(subgraph));
+
+				// Remove edges in subgraph from base graph
+				subgraph.edgeSet()
+						.forEach(g::removeEdge);
+
+				// Remove unconnected nodes
+				sortedNodes.removeAll(sortedNodes.stream()
+						.filter(n -> g.inDegreeOf(n) + g.outDegreeOf(n) == 0)
+						.collect(Collectors.toList()));
+			}
+		}
+
+		return patterns;
+	}
+
+	/**
 	 * Creates a pattern extraction graph
 	 * @param inContents list of annotated trees
 	 * @param rankedEntities entities in trees and their scores
 	 * @return a semantic graph
 	 */
-	public static SemanticGraph createPatternExtractionGraph(List<SemanticTree> inContents,
-	                                                         Map<Entity, Double> rankedEntities)
+	private static SemanticGraph createPatternExtractionGraph(List<SemanticTree> inContents,
+	                                                          Map<Entity, Double> rankedEntities)
 	{
 		// Create graph
 		SemanticGraph graph = new SemanticGraph(Edge.class);
@@ -83,61 +143,6 @@ public class PatternExtraction
 	}
 
 	/**
-	 * Extracts patterns from a semantic graph
-	 * @return the set of extracted patterns
-	 */
-	public static Set<SemanticTree> extract(SemanticGraph g, int inNumPatterns)
-	{
-		// Work out average node weight, which will be used as weight for edges
-		double avgWeight = g.vertexSet().stream().mapToDouble(v -> v.weight).average().orElse(1.0);
-
-		List<Node> sortedNodes = g.vertexSet().stream()
-				.sorted((v1, v2) -> Double.compare(v2.weight, v1.weight))// swapped v1 and v2 to obtain descending order
-				.collect(Collectors.toList());
-
-//		Map<String, List<Node>> ids = sortedNodes.stream()
-//				.collect(Collectors.groupingBy(n -> n.entity));
-
-		Set<SemanticTree> patterns = new HashSet<>();
-		while(patterns.size() < inNumPatterns && !sortedNodes.isEmpty())
-		{
-			// Extract subgraph from top-ranked entity
-			SubGraph subgraph = null;
-			while (subgraph == null && !sortedNodes.isEmpty())
-			{
-				Node topEntity = sortedNodes.stream()
-						.max(Comparator.comparing(Node::getWeight)).get();
-				if (g.inDegreeOf(topEntity) + g.outDegreeOf(topEntity) > 0)
-				{
-					subgraph = extractHeavySubgraph(topEntity, g, avgWeight);
-				}
-				else
-				{
-					// If top entity isn't connected, discard it
-					sortedNodes.remove(topEntity);
-				}
-			}
-
-			if (subgraph != null)
-			{
-				// split graph into trees
-				patterns.addAll(SemanticTree.createTrees(subgraph));
-
-				// Remove edges in subgraph from base graph
-				subgraph.edgeSet()
-						.forEach(g::removeEdge);
-
-				// Remove unconnected nodes
-				sortedNodes.removeAll(sortedNodes.stream()
-						.filter(n -> g.inDegreeOf(n) + g.outDegreeOf(n) == 0)
-						.collect(Collectors.toList()));
-			}
-		}
-
-		return patterns;
-	}
-
-	/**
 	 * Starting from an initial node, extract a heavy subgraph by greedily adding edges to directed subgraph
 	 * @return a heavy subgraph which is compact and has high weights
 	 */
@@ -155,20 +160,25 @@ public class PatternExtraction
 		boolean stop;
 		do
 		{
-			Pair<SubGraph, Double> firstItem = rankedExpansions.poll();
-			SubGraph bestExpansion = firstItem.getKey();
-			double newValue = firstItem.getValue();
-			double delta = newValue - q;
-			stop = delta <= 0.0;
-			if (!stop)
+			if (expansions.isEmpty())
+				stop = true;
+			else
 			{
-				subgraph = bestExpansion;
-				q = newValue;
+				Pair<SubGraph, Double> firstItem = rankedExpansions.poll();
+				SubGraph bestExpansion = firstItem.getKey();
+				double newValue = firstItem.getValue();
+				double delta = newValue - q;
+				stop = delta <= 0.0;
+				if (!stop)
+				{
+					subgraph = bestExpansion;
+					q = newValue;
 
-				// recalculate and rank expansions for new subgraph
-				expansions = getExpansions(subgraph);
-				rankedExpansions.clear();
-				expansions.forEach(s -> rankedExpansions.add(Pair.of(s, calculateWeight(s, inEdgeWeight))));
+					// recalculate and rank expansions for new subgraph
+					expansions = getExpansions(subgraph);
+					rankedExpansions.clear();
+					expansions.forEach(s -> rankedExpansions.add(Pair.of(s, calculateWeight(s, inEdgeWeight))));
+				}
 			}
 		}
 		while (!stop);

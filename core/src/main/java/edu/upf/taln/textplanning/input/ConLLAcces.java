@@ -7,6 +7,7 @@ import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 
 import java.io.BufferedReader;
 import java.io.StringReader;
@@ -129,6 +130,74 @@ public class ConLLAcces implements DocumentAccess
 		{
 			e.printStackTrace();
 			throw new RuntimeException("Invalid ConLL: " + e);
+		}
+	}
+
+	/**
+	 * Post-processing of trees does the following:
+	 * - Quote nodes are removed
+	 * - Coordinations are changed so that coordination acts as predicate governing coordinated elements
+	 * @param inTrees trees to be modified
+	 */
+	public void postProcessTrees(List<SemanticTree> inTrees)
+	{
+		for (SemanticTree t : inTrees)
+		{
+			// Quotes: first pass
+			List<Node> quotes = t.vertexSet().stream()
+					.filter(v -> v.getEntity().getEntityLabel().equals("_"))
+					.collect(Collectors.toList());
+
+			List<Node> quotesToRemove = quotes.stream()
+					.filter(quote -> t.inDegreeOf(quote) == 1 && t.outDegreeOf(quote) == 0)
+					.collect(Collectors.toList());
+			t.removeAllVertices(quotesToRemove);
+
+			// Quotes: second pass
+			quotes = t.vertexSet().stream()
+					.filter(v -> v.getEntity().getEntityLabel().equals("_"))
+					.collect(Collectors.toList());
+			quotesToRemove.clear();
+			quotes.stream()
+					.filter(quote -> t.inDegreeOf(quote) == 1 && t.outDegreeOf(quote) == 1)
+					.forEach(quote -> {
+				quotesToRemove.add(quote);
+				Edge i = t.incomingEdgesOf(quote).iterator().next();
+				Edge o = t.outgoingEdgesOf(quote).iterator().next();
+				Edge e = new Edge(i.role, i.isArg);
+				t.addEdge(t.getEdgeSource(i), t.getEdgeTarget(o), e);
+			});
+			t.removeAllVertices(quotesToRemove);
+
+			// Coords
+			List<Edge> coords = t.edgeSet().stream()
+					.filter(e -> e.role.equals("COORD"))
+					.collect(Collectors.toList());
+			List<Triple<Node, Node, Edge>> edgesToAdd = new ArrayList<>();
+			List<Edge> edgesToRemove = new ArrayList<>();
+
+			for (Edge e : coords)
+			{
+				// First item in coordination acts as governor of coord node, reverse relation so that coord governs both items
+				Node item = t.getEdgeSource(e);
+				Node coord = t.getEdgeTarget(e);
+				Edge reversedEdge = new Edge("I", e.isArg);
+				edgesToAdd.add(Triple.of(coord, item, reversedEdge)); // reverse of e: coord -I-> item
+				edgesToRemove.add(e);
+
+				// Now change governor of first item to be governor of coord
+				if (t.inDegreeOf(item) == 1)
+				{
+					Edge e2 = t.incomingEdgesOf(item).iterator().next();
+					Edge newE2 = new Edge(e2.role, e2.isArg);
+					edgesToAdd.add(Triple.of(t.getEdgeSource(e2), coord, newE2));
+					edgesToRemove.add(e2);
+				}
+			}
+
+			t.removeAllEdges(edgesToRemove);
+			edgesToAdd.forEach(e -> t.addEdge(e.getLeft(), e.getMiddle(), e.getRight()));
+
 		}
 	}
 

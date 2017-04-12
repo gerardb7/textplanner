@@ -1,21 +1,16 @@
 package edu.upf.taln.textplanning;
 
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
-import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.pattern.ItemSetMining;
 import org.apache.commons.io.FilenameUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -26,24 +21,9 @@ public class TextPlannerTest
 {
 	private static final String solrUrl = "http://10.55.0.41:443/solr/sewDataAnnSen";
 	private static final Path word2vecPath = null; //Paths.get("/home/gerard/data/GoogleNews-vectors-negative300.bin");
-	private static final Path senseEmbedPath = null;//Paths.get("/home/gerard/data/sensembed/babelfy_vectors_merged_senses_only");
+	private static final Path senseEmbedPath = Paths.get("/home/gerard/data/sensembed/babelfy_vectors_merged_senses_only");
 	private static final Path inputPath = Paths.get("/home/gerard/Baixades/test/");
 	private final static Logger log = LoggerFactory.getLogger(TextPlannerTest.class);
-
-	@Test
-	public void generatePatterns() throws Exception
-	{
-		for (Path f : getInputFiles())
-		{
-			String inConLL = new String(Files.readAllBytes(f), Charset.forName("UTF-16"));
-			ConLLAcces conll = new ConLLAcces();
-			List<SemanticTree> annotatedTrees = conll.readTrees(inConLL);
-			ItemSetMining extractor = new ItemSetMining();
-			Set<SemanticTree> patterns = extractor.getPatterns(annotatedTrees);
-			String outConLL = conll.writeTrees(patterns);
-			writeToFile("patterns_", f, outConLL);
-		}
-	}
 
 	@Test
 	public void generatePlans() throws Exception
@@ -52,7 +32,7 @@ public class TextPlannerTest
 		ConLLDriver driver = new ConLLDriver(solrUrl, word2vecPath, senseEmbedPath);
 		TextPlanner.Options options = new TextPlanner.Options();
 		options.rankingStopThreshold = 0.00001;
-		options.generateStats = true;
+		options.generateStats = false;
 
 		files.forEach(f -> {
 			String outConLL = driver.runPlanner(f, options);
@@ -66,6 +46,7 @@ public class TextPlannerTest
 		try (Stream<Path> paths = Files.walk(inputPath, 1))
 		{
 			files.addAll(paths.filter(Files::isRegularFile)
+//					.filter(p -> !p.getFileName().startsWith("plan_"))
 					.collect(Collectors.toList()));
 		}
 
