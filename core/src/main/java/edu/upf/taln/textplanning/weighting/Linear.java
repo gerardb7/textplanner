@@ -29,7 +29,7 @@ public class Linear implements WeightingFunction
 	{
 		return functions.entrySet().stream()
 				.mapToDouble(p -> p.getKey().weight(inEntity) * p.getValue())
-				.average().orElse(0.0);
+				.sum();
 	}
 
 	public Map<WeightingFunction, Double> getFunctions()

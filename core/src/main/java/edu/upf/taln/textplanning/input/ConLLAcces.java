@@ -202,7 +202,7 @@ public class ConLLAcces implements DocumentAccess
 	}
 
 	/**
-	 * Converts annotated trees to ConLL format
+	 * Converts semantic trees to ConLL format
 	 *
 	 * @param inTrees list of trees
 	 * @return ConLL-formatted representation of the trees
@@ -218,6 +218,7 @@ public class ConLLAcces implements DocumentAccess
 							.map(t::getEdgeTarget)
 							.forEach(nodes::add);
 
+					// Collect governor to dependent mappings
 					Map<Integer, List<Pair<String, Integer>>> governors = IntStream.range(0, nodes.size())
 							.mapToObj(i -> {
 								Node n = nodes.get(i);
@@ -278,7 +279,7 @@ public class ConLLAcces implements DocumentAccess
 
 	private String nodesToConll(List<Annotation> inNodes, Map<Integer, List<Pair<String, Integer>>> inGovernors)
 	{
-		// Iterate entities again, this time producing conll
+		// Iterate nodes again, this time producing conll
 		String conll = "";
 		for (int id = 0; id < inNodes.size(); ++id)
 		{

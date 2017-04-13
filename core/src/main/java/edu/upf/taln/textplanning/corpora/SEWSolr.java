@@ -69,11 +69,20 @@ public final class SEWSolr implements Corpus
 		if (isSense)
 			queryString = "annotationId:" + inItem.replace(":", "\\:");
 		else
-			queryString = "text:" + inItem;
+			queryString = "text:" + inItem.replace(":", "\\:").replace("-", "\\:");
 		SolrQuery query = new SolrQuery(queryString);
 		query.setRows(0); // don't request  data
 		Stopwatch timer = Stopwatch.createStarted();
-		long count = server.query(query).getResults().getNumFound();
+		long count = 0;
+		try
+		{
+			count = server.query(query).getResults().getNumFound();
+		}
+		catch (Exception e)
+		{
+			System.out.println("Query " + query + " failed: " + e);
+			e.printStackTrace();
+		}
 		debug.registerQuery(timer.stop().elapsed(TimeUnit.MILLISECONDS));
 
 		return count;

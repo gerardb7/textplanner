@@ -1,6 +1,5 @@
 package edu.upf.taln.textplanning;
 
-import org.apache.commons.io.FilenameUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,8 +8,8 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -28,21 +27,19 @@ public class TextPlannerTest
 	@Test
 	public void generatePlans() throws Exception
 	{
-		List<Path> files = getInputFiles();
+		Set<Path> files = getInputFiles();
 		ConLLDriver driver = new ConLLDriver(solrUrl, word2vecPath, senseEmbedPath);
 		TextPlanner.Options options = new TextPlanner.Options();
 		options.rankingStopThreshold = 0.00001;
-		options.generateStats = false;
+		options.generateStats = true;
 
-		files.forEach(f -> {
-			String outConLL = driver.runPlanner(f, options);
-			writeToFile("plan_", f, outConLL);
-		});
+		String outConLL = driver.runPlanner(files, options);
+		writeToFile(outConLL);
 	}
 
-	private List<Path> getInputFiles() throws Exception
+	private Set<Path> getInputFiles() throws Exception
 	{
-		List<Path> files = new ArrayList<>();
+		Set<Path> files = new HashSet<>();
 		try (Stream<Path> paths = Files.walk(inputPath, 1))
 		{
 			files.addAll(paths.filter(Files::isRegularFile)
@@ -53,20 +50,15 @@ public class TextPlannerTest
 		return files;
 	}
 
-	private void writeToFile(String inPrefix, Path inBaseFile, String inContents)
+	private void writeToFile(String inContents)
 	{
-		String outFile = inBaseFile.toAbsolutePath().toString();
-		String path = FilenameUtils.getFullPath(outFile);
-		final String fileName = FilenameUtils.getBaseName(outFile);
-		String outFilePath =  path + inPrefix + fileName + ".conll";
-
-		try (PrintWriter outm = new PrintWriter(outFilePath))
+		try (PrintWriter outm = new PrintWriter(inputPath.toAbsolutePath().toString() + "plan.conll"))
 		{
 			outm.print(inContents);
 		}
 		catch (Exception e)
 		{
-			log.info("Failed to create output file for " + inBaseFile);
+			log.error("Failed to create plan file");
 			e.printStackTrace();
 		}
 	}

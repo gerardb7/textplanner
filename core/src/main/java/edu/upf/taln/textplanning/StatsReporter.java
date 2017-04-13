@@ -38,10 +38,10 @@ public class StatsReporter
 		StringWriter writer = new StringWriter();
 
 		// Report trees
-		writer.write("Annotated trees");
-		IntStream.range(0, inTrees.size())
-				.forEach(i -> writer.write("\tTree " + (i + 1) + ": " + inTrees.get(i)));
-		writer.write("\n");
+//		writer.write("Annotated trees");
+//		IntStream.range(0, inTrees.size())
+//				.forEach(i -> writer.write("\tTree " + (i + 1) + ": " + inTrees.get(i)));
+//		writer.write("\n");
 
 		// Collect entities
 		List<Entity> entities = inTrees.stream().map(SemanticTree::vertexSet)

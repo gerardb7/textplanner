@@ -4,9 +4,6 @@ import com.beust.jcommander.*;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
-import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
 import edu.upf.taln.textplanning.similarity.Combined;
@@ -21,15 +18,13 @@ import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Executes the text planner from one or more ConLL encoded files.
@@ -115,42 +110,32 @@ public class ConLLDriver
 		planner = ConLLDriver.createConLLPlanner(inSolrUrl, inWordVectorsPath, inSenseVectorsPath);
 	}
 
-	public String runPlanner(Path inDoc, TextPlanner.Options inPlannerOptions)
+	public String runPlanner(Set<Path> inDoc, TextPlanner.Options inPlannerOptions)
 	{
 		try
 		{
-			String inConll = new String(Files.readAllBytes(inDoc), Charset.forName("UTF-16"));
-			List<SemanticTree> annotatedTrees = conll.readTrees(inConll);
-			conll.postProcessTrees(annotatedTrees);
-			List<SemanticTree> plan = planner.planText(annotatedTrees, inPlannerOptions);
-
-			String conll = "";
-			for (SemanticTree t : plan)
-			{
-				conll += printNode(t.getRoot());
-				for (Edge e : t.getPreOrder())
+			List<SemanticTree> trees = new ArrayList<>();
+			inDoc.forEach(d -> {
+				String inConll = null;
+				try
 				{
-					conll += " " + printNode(t.getEdgeTarget(e));
+					inConll = new String(Files.readAllBytes(d), Charset.forName("UTF-8"));
 				}
-				conll += "\n"; // Treat each pattern as a separate sentence
-			}
-
-			return conll;
+				catch (IOException e)
+				{
+					throw new RuntimeException(e);
+				}
+				trees.addAll(conll.readTrees(inConll));
+			});
+			conll.postProcessTrees(trees);
+			List<SemanticTree> plan = planner.planText(trees, inPlannerOptions);
+			return conll.writeTrees(plan);
 		}
 		catch (Exception e)
 		{
 			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
-	}
-
-	private String printNode(Node n)
-	{
-		String lemma = ((AnnotatedEntity)n.getEntity()).getAnnotation().getLemma();
-		if (lemma.endsWith("_01"))
-			lemma = lemma.substring(0, lemma.indexOf('_'));
-
-		return lemma.replace('_', ' ');
 	}
 
 	public static void main(String[] args) throws Exception
@@ -165,7 +150,7 @@ public class ConLLDriver
 		try
 		{
 			Stopwatch timer = Stopwatch.createStarted();
-			String planConll = driver.runPlanner(inputDoc, options);
+			String planConll = driver.runPlanner(Collections.singleton(inputDoc), options);
 
 			log.info("Text planning took " + timer.stop());
 			log.info("Solr queries: " + SEWSolr.debug.toString());
