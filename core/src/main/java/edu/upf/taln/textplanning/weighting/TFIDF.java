@@ -18,8 +18,8 @@ import java.util.stream.Collectors;
  */
 public class TFIDF implements WeightingFunction
 {
-	private final Corpus corpus;
-	private final Map<String, Double> tfidf = new HashMap<>();
+	public final Corpus corpus;
+	private final Map<Entity, Double> tfidf = new HashMap<>();
 
 	public TFIDF(Corpus inCorpus)
 	{
@@ -32,24 +32,26 @@ public class TFIDF implements WeightingFunction
 		tfidf.clear();
 
 		// Collect frequency of entities in the collection
-		Map<String, Long> freqs = inCollection.stream()
+		Map<Entity, Long> freqs = inCollection.stream()
 				.map(SemanticTree::vertexSet)
 				.map(p -> p.stream()
 						.map(Node::getEntity)
-						.map(Entity::getEntityLabel)
+						.filter(e -> !ignoreEntity(e))
 						.collect(Collectors.toList()))
 				.flatMap(List::stream)
+				// Entity objects are tested for equality according to their unique labels
 				.collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
-		long maxFreq = freqs.values().stream().mapToLong(Long::valueOf).max().orElse(1);
+		//long maxFreq = freqs.values().stream().mapToLong(Long::valueOf).max().orElse(1);
 
 		// Calculate tf*idf values of the collection relative to the corpus
-		for (String label : freqs.keySet())
+		for (Entity e : freqs.keySet())
 		{
-			long f = freqs.containsKey(label) ? freqs.get(label) : 0;
-			double tf = 0.5 + 0.5*(f/maxFreq); // augmented frequency
-			double idf = Math.log(corpus.getNumDocs() / (1 + corpus.getFrequency(label)));
-			tfidf.put(label, tf * idf);
+			long f = freqs.containsKey(e) ? freqs.get(e) : 0;
+			double tf = 1 + Math.log(f); // logarithmically scaled
+			//double tf = f; //0.5 + 0.5*(f/maxFreq); // augmented frequency
+			double idf = Math.log(corpus.getNumDocs() / (1 + corpus.getFrequency(e)));
+			tfidf.put(e, tf * idf);
 		}
 
 		// Normalize values to [0..1]
@@ -58,16 +60,21 @@ public class TFIDF implements WeightingFunction
 	}
 
 	@Override
-	public double weight(Entity inEntity)
+	public double weight(Entity e)
 	{
-		String label = inEntity.getEntityLabel();
-		if (!tfidf.containsKey(label))
-			throw new RuntimeException("Cannot calculate tfidf value for unseen entity " + label);
-
-		// @todo think of better treatment of '_' tokens
-		if (label.equals("_"))
+		if (ignoreEntity(e))
 			return 0.0;
 
-		return tfidf.get(label);
+		if (!tfidf.containsKey(e))
+			throw new RuntimeException("Cannot calculate tfidf value for unseen entity " + e);
+
+		return tfidf.get(e);
+	}
+
+	private boolean ignoreEntity(Entity e)
+	{
+		String l = e.getEntityLabel();
+		return (l.equals("_") || l.equals("\"") || l.equals("\'") || l.equals(",") || l.equals(";") || l.equals("--") ||
+				l.equals("-"));
 	}
 }

@@ -1,5 +1,6 @@
 package edu.upf.taln.textplanning.corpora;
 
+import edu.upf.taln.textplanning.datastructures.Entity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,6 +86,6 @@ public interface Corpus
 		}
 	}
 
-	long getFrequency(String inItem);
+	long getFrequency(Entity inEntity);
 	long getNumDocs();
 }

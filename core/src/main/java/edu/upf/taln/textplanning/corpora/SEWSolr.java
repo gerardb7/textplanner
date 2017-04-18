@@ -1,6 +1,8 @@
 package edu.upf.taln.textplanning.corpora;
 
 import com.google.common.base.Stopwatch;
+import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
+import edu.upf.taln.textplanning.datastructures.Entity;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
@@ -39,17 +41,18 @@ public final class SEWSolr implements Corpus
 		}
 	}
 
-	public long getFrequency(String inItem)
+	public long getFrequency(Entity inEntity)
 	{
+		// Get key use in look ups in the cache and solr
+		String key = getKey(inEntity);
 		try
 		{
-			if (cache.containsKey(inItem))
-				return cache.get(inItem);
+			if (cache.containsKey(key))
+				return cache.get(key);
 			else
 			{
-				boolean isSense =  inItem.startsWith("bn:");
-				long freq = queryFrequency(inItem, isSense);
-				cache.put(inItem, freq);
+				long freq = queryFrequency(key);
+				cache.put(key, freq);
 				return freq;
 			}
 		}
@@ -60,16 +63,39 @@ public final class SEWSolr implements Corpus
 		}
 	}
 
+	/**
+	 * BabelNet annotations in SEW have good coverage of nominal phrases but not so good for other grammatical categories.
+	 * For this reason we look up BabelNet synsets when they annotate to NPs, and use the word forms otherwise.
+	 * (Multiword expressions annotate by large nominal phrases)
+	 * @return the string representation of a key corresponding to the given entity
+	 */
+	private String getKey(Entity inEntity)
+	{
+		String label = inEntity.getEntityLabel();
+		if (label.startsWith("bn:") && label.endsWith("n"))
+		{
+			return label;
+		}
+		else
+		{
+			return ((AnnotatedEntity)inEntity).getAnnotation().getForm();
+		}
+	}
+
 	@Override
 	public long getNumDocs() { return this.numDocs; }
 
-	private long queryFrequency(String inItem, boolean isSense) throws IOException, SolrServerException
+	private long queryFrequency(String inKey) throws IOException, SolrServerException
 	{
 		String queryString;
-		if (isSense)
-			queryString = "annotationId:" + inItem.replace(":", "\\:");
+		String key = inKey.replace(":", "\\:").replace("-", "\\-").replace("\"", "\\\"");
+		if (key.startsWith("bn\\:"))
+		{
+			queryString = "annotationId:" + key;
+		}
 		else
-			queryString = "text:" + inItem.replace(":", "\\:").replace("-", "\\:");
+			queryString = "text:" + key;
+
 		SolrQuery query = new SolrQuery(queryString);
 		query.setRows(0); // don't request  data
 		Stopwatch timer = Stopwatch.createStarted();

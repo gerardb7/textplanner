@@ -38,7 +38,7 @@ public final class TextPlanner
 		public double simLowerBound = 0.1; // Pairs of entities with similarity below this value have their score set to 0
 		public double dampingFactor = 0.1; // damping factor to control balance between relevance bias and similarity
 		public double rankingStopThreshold = 0.0001; // stopping threshold for the main ranking algorithm
-		public boolean generateStats = false;
+		public boolean generateStats = true;
 		public String stats = "";
 	}
 
@@ -106,8 +106,7 @@ public final class TextPlanner
 				log.info("**Generating stats**");
 				timer.reset();
 				timer.start();
-				String stats = StatsReporter.reportStats(inContents, weighting, similarity);
-				log.info(stats);
+				inOptions.stats = StatsReporter.reportStats(inContents, weighting, similarity, rankedEntities);
 				log.info("Stats generation took " + timer.stop());
 			}
 
