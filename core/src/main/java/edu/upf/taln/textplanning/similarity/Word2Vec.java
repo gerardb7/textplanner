@@ -22,7 +22,7 @@ public class Word2Vec implements EntitySimilarity
 	{
 		log.info("Loading Word2Vec vectors");
 		Stopwatch timer = Stopwatch.createStarted();
-		vectors = WordVectorSerializer.loadGoogleModel(inEmbeddingsPath.toFile(), true);
+		vectors = WordVectorSerializer.readWord2VecModel(inEmbeddingsPath.toAbsolutePath().toString());
 		log.info("Loading took " + timer.stop());
 	}
 
