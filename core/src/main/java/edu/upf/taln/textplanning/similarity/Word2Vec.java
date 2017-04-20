@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.similarity;
 
 import com.google.common.base.Stopwatch;
+import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
 import edu.upf.taln.textplanning.datastructures.Entity;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
 import org.deeplearning4j.models.embeddings.wordvectors.WordVectors;
@@ -29,23 +30,27 @@ public class Word2Vec implements EntitySimilarity
 	@Override
 	public boolean isDefinedFor(Entity inItem)
 	{
-		return vectors.hasWord(inItem.getEntityLabel());
+		return vectors.hasWord(((AnnotatedEntity)inItem).getAnnotation().getForm());
 	}
 
 	@Override
 	public boolean isDefinedFor(Entity inItem1, Entity inItem2)
 	{
-		return vectors.hasWord(inItem1.getEntityLabel()) && vectors.hasWord(inItem2.getEntityLabel());
+		return vectors.hasWord(((AnnotatedEntity)inItem1).getAnnotation().getForm()) &&
+				vectors.hasWord(((AnnotatedEntity)inItem2).getAnnotation().getForm());
 	}
 
 	@Override
 	public double computeSimilarity(Entity inItem1, Entity inItem2)
 	{
-		if (inItem1.getEntityLabel().equals(inItem2.getEntityLabel()))
+		String form1 = ((AnnotatedEntity) inItem1).getAnnotation().getForm();
+		String form2 = ((AnnotatedEntity) inItem2).getAnnotation().getForm();
+
+		if (form1.equals(form2))
 			return 1.0;
 		if (!isDefinedFor(inItem1, inItem2))
 			return 0.0;
 
-		return vectors.similarity(inItem1.getEntityLabel(), inItem2.getEntityLabel());
+		return vectors.similarity(form1, form2);
 	}
 }

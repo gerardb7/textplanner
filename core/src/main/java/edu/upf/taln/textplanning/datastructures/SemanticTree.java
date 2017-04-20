@@ -128,8 +128,7 @@ public class SemanticTree extends SimpleDirectedGraph<Node, Edge>
 	public List<Edge> getPreOrder() { return getPreOrder(root); }
 	private List<Edge> getPreOrder(Node node)
 	{
-		// Lexicographical sort of siblings by id
-
+		// Sort of siblings by role and id
 		List<Edge> preorder = new ArrayList<>();
 		List<Edge> sortedSiblings = outgoingEdgesOf(node).stream()
 				.sorted(Comparator.comparing(Edge::getRole)

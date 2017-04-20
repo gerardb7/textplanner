@@ -20,14 +20,14 @@ public class AnnotatedEntity extends Entity
 	@Override
 	public String getEntityLabel()
 	{
-		return ann.getSense() != null? ann.getSense() : ann.getForm();
+		return ann.getSense() != null ? ann.getSense() : ann.getForm();
 	}
 
 	@Override
 	public String toString()
 	{
 		if (getAnnotation().getSense() == null)
-			return getEntityLabel();
+			return getAnnotation().getForm();
 		else
 			return getAnnotation().getSense() + "-" + getAnnotation().getForm();
 	}

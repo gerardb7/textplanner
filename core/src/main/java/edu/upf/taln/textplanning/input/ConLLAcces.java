@@ -172,6 +172,7 @@ public class ConLLAcces implements DocumentAccess
 			// Coords
 			List<Edge> coords = t.edgeSet().stream()
 					.filter(e -> e.role.equals("COORD"))
+					.filter(e -> ((AnnotatedEntity)t.getEdgeTarget(e).getEntity()).getAnnotation().getPOS().equals("CC"))
 					.collect(Collectors.toList());
 			List<Triple<Node, Node, Edge>> edgesToAdd = new ArrayList<>();
 			List<Edge> edgesToRemove = new ArrayList<>();
@@ -197,7 +198,6 @@ public class ConLLAcces implements DocumentAccess
 
 			t.removeAllEdges(edgesToRemove);
 			edgesToAdd.forEach(e -> t.addEdge(e.getLeft(), e.getMiddle(), e.getRight()));
-
 		}
 	}
 

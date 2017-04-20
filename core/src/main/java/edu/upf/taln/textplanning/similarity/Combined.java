@@ -10,7 +10,7 @@ import java.util.List;
  */
 public class Combined implements EntitySimilarity
 {
-	private final List<EntitySimilarity> functions;
+	public final List<EntitySimilarity> functions;
 	public Combined(List<EntitySimilarity> inFunctions)
 	{
 		functions = inFunctions;

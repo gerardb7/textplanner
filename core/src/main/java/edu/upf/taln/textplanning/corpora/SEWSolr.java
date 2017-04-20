@@ -106,8 +106,8 @@ public final class SEWSolr implements Corpus
 		}
 		catch (Exception e)
 		{
-			System.out.println("Query " + query + " failed: " + e);
-			e.printStackTrace();
+			log.error("Query " + query + " failed: " + e);
+
 		}
 		debug.registerQuery(timer.stop().elapsed(TimeUnit.MILLISECONDS));
 

@@ -2,13 +2,18 @@ package edu.upf.taln.textplanning;
 
 import Jama.Matrix;
 import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
+import edu.upf.taln.textplanning.datastructures.Annotation;
 import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.similarity.Combined;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
+import edu.upf.taln.textplanning.similarity.SensEmbed;
+import edu.upf.taln.textplanning.similarity.Word2Vec;
 import edu.upf.taln.textplanning.weighting.Position;
 import edu.upf.taln.textplanning.weighting.TFIDF;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
+import org.apache.commons.collections4.SetUtils;
 
 import java.io.StringWriter;
 import java.math.RoundingMode;
@@ -16,6 +21,7 @@ import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -110,20 +116,129 @@ public class StatsReporter
 				.forEach(row -> writer.write(row + "\n"));
 		writer.write("\n");*/
 
-		long numSenses = entities.stream()
-				.filter(e -> ((AnnotatedEntity)e).getAnnotation().getSense() != null)
-				.count();
-		long numDefinedSEW = entities.stream()
-				.filter(e -> ((AnnotatedEntity)e).getAnnotation().getSense() != null)
+		SensEmbed ssim = null;
+		Word2Vec wsim = null;
+		if (inSimilarity instanceof SensEmbed)
+		{
+			ssim = ((SensEmbed) inSimilarity);
+		}
+		else if (inSimilarity instanceof Word2Vec)
+		{
+			wsim = ((Word2Vec) inSimilarity);
+		}
+		else if (inSimilarity instanceof Combined)
+		{
+			for (EntitySimilarity sim : ((Combined)inSimilarity).functions)
+			{
+				if (sim instanceof SensEmbed)
+				{
+					ssim = ((SensEmbed) sim);
+				}
+				else if (sim instanceof Word2Vec)
+				{
+					wsim = ((Word2Vec) sim);
+				}
+			}
+		}
+
+		Set<AnnotatedEntity> senses = entities.stream()
+				.map(AnnotatedEntity.class::cast)
+				.filter(e -> e.getAnnotation().getSense() != null)
+				.collect(Collectors.toSet());
+		Set<AnnotatedEntity> nominalSenses = senses.stream()
+				.filter(e -> e.getAnnotation().getSense().endsWith("n"))
+				.collect(Collectors.toSet());
+		Set<AnnotatedEntity> allForms = entities.stream()
+				.map(AnnotatedEntity.class::cast)
+				.collect(Collectors.toSet());
+		Set<AnnotatedEntity> forms = entities.stream()
+				.map(AnnotatedEntity.class::cast)
+				.filter(e -> e.getAnnotation().getSense() == null)
+				.collect(Collectors.toSet());
+		Set<AnnotatedEntity> nonNominalSenseforms = entities.stream()
+				.map(AnnotatedEntity.class::cast)
+				.filter(e -> e.getAnnotation().getSense() == null || e.getAnnotation().getSense().endsWith("n"))
+				.collect(Collectors.toSet());
+		{
+			double ratio = ((double) senses.size() / (double) entities.size()) * 100.0;
+			writer.write("Babelfy: " + format.format(ratio) + "% of entities have a sense\n");
+		}
+		{
+			double ratio = ((double) nominalSenses.size() / (double) senses.size()) * 100.0;
+			writer.write("Babelfy: " + format.format(ratio) + "% of senses are nominal\n");
+		}
+
+		Set<AnnotatedEntity> sensesInSEW = senses.stream()
 				.filter(e -> corpusMetric.corpus.getFrequency(e) > 0)
-				.count();
-		long numDefinedSenseEmbed = entities.stream()
-				.filter(e -> ((AnnotatedEntity)e).getAnnotation().getSense() != null)
-				.filter(inSimilarity::isDefinedFor)
-				.count();
-		writer.write(entities.size() + " entities " + numSenses + " senses " + numDefinedSEW + " in SEW " + numDefinedSenseEmbed + " in SenseEmbed\n");
-		//entities.forEach(e -> writer.write(entities.indexOf(e) +"\t" + e + "\t" + inSimilarity.isDefinedFor(e) + "\n"));
-		writer.write("\n");
+				.collect(Collectors.toSet());
+		{
+			double ratio = ((double) sensesInSEW.size() / (double) senses.size()) * 100.0;
+			writer.write("SEW: " + format.format(ratio) + "% senses defined (" + sensesInSEW.size()
+					+ "/" + senses.size() + ")\n");
+		}
+		Set<AnnotatedEntity> nominalSensesInSEW = nominalSenses.stream()
+				.filter(e -> corpusMetric.corpus.getFrequency(e) > 0)
+				.collect(Collectors.toSet());
+		{
+			double ratio = ((double) nominalSensesInSEW.size() / (double) nominalSenses.size()) * 100.0;
+			writer.write("SEW: " + format.format(ratio) + "% nominal senses defined (" + nominalSensesInSEW.size()
+					+ "/" + nominalSenses.size() + ")\n");
+		}
+		Set<AnnotatedEntity>formsInSEW = nonNominalSenseforms.stream()
+				.filter(e -> corpusMetric.corpus.getFrequency(e) > 0)
+				.collect(Collectors.toSet());
+		{
+			double ratio = ((double) formsInSEW.size() / (double) nonNominalSenseforms.size()) * 100.0;
+			writer.write("SEW: " + format.format(ratio) + "% forms (of words not annotated with nominal senses) defined ("
+					+ formsInSEW.size()	+ "/" + nonNominalSenseforms.size() + ")\n");
+		}
+
+		if (ssim != null)
+		{
+			{
+				Set<AnnotatedEntity> definedSenses = senses.stream()
+						.filter(ssim::isDefinedFor)
+						.collect(Collectors.toSet());
+				double ratio = ((double) definedSenses.size() / (double) senses.size()) * 100.0;
+				writer.write("SensEmbed: " + format.format(ratio) + "% senses defined (" + definedSenses.size() + "/" +
+						senses.size() + ")\n");
+				writer.write("SensEmbed: undefined senses " + SetUtils.difference(senses, definedSenses).stream()
+						.map(AnnotatedEntity::toString)
+						.collect(Collectors.joining(",")) + "\n");
+			}
+			{
+				Set<AnnotatedEntity> definedForms = nominalSenses.stream()
+						.filter(ssim::isDefinedFor)
+						.collect(Collectors.toSet());
+				double ratio = ((double) definedForms.size() / (double) nominalSenses.size()) * 100.0;
+				writer.write("SensEmbed: " + format.format(ratio) + "% nominal senses defined (" + definedForms.size() +
+						"/" + senses.size() + ")\n");
+			}
+		}
+		if (wsim != null)
+		{
+			{
+				Set<AnnotatedEntity> definedForms = allForms.stream()
+						.filter(wsim::isDefinedFor)
+						.collect(Collectors.toSet());
+				double ratio = ((double) definedForms.size() / (double) allForms.size()) * 100.0;
+				writer.write("Word2Vec: " + format.format(ratio) + "% forms defined ("
+						+ definedForms.size() + "/" + allForms.size() + ")\n");
+			}
+			{
+				Set<AnnotatedEntity> definedForms = forms.stream()
+						.filter(wsim::isDefinedFor)
+						.collect(Collectors.toSet());
+				double ratio = ((double) definedForms.size() / (double) forms.size()) * 100.0;
+				writer.write("Word2Vec: " + format.format(ratio) + "% forms (of words not annotated with a sense) defined ("
+						+ definedForms.size() + "/" + forms.size() + ")\n");
+
+				writer.write("Word2Vec: undefined forms " + SetUtils.difference(forms, definedForms).stream()
+						.map(AnnotatedEntity::getAnnotation)
+						.map(Annotation::getForm)
+						.collect(Collectors.joining(",")) + "\n");
+			}
+		}
 
 		// Report patterns
 //		writer.write("Patterns\n");
