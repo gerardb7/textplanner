@@ -48,7 +48,9 @@ public class PowerIterationRanking
 		IntStream.range(0, n).forEach(i ->
 				IntStream.range(i, n).forEach(j -> // starting from i avoids calculating symmetric similarity twice
 				{
-					double sij = inSimilarity.computeSimilarity(entities.get(i), entities.get(j));
+					Entity ei = entities.get(i);
+					Entity ej = entities.get(j);
+					double sij = inSimilarity.computeSimilarity(ei, ej);
 					if (sij < inOptions.simLowerBound) // apply lower bound
 						sij = 0.0;
 					m.set(i, j, sij);

@@ -3,7 +3,10 @@ package edu.upf.taln.textplanning.utils;
 import com.beust.jcommander.*;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.similarity.*;
+import edu.upf.taln.textplanning.similarity.EntitySimilarity;
+import edu.upf.taln.textplanning.similarity.PatternSimilarity;
+import edu.upf.taln.textplanning.similarity.SensEmbed;
+import edu.upf.taln.textplanning.similarity.Word2Vec;
 
 import java.io.StringWriter;
 import java.math.RoundingMode;
@@ -12,7 +15,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -43,20 +45,66 @@ public class SimilarityMatrixGenerator
 		}
 	}
 
+	public static class PathToExistingFolder implements IParameterValidator
+	{
+		@Override
+		public void validate(String name, String value) throws ParameterException
+		{
+			Path path = Paths.get(value);
+			if (!Files.exists(path) || !Files.isDirectory(path))
+			{
+				throw new ParameterException("Cannot open folder " + name + " = " + value);
+			}
+		}
+	}
+
+	private enum EmbeddingsType
+	{
+		Word2Vec, SensEmbed, MergedSensEmbed;
+		// converter that will be used later
+		public static EmbeddingsType fromString(String code) {
+
+			for(EmbeddingsType output : EmbeddingsType.values())
+			{
+				if(output.toString().equalsIgnoreCase(code))
+					return output;
+			}
+			return null;
+		}
+	}
+
+	public static class EmbeddingsTypeConverter implements IStringConverter<EmbeddingsType>
+	{
+		@Override
+		public EmbeddingsType convert(String value)
+		{
+			EmbeddingsType convertedValue = EmbeddingsType.fromString(value);
+
+			if(convertedValue == null)
+			{
+				throw new ParameterException("Value " + value + "can not be converted to EmbeddingsType. " +
+						"Available values are: word, sense, merged.");
+			}
+			return convertedValue;
+		}
+	}
+
 	@SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
 	private static class CMLArgs
 	{
-		@Parameter(description = "Input ConLL document", arity = 1, converter = PathConverter.class,
-				validateWith = PathToExistingFile.class, required = true)
-		private List<Path> doc;
-		@Parameter(names = "-d", description = "Produce distances instead of similarity")
-		private boolean distance = true;
-		@Parameter(names = "-wvec", description = "Path to file containing word vectors",
-				converter = PathConverter.class, validateWith = PathToExistingFile.class)
-		private Path wordVectorsPath = null;
-		@Parameter(names = "-svec", description = "Path to file containing sense vectors",
-				converter = PathConverter.class, validateWith = PathToExistingFile.class)
-		private Path senseVectorsPath;
+		@Parameter(description = "Input folder", arity = 1, converter = PathConverter.class,
+				validateWith = PathToExistingFolder.class, required = true)
+		private List<Path> input;
+		@Parameter(names = "-solr", description = "URL of Solr index", required = true)
+		private String solrUrl;
+		@Parameter(names = "-e", description = "Path to file containing embeddings",
+				converter = PathConverter.class, validateWith = PathToExistingFile.class, required = true)
+		private Path embeddings = null;
+		@Parameter(names = "-t", description = "Type of embeddings", converter = EmbeddingsTypeConverter.class,
+				required = true)
+		private EmbeddingsType type;
+		@Parameter(names = "-debug", description = "Debug mode")
+		private boolean debug;
 	}
 
 	private final PatternSimilarity sim;
@@ -67,7 +115,7 @@ public class SimilarityMatrixGenerator
 	 *
 	 * @param inSimilarityFunction similarity function
 	 */
-	public SimilarityMatrixGenerator(PatternSimilarity inSimilarityFunction)
+	private SimilarityMatrixGenerator(PatternSimilarity inSimilarityFunction)
 	{
 		assert inSimilarityFunction != null;
 		sim = inSimilarityFunction;
@@ -83,7 +131,7 @@ public class SimilarityMatrixGenerator
 	 * @param inPatterns patterns to compare
 	 * @return similarity matrix
 	 */
-	public double[][] calculateSimilarityMatrix(List<SemanticTree> inPatterns)
+	private double[][] calculateSimilarityMatrix(List<SemanticTree> inPatterns)
 	{
 		assert inPatterns != null;
 
@@ -100,7 +148,7 @@ public class SimilarityMatrixGenerator
 	 * @param inPatterns patterns to compare
 	 * @return similarity matrix
 	 */
-	public double[][] calculateDistanceMatrix(List<SemanticTree> inPatterns)
+	private double[][] calculateDistanceMatrix(List<SemanticTree> inPatterns)
 	{
 		assert inPatterns != null;
 
@@ -118,7 +166,7 @@ public class SimilarityMatrixGenerator
 	 * @param inMatrix matrix to convert
 	 * @return string representation of matrix
 	 */
-	public String formatMatrix(double[][] inMatrix)
+	private String formatMatrix(double[][] inMatrix)
 	{
 		assert inMatrix != null;
 
@@ -139,28 +187,32 @@ public class SimilarityMatrixGenerator
 	{
 		CMLArgs cmlArgs = new CMLArgs();
 		new JCommander(cmlArgs, args);
-		EntitySimilarity wordVectors = (cmlArgs.wordVectorsPath != null) ? new Word2Vec(cmlArgs.wordVectorsPath) : null;
-		EntitySimilarity senseVectors = (cmlArgs.senseVectorsPath != null) ? new SensEmbed(cmlArgs.senseVectorsPath) : null;
-		List<EntitySimilarity> functions = new ArrayList<>();
-		functions.add(senseVectors);
-		functions.add(wordVectors);
-		EntitySimilarity combined = new Combined(functions);
-		PatternSimilarity similarity = new PatternSimilarity(combined);
+
+		EntitySimilarity sim = null;
+		switch (cmlArgs.type)
+		{
+			case Word2Vec: sim = new Word2Vec(cmlArgs.embeddings); break;
+			case SensEmbed: sim = new SensEmbed(cmlArgs.embeddings, false); break;
+			case MergedSensEmbed: sim = new SensEmbed(cmlArgs.embeddings, true);	break;
+		}
+		PatternSimilarity similarity = new PatternSimilarity(sim);
 		SimilarityMatrixGenerator calculator = new SimilarityMatrixGenerator(similarity);
 
-		Path inputDoc = cmlArgs.doc.get(0);
+		Path inputDoc = cmlArgs.input.get(0);
 		String conll = new String(Files.readAllBytes(inputDoc), Charset.forName("UTF-8"));
 		ConLLAcces reader = new ConLLAcces();
 		List<SemanticTree> inputPatterns = reader.readTrees(conll);
 		double[][] matrix;
-		if (cmlArgs.distance)
-		{
+
+		// @todo fix this
+//		if (true)//cmlArgs.distance)
+//		{
 			matrix = calculator.calculateDistanceMatrix(inputPatterns);
-		}
-		else
-		{
+//		}
+//		else
+//		{
 			matrix = calculator.calculateSimilarityMatrix(inputPatterns);
-		}
+//		}
 		String matrixString = calculator.formatMatrix(matrix);
 		System.out.println(matrixString);
 	}

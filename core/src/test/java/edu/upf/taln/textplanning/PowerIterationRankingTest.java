@@ -8,9 +8,12 @@ import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.junit.Test;
 
+import java.math.RoundingMode;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
@@ -68,21 +71,29 @@ public class PowerIterationRankingTest
 	public void testRanking()
 	{
 		List<Entity> entities = new ArrayList<>();
-		for (int i=0; i<3; ++i)
+		for (int i=0; i<9; ++i)
 		{
 			entities.add(new DummyEntity());
 		}
 
 		TextPlanner.Options options = new TextPlanner.Options();
-		options.rankingStopThreshold = 0.00001;
-		options.dampingFactor = 0.5;
+		options.rankingStopThreshold = 0.0001;
+		options.dampingFactor = 0.3;
 		options.generateStats = true;
-		DummyWeighting weight = new DummyWeighting(2);
+		DummyWeighting weight = new DummyWeighting(5);
 		Matrix rankingMatrix = PowerIterationRanking.createRankingMatrix(entities, weight, new DummySimilarity(), options);
 		Matrix result = PowerIterationRanking.run(rankingMatrix, options.rankingStopThreshold);
 
 		double[] weights = entities.stream().mapToDouble(weight::weight).toArray();
-		System.out.println("Initial weights = " + Arrays.toString(weights));
-		System.out.println("Final ranking = " + Arrays.toString(result.getColumnPackedCopy()));
+		NumberFormat f = NumberFormat.getInstance();
+		f.setRoundingMode(RoundingMode.UP);
+		f.setMaximumFractionDigits(3);
+		f.setMinimumFractionDigits(3);
+		System.out.println("Initial weights = " + Arrays.stream(weights)
+				.mapToObj(f::format)
+				.collect(Collectors.joining(", ")));
+		System.out.println("Final ranking = " + Arrays.stream(result.getColumnPackedCopy())
+				.mapToObj(f::format)
+				.collect(Collectors.joining(", ")));
 	}
 }

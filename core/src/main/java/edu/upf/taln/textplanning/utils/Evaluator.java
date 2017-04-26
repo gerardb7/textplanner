@@ -2,7 +2,9 @@ package edu.upf.taln.textplanning.utils;
 
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.similarity.*;
+import edu.upf.taln.textplanning.similarity.EntitySimilarity;
+import edu.upf.taln.textplanning.similarity.PatternSimilarity;
+import edu.upf.taln.textplanning.similarity.SensEmbed;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +29,7 @@ public class Evaluator
 {
 	private final static Logger log = LoggerFactory.getLogger(Evaluator.class);
 
-	public static void evaluate(Path inGoldPath, Path inSystemPath, Path inSenseVectors, Path inWordVectors) throws Exception
+	private static void evaluate(Path inGoldPath, Path inSystemPath, Path embeddingsPath) throws Exception
 	{
 		// Collect files from folders
 		List<Path> goldFiles = new ArrayList<>();
@@ -56,13 +58,8 @@ public class Evaluator
 				.collect(Collectors.toList());
 
 		// Set up similarity metric
-		EntitySimilarity senseSim = inSenseVectors == null ? null : new SensEmbed(inSenseVectors);
-		EntitySimilarity wordSim = inWordVectors == null ? null : new Word2Vec(inWordVectors);
-		List<EntitySimilarity> functions = new ArrayList<>();
-		functions.add(senseSim);
-		functions.add(wordSim);
-		EntitySimilarity combined = new Combined(functions);
-		PatternSimilarity similarity = new PatternSimilarity(combined);
+		EntitySimilarity sim = new SensEmbed(embeddingsPath, true);
+		PatternSimilarity similarity = new PatternSimilarity(sim);
 
 		int numPairsSim = 0;
 		int numPairsStats = 0;
@@ -183,9 +180,9 @@ public class Evaluator
 
 	public static void main(String[] args) throws Exception
 	{
-		if (args.length < 3)
+		if (args.length != 3)
 		{
-			System.err.println("Wrong number of parameters. Usage: evaluator path_gold path_system path_sense_vectors [path_word_vectors]");
+			System.err.println("Wrong number of parameters. Usage: evaluator path_gold path_system embeddings_path");
 			System.exit(-1);
 		}
 
@@ -202,24 +199,14 @@ public class Evaluator
 			System.exit(-1);
 		}
 
-		Path senseVectors = Paths.get(args[2]);
-		if (!Files.exists(senseVectors) || !Files.isRegularFile(senseVectors))
+		Path embeddings = Paths.get(args[2]);
+		if (!Files.exists(embeddings) || !Files.isRegularFile(embeddings))
 		{
-			System.err.println("Cannot open " + senseVectors);
+			System.err.println("Cannot open " + embeddings);
 			System.exit(-1);
 		}
 
-		Path wordVectors = null;
-		if (args.length == 4)
-		{
-			wordVectors = Paths.get(args[3]);
-			if (!Files.exists(wordVectors) || !Files.isRegularFile(wordVectors))
-			{
-				System.err.println("Cannot open " + wordVectors);
-				System.exit(-1);
-			}
-		}
 
-		Evaluator.evaluate(goldPath, systemPath, senseVectors, wordVectors);
+		Evaluator.evaluate(goldPath, systemPath, embeddings);
 	}
 }

@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 /**
- * Computes similarity between word forms according to Word2Vec distributional vectors
+ * Computes similarity between word forms according to word distributional vectors
  */
 public class Word2Vec implements EntitySimilarity
 {
@@ -21,7 +21,7 @@ public class Word2Vec implements EntitySimilarity
 
 	public Word2Vec(Path inEmbeddingsPath) throws IOException
 	{
-		log.info("Loading Word2Vec vectors");
+		log.info("Loading word vectors");
 		Stopwatch timer = Stopwatch.createStarted();
 		vectors = WordVectorSerializer.readWord2VecModel(inEmbeddingsPath.toAbsolutePath().toString());
 		log.info("Loading took " + timer.stop());

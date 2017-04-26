@@ -13,7 +13,7 @@ import edu.upf.taln.textplanning.similarity.Word2Vec;
 import edu.upf.taln.textplanning.weighting.Position;
 import edu.upf.taln.textplanning.weighting.TFIDF;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
-import org.apache.commons.collections4.SetUtils;
+import org.apache.commons.collections4.ListUtils;
 
 import java.io.StringWriter;
 import java.math.RoundingMode;
@@ -24,61 +24,152 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Generates statistics about a document containing annotations of deep syntactic trees.
  */
 public class StatsReporter
 {
-	public static String reportStats(List<SemanticTree> inTrees, WeightingFunction inWeighting,
-	                                 EntitySimilarity inSimilarity, Map<Entity, Double> rankedEntities)
+	public static String reportStats(List<SemanticTree> t, WeightingFunction rel,
+	                                 EntitySimilarity sim, Map<Entity, Double> rankedEntities,
+	                                 TextPlanner.Options o)
 	{
 		// Set up formatting
-		NumberFormat format = NumberFormat.getInstance();
-		format.setRoundingMode(RoundingMode.UP);
-		format.setMaximumFractionDigits(3);
-		format.setMinimumFractionDigits(3);
+		NumberFormat f = NumberFormat.getInstance();
+		f.setRoundingMode(RoundingMode.UP);
+		f.setMaximumFractionDigits(3);
+		f.setMinimumFractionDigits(3);
+		StringWriter w = new StringWriter();
 
-		StringWriter writer = new StringWriter();
+		// Prepare similarity functions
+		final SensEmbed ssim;
+		final Word2Vec wsim;
+		if (sim instanceof SensEmbed)
+		{
+			ssim = ((SensEmbed) sim);
+			wsim = null;
+		}
+		else if (sim instanceof Word2Vec)
+		{
+			ssim = null;
+			wsim = ((Word2Vec) sim);
+		}
+		else if (sim instanceof Combined)
+		{
+			EntitySimilarity s1 = ((Combined)sim).functions.get(0);
+			EntitySimilarity s2 = ((Combined)sim).functions.get(1);
+			ssim = (SensEmbed) (s1 instanceof SensEmbed ? s1 : s2);
+			wsim = (Word2Vec) (s1 instanceof Word2Vec ? s1 : s2);
+		}
+		else
+		{
+			ssim = null;
+			wsim = null;
+		}
 
-		// Report trees
-//		writer.write("Annotated trees");
-//		IntStream.range(0, inTrees.size())
-//				.forEach(i -> writer.write("\tTree " + (i + 1) + ": " + inTrees.get(i)));
-//		writer.write("\n");
-
-		// Collect entities
-		List<Entity> entities = inTrees.stream().map(SemanticTree::vertexSet)
+		// Collect entities, senses, forms, etc.
+		List<AnnotatedEntity> entities = t.stream().map(SemanticTree::vertexSet)
 				.map(p -> p.stream()
 						.map(Node::getEntity))
 				.flatMap(Function.identity())
 				.distinct()
+				.map(AnnotatedEntity.class::cast)
+				.collect(Collectors.toList());
+		List<AnnotatedEntity> senses = entities.stream()
+				.map(AnnotatedEntity.class::cast)
+				.filter(e -> e.getAnnotation().getSense() != null)
+				.collect(Collectors.toList());
+		List<AnnotatedEntity> nominalSenses = senses.stream()
+				.filter(e -> e.getAnnotation().getSense().endsWith("n"))
+				.collect(Collectors.toList());
+		List<AnnotatedEntity> allForms = entities.stream()
+				.map(AnnotatedEntity.class::cast)
+				.collect(Collectors.toList());
+		List<AnnotatedEntity> forms = entities.stream()
+				.map(AnnotatedEntity.class::cast)
+				.filter(e -> e.getAnnotation().getSense() == null)
+				.collect(Collectors.toList());
+		List<AnnotatedEntity> nonNominalSenseforms = entities.stream()
+				.map(AnnotatedEntity.class::cast)
+				.filter(e -> e.getAnnotation().getSense() == null || e.getAnnotation().getSense().endsWith("n"))
 				.collect(Collectors.toList());
 
+		// Collect similarity values
 		List<Double> simValues = entities.stream()
 				.mapToDouble(e1 -> entities.stream()
 						.filter(e2 -> e1 != e2)
-						.mapToDouble(e2 -> inSimilarity.computeSimilarity(e1, e2))
+						.mapToDouble(e2 -> sim.computeSimilarity(e1, e2))
+						.map(d -> d < o.simLowerBound ? 0.0 : d)
+						.average().orElse(0.0))
+				.boxed()
+				.collect(Collectors.toList());
+		List<Double> sensEmbedValues = senses.stream()
+				.mapToDouble(e1 -> senses.stream()
+						.filter(e2 -> e1 != e2)
+						.mapToDouble(e2 -> ssim != null ? ssim.computeSimilarity(e1, e2) : 0.0)
+						.map(d -> d < o.simLowerBound ? 0.0 : d)
+						.average().orElse(0.0))
+				.boxed()
+				.collect(Collectors.toList());
+		List<Double> word2VecValues = allForms.stream()
+				.mapToDouble(e1 -> allForms.stream()
+						.filter(e2 -> e1 != e2)
+						.mapToDouble(e2 -> wsim != null ? wsim.computeSimilarity(e1, e2) : 0.0)
+						.map(d -> d < o.simLowerBound ? 0.0 : d)
 						.average().orElse(0.0))
 				.boxed()
 				.collect(Collectors.toList());
 
+		// Collect similarity values weighted by relevance
 		List<Double> simRelValues = entities.stream()
 				.mapToDouble(e1 -> entities.stream()
 						.filter(e2 -> e1 != e2)
-						.mapToDouble(e2 -> inSimilarity.computeSimilarity(e1, e2) * inWeighting.weight(e2))
+						.mapToDouble(e2 -> {
+							double s = sim.computeSimilarity(e1, e2);
+							double r = rel.weight(e2);
+							s = s < o.simLowerBound ? 0.0 : s;
+							r = r < o.relevanceLowerBound ? 0.0 : r;
+							return s*r;
+						})
+						.average().orElse(0.0))
+				.boxed()
+				.collect(Collectors.toList());
+		List<Double> sensEmbedRelValues = senses.stream()
+				.mapToDouble(e1 -> senses.stream()
+						.filter(e2 -> e1 != e2)
+						.mapToDouble(e2 -> {
+							double s = ssim != null ? ssim.computeSimilarity(e1, e2) : 0.0;
+							double r = rel.weight(e2);
+							s = s < o.simLowerBound ? 0.0 : s;
+							r = r < o.relevanceLowerBound ? 0.0 : r;
+							return s*r;
+						})
+						.average().orElse(0.0))
+				.boxed()
+				.collect(Collectors.toList());
+		List<Double> word2VecRelValues = allForms.stream()
+				.mapToDouble(e1 -> allForms.stream()
+						.filter(e2 -> e1 != e2)
+						.mapToDouble(e2 -> {
+							double s = wsim != null ? wsim.computeSimilarity(e1, e2) : 0.0;
+							double r = rel.weight(e2);
+							s = s < o.simLowerBound ? 0.0 : s;
+							r = r < o.relevanceLowerBound ? 0.0 : r;
+							return s*r;
+						})
 						.average().orElse(0.0))
 				.boxed()
 				.collect(Collectors.toList());
 
 		// Set up metrics
-//		Map<WeightingFunction, Double> functions = ((Linear) inWeighting).getFunctions();
+//		Map<WeightingFunction, Double> functions = ((Linear) rel).getFunctions();
 //		Iterator<WeightingFunction> it = functions.keySet().iterator();
-		TFIDF corpusMetric = (TFIDF)inWeighting;
+		TFIDF corpusMetric = (TFIDF)rel;
 		Position positionMetric = new Position();
-		positionMetric.setCollection(inTrees);
+		positionMetric.setCollection(t);
 
-		Map<String, Long> freqs = inTrees.stream()
+		Map<String, Long> freqs = t.stream()
 				.map(SemanticTree::vertexSet)
 				.map(p -> p.stream()
 						.map(Node::getEntity)
@@ -88,84 +179,36 @@ public class StatsReporter
 				.collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
 		// Report metrics for each collection
-		writer.write("Scoring of entities\n");
-		writer.write("num\tlabel\ttfidf\tpos\tlinear\trank\tf\tdf\tsim\tsimrel\n");
+		w.write("Scoring of entities\n");
+		w.write("num\tlabel\ttfidf\tpos\tlinear\trank\tf\tdf\tsim\tsensEmbed\tword2vec\tsimRel\tsensEmbedRel\tword2VecRel\n");
 		entities.forEach(e -> {
 			double tfIdf = corpusMetric.weight(e);
 			double pos = positionMetric.weight(e);
-			double linear = inWeighting.weight(e);
+			double linear = rel.weight(e);
 			double rank = rankedEntities.get(e);
-			long f = freqs.get(e.getEntityLabel());
+			long fq = freqs.get(e.getEntityLabel());
 			long df = corpusMetric.corpus.getFrequency(e);
-			double sim = simValues.get(entities.indexOf(e));
-			double simrel = simRelValues.get(entities.indexOf(e));
+			double s = simValues.get(entities.indexOf(e));
+			double ss = senses.contains(e) ? sensEmbedValues.get(senses.indexOf(e)) : -1.0;
+			double ws = allForms.contains(e) ? word2VecValues.get(allForms.indexOf(e)) : -1.0;
+			double srel = simRelValues.get(entities.indexOf(e));
+			double ssrel = senses.contains(e) ? sensEmbedRelValues.get(senses.indexOf(e)) : -1.0;
+			double wsrel = allForms.contains(e) ? word2VecRelValues.get(allForms.indexOf(e)) : -1.0;
 
-			writer.write(entities.indexOf(e) +"\t" + e + "\t" + format.format(tfIdf) + "\t" + format.format(pos) +
-					"\t" + format.format(linear) + "\t" + format.format(rank) + "\t" + f + "\t" + df + "\t" +
-					format.format(sim) + "\t" + format.format(simrel) + "\n");
+			w.write(entities.indexOf(e) +"\t" + e + "\t" + f.format(tfIdf) + "\t" + f.format(pos) +
+					"\t" + f.format(linear) + "\t" + f.format(rank) + "\t" + fq + "\t" + df + "\t" +
+					f.format(s) + "\t" + f.format(ss) + "\t" + f.format(ws) + "\t" +
+					f.format(srel) + "\t" + f.format(ssrel) + "\t" + f.format(wsrel) + "\n");
 		});
-		writer.write("\n");
+		w.write("\n");
 
-		// Report similarity
-/*		writer.write("Similarity table\n");
-		IntStream.range(0, entities.size())
-				.mapToObj(i -> i + "\t" + IntStream.range(0, entities.size())
-						.mapToDouble(j -> inSimilarity.computeSimilarity(entities.get(i), entities.get(j)))
-						.mapToObj(format::format)
-						.collect(Collectors.joining("\t")))
-				.forEach(row -> writer.write(row + "\n"));
-		writer.write("\n");*/
-
-		SensEmbed ssim = null;
-		Word2Vec wsim = null;
-		if (inSimilarity instanceof SensEmbed)
-		{
-			ssim = ((SensEmbed) inSimilarity);
-		}
-		else if (inSimilarity instanceof Word2Vec)
-		{
-			wsim = ((Word2Vec) inSimilarity);
-		}
-		else if (inSimilarity instanceof Combined)
-		{
-			for (EntitySimilarity sim : ((Combined)inSimilarity).functions)
-			{
-				if (sim instanceof SensEmbed)
-				{
-					ssim = ((SensEmbed) sim);
-				}
-				else if (sim instanceof Word2Vec)
-				{
-					wsim = ((Word2Vec) sim);
-				}
-			}
-		}
-
-		Set<AnnotatedEntity> senses = entities.stream()
-				.map(AnnotatedEntity.class::cast)
-				.filter(e -> e.getAnnotation().getSense() != null)
-				.collect(Collectors.toSet());
-		Set<AnnotatedEntity> nominalSenses = senses.stream()
-				.filter(e -> e.getAnnotation().getSense().endsWith("n"))
-				.collect(Collectors.toSet());
-		Set<AnnotatedEntity> allForms = entities.stream()
-				.map(AnnotatedEntity.class::cast)
-				.collect(Collectors.toSet());
-		Set<AnnotatedEntity> forms = entities.stream()
-				.map(AnnotatedEntity.class::cast)
-				.filter(e -> e.getAnnotation().getSense() == null)
-				.collect(Collectors.toSet());
-		Set<AnnotatedEntity> nonNominalSenseforms = entities.stream()
-				.map(AnnotatedEntity.class::cast)
-				.filter(e -> e.getAnnotation().getSense() == null || e.getAnnotation().getSense().endsWith("n"))
-				.collect(Collectors.toSet());
 		{
 			double ratio = ((double) senses.size() / (double) entities.size()) * 100.0;
-			writer.write("Babelfy: " + format.format(ratio) + "% of entities have a sense\n");
+			w.write("Babelfy: " + f.format(ratio) + "% of entities have a sense\n");
 		}
 		{
 			double ratio = ((double) nominalSenses.size() / (double) senses.size()) * 100.0;
-			writer.write("Babelfy: " + format.format(ratio) + "% of senses are nominal\n");
+			w.write("Babelfy: " + f.format(ratio) + "% of senses are nominal\n");
 		}
 
 		Set<AnnotatedEntity> sensesInSEW = senses.stream()
@@ -173,7 +216,7 @@ public class StatsReporter
 				.collect(Collectors.toSet());
 		{
 			double ratio = ((double) sensesInSEW.size() / (double) senses.size()) * 100.0;
-			writer.write("SEW: " + format.format(ratio) + "% senses defined (" + sensesInSEW.size()
+			w.write("SEW: " + f.format(ratio) + "% senses defined (" + sensesInSEW.size()
 					+ "/" + senses.size() + ")\n");
 		}
 		Set<AnnotatedEntity> nominalSensesInSEW = nominalSenses.stream()
@@ -181,7 +224,7 @@ public class StatsReporter
 				.collect(Collectors.toSet());
 		{
 			double ratio = ((double) nominalSensesInSEW.size() / (double) nominalSenses.size()) * 100.0;
-			writer.write("SEW: " + format.format(ratio) + "% nominal senses defined (" + nominalSensesInSEW.size()
+			w.write("SEW: " + f.format(ratio) + "% nominal senses defined (" + nominalSensesInSEW.size()
 					+ "/" + nominalSenses.size() + ")\n");
 		}
 		Set<AnnotatedEntity>formsInSEW = nonNominalSenseforms.stream()
@@ -189,7 +232,7 @@ public class StatsReporter
 				.collect(Collectors.toSet());
 		{
 			double ratio = ((double) formsInSEW.size() / (double) nonNominalSenseforms.size()) * 100.0;
-			writer.write("SEW: " + format.format(ratio) + "% forms (of words not annotated with nominal senses) defined ("
+			w.write("SEW: " + f.format(ratio) + "% forms (of words not annotated with nominal senses) defined ("
 					+ formsInSEW.size()	+ "/" + nonNominalSenseforms.size() + ")\n");
 		}
 
@@ -200,9 +243,9 @@ public class StatsReporter
 						.filter(ssim::isDefinedFor)
 						.collect(Collectors.toSet());
 				double ratio = ((double) definedSenses.size() / (double) senses.size()) * 100.0;
-				writer.write("SensEmbed: " + format.format(ratio) + "% senses defined (" + definedSenses.size() + "/" +
+				w.write("sense: " + f.format(ratio) + "% senses defined (" + definedSenses.size() + "/" +
 						senses.size() + ")\n");
-				writer.write("SensEmbed: undefined senses " + SetUtils.difference(senses, definedSenses).stream()
+				w.write("sense: undefined senses " + ListUtils.removeAll(senses, definedSenses).stream()
 						.map(AnnotatedEntity::toString)
 						.collect(Collectors.joining(",")) + "\n");
 			}
@@ -211,7 +254,7 @@ public class StatsReporter
 						.filter(ssim::isDefinedFor)
 						.collect(Collectors.toSet());
 				double ratio = ((double) definedForms.size() / (double) nominalSenses.size()) * 100.0;
-				writer.write("SensEmbed: " + format.format(ratio) + "% nominal senses defined (" + definedForms.size() +
+				w.write("sense: " + f.format(ratio) + "% nominal senses defined (" + definedForms.size() +
 						"/" + senses.size() + ")\n");
 			}
 		}
@@ -222,7 +265,7 @@ public class StatsReporter
 						.filter(wsim::isDefinedFor)
 						.collect(Collectors.toSet());
 				double ratio = ((double) definedForms.size() / (double) allForms.size()) * 100.0;
-				writer.write("Word2Vec: " + format.format(ratio) + "% forms defined ("
+				w.write("word: " + f.format(ratio) + "% forms defined ("
 						+ definedForms.size() + "/" + allForms.size() + ")\n");
 			}
 			{
@@ -230,24 +273,27 @@ public class StatsReporter
 						.filter(wsim::isDefinedFor)
 						.collect(Collectors.toSet());
 				double ratio = ((double) definedForms.size() / (double) forms.size()) * 100.0;
-				writer.write("Word2Vec: " + format.format(ratio) + "% forms (of words not annotated with a sense) defined ("
+				w.write("word: " + f.format(ratio) + "% forms (of words not annotated with a sense) defined ("
 						+ definedForms.size() + "/" + forms.size() + ")\n");
 
-				writer.write("Word2Vec: undefined forms " + SetUtils.difference(forms, definedForms).stream()
+				w.write("word: undefined forms " + ListUtils.removeAll(forms, definedForms).stream()
 						.map(AnnotatedEntity::getAnnotation)
 						.map(Annotation::getForm)
 						.collect(Collectors.joining(",")) + "\n");
 			}
 		}
 
-		// Report patterns
-//		writer.write("Patterns\n");
-//		ItemSetMining miner = new ItemSetMining();
-//		Set<SemanticTree> patterns = miner.getPatterns(inTrees);
-//		patterns.forEach(p -> writer.write(p.toString() + "\n"));
-//		writer.write("\n");
-
-		return writer.toString();
+		// Report similarity
+		w.write("\nSimilarity table\n");
+		IntStream.range(0, entities.size())
+				.mapToObj(i -> i + "\t" + entities.stream()
+						.mapToDouble(entity -> sim.computeSimilarity(entities.get(i), entity))
+						.map(d -> d < o.simLowerBound ? 0.0 : d)
+						.mapToObj(f::format)
+						.collect(Collectors.joining("\t")))
+				.forEach(row -> w.write(row + "\n"));
+		w.write("\n");
+		return w.toString();
 	}
 
 	public static String getMatrixStats(Matrix inMatrix)

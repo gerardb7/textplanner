@@ -40,7 +40,7 @@ public class SensEmbedTest
 	@Test
 	public void testComputeSimilarity() throws Exception
 	{
-		SensEmbed vectors = new SensEmbed(Paths.get("src/test/resources/test_dummy_vectors"));
+		SensEmbed vectors = new SensEmbed(Paths.get("src/test/resources/test_dummy_vectors"), true);
 
 
 		double sim11 = vectors.computeSimilarity(id1, id1);

@@ -1,9 +1,13 @@
 package edu.upf.taln.textplanning.utils;
 
 import com.beust.jcommander.*;
+import edu.upf.taln.textplanning.ConLLDriver;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.similarity.*;
+import edu.upf.taln.textplanning.similarity.EntitySimilarity;
+import edu.upf.taln.textplanning.similarity.PatternSimilarity;
+import edu.upf.taln.textplanning.similarity.SensEmbed;
+import edu.upf.taln.textplanning.similarity.Word2Vec;
 
 import java.io.StringWriter;
 import java.math.RoundingMode;
@@ -12,7 +16,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -38,52 +41,87 @@ public class SemanticTextualSimilarityOutput
 			Path path = Paths.get(value);
 			if (!Files.exists(path) || !Files.isRegularFile(path))
 			{
-				throw new ParameterException("Cannot read from " + name + " = " + value);
+				throw new ParameterException("Cannot open file " + name + " = " + value);
 			}
 		}
 	}
 
-	public static class PathToFile implements IParameterValidator
+	public static class PathToExistingFolder implements IParameterValidator
 	{
 		@Override
 		public void validate(String name, String value) throws ParameterException
 		{
 			Path path = Paths.get(value);
-			if (!Files.isRegularFile(path))
+			if (!Files.exists(path) || !Files.isDirectory(path))
 			{
-				throw new ParameterException("Cannot writeGraphs to " + name + " = " + value);
+				throw new ParameterException("Cannot open folder " + name + " = " + value);
 			}
 		}
 	}
 
+	private enum EmbeddingsType
+	{
+		Word2Vec, SensEmbed, MergedSensEmbed;
+		// converter that will be used later
+		public static EmbeddingsType fromString(String code) {
+
+			for(EmbeddingsType output : EmbeddingsType.values())
+			{
+				if(output.toString().equalsIgnoreCase(code))
+					return output;
+			}
+			return null;
+		}
+	}
+
+	public static class EmbeddingsTypeConverter implements IStringConverter<EmbeddingsType>
+	{
+		@Override
+		public EmbeddingsType convert(String value)
+		{
+			EmbeddingsType convertedValue = EmbeddingsType.fromString(value);
+
+			if(convertedValue == null)
+			{
+				throw new ParameterException("Value " + value + "can not be converted to EmbeddingsType. " +
+						"Available values are: word, sense, merged.");
+			}
+			return convertedValue;
+		}
+	}
+
+	@SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
 	private static class CMLArgs
 	{
-		@Parameter(description = "Input conll pairs file", arity = 1, converter = PathConverter.class,
-				validateWith = PathToExistingFile.class, required = true)
-		private List<Path> inputConll;
-		@Parameter(description = "Output file", converter = PathConverter.class,
-				validateWith = PathToFile.class, required = true)
-		private Path output;
-		@Parameter(names = "-wvec", description = "Path to file containing word vectors",
-				converter = PathConverter.class, validateWith = PathToExistingFile.class)
-		private Path wordVectorsPath = null;
-		@Parameter(names = "-svec", description = "Path to file containing sense vectors",
-				converter = PathConverter.class, validateWith = PathToExistingFile.class, required = true)
-		private Path senseVectorsPath;
+		@Parameter(description = "Input folder", arity = 1, converter = ConLLDriver.PathConverter.class,
+				validateWith = ConLLDriver.PathToExistingFolder.class, required = true)
+		private List<Path> input;
+		@Parameter(names = "-solr", description = "URL of Solr index", required = true)
+		private String solrUrl;
+		@Parameter(names = "-e", description = "Path to file containing embeddings",
+				converter = ConLLDriver.PathConverter.class, validateWith = ConLLDriver.PathToExistingFile.class, required = true)
+		private Path embeddings = null;
+		@Parameter(names = "-t", description = "Type of embeddings", converter = ConLLDriver.EmbeddingsTypeConverter.class,
+				required = true)
+		private EmbeddingsType type;
+		@Parameter(names = "-debug", description = "Debug mode")
+		private boolean debug;
 	}
 
 	public static void main(String[] args) throws Exception
 	{
 		CMLArgs cmlArgs = new CMLArgs();
 		new JCommander(cmlArgs, args);
-		EntitySimilarity senseSim = new SensEmbed(cmlArgs.senseVectorsPath);
-		EntitySimilarity wordSim = new Word2Vec(cmlArgs.wordVectorsPath);
-		List<EntitySimilarity> functions = new ArrayList<>();
-		functions.add(senseSim);
-		functions.add(wordSim);
-		EntitySimilarity combined = new Combined(functions);
-		PatternSimilarity msgSim = new PatternSimilarity(combined);
-		String conll = new String(Files.readAllBytes(cmlArgs.inputConll.get(0)), Charset.forName("UTF-8"));
+
+		EntitySimilarity sim = null;
+		switch (cmlArgs.type)
+		{
+			case Word2Vec: sim = new Word2Vec(cmlArgs.embeddings); break;
+			case SensEmbed: sim = new SensEmbed(cmlArgs.embeddings, false); break;
+			case MergedSensEmbed: sim = new SensEmbed(cmlArgs.embeddings, true);	break;
+		}
+		PatternSimilarity msgSim = new PatternSimilarity(sim);
+		String conll = new String(Files.readAllBytes(cmlArgs.input.get(0)), Charset.forName("UTF-8"));
 		ConLLAcces reader = new ConLLAcces();
 		List<SemanticTree> trees = reader.readTrees(conll);
 		StringWriter writer = new StringWriter();
@@ -99,6 +137,7 @@ public class SemanticTextualSimilarityOutput
 			writer.append("\n");
 		}
 
-		Files.write(cmlArgs.output, writer.toString().getBytes());
+		// @todo Fix input and output of class
+		//Files.write(sim., writer.toString().getBytes());
 	}
 }

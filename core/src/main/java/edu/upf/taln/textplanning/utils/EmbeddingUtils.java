@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 public class EmbeddingUtils
 {
 	private static final int dimension = 400;
-	private static final int expectedVectors = 1734862;
+//	private static final int expectedVectors = 1734862;
 	private final static Logger log = LoggerFactory.getLogger(EmbeddingUtils.class);
 
 	/**
@@ -33,11 +33,10 @@ public class EmbeddingUtils
 	 *
 	 * @param inEmbeddingsPath path to the input file
 	 * @param inOutPath        path to the merged file
-	 * @throws IOException
 	 */
-	public static void mergeEmbeddings(Path inEmbeddingsPath, Path inOutPath) throws IOException
+	private static void mergeEmbeddings(Path inEmbeddingsPath, Path inOutPath) throws IOException
 	{
-		Map<String, List<double[]>> allVectors = parseEmbeddingsFile(inEmbeddingsPath, true);
+		Map<String, List<double[]>> allVectors = parseEmbeddingsFile(inEmbeddingsPath, true, true);
 		Map<String, double[]> meanVectors = averageEmbeddings(allVectors);
 		writeEmbeddingsToFile(meanVectors, inOutPath);
 	}
@@ -49,11 +48,10 @@ public class EmbeddingUtils
 	 * @param inEmbeddingsPath path to the file containing the embeddings
 	 * @param inConllPath      path to the conll file
 	 * @param inOutPath        path to the new embeddings file
-	 * @throws Exception
 	 */
-	public static void subsetEmbeddings(Path inEmbeddingsPath, Path inConllPath, Path inOutPath) throws Exception
+	private static void subsetEmbeddings(Path inEmbeddingsPath, Path inConllPath, Path inOutPath) throws Exception
 	{
-		Map<String, List<double[]>> allVectors = parseEmbeddingsFile(inEmbeddingsPath, true);
+		Map<String, List<double[]>> allVectors = parseEmbeddingsFile(inEmbeddingsPath, true, true);
 
 		log.info("Calculating subset");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -100,22 +98,24 @@ public class EmbeddingUtils
 	/**
 	 * Reads a file containing embeddings.
 	 *
-	 * @param inEmbeddingsPath path to file containing the embeddings
-	 * @param inSensesOnly     if true vectors for words are discarded
+	 * @param embeddings path to file containing the embeddings
+	 * @param sensesOnly     if true vectors for words are discarded
+	 * @param useSynsetsAsKeys true -> BabelNet synset ids used as keys, false -> pairs of word and ids used as keys
 	 * @return a map containing all vectors
-	 * @throws IOException
 	 */
-	public static Map<String, List<double[]>> parseEmbeddingsFile(Path inEmbeddingsPath, boolean inSensesOnly) throws IOException
+	public static Map<String, List<double[]>> parseEmbeddingsFile(Path embeddings, @SuppressWarnings("SameParameterValue") boolean sensesOnly,
+	                                                              boolean useSynsetsAsKeys) throws IOException
 	{
 		int numVectorsRead = 0;
 		int numVectorsKept = 0;
 
 		HashMap<String, List<double[]>> allVectors = new HashMap<>();
-		FileReader fileReader = new FileReader(inEmbeddingsPath.toFile());
-		BufferedReader bufferReader = new BufferedReader(fileReader);
+		FileInputStream fs = new FileInputStream(embeddings.toFile());
+		InputStreamReader isr = new InputStreamReader(fs, "UTF-8");
+		BufferedReader br = new BufferedReader(isr);
 		String line;
 
-		while ((line = bufferReader.readLine()) != null)
+		while ((line = br.readLine()) != null)
 		{
 			if (line.isEmpty())
 			{
@@ -130,10 +130,10 @@ public class EmbeddingUtils
 			}
 
 			// For performance reasons, let's avoid regular expressions
-			if (!inSensesOnly || columns[0].contains("bn:"))
+			if (!sensesOnly || columns[0].contains("bn:"))
 			{
 				String babelnetId = columns[0];
-				if (!babelnetId.startsWith("bn:"))
+				if (useSynsetsAsKeys && !babelnetId.startsWith("bn:"))
 				{
 					babelnetId = babelnetId.substring(babelnetId.indexOf("bn:"));
 				}
@@ -150,10 +150,10 @@ public class EmbeddingUtils
 
 			if (++numVectorsRead % 100000 == 0)
 			{
-				log.debug(numVectorsRead + " vectors readGraphs");
+				log.info(numVectorsRead + " vectors read");
 			}
 		}
-		log.info("Parsing complete: " + numVectorsRead + " vectors readGraphs (expected " + expectedVectors + "), and " + numVectorsKept + " vectors stored");
+		log.info("Parsing complete: " + numVectorsRead + " vectors read and " + numVectorsKept + " vectors stored");
 
 		return allVectors;
 	}
@@ -163,9 +163,8 @@ public class EmbeddingUtils
 	 *
 	 * @param inVectors the vectors
 	 * @param inOutPath path to the output file
-	 * @throws FileNotFoundException
 	 */
-	public static void writeEmbeddingsToFile(Map<String, double[]> inVectors, Path inOutPath) throws FileNotFoundException
+	private static void writeEmbeddingsToFile(Map<String, double[]> inVectors, Path inOutPath) throws FileNotFoundException
 	{
 		// Create String representation of each averaged vector and writeGraphs them to a file
 		log.info("Writing to file");
@@ -213,7 +212,7 @@ public class EmbeddingUtils
 	 * @param inVectors the vectors to average
 	 * @return the averaged vectors
 	 */
-	public static Map<String, double[]> averageEmbeddings(Map<String, List<double[]>> inVectors)
+	private static Map<String, double[]> averageEmbeddings(Map<String, List<double[]>> inVectors)
 	{
 		// Merge vectors corresponding to the same babelnet sense
 		log.info("Merging vectors");

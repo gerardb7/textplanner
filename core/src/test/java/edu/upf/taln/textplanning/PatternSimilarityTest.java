@@ -29,8 +29,8 @@ public class PatternSimilarityTest
 		SemanticTree tree4 = trees.get(3);
 		SemanticTree tree5 = trees.get(4);
 
-		EntitySimilarity wordVectors = null; //new Word2Vec("/home/gerard/data/GoogleNews-vectors-negative300.bin");
-		EntitySimilarity senseVectors = null; //new SensEmbed("/home/gerard/data/sensembed/babelfy_vectors_merged_senses_only");
+		EntitySimilarity wordVectors = null; //new word("/home/gerard/data/GoogleNews-vectors-negative300.bin");
+		EntitySimilarity senseVectors = null; //new sense("/home/gerard/data/sense/babelfy_vectors_merged_senses_only");
 		List<EntitySimilarity> functions = new ArrayList<>();
 		//noinspection ConstantConditions
 		functions.add(senseVectors);

@@ -2,6 +2,8 @@ package edu.upf.taln.textplanning.similarity;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
+import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
+import edu.upf.taln.textplanning.datastructures.Annotation;
 import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.utils.EmbeddingUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -19,46 +21,52 @@ import java.util.stream.Collectors;
 public class SensEmbed implements EntitySimilarity
 {
 	private final ImmutableMap<String, double[]> vectors;
+	private final boolean merged; // true -> sense-only embeddings, false -> pair word-sense embeddings
 	private final static Logger log = LoggerFactory.getLogger(SensEmbed.class);
 
-	public SensEmbed(Path inEmbeddingsPath) throws Exception
+	public SensEmbed(Path inEmbeddingsPath, boolean merged) throws Exception
 	{
 		log.info("Loading SenseEmbed vectors");
 		Stopwatch timer = Stopwatch.createStarted();
-		Map<String, List<double[]>> embeddings = EmbeddingUtils.parseEmbeddingsFile(inEmbeddingsPath, true);
-		if (embeddings.values().stream().anyMatch(l -> l.size() != 1))
-			throw new Exception("Embedding file must contain a single vector per entry");
+		Map<String, List<double[]>> embeddings = EmbeddingUtils.parseEmbeddingsFile(inEmbeddingsPath, true, merged);
+		embeddings.entrySet().stream()
+				.filter(e -> e.getValue().size() != 1)
+				.forEach(e -> log.error("Sense " + e.getKey() + " has " + e.getValue() + " vectors"));
 		Map<String, double[]> avgEmbeddings = embeddings.entrySet().stream()
 				.map(e -> Pair.of(e.getKey(), e.getValue().get(0)))
 				.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
 
 		ImmutableMap.Builder<String, double[]> builder = ImmutableMap.builder();
 		vectors = builder.putAll(avgEmbeddings).build();
+		this.merged = merged;
 		log.info("Loading took " + timer.stop());
 	}
 
 	@Override
-	public boolean isDefinedFor(Entity inItem)
+	public boolean isDefinedFor(Entity e)
 	{
-		return vectors.containsKey(inItem.getEntityLabel());
+		return vectors.containsKey(getKey(e));
 	}
 
 	@Override
-	public boolean isDefinedFor(Entity inItem1, Entity inItem2)
+	public boolean isDefinedFor(Entity e1, Entity e2)
 	{
-		return vectors.containsKey(inItem1.getEntityLabel()) && vectors.containsKey(inItem2.getEntityLabel());
+		return vectors.containsKey(getKey(e1)) && vectors.containsKey(getKey(e2));
 	}
 
 	@Override
-	public double computeSimilarity(Entity inItem1, Entity inItem2)
+	public double computeSimilarity(Entity e1, Entity e2)
 	{
-		if (inItem1.getEntityLabel().equals(inItem2.getEntityLabel()))
+		String k1 = getKey(e1);
+		String k2 = getKey(e2);
+
+		if (k1.equals(k2))
 			return 1.0;
-		if (!isDefinedFor(inItem1, inItem2))
+		if (!isDefinedFor(e1, e2))
 			return 0.0;
 
-		double[] v1 = vectors.get(inItem1.getEntityLabel());
-		double[] v2 = vectors.get(inItem2.getEntityLabel());
+		double[] v1 = vectors.get(k1);
+		double[] v2 = vectors.get(k2);
 
 		double dotProduct = 0.0;
 		double normA = 0.0;
@@ -77,5 +85,14 @@ public class SensEmbed implements EntitySimilarity
 		return Math.max(0.0, cosineSimilarity);
 		//double distanceMetric = Math.acos(cosineSimilarity) / Math.PI; // range (0,1)
 		//return (cosineSimilarity + 1.0) / 2.0;
+	}
+
+	private String getKey(Entity e)
+	{
+		Annotation a = ((AnnotatedEntity)e).getAnnotation();
+		if (a.getSense() == null)
+			return a.getForm();
+		else
+			return merged ? a.getSense() : a.getForm() + "_" + a.getSense();
 	}
 }

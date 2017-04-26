@@ -13,6 +13,8 @@ import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.RoundingMode;
+import java.text.NumberFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,12 +36,24 @@ public final class TextPlanner
 	public static class Options
 	{
 		public int numPatterns = 10; // Number of patterns to return
+		public double dampingFactor = 0.3; // damping factor to control balance between relevance bias and similarity
+		public double rankingStopThreshold = 0.0001; // stopping threshold for the main ranking algorithm
 		public double relevanceLowerBound = 0.1; // Entities with relevance below this value have their score set to 0
 		public double simLowerBound = 0.1; // Pairs of entities with similarity below this value have their score set to 0
-		public double dampingFactor = 0.1; // damping factor to control balance between relevance bias and similarity
-		public double rankingStopThreshold = 0.0001; // stopping threshold for the main ranking algorithm
 		public boolean generateStats = true;
 		public String stats = "";
+
+		@Override
+		public String toString()
+		{
+			NumberFormat f = NumberFormat.getInstance();
+			f.setRoundingMode(RoundingMode.UP);
+			f.setMaximumFractionDigits(3);
+			f.setMinimumFractionDigits(3);
+			return "Params: numPatterns=" + numPatterns + " damping=" + f.format(dampingFactor) +
+					" delta=" + f.format(rankingStopThreshold) + " min_rel=" + f.format(relevanceLowerBound) +
+					" min_sim=" + f.format(simLowerBound) + "\n\n" + stats;
+		}
 	}
 
 	/**
@@ -106,7 +120,7 @@ public final class TextPlanner
 				log.info("**Generating stats**");
 				timer.reset();
 				timer.start();
-				inOptions.stats = StatsReporter.reportStats(inContents, weighting, similarity, rankedEntities);
+				inOptions.stats = StatsReporter.reportStats(inContents, weighting, similarity, rankedEntities, inOptions);
 				log.info("Stats generation took " + timer.stop());
 			}
 

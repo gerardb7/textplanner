@@ -6,7 +6,6 @@ import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.similarity.Combined;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.similarity.SensEmbed;
 import edu.upf.taln.textplanning.similarity.Word2Vec;
@@ -69,6 +68,37 @@ public class ConLLDriver
 		}
 	}
 
+	private enum EmbeddingsType
+	{
+		word, sense, merged;
+		// converter that will be used later
+		public static EmbeddingsType fromString(String code) {
+
+			for(EmbeddingsType output : EmbeddingsType.values())
+			{
+				if(output.toString().equalsIgnoreCase(code))
+				return output;
+			}
+			return null;
+		}
+	}
+
+	public static class EmbeddingsTypeConverter implements IStringConverter<EmbeddingsType>
+	{
+		@Override
+		public EmbeddingsType convert(String value)
+		{
+			EmbeddingsType convertedValue = EmbeddingsType.fromString(value);
+
+			if(convertedValue == null)
+			{
+				throw new ParameterException("Value " + value + " can not be converted to EmbeddingsType. " +
+						"Available values are: word, sense, merged.");
+			}
+			return convertedValue;
+		}
+	}
+
 	@SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
 	private static class CMLArgs
 	{
@@ -77,54 +107,50 @@ public class ConLLDriver
 		private List<Path> input;
 		@Parameter(names = "-solr", description = "URL of Solr index", required = true)
 		private String solrUrl;
-		@Parameter(names = "-wvec", description = "Path to file containing word vectors",
-				converter = PathConverter.class, validateWith = PathToExistingFile.class)
-		private Path wordVectorsPath = null;
-		@Parameter(names = "-svec", description = "Path to file containing sense vectors",
+		@Parameter(names = "-e", description = "Path to file containing embeddings",
 				converter = PathConverter.class, validateWith = PathToExistingFile.class, required = true)
-		private Path senseVectorsPath;
+		private Path embeddings = null;
+		@Parameter(names = "-t", description = "Type of embeddings", converter = EmbeddingsTypeConverter.class,
+				required = true)
+		private EmbeddingsType type;
 		@Parameter(names = "-debug", description = "Debug mode")
 		private boolean debug;
 	}
-	private final TextPlanner planner;
-	private final ConLLAcces conll = new ConLLAcces();
+
+
 	private final static Logger log = LoggerFactory.getLogger(ConLLDriver.class);
 
 	/**
 	 * Instantiates a planner that takes as input DSynt trees encoded using ConLL
 	 * It uses the following resources:
-	 * @param inSolrUrl url of solr server containing an index of the Semantically Enriched Wikipedia (SEW)
-	 * @param inWord2VecPath path to the file containing the Word2Vec vectors obtained from the Google News Corpus
-	 * @param inSenseEmbedPath path to the file containing a merged version of the SensEmbed vectors
+	 * @param solrUrl url of solr server containing an index of the Semantically Enriched Wikipedia (SEW)
+	 * @param embeddingsFile path to the file containing the word vectors obtained from the Google News Corpus
+	 * @param t type of embeddings
 	 * @return an instance of the TextPlanner class
-	 * @throws Exception
 	 */
-	public static TextPlanner createConLLPlanner(String inSolrUrl, Path inWord2VecPath, Path inSenseEmbedPath) throws Exception
+	@SuppressWarnings("WeakerAccess")
+	public static TextPlanner createConLLPlanner(String solrUrl, Path embeddingsFile, EmbeddingsType t) throws Exception
 	{
 //		final String solrUrl = "http://10.55.0.41:443/solr/sewDataAnnSen";
 //		final Path word2vecPath = Paths.get("/home/gerard/data/GoogleNews-vectors-negative300.bin");
-//		final Path senseEmbedPath = Paths.get("/home/gerard/data/sensembed/babelfy_vectors_merged_senses_only");
+//		final Path senseEmbedPath = Paths.get("/home/gerard/data/sense/babelfy_vectors_merged_senses_only");
 //		final Path inputPath = Paths.get("/home/gerard/Baixades/test/");
 
-		Corpus corpus = new SEWSolr(inSolrUrl);
+		Corpus corpus = new SEWSolr(solrUrl);
 		WeightingFunction corpusMetric = new TFIDF(corpus);
-		EntitySimilarity senseVectors = (inSenseEmbedPath != null) ? new SensEmbed(inSenseEmbedPath) : null;
-		EntitySimilarity wordVectors = (inWord2VecPath != null) ? new Word2Vec(inWord2VecPath) : null;
-		List<EntitySimilarity> metrics = new ArrayList<>();
-		if (senseVectors != null)
-			metrics.add(senseVectors);
-		if (wordVectors != null)
-			metrics.add(wordVectors);
-		EntitySimilarity combination = new Combined(metrics);
-		return new TextPlanner(corpusMetric, combination);
+		EntitySimilarity sim = null;
+		switch (t)
+		{
+			case word: sim = new Word2Vec(embeddingsFile); break;
+			case sense: sim = new SensEmbed(embeddingsFile, false); break;
+			case merged: sim = new SensEmbed(embeddingsFile, true);	break;
+		}
+
+		return new TextPlanner(corpusMetric, sim);
 	}
 
-	ConLLDriver(String inSolrUrl, Path inWordVectorsPath, Path inSenseVectorsPath) throws Exception
-	{
-		planner = ConLLDriver.createConLLPlanner(inSolrUrl, inWordVectorsPath, inSenseVectorsPath);
-	}
-
-	public String runPlanner(Path inputFolder, TextPlanner.Options options)
+	@SuppressWarnings("WeakerAccess")
+	public static String runPlanner(TextPlanner p, Path inputFolder, TextPlanner.Options options)
 	{
 		try
 		{
@@ -139,9 +165,10 @@ public class ConLLDriver
 			}
 
 			// Read trees from conll files
+			ConLLAcces conll = new ConLLAcces();
 			List<SemanticTree> trees = new ArrayList<>();
 			files.forEach(d -> {
-				String inConll = null;
+				String inConll;
 				try
 				{
 					inConll = new String(Files.readAllBytes(d), Charset.forName("UTF-8"));
@@ -154,7 +181,8 @@ public class ConLLDriver
 			});
 
 			conll.postProcessTrees(trees);
-			List<SemanticTree> plan = planner.planText(trees, options);			String result = conll.writeTrees(plan);
+			List<SemanticTree> plan = p.planText(trees, options);
+			String result = conll.writeTrees(plan);
 			log.info("Planning took " + timer.stop());
 
 			return result;
@@ -170,14 +198,15 @@ public class ConLLDriver
 	{
 		CMLArgs cmlArgs = new CMLArgs();
 		new JCommander(cmlArgs, args);
-		ConLLDriver driver = new ConLLDriver(cmlArgs.solrUrl, cmlArgs.wordVectorsPath, cmlArgs.senseVectorsPath);
+		TextPlanner planner = ConLLDriver.createConLLPlanner(cmlArgs.solrUrl, cmlArgs.embeddings, cmlArgs.type);
 		TextPlanner.Options options = new TextPlanner.Options();
-		Path inputFolder = cmlArgs.input.get(0);
+		log.info("Planning parameters " + options);
 
+		Path inputFolder = cmlArgs.input.get(0);
 		log.info("Generating summary for files in folder " + inputFolder);
 		try
 		{
-			String planConll = driver.runPlanner(inputFolder, options);
+			String planConll = ConLLDriver.runPlanner(planner, inputFolder, options);
 
 //			log.info("Solr queries: " + SEWSolr.debug.toString());
 //			log.info("Word form vector lookups: " + PatternSimilarity.numWordSuccessfulLookups + " successful, " +
@@ -198,7 +227,7 @@ public class ConLLDriver
 				Path statsFile = Paths.get(System.getProperty("user.dir") + File.separator + "stats.txt");
 				try (PrintWriter outs = new PrintWriter(statsFile.toString()))
 				{
-					outs.print(options.stats);
+					outs.print(options);
 					log.info("Created stats file " + statsFile);
 				}
 			}
