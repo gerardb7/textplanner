@@ -6,7 +6,6 @@ import edu.upf.taln.textplanning.datastructures.Annotation;
 import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
-import edu.upf.taln.textplanning.similarity.Combined;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.similarity.SensEmbed;
 import edu.upf.taln.textplanning.similarity.Word2Vec;
@@ -43,32 +42,39 @@ public class StatsReporter
 		StringWriter w = new StringWriter();
 
 		// Prepare similarity functions
-		final SensEmbed ssim;
-		final Word2Vec wsim;
+		final SensEmbed sense;
+		final SensEmbed merged;
+		final Word2Vec word;
 		if (sim instanceof SensEmbed)
 		{
-			ssim = ((SensEmbed) sim);
-			wsim = null;
+
+			SensEmbed s = ((SensEmbed) sim);
+			if (s.isMerged())
+			{
+				merged = s;
+				sense = null;
+			}
+			else
+			{
+				merged = null;
+				sense = s;
+			}
+			word = null;
 		}
 		else if (sim instanceof Word2Vec)
 		{
-			ssim = null;
-			wsim = ((Word2Vec) sim);
-		}
-		else if (sim instanceof Combined)
-		{
-			EntitySimilarity s1 = ((Combined)sim).functions.get(0);
-			EntitySimilarity s2 = ((Combined)sim).functions.get(1);
-			ssim = (SensEmbed) (s1 instanceof SensEmbed ? s1 : s2);
-			wsim = (Word2Vec) (s1 instanceof Word2Vec ? s1 : s2);
+			sense = null;
+			merged = null;
+			word = ((Word2Vec) sim);
 		}
 		else
 		{
-			ssim = null;
-			wsim = null;
+			sense = null;
+			merged = null;
+			word = null;
 		}
 
-		// Collect entities, senses, forms, etc.
+		// Collect entities, entitiesWithSense, entitiesWithoutSense, etc.
 		List<AnnotatedEntity> entities = t.stream().map(SemanticTree::vertexSet)
 				.map(p -> p.stream()
 						.map(Node::getEntity))
@@ -76,57 +82,54 @@ public class StatsReporter
 				.distinct()
 				.map(AnnotatedEntity.class::cast)
 				.collect(Collectors.toList());
-		List<AnnotatedEntity> senses = entities.stream()
+		List<AnnotatedEntity> entitiesWithSense = entities.stream()
 				.map(AnnotatedEntity.class::cast)
 				.filter(e -> e.getAnnotation().getSense() != null)
 				.collect(Collectors.toList());
-		List<AnnotatedEntity> nominalSenses = senses.stream()
+		List<AnnotatedEntity> entitiesWithNominalSense = entitiesWithSense.stream()
 				.filter(e -> e.getAnnotation().getSense().endsWith("n"))
 				.collect(Collectors.toList());
-		List<AnnotatedEntity> allForms = entities.stream()
-				.map(AnnotatedEntity.class::cast)
-				.collect(Collectors.toList());
-		List<AnnotatedEntity> forms = entities.stream()
+		List<AnnotatedEntity> entitiesWithoutSense = entities.stream()
 				.map(AnnotatedEntity.class::cast)
 				.filter(e -> e.getAnnotation().getSense() == null)
 				.collect(Collectors.toList());
-		List<AnnotatedEntity> nonNominalSenseforms = entities.stream()
+		List<AnnotatedEntity> entitiesWithNonNominalSense = entities.stream()
 				.map(AnnotatedEntity.class::cast)
 				.filter(e -> e.getAnnotation().getSense() == null || e.getAnnotation().getSense().endsWith("n"))
 				.collect(Collectors.toList());
 
 		// Collect similarity values
-		List<Double> simValues = entities.stream()
+		List<Double> senseValues = entities.stream()
 				.mapToDouble(e1 -> entities.stream()
 						.filter(e2 -> e1 != e2)
-						.mapToDouble(e2 -> sim.computeSimilarity(e1, e2))
+						.mapToDouble(e2 -> sense != null ? sense.computeSimilarity(e1, e2) : 0.0)
 						.map(d -> d < o.simLowerBound ? 0.0 : d)
 						.average().orElse(0.0))
 				.boxed()
 				.collect(Collectors.toList());
-		List<Double> sensEmbedValues = senses.stream()
-				.mapToDouble(e1 -> senses.stream()
+		List<Double> mergedValues = entitiesWithSense.stream()
+				.mapToDouble(e1 -> entitiesWithSense.stream()
 						.filter(e2 -> e1 != e2)
-						.mapToDouble(e2 -> ssim != null ? ssim.computeSimilarity(e1, e2) : 0.0)
+						.mapToDouble(e2 -> merged != null ? merged.computeSimilarity(e1, e2) : 0.0)
 						.map(d -> d < o.simLowerBound ? 0.0 : d)
 						.average().orElse(0.0))
 				.boxed()
 				.collect(Collectors.toList());
-		List<Double> word2VecValues = allForms.stream()
-				.mapToDouble(e1 -> allForms.stream()
+		List<Double> wordValues = entities.stream()
+				.mapToDouble(e1 -> entities.stream()
 						.filter(e2 -> e1 != e2)
-						.mapToDouble(e2 -> wsim != null ? wsim.computeSimilarity(e1, e2) : 0.0)
+						.mapToDouble(e2 -> word != null ? word.computeSimilarity(e1, e2) : 0.0)
 						.map(d -> d < o.simLowerBound ? 0.0 : d)
 						.average().orElse(0.0))
 				.boxed()
 				.collect(Collectors.toList());
 
 		// Collect similarity values weighted by relevance
-		List<Double> simRelValues = entities.stream()
+		List<Double> senseRelValues = entities.stream()
 				.mapToDouble(e1 -> entities.stream()
 						.filter(e2 -> e1 != e2)
 						.mapToDouble(e2 -> {
-							double s = sim.computeSimilarity(e1, e2);
+							double s = sense != null ? sense.computeSimilarity(e1, e2) : 0.0;
 							double r = rel.weight(e2);
 							s = s < o.simLowerBound ? 0.0 : s;
 							r = r < o.relevanceLowerBound ? 0.0 : r;
@@ -135,11 +138,11 @@ public class StatsReporter
 						.average().orElse(0.0))
 				.boxed()
 				.collect(Collectors.toList());
-		List<Double> sensEmbedRelValues = senses.stream()
-				.mapToDouble(e1 -> senses.stream()
+		List<Double> mergedRelValues = entitiesWithSense.stream()
+				.mapToDouble(e1 -> entitiesWithSense.stream()
 						.filter(e2 -> e1 != e2)
 						.mapToDouble(e2 -> {
-							double s = ssim != null ? ssim.computeSimilarity(e1, e2) : 0.0;
+							double s = merged != null ? merged.computeSimilarity(e1, e2) : 0.0;
 							double r = rel.weight(e2);
 							s = s < o.simLowerBound ? 0.0 : s;
 							r = r < o.relevanceLowerBound ? 0.0 : r;
@@ -148,11 +151,11 @@ public class StatsReporter
 						.average().orElse(0.0))
 				.boxed()
 				.collect(Collectors.toList());
-		List<Double> word2VecRelValues = allForms.stream()
-				.mapToDouble(e1 -> allForms.stream()
+		List<Double> wordRelValues = entities.stream()
+				.mapToDouble(e1 -> entities.stream()
 						.filter(e2 -> e1 != e2)
 						.mapToDouble(e2 -> {
-							double s = wsim != null ? wsim.computeSimilarity(e1, e2) : 0.0;
+							double s = word != null ? word.computeSimilarity(e1, e2) : 0.0;
 							double r = rel.weight(e2);
 							s = s < o.simLowerBound ? 0.0 : s;
 							r = r < o.relevanceLowerBound ? 0.0 : r;
@@ -180,7 +183,7 @@ public class StatsReporter
 
 		// Report metrics for each collection
 		w.write("Scoring of entities\n");
-		w.write("num\tlabel\ttfidf\tpos\tlinear\trank\tf\tdf\tsim\tsensEmbed\tword2vec\tsimRel\tsensEmbedRel\tword2VecRel\n");
+		w.write("num\tlabel\ttfidf\tpos\tlinear\trank\tf\tdf\tsense\tmerged\tword\tsenserel\tmergedrel\twordrel\n");
 		entities.forEach(e -> {
 			double tfIdf = corpusMetric.weight(e);
 			double pos = positionMetric.weight(e);
@@ -188,95 +191,127 @@ public class StatsReporter
 			double rank = rankedEntities.get(e);
 			long fq = freqs.get(e.getEntityLabel());
 			long df = corpusMetric.corpus.getFrequency(e);
-			double s = simValues.get(entities.indexOf(e));
-			double ss = senses.contains(e) ? sensEmbedValues.get(senses.indexOf(e)) : -1.0;
-			double ws = allForms.contains(e) ? word2VecValues.get(allForms.indexOf(e)) : -1.0;
-			double srel = simRelValues.get(entities.indexOf(e));
-			double ssrel = senses.contains(e) ? sensEmbedRelValues.get(senses.indexOf(e)) : -1.0;
-			double wsrel = allForms.contains(e) ? word2VecRelValues.get(allForms.indexOf(e)) : -1.0;
+			double ss = entities.contains(e) ? senseValues.get(entities.indexOf(e)) : -1.0;
+			double ms = entitiesWithSense.contains(e) ? mergedValues.get(entitiesWithSense.indexOf(e)) : -1.0;
+			double ws = entities.contains(e) ? wordValues.get(entities.indexOf(e)) : -1.0;
+			double ssrel = entities.contains(e) ? senseRelValues.get(entities.indexOf(e)) : -1.0;
+			double msrel = entitiesWithSense.contains(e) ? mergedRelValues.get(entitiesWithSense.indexOf(e)) : -1.0;
+			double wsrel = entities.contains(e) ? wordRelValues.get(entities.indexOf(e)) : -1.0;
 
 			w.write(entities.indexOf(e) +"\t" + e + "\t" + f.format(tfIdf) + "\t" + f.format(pos) +
 					"\t" + f.format(linear) + "\t" + f.format(rank) + "\t" + fq + "\t" + df + "\t" +
-					f.format(s) + "\t" + f.format(ss) + "\t" + f.format(ws) + "\t" +
-					f.format(srel) + "\t" + f.format(ssrel) + "\t" + f.format(wsrel) + "\n");
+					f.format(ss) + "\t" + f.format(ms) + "\t" + f.format(ws) + "\t" +
+					f.format(ssrel) + "\t" + f.format(msrel) + "\t" + f.format(wsrel) + "\n");
 		});
 		w.write("\n");
 
 		{
-			double ratio = ((double) senses.size() / (double) entities.size()) * 100.0;
+			double ratio = ((double) entitiesWithSense.size() / (double) entities.size()) * 100.0;
 			w.write("Babelfy: " + f.format(ratio) + "% of entities have a sense\n");
 		}
 		{
-			double ratio = ((double) nominalSenses.size() / (double) senses.size()) * 100.0;
-			w.write("Babelfy: " + f.format(ratio) + "% of senses are nominal\n");
+			double ratio = ((double) entitiesWithNominalSense.size() / (double) entitiesWithSense.size()) * 100.0;
+			w.write("Babelfy: " + f.format(ratio) + "% of entitiesWithSense are nominal\n");
 		}
 
-		Set<AnnotatedEntity> sensesInSEW = senses.stream()
+		Set<AnnotatedEntity> sensesInSEW = entitiesWithSense.stream()
 				.filter(e -> corpusMetric.corpus.getFrequency(e) > 0)
 				.collect(Collectors.toSet());
 		{
-			double ratio = ((double) sensesInSEW.size() / (double) senses.size()) * 100.0;
-			w.write("SEW: " + f.format(ratio) + "% senses defined (" + sensesInSEW.size()
-					+ "/" + senses.size() + ")\n");
+			double ratio = ((double) sensesInSEW.size() / (double) entitiesWithSense.size()) * 100.0;
+			w.write("SEW: " + f.format(ratio) + "% entitiesWithSense defined (" + sensesInSEW.size()
+					+ "/" + entitiesWithSense.size() + ")\n");
 		}
-		Set<AnnotatedEntity> nominalSensesInSEW = nominalSenses.stream()
+		Set<AnnotatedEntity> nominalSensesInSEW = entitiesWithNominalSense.stream()
 				.filter(e -> corpusMetric.corpus.getFrequency(e) > 0)
 				.collect(Collectors.toSet());
 		{
-			double ratio = ((double) nominalSensesInSEW.size() / (double) nominalSenses.size()) * 100.0;
-			w.write("SEW: " + f.format(ratio) + "% nominal senses defined (" + nominalSensesInSEW.size()
-					+ "/" + nominalSenses.size() + ")\n");
+			double ratio = ((double) nominalSensesInSEW.size() / (double) entitiesWithNominalSense.size()) * 100.0;
+			w.write("SEW: " + f.format(ratio) + "% nominal entitiesWithSense defined (" + nominalSensesInSEW.size()
+					+ "/" + entitiesWithNominalSense.size() + ")\n");
 		}
-		Set<AnnotatedEntity>formsInSEW = nonNominalSenseforms.stream()
+		Set<AnnotatedEntity>formsInSEW = entitiesWithNonNominalSense.stream()
 				.filter(e -> corpusMetric.corpus.getFrequency(e) > 0)
 				.collect(Collectors.toSet());
 		{
-			double ratio = ((double) formsInSEW.size() / (double) nonNominalSenseforms.size()) * 100.0;
-			w.write("SEW: " + f.format(ratio) + "% forms (of words not annotated with nominal senses) defined ("
-					+ formsInSEW.size()	+ "/" + nonNominalSenseforms.size() + ")\n");
+			double ratio = ((double) formsInSEW.size() / (double) entitiesWithNonNominalSense.size()) * 100.0;
+			w.write("SEW: " + f.format(ratio) + "% entitiesWithoutSense (of words not annotated with nominal entitiesWithSense) defined ("
+					+ formsInSEW.size()	+ "/" + entitiesWithNonNominalSense.size() + ")\n");
 		}
 
-		if (ssim != null)
+		if (sense != null)
 		{
 			{
-				Set<AnnotatedEntity> definedSenses = senses.stream()
-						.filter(ssim::isDefinedFor)
+				Set<AnnotatedEntity> definedEntities = entities.stream()
+						.filter(sense::isDefinedFor)
 						.collect(Collectors.toSet());
-				double ratio = ((double) definedSenses.size() / (double) senses.size()) * 100.0;
-				w.write("sense: " + f.format(ratio) + "% senses defined (" + definedSenses.size() + "/" +
-						senses.size() + ")\n");
-				w.write("sense: undefined senses " + ListUtils.removeAll(senses, definedSenses).stream()
+				double ratio = ((double) definedEntities.size() / (double) entities.size()) * 100.0;
+				w.write("sense: " + f.format(ratio) + "% entities defined (" + definedEntities.size() + "/" +
+						entities.size() + ")\n");
+				w.write("sense: undefined entities " + ListUtils.removeAll(entitiesWithSense, definedEntities).stream()
 						.map(AnnotatedEntity::toString)
 						.collect(Collectors.joining(",")) + "\n");
 			}
 			{
-				Set<AnnotatedEntity> definedForms = nominalSenses.stream()
-						.filter(ssim::isDefinedFor)
+				Set<AnnotatedEntity> definedSenses = entitiesWithSense.stream()
+						.filter(sense::isDefinedFor)
 						.collect(Collectors.toSet());
-				double ratio = ((double) definedForms.size() / (double) nominalSenses.size()) * 100.0;
-				w.write("sense: " + f.format(ratio) + "% nominal senses defined (" + definedForms.size() +
-						"/" + senses.size() + ")\n");
+				double ratio = ((double) definedSenses.size() / (double) entitiesWithSense.size()) * 100.0;
+				w.write("sense: " + f.format(ratio) + "% senses defined (" + definedSenses.size() +
+						"/" + entitiesWithSense.size() + ")\n");
+			}
+			{
+				Set<AnnotatedEntity> definedForms = entitiesWithoutSense.stream()
+						.filter(sense::isDefinedFor)
+						.collect(Collectors.toSet());
+				double ratio = ((double) definedForms.size() / (double) entitiesWithoutSense.size()) * 100.0;
+				w.write("sense: " + f.format(ratio) + "% forms of entities without sense defined (" + definedForms.size() +
+						"/" + entitiesWithoutSense.size() + ")\n");
 			}
 		}
-		if (wsim != null)
+
+		if (merged != null)
 		{
 			{
-				Set<AnnotatedEntity> definedForms = allForms.stream()
-						.filter(wsim::isDefinedFor)
+				Set<AnnotatedEntity> definedSenses = entitiesWithSense.stream()
+						.filter(merged::isDefinedFor)
 						.collect(Collectors.toSet());
-				double ratio = ((double) definedForms.size() / (double) allForms.size()) * 100.0;
-				w.write("word: " + f.format(ratio) + "% forms defined ("
-						+ definedForms.size() + "/" + allForms.size() + ")\n");
+				double ratio = ((double) definedSenses.size() / (double) entitiesWithSense.size()) * 100.0;
+				w.write("merged: " + f.format(ratio) + "% senses defined (" + definedSenses.size() + "/" +
+						entitiesWithSense.size() + ")\n");
+				w.write("merged: undefined senses " + ListUtils.removeAll(entitiesWithSense, definedSenses).stream()
+						.map(AnnotatedEntity::toString)
+						.collect(Collectors.joining(",")) + "\n");
 			}
 			{
-				Set<AnnotatedEntity> definedForms = forms.stream()
-						.filter(wsim::isDefinedFor)
+				Set<AnnotatedEntity> definedForms = entitiesWithNominalSense.stream()
+						.filter(merged::isDefinedFor)
 						.collect(Collectors.toSet());
-				double ratio = ((double) definedForms.size() / (double) forms.size()) * 100.0;
-				w.write("word: " + f.format(ratio) + "% forms (of words not annotated with a sense) defined ("
-						+ definedForms.size() + "/" + forms.size() + ")\n");
+				double ratio = ((double) definedForms.size() / (double) entitiesWithNominalSense.size()) * 100.0;
+				w.write("merged: " + f.format(ratio) + "% nominal senses defined (" + definedForms.size() +
+						"/" + entitiesWithNominalSense.size() + ")\n");
+			}
+		}
 
-				w.write("word: undefined forms " + ListUtils.removeAll(forms, definedForms).stream()
+		if (word != null)
+		{
+			{
+				Set<AnnotatedEntity> definedForms = entities.stream()
+						.filter(word::isDefinedFor)
+						.collect(Collectors.toSet());
+				double ratio = ((double) definedForms.size() / (double) entities.size()) * 100.0;
+				w.write("word: " + f.format(ratio) + "% forms defined ("
+						+ definedForms.size() + "/" + entities.size() + ")\n");
+			}
+			{
+				Set<AnnotatedEntity> definedForms = entitiesWithoutSense.stream()
+						.filter(word::isDefinedFor)
+						.collect(Collectors.toSet());
+				double ratio = ((double) definedForms.size() / (double) entitiesWithoutSense.size()) * 100.0;
+				w.write("word: " + f.format(ratio) + "% forms of entitites with no sense defined ("
+						+ definedForms.size() + "/" + entitiesWithoutSense.size() + ")\n");
+
+				w.write("word: undefined forms " + ListUtils.removeAll(entitiesWithoutSense, definedForms).stream()
 						.map(AnnotatedEntity::getAnnotation)
 						.map(Annotation::getForm)
 						.collect(Collectors.joining(",")) + "\n");

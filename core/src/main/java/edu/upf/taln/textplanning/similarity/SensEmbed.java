@@ -28,7 +28,10 @@ public class SensEmbed implements EntitySimilarity
 	{
 		log.info("Loading SenseEmbed vectors");
 		Stopwatch timer = Stopwatch.createStarted();
-		Map<String, List<double[]>> embeddings = EmbeddingUtils.parseEmbeddingsFile(inEmbeddingsPath, true, merged);
+
+		// If file contains merged sense vectors, ignore vectors for words, if any.
+		// If file contains word-sense pairs, do not ignore words.
+		Map<String, List<double[]>> embeddings = EmbeddingUtils.parseEmbeddingsFile(inEmbeddingsPath, !merged, merged);
 		embeddings.entrySet().stream()
 				.filter(e -> e.getValue().size() != 1)
 				.forEach(e -> log.error("Sense " + e.getKey() + " has " + e.getValue() + " vectors"));
@@ -86,6 +89,8 @@ public class SensEmbed implements EntitySimilarity
 		//double distanceMetric = Math.acos(cosineSimilarity) / Math.PI; // range (0,1)
 		//return (cosineSimilarity + 1.0) / 2.0;
 	}
+
+	public boolean isMerged() { return merged; }
 
 	private String getKey(Entity e)
 	{
