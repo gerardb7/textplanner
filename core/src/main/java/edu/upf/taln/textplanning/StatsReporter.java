@@ -9,7 +9,6 @@ import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.similarity.SensEmbed;
 import edu.upf.taln.textplanning.similarity.Word2Vec;
-import edu.upf.taln.textplanning.weighting.Position;
 import edu.upf.taln.textplanning.weighting.TFIDF;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.apache.commons.collections4.ListUtils;
@@ -166,11 +165,7 @@ public class StatsReporter
 				.collect(Collectors.toList());
 
 		// Set up metrics
-//		Map<WeightingFunction, Double> functions = ((Linear) rel).getFunctions();
-//		Iterator<WeightingFunction> it = functions.keySet().iterator();
 		TFIDF corpusMetric = (TFIDF)rel;
-		Position positionMetric = new Position();
-		positionMetric.setCollection(t);
 
 		Map<String, Long> freqs = t.stream()
 				.map(SemanticTree::vertexSet)
@@ -183,11 +178,9 @@ public class StatsReporter
 
 		// Report metrics for each collection
 		w.write("Scoring of entities\n");
-		w.write("num\tlabel\ttfidf\tpos\tlinear\trank\tf\tdf\tsense\tmerged\tword\tsenserel\tmergedrel\twordrel\n");
+		w.write("num\tlabel\ttfidf\trank\tf\tdf\tsense\tmerged\tword\tsenserel\tmergedrel\twordrel\n");
 		entities.forEach(e -> {
 			double tfIdf = corpusMetric.weight(e);
-			double pos = positionMetric.weight(e);
-			double linear = rel.weight(e);
 			double rank = rankedEntities.get(e);
 			long fq = freqs.get(e.getEntityLabel());
 			long df = corpusMetric.corpus.getFrequency(e);
@@ -198,8 +191,7 @@ public class StatsReporter
 			double msrel = entitiesWithSense.contains(e) ? mergedRelValues.get(entitiesWithSense.indexOf(e)) : -1.0;
 			double wsrel = entities.contains(e) ? wordRelValues.get(entities.indexOf(e)) : -1.0;
 
-			w.write(entities.indexOf(e) +"\t" + e + "\t" + f.format(tfIdf) + "\t" + f.format(pos) +
-					"\t" + f.format(linear) + "\t" + f.format(rank) + "\t" + fq + "\t" + df + "\t" +
+			w.write(entities.indexOf(e) +"\t" + e + "\t" + f.format(tfIdf) + "\t" + f.format(rank) + "\t" + fq + "\t" + df + "\t" +
 					f.format(ss) + "\t" + f.format(ms) + "\t" + f.format(ws) + "\t" +
 					f.format(ssrel) + "\t" + f.format(msrel) + "\t" + f.format(wsrel) + "\n");
 		});
@@ -211,7 +203,7 @@ public class StatsReporter
 		}
 		{
 			double ratio = ((double) entitiesWithNominalSense.size() / (double) entitiesWithSense.size()) * 100.0;
-			w.write("Babelfy: " + f.format(ratio) + "% of entitiesWithSense are nominal\n");
+			w.write("Babelfy: " + f.format(ratio) + "% of senses are nominal\n");
 		}
 
 		Set<AnnotatedEntity> sensesInSEW = entitiesWithSense.stream()
@@ -219,7 +211,7 @@ public class StatsReporter
 				.collect(Collectors.toSet());
 		{
 			double ratio = ((double) sensesInSEW.size() / (double) entitiesWithSense.size()) * 100.0;
-			w.write("SEW: " + f.format(ratio) + "% entitiesWithSense defined (" + sensesInSEW.size()
+			w.write("SEW: " + f.format(ratio) + "% senses defined (" + sensesInSEW.size()
 					+ "/" + entitiesWithSense.size() + ")\n");
 		}
 		Set<AnnotatedEntity> nominalSensesInSEW = entitiesWithNominalSense.stream()
@@ -227,7 +219,7 @@ public class StatsReporter
 				.collect(Collectors.toSet());
 		{
 			double ratio = ((double) nominalSensesInSEW.size() / (double) entitiesWithNominalSense.size()) * 100.0;
-			w.write("SEW: " + f.format(ratio) + "% nominal entitiesWithSense defined (" + nominalSensesInSEW.size()
+			w.write("SEW: " + f.format(ratio) + "% nominal senses defined (" + nominalSensesInSEW.size()
 					+ "/" + entitiesWithNominalSense.size() + ")\n");
 		}
 		Set<AnnotatedEntity>formsInSEW = entitiesWithNonNominalSense.stream()
@@ -235,7 +227,7 @@ public class StatsReporter
 				.collect(Collectors.toSet());
 		{
 			double ratio = ((double) formsInSEW.size() / (double) entitiesWithNonNominalSense.size()) * 100.0;
-			w.write("SEW: " + f.format(ratio) + "% entitiesWithoutSense (of words not annotated with nominal entitiesWithSense) defined ("
+			w.write("SEW: " + f.format(ratio) + "% forms (of words not annotated with nominal senses) defined ("
 					+ formsInSEW.size()	+ "/" + entitiesWithNonNominalSense.size() + ")\n");
 		}
 
