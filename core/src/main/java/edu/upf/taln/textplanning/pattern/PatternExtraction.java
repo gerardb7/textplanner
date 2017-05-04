@@ -53,7 +53,8 @@ public class PatternExtraction
 			while (subgraph == null && !sortedNodes.isEmpty())
 			{
 				Node topEntity = sortedNodes.stream()
-						.max(Comparator.comparing(Node::getWeight)).get();
+						.max(Comparator.comparing(Node::getWeight))
+						.orElse(sortedNodes.get(0));
 				if (g.inDegreeOf(topEntity) + g.outDegreeOf(topEntity) > 0)
 				{
 					subgraph = extractHeavySubgraph(topEntity, g, avgWeight);
@@ -98,8 +99,7 @@ public class PatternExtraction
 		Map<String, Set<Node>> ids = new HashMap<>();
 
 		// Iterate triple in each tree and populate graph from them
-		inContents.stream()
-				.forEach(t -> {
+		inContents.forEach(t -> {
 					for (Edge e : t.edgeSet())
 					{
 						Node governor = t.getEdgeSource(e);
@@ -128,8 +128,10 @@ public class PatternExtraction
 								throw new RuntimeException("Failed to add edge between " + govNode.id + " and " + depNode.id + ": " + ex);
 							}
 						}
-						else
-							throw new RuntimeException("Dependency between two nodes with same id " + depNode.id);
+						// Ignore loops.
+						// To see how loops may occur in semantic trees, consider "West Nickel Mines Amish School
+						// shooting", where "West Nickel Mines Amish School" and "Amish School shooting" are assigned
+						// the same synset (same id and therefore same node) and are linked through a NAME relation.
 					}
 				});
 
@@ -252,7 +254,7 @@ public class PatternExtraction
 				.map(e -> {
 					List<Edge> expansion = new ArrayList<>();
 					expansion.add(e);
-					expandNode(pattern, g.getEdgeTarget(e)).forEach(expansion::add);
+					expansion.addAll(expandNode(pattern, g.getEdgeTarget(e)));
 					return expansion;
 				})
 				.flatMap(List::stream)
