@@ -22,9 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -68,7 +66,7 @@ public class ConLLDriver
 		}
 	}
 
-	private enum EmbeddingsType
+	public enum EmbeddingsType
 	{
 		word, sense, merged;
 		// converter that will be used later
@@ -150,24 +148,16 @@ public class ConLLDriver
 	}
 
 	@SuppressWarnings("WeakerAccess")
-	public static String runPlanner(TextPlanner p, Path inputFolder, TextPlanner.Options options)
+	public static String runPlanner(TextPlanner p, List<Path> inputFiles, TextPlanner.Options options)
 	{
 		try
 		{
 			Stopwatch timer = Stopwatch.createStarted();
 
-			Set<Path> files = new HashSet<>();
-			try (Stream<Path> paths = Files.walk(inputFolder, 1))
-			{
-				files.addAll(paths.filter(Files::isRegularFile)
-//					.filter(p -> !p.getFileName().startsWith("plan_"))
-						.collect(Collectors.toList()));
-			}
-
 			// Read trees from conll files
 			ConLLAcces conll = new ConLLAcces();
 			List<SemanticTree> trees = new ArrayList<>();
-			files.forEach(d -> {
+			inputFiles.forEach(d -> {
 				String inConll;
 				try
 				{
@@ -206,7 +196,16 @@ public class ConLLDriver
 		log.info("Generating summary for files in folder " + inputFolder);
 		try
 		{
-			String planConll = ConLLDriver.runPlanner(planner, inputFolder, options);
+			// Collect files from folder
+			List<Path> files = new ArrayList<>();
+			try (Stream<Path> paths = Files.walk(inputFolder, 1))
+			{
+				files.addAll(paths.filter(Files::isRegularFile)
+//					.filter(p -> !p.getFileName().startsWith("plan_"))
+						.collect(Collectors.toList()));
+			}
+
+			String planConll = ConLLDriver.runPlanner(planner, files, options);
 
 //			log.info("Solr queries: " + SEWSolr.debug.toString());
 //			log.info("Word form vector lookups: " + PatternSimilarity.numWordSuccessfulLookups + " successful, " +
