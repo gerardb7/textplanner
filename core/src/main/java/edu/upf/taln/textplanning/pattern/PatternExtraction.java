@@ -1,9 +1,12 @@
 package edu.upf.taln.textplanning.pattern;
 
-import edu.upf.taln.textplanning.datastructures.*;
+import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
+import edu.upf.taln.textplanning.datastructures.Entity;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.SubGraph;
+import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.ext.DOTExporter;
@@ -87,19 +90,19 @@ public class PatternExtraction
 
 	/**
 	 * Creates a pattern extraction graph
-	 * @param inContents list of annotated trees
+	 * @param trees list of annotated trees
 	 * @param rankedEntities entities in trees and their scores
 	 * @return a semantic graph
 	 */
-	private static SemanticGraph createPatternExtractionGraph(List<SemanticTree> inContents,
+	private static SemanticGraph createPatternExtractionGraph(List<SemanticTree> trees,
 	                                                          Map<Entity, Double> rankedEntities)
 	{
-		// Create graph
+		// Create empty graph
 		SemanticGraph graph = new SemanticGraph(Edge.class);
 		Map<String, Set<Node>> ids = new HashMap<>();
 
-		// Iterate triple in each tree and populate graph from them
-		inContents.forEach(t -> {
+		// Iterate triples in each tree and populate graph from them
+		trees.forEach(t -> {
 					for (Edge e : t.edgeSet())
 					{
 						Node governor = t.getEdgeSource(e);
@@ -152,15 +155,36 @@ public class PatternExtraction
 		return graph;
 	}
 
+	/**
+	 * Creates a graph node from a tree node.
+	 * A single graph node is created for all non-predicative tree nodes with the same label.
+	 * A single graph node is created for all predicates with same label and same dependent labels.
+	 * The graph node is assigned a weight.
+	 * @param t a tree
+	 * @param n a node in the tree
+	 * @param rankedEntities weights for nodess
+	 *
+	 * @return a graph node
+	 */
 	private static Node createGraphNode(SemanticTree t, Node n, Map<Entity, Double> rankedEntities)
 	{
 		String id = n.getEntity().getEntityLabel();
-		Annotation a = ((AnnotatedEntity)n.getEntity()).getAnnotation();
-		if (t.isPredicate(n) || id.equals("_")) // if a predicate, make node unique by appending ann id
-			id += ":" + a.getId();
+		if (t.isPredicate(n) || id.equals("_")) // if a predicate use predicate and argument labels as id
+			id = predicateToString(t, n);
 		double govWeight = rankedEntities.get(n.getEntity());
 
 		return new Node(id, n.getEntity(), govWeight);
+	}
+
+	private static String predicateToString(SemanticTree t, Node p)
+	{
+		StringBuilder str = new StringBuilder(p.getEntity().getEntityLabel());
+		for (Edge e : t.outgoingEdgesOf(p))
+		{
+			str.append("_").append(e.getRole()).append("-").append(t.getEdgeTarget(e).getEntity().getEntityLabel());
+		}
+
+		return str.toString();
 	}
 
 	/**
