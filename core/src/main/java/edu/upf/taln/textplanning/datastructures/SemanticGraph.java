@@ -45,12 +45,15 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 		public String toString() { return this.entity.toString(); }
 
 		@Override
-		public boolean equals(Object obj)
+		public boolean equals(Object o)
 		{
-			if (!(obj instanceof Node))
+			if (this == o)
+				return true;
+			if (o == null || getClass() != o.getClass())
 				return false;
-			Node other = (Node)obj;
-			return id.equalsIgnoreCase(other.id);
+
+			Node node = (Node) o;
+			return id.equals(node.id);
 		}
 
 		@Override
@@ -83,6 +86,26 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 
 		@Override
 		public String toString() { return role; }
+
+		@Override
+		public boolean equals(Object o)
+		{
+			if (this == o)
+				return true;
+			if (o == null || getClass() != o.getClass())
+				return false;
+
+			Edge edge = (Edge) o;
+			return isArg == edge.isArg && role.equals(edge.role);
+		}
+
+		@Override
+		public int hashCode()
+		{
+			int result = role.hashCode();
+			result = 31 * result + (isArg ? 1 : 0);
+			return result;
+		}
 	}
 
 	public static class SubGraph extends DirectedSubgraph<Node, Edge>
