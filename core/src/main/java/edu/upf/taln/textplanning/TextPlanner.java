@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning;
 import Jama.Matrix;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.coherence.DiscoursePlanner;
+import edu.upf.taln.textplanning.datastructures.ContentGraphCreator;
 import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
@@ -90,7 +91,7 @@ public final class TextPlanner
 			// 1- Create content graph
 			log.info("**Creating content graph**");
 			Stopwatch timer = Stopwatch.createStarted();
-			SemanticGraph contentGraph = PatternExtraction.createContentGraph(inContents);
+			SemanticGraph contentGraph = ContentGraphCreator.createContentGraph(inContents);
 			log.info("Graph creation took " + timer.stop());
 
 			// 2- Create entity ranking matrix
