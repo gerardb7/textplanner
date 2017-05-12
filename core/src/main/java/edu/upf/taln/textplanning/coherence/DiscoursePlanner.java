@@ -1,6 +1,5 @@
 package edu.upf.taln.textplanning.coherence;
 
-import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
@@ -27,18 +26,15 @@ public class DiscoursePlanner
 	 *
 	 * @param patterns set of patterns to structure
 	 * @param entitySim similarity function between pairs of entities in the patterns
-	 * @param rankedEntities entities and their relevance scores
 	 * @return list of patterns
 	 */
-	public static List<SemanticTree> structurePatterns(Set<SemanticTree> patterns, EntitySimilarity entitySim,
-	                                                   Map<Entity, Double> rankedEntities)
+	public static List<SemanticTree> structurePatterns(Set<SemanticTree> patterns, EntitySimilarity entitySim)
 	{
-		// weight patterns according to the ranking of their entities
+		// Weight patterns by averaging their node weights
 		//noinspection RedundantTypeArguments
 		List<Pair<SemanticTree, Double>> rankedPatterns = patterns.stream()
 				.map(p -> Pair.of(p, p.vertexSet().stream()
-						.map(Node::getEntity)
-						.mapToDouble(rankedEntities::get)
+						.mapToDouble(Node::getWeight)
 						.average().orElse(0.0)))
 				.sorted(Comparator.comparing(Pair<SemanticTree, Double>::getRight).reversed())
 				.collect(Collectors.toList());

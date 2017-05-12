@@ -1,7 +1,6 @@
 package edu.upf.taln.textplanning.pattern;
 
 import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
-import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
@@ -28,15 +27,11 @@ public class PatternExtraction
 	/**
 	 * Extracts patterns from a content graph
 	 * @param g a content graph
-	 * @param rankedEntities entities in trees and their scores
 	 * @param numPatterns number of patterns to extract
 	 * @return the set of extracted patterns
 	 */
-	public static Set<SemanticTree> extract(SemanticGraph g, Map<Entity, Double> rankedEntities, int numPatterns)
+	public static Set<SemanticTree> extract(SemanticGraph g, int numPatterns)
 	{
-		// Assign weights to nodes in the graph
-		g.vertexSet().forEach(v -> v.setWeight(rankedEntities.get(v.getEntity())));
-
 		// Work out average node weight, which will be used as weight for edges
 		double avgWeight = g.vertexSet().stream().mapToDouble(Node::getWeight).average().orElse(1.0);
 

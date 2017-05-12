@@ -10,10 +10,9 @@ import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 
@@ -27,21 +26,25 @@ public class PowerIterationRanking
 	private final static Logger log = LoggerFactory.getLogger(PowerIterationRanking.class);
 
 	/**
-	 * Creates joint stochastic matrix based on a similarity function biased against prior relevance and deep syntactic
-	 * co-occurrence. Approach has similarities to Otterbacher et al. 2009 paper "Biased LexRank" (p.5)
+	 * Creates joint stochastic matrix for a content graph based on a similarity function between node's entities
+	 * biased against prior relevance and connections in the graph.
+	 * Approach has similarities to Otterbacher et al. 2009 paper "Biased LexRank" (p.5)
 	 *
-	 * @param entities list of entities
-	 * @param inSimilarity similarity metric for pairs of patterns
-	 * @param g content graph
+	 * @param g content graph where nodes have entities associated to them
+	 * @param inWeighting relevance weighting function for entities
+	 * @param inSimilarity similarity metric for pairs of entities
 	 * @param inOptions algorithm options
 	 * @return a similarity matrix
 	 */
-	public static Matrix createRankingMatrix(List<Entity> entities, WeightingFunction inWeighting, SemanticGraph g,
+	public static Matrix createRankingMatrix(SemanticGraph g, WeightingFunction inWeighting,
 	                                         EntitySimilarity inSimilarity, TextPlanner.Options inOptions)
 	{
-		// Create relevance row vector by applying weighting function to entities
-		int n = entities.size();
-		double[] b = entities.stream()
+		List<Node> nodes = new ArrayList<>(g.vertexSet());
+
+		// Create relevance row vector by applying weighting function to node's entities
+		int n = nodes.size();
+		double[] b = nodes.stream()
+				.map(Node::getEntity)
 				.mapToDouble(inWeighting::weight)
 				.map(w -> w < inOptions.relevanceLowerBound ? 0.0 : w) // apply lower bound
 				.toArray();
@@ -49,28 +52,28 @@ public class PowerIterationRanking
 		double accum = Arrays.stream(b).sum();
 		IntStream.range(0, n).forEach(i -> b[i] /= accum); // normalize vector with sum of row
 
-		// Create syntactic co-occurrence matrix from links in the content graph
-		Matrix m_syn = new Matrix(n, n);
+		// Create an adjacency matrix for the content graph
+		Matrix m_graph = new Matrix(n, n);
 		IntStream.range(0, n).forEach(i ->
 				IntStream.range(i, n).forEach(j -> // starting from i avoids calculating symmetric co-occurrence twice
 				{
-					Entity ei = entities.get(i);
-					Entity ej = entities.get(j);
-					double sij = cooccur(g, ei, ej) ? 1.0 : 0.0;
-					m_syn.set(i, j, sij);
-					m_syn.set(j, i, sij);
+					Node ni = nodes.get(i);
+					Node nj = nodes.get(j);
+					double sij = cooccur(g, ni, nj) ? 1.0 : 0.0;
+					m_graph.set(i, j, sij);
+					m_graph.set(j, i, sij);
 				}));
-		log.info("Syntactic co-occurrence matrix:");
-		log.info(StatsReporter.getMatrixStats(m_syn));
-		normalize(m_syn);
+		log.info("Content graph adjacency matrix:");
+		log.info(StatsReporter.getMatrixStats(m_graph));
+		normalize(m_graph);
 
-		// Create similarity matrix by applying function to pairs of entities
+		// Create similarity matrix by applying function to pairs of nodes
 		Matrix m_sim = new Matrix(n, n);
 		IntStream.range(0, n).forEach(i ->
 				IntStream.range(i, n).forEach(j -> // starting from i avoids calculating symmetric similarity twice
 				{
-					Entity ei = entities.get(i);
-					Entity ej = entities.get(j);
+					Entity ei = nodes.get(i).getEntity();
+					Entity ej = nodes.get(j).getEntity();
 					double sij = inSimilarity.computeSimilarity(ei, ej);
 					if (sij < inOptions.simLowerBound) // apply lower bound
 						sij = 0.0;
@@ -81,15 +84,15 @@ public class PowerIterationRanking
 		log.info(StatsReporter.getMatrixStats(m_sim));
 		normalize(m_sim);
 
-		// Bias each row using relevance bias wit damping factor d1, and syntactic bias with damping factor d2:
-		// Prob i->j = d1*rel_bias(j) + d2*syn_bias(i,j) (1-d1 - d2)*sim(i,j)
+		// Bias each row using relevance bias with damping factor d1, and graph bias with damping factor d2:
+		// Prob i->j = d1*rel_bias(j) + d2*graph_bias(i,j) (1-d1 - d2)*sim(i,j)
 		// The resulting matrix is row-normalized because both b and m are normalized
 		double d1 = inOptions.dampingRelevance;
 		double d2 = inOptions.dampingSyntactic;
 		IntStream.range(0, n).forEach(i ->
 			IntStream.range(0, n).forEach(j -> {
 				double brj = b[j]; // bias towards relevance of j
-				double bsij = m_syn.get(i, j); // bias towards syntactic co-occurence of i and j in the content graph
+				double bsij = m_graph.get(i, j); // content graph bias
 				double sij = m_sim.get(i, j); // sim of i and j
 				double pij = d1 * brj + d2 * bsij + (1.0 - d1 - d2) * sij; // biased prob of going from i to j
 				m_sim.set(i, j, pij);
@@ -104,36 +107,19 @@ public class PowerIterationRanking
 
 
 	/**
-	 * @return true if both entities are connected through a deep dependency relation in the content graph
+	 * @return true if both nodes are connected through an edge in the content graph
 	 */
-	private static boolean cooccur(SemanticGraph g, Entity e1, Entity e2)
+	private static boolean cooccur(SemanticGraph g, Node n1, Node n2)
 	{
-		Set<Node> nodes = g.vertexSet().stream()
-				.filter(n -> n.getEntity().equals(e1))
-				.collect(Collectors.toSet());
-
-		if (!nodes.isEmpty())
-		{
-			boolean isGovernorOf = nodes.stream()
-					.map(g::incomingEdgesOf)
-					.flatMap(Set::stream)
+		boolean isGovernorOf = g.incomingEdgesOf(n1).stream()
 					.map(g::getEdgeSource)
-					.anyMatch(n -> n.getEntity().equals(e2));
+					.anyMatch(n -> n == n2);
 
-			if (isGovernorOf)
-				return true;
+		boolean isDependentOf = g.outgoingEdgesOf(n1).stream()
+				.map(g::getEdgeTarget)
+				.anyMatch(n -> n == n2);
 
-			boolean isDependentOf = nodes.stream()
-					.map(g::outgoingEdgesOf)
-					.flatMap(Set::stream)
-					.map(g::getEdgeTarget)
-					.anyMatch(n -> n.getEntity().equals(e2));
-
-			if (isDependentOf)
-				return true;
-		}
-
-		return false;
+		return isGovernorOf || isDependentOf;
 	}
 
 	/**

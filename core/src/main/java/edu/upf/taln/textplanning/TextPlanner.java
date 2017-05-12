@@ -4,7 +4,6 @@ import Jama.Matrix;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.coherence.DiscoursePlanner;
 import edu.upf.taln.textplanning.datastructures.ContentGraphCreator;
-import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
@@ -17,10 +16,9 @@ import org.slf4j.LoggerFactory;
 
 import java.math.RoundingMode;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 
@@ -39,7 +37,7 @@ public final class TextPlanner
 	{
 		public int numPatterns = 10; // Number of patterns to return
 		public double dampingRelevance = 0.3; // damping factor to control bias towards prior relevance of entities
-		public double dampingSyntactic = 0.3; // damping factor to control bias towards deep-syntactic co-occurrence between entities
+		public double dampingSyntactic = 0.1; // damping factor to control bias towards deep-syntactic co-occurrence between entities
 		public double rankingStopThreshold = 0.0001; // stopping threshold for the main ranking algorithm
 		public double relevanceLowerBound = 0.1; // Entities with relevance below this value have their score set to 0
 		public double simLowerBound = 0.1; // Pairs of entities with similarity below this value have their score set to 0
@@ -80,13 +78,6 @@ public final class TextPlanner
 		try
 		{
 			log.info("***Planning started***");
-			// 0- Collect entities in trees
-			List<Entity> entities = inContents.stream()
-					.map(SemanticTree::vertexSet)
-					.flatMap(Set::stream)
-					.map(Node::getEntity)
-					.distinct() // equality tested through labels of objects
-					.collect(Collectors.toList());
 
 			// 1- Create content graph
 			log.info("**Creating content graph**");
@@ -99,7 +90,7 @@ public final class TextPlanner
 			timer.reset(); timer.start();
 			weighting.setCollection(inContents);
 			Matrix rankingMatrix =
-					PowerIterationRanking.createRankingMatrix(entities, weighting, contentGraph, similarity, inOptions);
+					PowerIterationRanking.createRankingMatrix(contentGraph, weighting, similarity, inOptions);
 			log.info("Creation of ranking matrix took " + timer.stop());
 
 			// 3- Rank entities using biased semantic ranking and power iteration method
@@ -108,20 +99,22 @@ public final class TextPlanner
 			Matrix finalDistribution = PowerIterationRanking.run(rankingMatrix, inOptions.rankingStopThreshold);
 			log.info("Power iteration ranking took " + timer.stop());
 			double[] ranking = finalDistribution.getColumnPackedCopy();
+			// Assign weights to nodes in the graph
+			List<Node> nodes = new ArrayList<>(contentGraph.vertexSet());
+			IntStream.range(0, ranking.length)
+					.forEach(i -> nodes.get(i).setWeight(ranking[i]));
 
 			// 4- Extract patterns from content graph
 			log.info("**Extracting patterns**");
 			timer.reset(); timer.start();
-			Map<Entity, Double> rankedEntities = IntStream.range(0, ranking.length)
-					.boxed()
-					.collect(Collectors.toMap(entities::get, i -> ranking[i]));
-			Set<SemanticTree> patterns = PatternExtraction.extract(contentGraph, rankedEntities, inOptions.numPatterns);
+
+			Set<SemanticTree> patterns = PatternExtraction.extract(contentGraph, inOptions.numPatterns);
 			log.info("Pattern extraction took " + timer.stop());
 
 			// 5- Sort the trees into a coherence-optimized list
 			log.info("**Structuring patterns**");
 			timer.reset(); timer.start();
-			List<SemanticTree> patternList = DiscoursePlanner.structurePatterns(patterns, similarity, rankedEntities);
+			List<SemanticTree> patternList = DiscoursePlanner.structurePatterns(patterns, similarity);
 			log.info("Pattern structuring took " + timer.stop());
 
 			// 6- Generate stats (optional)
@@ -130,7 +123,7 @@ public final class TextPlanner
 				log.info("**Generating stats**");
 				timer.reset();
 				timer.start();
-				inOptions.stats = StatsReporter.reportStats(inContents, weighting, similarity, rankedEntities, inOptions);
+				inOptions.stats = StatsReporter.reportStats(inContents, weighting, similarity, contentGraph, inOptions);
 				log.info("Stats generation took " + timer.stop());
 			}
 
