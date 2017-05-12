@@ -1,7 +1,6 @@
 package edu.upf.taln.textplanning.datastructures;
 
 import org.jgrapht.DirectedGraph;
-import org.jgrapht.alg.CycleDetector;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DirectedSubgraph;
 import org.jgrapht.graph.SimpleDirectedGraph;
@@ -89,7 +88,7 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 	}
 
 	/**
-	 * Implements directed acyclic subgraphs
+	 * Implements connected rooted subgraphs of a semantic graph
 	 */
 	public static class SubGraph extends DirectedSubgraph<Node, Edge>
 	{
@@ -111,18 +110,32 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 
 		public Node getRoot() { return root; }
 
-		/**
-		 * Adds edge in base to subgraph, while checking that the subgraph remains a DAG.
-		 */
-		public void expand(Edge e)
+
+		public boolean isValidExpansion(Edge e)
 		{
 			Node s = base.getEdgeSource(e);
 			Node t = base.getEdgeTarget(e);
+			if (s.equals(t))
+				return false; // ni loops
+			if (!base.containsEdge(e))
+				return false; // keep subgraph consistent with base
+			if (containsEdge(e))
+				return false; // no duplicated edges
+			if (!containsVertex(s) && !containsVertex(t))
+				return false; // keep subgraph connected
+			return !(t.equals(root) && containsVertex(s));
+		}
 
-			// Only valid extensions are those that keep this as a connected rooted subgraph of the base
-			if (!base.containsEdge(e) || !base.containsVertex(s) || !base.containsVertex(t) ||
-					containsEdge(e) || (!containsVertex(s) && !containsVertex(t)))
-				throw new RuntimeException("Invalid extension " + e);
+
+		/**
+		 * Adds edge in base to subgraph, while checking that the subgraph remains a connected rooted subgraph.
+		 */
+		public void expand(Edge e)
+		{
+			if (!isValidExpansion(e))
+				throw new RuntimeException("Invalid extension to subgraph");
+			Node s = base.getEdgeSource(e);
+			Node t = base.getEdgeTarget(e);
 
 			if (!containsVertex(s))
 			{
@@ -132,14 +145,10 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 				if (root.equals(t))
 					root = s;
 			}
+
 			if (!containsVertex(t))
 				addVertex(t);
 			addEdge(s, t, e);
-
-			// Check for cycles
-			CycleDetector<Node, Edge> detector = new CycleDetector<>(this);
-			if (detector.detectCycles())
-				throw new RuntimeException("Invalid extension " + e + " produces cycles");
 		}
 	}
 

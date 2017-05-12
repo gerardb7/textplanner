@@ -2,13 +2,12 @@ package edu.upf.taln.textplanning;
 
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.similarity.Combined;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.similarity.PatternSimilarity;
+import edu.upf.taln.textplanning.similarity.Random;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -31,12 +30,7 @@ public class PatternSimilarityTest
 
 		EntitySimilarity wordVectors = null; //new word("/home/gerard/data/GoogleNews-vectors-negative300.bin");
 		EntitySimilarity senseVectors = null; //new sense("/home/gerard/data/sense/babelfy_vectors_merged_senses_only");
-		List<EntitySimilarity> functions = new ArrayList<>();
-		//noinspection ConstantConditions
-		functions.add(senseVectors);
-		//noinspection ConstantConditions
-		functions.add(wordVectors);
-		EntitySimilarity combined = new Combined(functions);
+		EntitySimilarity combined = new Random();
 		PatternSimilarity simCalc = new PatternSimilarity(combined);
 
 		ConLLAcces conll = new ConLLAcces();

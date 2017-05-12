@@ -9,6 +9,7 @@ import edu.upf.taln.textplanning.input.ConLLAcces;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.similarity.SensEmbed;
 import edu.upf.taln.textplanning.similarity.Word2Vec;
+import edu.upf.taln.textplanning.weighting.Random;
 import edu.upf.taln.textplanning.weighting.TFIDF;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.slf4j.Logger;
@@ -146,6 +147,21 @@ public class ConLLDriver
 
 		return new TextPlanner(corpusMetric, sim);
 	}
+
+
+	/**
+	 * Instantiates a planner that uses random relevance weighting and similarity calculations.
+	 * @return an instance of the TextPlanner class
+	 */
+	@SuppressWarnings("WeakerAccess")
+	public static TextPlanner createRandomPlanner() throws Exception
+	{
+		WeightingFunction corpusMetric = new Random();
+		EntitySimilarity sim = new edu.upf.taln.textplanning.similarity.Random();
+
+		return new TextPlanner(corpusMetric, sim);
+	}
+
 
 	@SuppressWarnings("WeakerAccess")
 	public static String runPlanner(TextPlanner p, List<Path> inputFiles, TextPlanner.Options options)

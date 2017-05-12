@@ -275,9 +275,11 @@ public class PatternExtraction
 		expansions.addAll(getLeafExpansions(s));
 		expansions.forEach(PatternExtraction::addArguments);
 
-		return expansions.stream()
-				.filter(e -> isInflectedVerb((SemanticGraph)e.getBase(), e.getRoot())) // Discard non-verbal roots
-				.collect(Collectors.toSet());
+		return expansions;
+//
+//		return expansions.stream()
+//				.filter(e -> isInflectedVerb((SemanticGraph)e.getBase(), e.getRoot())) // Discard non-verbal roots
+//				.collect(Collectors.toSet());
 	}
 
 	/**
@@ -287,22 +289,24 @@ public class PatternExtraction
 	 */
 	private static Set<SubGraph> getRootExpansions(SubGraph s)
 	{
-		Set<SubGraph> trees = new HashSet<>();
-		trees.add(s);
-
-		Node root = s.getRoot();
-		if (s.getBase().inDegreeOf(root) == 0 || isInflectedVerb((SemanticGraph)s.getBase(), root))
-		{
-			return trees;
-		}
-		else
-		{
-			return s.getBase().incomingEdgesOf(root).stream()
+//		Set<SubGraph> trees = new HashSet<>();
+//		trees.add(s);
+//
+//		Node root = s.getRoot();
+//		if (s.getBase().inDegreeOf(root) == 0 || isInflectedVerb((SemanticGraph)s.getBase(), root))
+//		{
+//			return trees;
+//		}
+//		else
+//		{
+			return s.getBase().incomingEdgesOf(s.getRoot()).stream()
+					.filter(s::isValidExpansion) // prevents getting caught in cycles
+					.filter(e -> !s.containsVertex(s.getBase().getEdgeSource(e)))
 					.map(e -> new SubGraph(s, e))
-					.map(PatternExtraction::getRootExpansions)
-					.flatMap(Set::stream)
+					//.map(PatternExtraction::getRootExpansions)
+					//.flatMap(Set::stream)
 					.collect(Collectors.toSet());
-		}
+//		}
 	}
 
 	/**
@@ -314,8 +318,8 @@ public class PatternExtraction
 	{
 		return s.vertexSet().stream()
 				.flatMap(v -> s.getBase().outgoingEdgesOf(v).stream()
-						.filter(e -> !e.isArg)
-						.filter(e -> !s.containsEdge(e)))
+						.filter(e -> !e.isArg))
+				.filter(s::isValidExpansion) // prevents getting caught in cycles
 				.map(e -> new SubGraph(s, e))
 				.collect(Collectors.toSet());
 	}
@@ -330,10 +334,11 @@ public class PatternExtraction
 		{
 			edgesToArgs = s.vertexSet().stream()
 					.flatMap(v -> s.getBase().outgoingEdgesOf(v).stream()
-							.filter(Edge::isArg)
-							.filter(e -> !s.containsEdge(e)))
+							.filter(Edge::isArg))
+					.filter(s::isValidExpansion) // prevents getting caught in cycles
 					.collect(Collectors.toList());
-			edgesToArgs.forEach(s::expand);
+			edgesToArgs.stream()
+					.forEach(s::expand);
 		}
 		while (!edgesToArgs.isEmpty());
 	}
