@@ -4,6 +4,7 @@ import Jama.Matrix;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.coherence.DiscoursePlanner;
 import edu.upf.taln.textplanning.datastructures.Entity;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.pattern.PatternExtraction;
@@ -36,7 +37,8 @@ public final class TextPlanner
 	public static class Options
 	{
 		public int numPatterns = 10; // Number of patterns to return
-		public double dampingFactor = 0.3; // damping factor to control balance between relevance bias and similarity
+		public double dampingRelevance = 0.3; // damping factor to control bias towards prior relevance of entities
+		public double dampingSyntactic = 0.3; // damping factor to control bias towards deep-syntactic co-occurrence between entities
 		public double rankingStopThreshold = 0.0001; // stopping threshold for the main ranking algorithm
 		public double relevanceLowerBound = 0.1; // Entities with relevance below this value have their score set to 0
 		public double simLowerBound = 0.1; // Pairs of entities with similarity below this value have their score set to 0
@@ -50,7 +52,8 @@ public final class TextPlanner
 			f.setRoundingMode(RoundingMode.UP);
 			f.setMaximumFractionDigits(3);
 			f.setMinimumFractionDigits(3);
-			return "Params: numPatterns=" + numPatterns + " damping=" + f.format(dampingFactor) +
+			return "Params: numPatterns=" + numPatterns + " damping_rel=" + f.format(dampingRelevance) +
+					" damping_synt=" + f.format(dampingSyntactic) +
 					" delta=" + f.format(rankingStopThreshold) + " min_rel=" + f.format(relevanceLowerBound) +
 					" min_sim=" + f.format(simLowerBound) + "\n\n" + stats;
 		}
@@ -76,8 +79,7 @@ public final class TextPlanner
 		try
 		{
 			log.info("***Planning started***");
-
-			// 1- Collect entities in trees
+			// 0- Collect entities in trees
 			List<Entity> entities = inContents.stream()
 					.map(SemanticTree::vertexSet)
 					.flatMap(Set::stream)
@@ -85,11 +87,18 @@ public final class TextPlanner
 					.distinct() // equality tested through labels of objects
 					.collect(Collectors.toList());
 
-			// 2- Create ranking matrix
-			log.info("**Creating ranking matrix**");
+			// 1- Create content graph
+			log.info("**Creating content graph**");
 			Stopwatch timer = Stopwatch.createStarted();
+			SemanticGraph contentGraph = PatternExtraction.createContentGraph(inContents);
+			log.info("Graph creation took " + timer.stop());
+
+			// 2- Create entity ranking matrix
+			log.info("**Creating ranking matrix**");
+			timer.reset(); timer.start();
 			weighting.setCollection(inContents);
-			Matrix rankingMatrix = PowerIterationRanking.createRankingMatrix(entities, weighting, similarity, inOptions);
+			Matrix rankingMatrix =
+					PowerIterationRanking.createRankingMatrix(entities, weighting, contentGraph, similarity, inOptions);
 			log.info("Creation of ranking matrix took " + timer.stop());
 
 			// 3- Rank entities using biased semantic ranking and power iteration method
@@ -99,13 +108,13 @@ public final class TextPlanner
 			log.info("Power iteration ranking took " + timer.stop());
 			double[] ranking = finalDistribution.getColumnPackedCopy();
 
-			// 4- Create semantic graph and extract patterns
+			// 4- Extract patterns from content graph
 			log.info("**Extracting patterns**");
 			timer.reset(); timer.start();
 			Map<Entity, Double> rankedEntities = IntStream.range(0, ranking.length)
 					.boxed()
 					.collect(Collectors.toMap(entities::get, i -> ranking[i]));
-			Set<SemanticTree> patterns = PatternExtraction.extract(inContents, rankedEntities, inOptions.numPatterns);
+			Set<SemanticTree> patterns = PatternExtraction.extract(contentGraph, rankedEntities, inOptions.numPatterns);
 			log.info("Pattern extraction took " + timer.stop());
 
 			// 5- Sort the trees into a coherence-optimized list

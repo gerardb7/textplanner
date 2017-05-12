@@ -31,7 +31,7 @@ public final class SemanticTreeEditScore implements EditScore
 		// Score is inverse of similarity
 		assert e1 != null;
 		assert e2 != null;
-		return 1.0 - sim.getSimilarity(e1.entity, e2.entity);
+		return 1.0 - sim.getSimilarity(e1.getEntity(), e2.getEntity());
 	}
 
 	@Override

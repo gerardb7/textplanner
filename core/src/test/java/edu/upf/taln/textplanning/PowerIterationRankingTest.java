@@ -78,10 +78,10 @@ public class PowerIterationRankingTest
 
 		TextPlanner.Options options = new TextPlanner.Options();
 		options.rankingStopThreshold = 0.0001;
-		options.dampingFactor = 0.3;
+		options.dampingRelevance = 0.3;
 		options.generateStats = true;
 		DummyWeighting weight = new DummyWeighting(5);
-		Matrix rankingMatrix = PowerIterationRanking.createRankingMatrix(entities, weight, new DummySimilarity(), options);
+		Matrix rankingMatrix = null; // PowerIterationRanking.createRankingMatrix(entities, weight, new DummySimilarity(), options);
 		Matrix result = PowerIterationRanking.run(rankingMatrix, options.rankingStopThreshold);
 
 		double[] weights = entities.stream().mapToDouble(weight::weight).toArray();

@@ -57,8 +57,8 @@ public class SemanticTree extends SimpleDirectedGraph<Node, Edge>
 		for (Edge i : inLinks)
 		{
 			Node s = g.getEdgeSource(i);
-			String newId = n.id + "_" + ++counter;
-			Node r = new Node(newId, n.entity, n.weight);
+			String newId = n.getId() + "_" + ++counter;
+			Node r = new Node(newId, n.getEntity(), n.getWeight());
 			g.addVertex(r);
 			Edge sr = new Edge(i.role, i.isArg);
 			g.addEdge(s, r, sr);
@@ -123,7 +123,7 @@ public class SemanticTree extends SimpleDirectedGraph<Node, Edge>
 		List<Edge> preorder = new ArrayList<>();
 		List<Edge> sortedSiblings = outgoingEdgesOf(node).stream()
 				.sorted(Comparator.comparing(Edge::getRole)
-						.thenComparing(Comparator.comparing(e -> this.getEdgeTarget(e).id)))
+						.thenComparing(Comparator.comparing(e -> this.getEdgeTarget(e).getId())))
 				.collect(Collectors.toList());
 
 		for (Edge e: sortedSiblings)

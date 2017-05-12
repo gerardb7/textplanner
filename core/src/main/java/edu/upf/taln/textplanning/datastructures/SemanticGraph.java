@@ -14,15 +14,20 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 {
 	public static class Node
 	{
-		public final String id; // unique id, determines if two nodes are the same!
-		public final Entity entity;
-		public final double weight;
+		private final String id; // unique id, determines if two nodes are the same!
+		private final Entity entity;
+		private double weight;
 
-		public Node(String id, Entity inEntity, double weight)
+		public Node(String id, Entity e)
+		{
+			this(id, e, 0.0);
+		}
+
+		public Node(String id, Entity e, double w)
 		{
 			this.id = id;
-			this.entity = inEntity;
-			this.weight = weight;
+			this.entity = e;
+			this.weight = w;
 		}
 
 		public String getId()
@@ -38,6 +43,11 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 		public double getWeight()
 		{
 			return weight;
+		}
+
+		public void setWeight(double w)
+		{
+			weight = w;
 		}
 
 		@Override

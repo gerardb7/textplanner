@@ -37,7 +37,7 @@ public final class SemanticTreeProxy implements unnonouno.treedist.Tree
 		nodes = builder.addAll(preOrderNodes).build();
 
 		Map<Node, Integer> mutableIndex = new HashMap<>();
-		nodes.stream().forEach(n -> mutableIndex.put(n, nodes.indexOf(n)));
+		nodes.forEach(n -> mutableIndex.put(n, nodes.indexOf(n)));
 		ImmutableMap.Builder<Node, Integer> mapBuilder = ImmutableMap.builder();
 		index = mapBuilder.putAll(mutableIndex).build();
 	}
@@ -106,7 +106,7 @@ public final class SemanticTreeProxy implements unnonouno.treedist.Tree
 				.collect(Collectors.toList());
 
 		// @todo lexicographical sort very inefficient
-		siblings.sort(Comparator.comparing(n -> n.id)); // lexicographic compare
+		siblings.sort(Comparator.comparing(Node::getId)); // lexicographic compare
 		int nextSibling = siblings.indexOf(node) + 1;
 
 		if (nextSibling >= siblings.size())

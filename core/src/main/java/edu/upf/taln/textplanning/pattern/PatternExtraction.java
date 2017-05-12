@@ -34,24 +34,26 @@ public class PatternExtraction
 			;
 
 	/**
-	 * Extracts patterns from a semantic graph
+	 * Extracts patterns from a content graph
+	 * @param g a content graph
+	 * @param rankedEntities entities in trees and their scores
+	 * @param numPatterns number of patterns to extract
 	 * @return the set of extracted patterns
 	 */
-	public static Set<SemanticTree> extract(List<SemanticTree> inContents, Map<Entity, Double> rankedEntities,
-	                                        int inNumPatterns)
+	public static Set<SemanticTree> extract(SemanticGraph g, Map<Entity, Double> rankedEntities, int numPatterns)
 	{
-		// Create semantic graph
-		SemanticGraph g = createPatternExtractionGraph(inContents, rankedEntities);
+		// Assign weights to nodes in the graph
+		g.vertexSet().forEach(v -> v.setWeight(rankedEntities.get(v.getEntity())));
 
 		// Work out average node weight, which will be used as weight for edges
-		double avgWeight = g.vertexSet().stream().mapToDouble(v -> v.weight).average().orElse(1.0);
+		double avgWeight = g.vertexSet().stream().mapToDouble(Node::getWeight).average().orElse(1.0);
 
 		// Extract patterns
 		Set<SemanticTree> patterns = new HashSet<>();
-		boolean stop = patterns.size() == inNumPatterns;
+		boolean stop = patterns.size() == numPatterns;
 		while(!stop)
 		{
-			SubGraph heavySubgraph = extractHeavySubgraph(inNumPatterns, g, avgWeight);
+			SubGraph heavySubgraph = extractHeavySubgraph(numPatterns, g, avgWeight);
 			if (heavySubgraph != null)
 			{
 				// split graph into trees
@@ -61,7 +63,7 @@ public class PatternExtraction
 				heavySubgraph.edgeSet()
 						.forEach(g::removeEdge);
 
-				stop = patterns.size() == inNumPatterns;
+				stop = patterns.size() == numPatterns;
 			}
 			else
 				stop = true;
@@ -73,11 +75,9 @@ public class PatternExtraction
 	/**
 	 * Creates a pattern extraction graph
 	 * @param trees list of annotated trees
-	 * @param rankedEntities entities in trees and their scores
 	 * @return a semantic graph
 	 */
-	private static SemanticGraph createPatternExtractionGraph(List<SemanticTree> trees,
-	                                                          Map<Entity, Double> rankedEntities)
+	public static SemanticGraph createContentGraph(List<SemanticTree> trees)
 	{
 		// Create empty graph
 		SemanticGraph graph = new SemanticGraph(Edge.class);
@@ -91,17 +91,17 @@ public class PatternExtraction
 						Node dependent = t.getEdgeTarget(e);
 
 						// Add governing tree node to graph
-						Node govNode = createGraphNode(t, governor, rankedEntities);
+						Node govNode = createGraphNode(t, governor);
 						graph.addVertex(govNode); // does nothing if node existed
-						ids.computeIfAbsent(govNode.id, v -> new HashSet<>()).add(governor);
+						ids.computeIfAbsent(govNode.getId(), v -> new HashSet<>()).add(governor);
 
 						// Add dependent tree node to graph
-						Node depNode = createGraphNode(t, dependent, rankedEntities);
+						Node depNode = createGraphNode(t, dependent);
 						graph.addVertex(depNode); // does nothing if node existed
-						ids.computeIfAbsent(depNode.id, v -> new HashSet<>()).add(dependent);
+						ids.computeIfAbsent(depNode.getId(), v -> new HashSet<>()).add(dependent);
 
 						// Add edge
-						if (!govNode.id.equals(depNode.id))
+						if (!govNode.getId().equals(depNode.getId()))
 						{
 							try
 							{
@@ -110,7 +110,7 @@ public class PatternExtraction
 							}
 							catch (Exception ex)
 							{
-								throw new RuntimeException("Failed to add edge between " + govNode.id + " and " + depNode.id + ": " + ex);
+								throw new RuntimeException("Failed to add edge between " + govNode.getId() + " and " + depNode.getId() + ": " + ex);
 							}
 						}
 						// Ignore loops.
@@ -149,18 +149,16 @@ public class PatternExtraction
 	 * The graph node is assigned a weight.
 	 * @param t a tree
 	 * @param n a node in the tree
-	 * @param rankedEntities weights for nodess
 	 *
 	 * @return a graph node
 	 */
-	private static Node createGraphNode(SemanticTree t, Node n, Map<Entity, Double> rankedEntities)
+	private static Node createGraphNode(SemanticTree t, Node n)
 	{
 		String id = n.getEntity().getEntityLabel();
 		if (t.isPredicate(n) || id.equals("_")) // if a predicate use predicate and argument labels as id
 			id = predicateToString(t, n);
-		double govWeight = rankedEntities.get(n.getEntity());
 
-		return new Node(id, n.getEntity(), govWeight);
+		return new Node(id, n.getEntity());
 	}
 
 	private static String predicateToString(SemanticTree t, Node p)
@@ -188,24 +186,22 @@ public class PatternExtraction
 		// Edges are equal if they're the same instance, which is fine as all expansions are beam with a subset of
 		// the edges of the base graph, so instances will match.
 
-		// Get k top ranked non-predicative nodes
+		// Start off from k top ranked verbal predicates
 		List<Node> topNodes = g.vertexSet().stream()
-				.filter(n -> !g.isPredicate(n)) // is not a predicate
-				.filter(n -> g.inDegreeOf(n) > 0) // is argument of some predicate
-				.sorted((v1, v2) -> Double.compare(v2.weight, v1.weight))// swapped v1 and v2 to obtain descending order
+				.filter(n -> isInflectedVerb(g, n)) // is a predicate
+				.sorted((v1, v2) -> Double.compare(v2.getWeight(), v1.getWeight()))// swapped v1 and v2 to obtain descending order
 				.limit(k)
 				.collect(Collectors.toList());
 
 		if (topNodes.isEmpty())
 			return null;
 
-		// Create beam of open states: start subgraphs resulting from applying first expansion to top nodes
+		// Create beam of open states: patterns corresponding to top predicates with their (recursive) arguments)
 		PriorityQueue<Pair<SubGraph, Double>> beam =
 			new PriorityQueue<>((s1, s2) -> Double.compare(s2.getRight(), s1.getRight())); // swapped s1 and s2 to obtain descending order
 		topNodes.stream()
 				.map(n -> new SubGraph(g, n))
-				.map(PatternExtraction::getExpansions) // get expanded subgraphs
-				.flatMap(Set::stream)
+				.map(s -> { PatternExtraction.addArguments(s); return s; }) // get expanded subgraphs
 				.map(s -> Pair.of(s, calculateWeight(s, edgeWeight)))
 				.forEach(beam::add);
 
@@ -258,7 +254,7 @@ public class PatternExtraction
 	private static double calculateWeight(SubGraph s, double edgeWeight)
 	{
 		double ws = s.vertexSet().stream()
-				.mapToDouble(n -> n.weight)
+				.mapToDouble(Node::getWeight)
 				.sum();
 		double ds = s.edgeSet().size() * edgeWeight; // assign edges the average node weight
 		double dv = s.getBase().edgeSet().size() * edgeWeight;
@@ -271,42 +267,10 @@ public class PatternExtraction
 	 */
 	private static Set<SubGraph> getExpansions(SubGraph s)
 	{
-		Set<SubGraph> expansions = getRootExpansions(s);
-		expansions.addAll(getLeafExpansions(s));
+		Set<SubGraph> expansions = getLeafExpansions(s);
 		expansions.forEach(PatternExtraction::addArguments);
 
 		return expansions;
-//
-//		return expansions.stream()
-//				.filter(e -> isInflectedVerb((SemanticGraph)e.getBase(), e.getRoot())) // Discard non-verbal roots
-//				.collect(Collectors.toSet());
-	}
-
-	/**
-	 * Given a graph g and a rooted subgraph s, return a new subgraph for each verbal node in g that is an ancestor
-	 * of the root of s. Each returned subgraph contains s plus additional nodes and edges in g.
-	 * @return expanded set of subgraphs
-	 */
-	private static Set<SubGraph> getRootExpansions(SubGraph s)
-	{
-//		Set<SubGraph> trees = new HashSet<>();
-//		trees.add(s);
-//
-//		Node root = s.getRoot();
-//		if (s.getBase().inDegreeOf(root) == 0 || isInflectedVerb((SemanticGraph)s.getBase(), root))
-//		{
-//			return trees;
-//		}
-//		else
-//		{
-			return s.getBase().incomingEdgesOf(s.getRoot()).stream()
-					.filter(s::isValidExpansion) // prevents getting caught in cycles
-					.filter(e -> !s.containsVertex(s.getBase().getEdgeSource(e)))
-					.map(e -> new SubGraph(s, e))
-					//.map(PatternExtraction::getRootExpansions)
-					//.flatMap(Set::stream)
-					.collect(Collectors.toSet());
-//		}
 	}
 
 	/**
@@ -337,8 +301,7 @@ public class PatternExtraction
 							.filter(Edge::isArg))
 					.filter(s::isValidExpansion) // prevents getting caught in cycles
 					.collect(Collectors.toList());
-			edgesToArgs.stream()
-					.forEach(s::expand);
+			edgesToArgs.forEach(s::expand);
 		}
 		while (!edgesToArgs.isEmpty());
 	}
