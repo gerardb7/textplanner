@@ -3,11 +3,14 @@ package edu.upf.taln.textplanning.input;
 import com.google.common.base.Splitter;
 import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
 import edu.upf.taln.textplanning.datastructures.Annotation;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.StringReader;
@@ -20,6 +23,8 @@ import java.util.stream.IntStream;
  */
 public class ConLLAcces implements DocumentAccess
 {
+	private final static Logger log = LoggerFactory.getLogger(ConLLAcces.class);
+
 	/**
 	 * Reads annotated trees from ConLL file
 	 *
@@ -41,8 +46,10 @@ public class ConLLAcces implements DocumentAccess
 			List<SemanticTree> trees = new ArrayList<>();
 			List<Annotation> anns = new ArrayList<>();
 			Map<Integer, List<Pair<String, Integer>>> governors = new HashMap<>();
-			int rootId = -1;
+			//int rootId = -1;
+			Set<Integer> roots = new HashSet<>();
 			int sentence = 0;
+			boolean failedSentence = false;
 
 			String line;
 			while ((line = bufferReader.readLine()) != null)
@@ -55,74 +62,102 @@ public class ConLLAcces implements DocumentAccess
 				String[] columns = line.split("\t");
 				if (columns.length != 14 && columns.length != 15)
 				{
-					throw new Exception("Cannot parse line in conll file: " + line);
+					throw new Exception("Cannot parse conll file, wrong number of columns");
 				}
 
-				int id = Integer.parseInt(columns[0]);
-				if ((id == 0 || id == 1) && !anns.isEmpty())
+				try
 				{
-					// Create tree from previously collected nodes
-					double position = ((double)(numStructures - sentence)) / ((double)numStructures);
-					trees.add(createTree(rootId, anns, governors, position));
-					++sentence;
-					anns.clear();
-					governors.clear();
-					rootId = -1;
+					int id = Integer.parseInt(columns[0]);
+					if ((id == 0 || id == 1) && !anns.isEmpty())
+					{
+						if (!failedSentence)
+						{
+							// Create tree from previously collected nodes
+							double position = ((double) (numStructures - sentence)) / ((double) numStructures);
+							roots.stream()
+									.map(r -> createTree(r, anns, governors, position))
+									.forEach(trees::add);
+						}
+
+						// Reset variables
+						failedSentence = false;
+						++sentence;
+						anns.clear();
+						governors.clear();
+						roots.clear();
+						//rootId = -1;
+					}
+
+					if (id >= 1 && !failedSentence)
+					{
+						String lemma = columns[1];
+						String form = columns[2];
+						String pos = columns[4];
+						String feats = columns[6];
+						Map<String, String> features = Splitter.on("|").withKeyValueSeparator("=").split(feats);
+						String relationName = features.getOrDefault("fn", null);
+						String ref = features.getOrDefault("bnId", null);
+						if (pos.equals("_"))
+						{
+							if (features.containsKey("dpos"))
+							{
+								pos = features.get("dpos");
+							}
+							else if (features.containsKey("spos"))
+							{
+								pos = features.get("spos");
+							}
+						}
+
+						double conf = features.containsKey("conf") ?
+								Double.parseDouble(features.get("conf")) : 0.0;
+						List<Integer> govns = Arrays.stream(columns[8].split(",")).map(Integer::parseInt).collect(Collectors.toList());
+						List<String> roles = Arrays.stream(columns[10].split(",")).collect(Collectors.toList());
+
+						// Perform some checks
+						if (govns.isEmpty() || roles.isEmpty())
+						{
+							log.error("Token in sentence " + sentence + " has no governor or role specified, skipping sentence");
+							failedSentence = true;
+						}
+						if (govns.size() != roles.size())
+						{
+							log.error("Token in sentence " + sentence + " has different number of roles and governors, skipping sentence");
+							failedSentence = true;
+						}
+						if (govns.size() > 1)
+							log.warn("Token in sentence " + sentence + " has multiple governors, keeping first and ignoring the rest");
+
+						int gov = govns.get(0);
+						String role = roles.get(0);
+						Annotation ann = new Annotation("s" + sentence + "-w" + id, form, lemma, pos, feats, ref, conf,
+								relationName, role, line);
+						anns.add(ann);
+
+						if (gov > 0)
+							governors.computeIfAbsent(gov, v -> new ArrayList<>()).add(Pair.of(role, id));
+						else if (gov == 0)
+						{
+							if (roots.size() == 1)
+							{
+								log.warn("Sentence " + sentence + " has multiple roots");
+							}
+							roots.add(id);
+						}
+					}
 				}
-
-				if (id >= 1)
+				catch (Exception e)
 				{
-					String lemma = columns[1];
-					String form = columns[2];
-					String pos = columns[4];
-					String feats = columns[6];
-					Map<String, String> features = Splitter.on("|").withKeyValueSeparator("=").split(feats);
-					String relationName = features.containsKey("fn") ? features.get("fn") : null;
-					String ref = features.containsKey("bnId") ?
-							features.get("bnId") : null;
-					if (pos.equals("_"))
-					{
-						if (features.containsKey("dpos"))
-						{
-							pos = features.get("dpos");
-						}
-						else if (features.containsKey("spos"))
-						{
-							pos = features.get("spos");
-						}
-					}
-
-					double conf = features.containsKey("conf") ?
-							Double.parseDouble(features.get("conf")) : 0.0;
-					List<Integer> govns = Arrays.stream(columns[8].split(",")).map(Integer::parseInt).collect(Collectors.toList());
-					List<String> roles = Arrays.stream(columns[10].split(",")).collect(Collectors.toList());
-
-					// Perform some checks
-					if (govns.isEmpty() || roles.isEmpty())
-						throw new Exception("Conll file has no governor or role specified in line " + line);
-					if (govns.size() > 1 || roles.size() > 1)
-						throw new Exception("Conll file contains graphs which cannot be read as trees: " + line);
-					if (govns.size() != roles.size())
-						throw new Exception("Conll file contains different number of roles and governors in line: " + line);
-
-					Annotation ann = new Annotation("s" + sentence + "-w" + id, form, lemma, pos, feats, ref, conf,
-							relationName, roles.get(0), line);
-					anns.add(ann);
-					IntStream.range(0, govns.size())
-							.filter(i -> govns.get(i) > 0)
-							.forEach(i -> governors.computeIfAbsent(govns.get(i), v -> new ArrayList<>()).add(Pair.of(roles.get(i), id)));
-					if (govns.size() == 1 && govns.get(0) == 0)
-					{
-						if (rootId != -1)
-							throw new Exception("Conll file contains graphs which cannot be read as trees");
-						rootId = id;
-					}
+					log.error("Parsing of sentence " + sentence + " failed, skipping sentence: " + e);
+					failedSentence = true;
 				}
 			}
 
 			// Create last tree
 			double position = ((double)(numStructures - sentence)) / ((double)numStructures);
-			trees.add(createTree(rootId, anns, governors, position));
+			roots.stream()
+					.map(r -> createTree(r, anns, governors, position))
+					.forEach(trees::add);
 
 			return trees;
 		}
@@ -218,37 +253,74 @@ public class ConLLAcces implements DocumentAccess
 							.map(t::getEdgeTarget)
 							.forEach(nodes::add);
 
-					// Collect governor to dependent mappings
-					Map<Integer, List<Pair<String, Integer>>> governors = IntStream.range(0, nodes.size())
-							.mapToObj(i -> {
-								Node n = nodes.get(i);
-								Annotation a = ((AnnotatedEntity)n.entity).getAnnotation();
-								String role = a.getRole();
-								int governorIndex = -1;
-								List<Pair<String, Integer>> govs = new ArrayList<>();
-								if (t.inDegreeOf(n) > 0) // has parent
-								{
-									Node p = t.getEdgeSource(t.incomingEdgesOf(n).iterator().next());
-									governorIndex = nodes.indexOf(p);
-									govs.add(Pair.of(role, governorIndex));
-								}
-
-								return Pair.of(i, govs);
-							})
-							.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
-
 					List<Annotation> anns = nodes.stream()
 							.map(Node::getEntity)
 							.filter(AnnotatedEntity.class::isInstance)
 							.map(AnnotatedEntity.class::cast)
 							.map(AnnotatedEntity::getAnnotation)
 							.collect(Collectors.toList());
+
+					// Collect governor to dependent mappings
+					Map<Integer, List<Pair<String, Integer>>> governors = IntStream.range(0, nodes.size())
+							.mapToObj(i -> {
+								Node n = nodes.get(i);
+								List<Pair<String, Integer>> govs = new ArrayList<>();
+								if (t.inDegreeOf(n) > 0) // has parent
+								{
+									Edge e = t.incomingEdgesOf(n).iterator().next();
+									Node gov = t.getEdgeSource(e);
+									int govIndex = nodes.indexOf(gov);
+									govs.add(Pair.of(e.role, govIndex));
+								}
+
+								return Pair.of(i, govs);
+							})
+							.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
+
+
 					return nodesToConll(anns, governors);
 				})
 				.map(s -> "0\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\tslex=Sentence\n" + s + "\n")
-				.reduce(String::concat).get();
+				.reduce(String::concat).orElse("");
 	}
 
+	/**
+	 * Converts semantic graphs to ConLL format.
+	 * @return ConLL-formatted representation of the grpahs
+	 */
+	public String writeGraphs(Collection<SemanticGraph> graphs)
+	{
+		// Get a topological ordering of nodes along with their governors in the graph
+		return graphs.stream()
+				.map(g -> {
+					List<Node> nodes = new ArrayList<>(g.vertexSet());
+					List<Annotation> anns = nodes.stream()
+							.map(Node::getEntity)
+							.filter(AnnotatedEntity.class::isInstance)
+							.map(AnnotatedEntity.class::cast)
+							.map(AnnotatedEntity::getAnnotation)
+							.collect(Collectors.toList());
+
+					// Collect governor to dependent mappings
+					Map<Integer, List<Pair<String, Integer>>> governors = IntStream.range(0, nodes.size())
+							.mapToObj(i -> {
+								Node n = nodes.get(i);
+								List<Pair<String, Integer>> govs = new ArrayList<>();
+								g.incomingEdgesOf(n).forEach(e -> {
+									Node gov = g.getEdgeSource(e);
+									int govIndex = nodes.indexOf(gov);
+									govs.add(Pair.of(e.role, govIndex));
+								});
+
+								return Pair.of(i, govs);
+							})
+							.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
+
+					return this.nodesToConll(anns, governors);
+				})
+				.map(s -> "0\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\tslex=Sentence\n" + s + "\n")
+				.reduce(String::concat).orElse("");
+	}
 
 	private int getNumberOfStructures(String inDocumentContents) throws Exception
 	{
@@ -280,7 +352,7 @@ public class ConLLAcces implements DocumentAccess
 	private String nodesToConll(List<Annotation> inNodes, Map<Integer, List<Pair<String, Integer>>> inGovernors)
 	{
 		// Iterate nodes again, this time producing conll
-		String conll = "";
+		StringBuilder conll = new StringBuilder();
 		for (int id = 0; id < inNodes.size(); ++id)
 		{
 			Annotation node = inNodes.get(id);
@@ -307,7 +379,7 @@ public class ConLLAcces implements DocumentAccess
 			}
 			feats = features.entrySet().stream()
 					.map(e -> e.getKey() + "=" + e.getValue())
-					.reduce((e1, e2) -> e1 + "|" + e2).get();
+					.reduce((e1, e2) -> e1 + "|" + e2).orElse("");
 			String entityConll = id + 1 + "\t" +
 					node.getLemma() + "\t" +
 					node.getForm() + "\t" +
@@ -324,10 +396,10 @@ public class ConLLAcces implements DocumentAccess
 					"_\t" +
 					"true\n";
 
-			conll += entityConll;
+			conll.append(entityConll);
 		}
 
-		return conll;
+		return conll.toString();
 	}
 
 	private SemanticTree createTree(int inRootId, List<Annotation> annotations,

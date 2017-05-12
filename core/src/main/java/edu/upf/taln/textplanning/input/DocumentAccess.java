@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.input;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import org.jgrapht.graph.DefaultEdge;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -25,5 +26,5 @@ public interface DocumentAccess
 		}
 	}
 
-	List<SemanticTree> readTrees(String inDocumentContents);
+	List<SemanticTree> readTrees(String inDocumentContents) throws IOException;
 }

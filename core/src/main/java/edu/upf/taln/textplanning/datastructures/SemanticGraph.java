@@ -1,12 +1,12 @@
 package edu.upf.taln.textplanning.datastructures;
 
 import org.jgrapht.DirectedGraph;
+import org.jgrapht.alg.CycleDetector;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DirectedSubgraph;
 import org.jgrapht.graph.SimpleDirectedGraph;
 
 import java.util.HashSet;
-import java.util.List;
 
 /**
  * A semantic graph is a rooted directed simple graph with weighted nodes and labels on both edges and nodes.
@@ -88,30 +88,58 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 		public String toString() { return role; }
 	}
 
+	/**
+	 * Implements directed acyclic subgraphs
+	 */
 	public static class SubGraph extends DirectedSubgraph<Node, Edge>
 	{
-		public final Node initialNode;
+		private Node root;
 
-		public SubGraph(DirectedGraph<Node, Edge> base, Node node)
+		public SubGraph(DirectedGraph<Node, Edge> base, Node root)
 		{
 			super(base, new HashSet<>(), new HashSet<>());
-			addVertex(node);
-			initialNode = node;
+			addVertex(root);
+			this.root = root;
 		}
 
-		public SubGraph(SubGraph other, List<Edge> inExpansion)
+		public SubGraph(SubGraph other, Edge e)
 		{
 			super(other.getBase(), other.vertexSet(), other.edgeSet());
-			initialNode = other.initialNode;
+			this.root = other.root;
+			expand(e); // may update root
+		}
 
-			inExpansion.stream()
-					.map(e -> getBase().getEdgeSource(e))
-					.forEach(this::addVertex);
-			inExpansion.stream()
-					.map(e -> getBase().getEdgeTarget(e))
-					.forEach(this::addVertex);
-			inExpansion.stream()
-					.forEach(e -> addEdge(getBase().getEdgeSource(e), getBase().getEdgeTarget(e), e));
+		public Node getRoot() { return root; }
+
+		/**
+		 * Adds edge in base to subgraph, while checking that the subgraph remains a DAG.
+		 */
+		public void expand(Edge e)
+		{
+			Node s = base.getEdgeSource(e);
+			Node t = base.getEdgeTarget(e);
+
+			// Only valid extensions are those that keep this as a connected rooted subgraph of the base
+			if (!base.containsEdge(e) || !base.containsVertex(s) || !base.containsVertex(t) ||
+					containsEdge(e) || (!containsVertex(s) && !containsVertex(t)))
+				throw new RuntimeException("Invalid extension " + e);
+
+			if (!containsVertex(s))
+			{
+				addVertex(s);
+
+				// update root
+				if (root.equals(t))
+					root = s;
+			}
+			if (!containsVertex(t))
+				addVertex(t);
+			addEdge(s, t, e);
+
+			// Check for cycles
+			CycleDetector<Node, Edge> detector = new CycleDetector<>(this);
+			if (detector.detectCycles())
+				throw new RuntimeException("Invalid extension " + e + " produces cycles");
 		}
 	}
 

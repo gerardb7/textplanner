@@ -7,16 +7,21 @@ import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.SubGraph;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.input.ConLLAcces;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.jgrapht.DirectedGraph;
 import org.jgrapht.ext.DOTExporter;
 import org.jgrapht.ext.IntegerComponentNameProvider;
 import org.jgrapht.ext.StringComponentNameProvider;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import static java.lang.Math.min;
 
 /**
  * Pattern extraction strategy based on finding dense subgraphs (multitrees) in a semantic graph.
@@ -25,7 +30,8 @@ import java.util.stream.Collectors;
   */
 public class PatternExtraction
 {
-	private final static double lambda = 0.8;
+	private final static double lambda = 1.0
+			;
 
 	/**
 	 * Extracts patterns from a semantic graph
@@ -39,50 +45,26 @@ public class PatternExtraction
 
 		// Work out average node weight, which will be used as weight for edges
 		double avgWeight = g.vertexSet().stream().mapToDouble(v -> v.weight).average().orElse(1.0);
-		// Get list of non-predicative nodes sorted by ranking
-		List<Node> sortedNodes = g.vertexSet().stream()
-				.filter(n -> !g.isPredicate(n))
-				.sorted((v1, v2) -> Double.compare(v2.weight, v1.weight))// swapped v1 and v2 to obtain descending order
-				.collect(Collectors.toList());
 
-//		Map<String, List<Node>> ids = sortedNodes.stream()
-//				.collect(Collectors.groupingBy(n -> n.entity));
-
+		// Extract patterns
 		Set<SemanticTree> patterns = new HashSet<>();
-		while(patterns.size() < inNumPatterns && !sortedNodes.isEmpty())
+		boolean stop = patterns.size() == inNumPatterns;
+		while(!stop)
 		{
-			// Extract subgraph from top-ranked entity
-			SubGraph subgraph = null;
-			while (subgraph == null && !sortedNodes.isEmpty())
-			{
-				Node topEntity = sortedNodes.stream()
-						.max(Comparator.comparing(Node::getWeight))
-						.orElse(sortedNodes.get(0));
-				if (g.inDegreeOf(topEntity) + g.outDegreeOf(topEntity) > 0)
-				{
-					subgraph = extractHeavySubgraph(topEntity, g, avgWeight);
-				}
-				else
-				{
-					// If top entity isn't connected, discard it
-					sortedNodes.remove(topEntity);
-				}
-			}
-
-			if (subgraph != null)
+			SubGraph heavySubgraph = extractHeavySubgraph(inNumPatterns, g, avgWeight);
+			if (heavySubgraph != null)
 			{
 				// split graph into trees
-				patterns.addAll(SemanticTree.createTrees(subgraph, getVerbalRoots(subgraph)));
+				patterns.add(SemanticTree.createTree(heavySubgraph));
 
 				// Remove edges in subgraph from base graph
-				subgraph.edgeSet()
+				heavySubgraph.edgeSet()
 						.forEach(g::removeEdge);
 
-				// Remove unconnected nodes
-				sortedNodes.removeAll(sortedNodes.stream()
-						.filter(n -> g.inDegreeOf(n) + g.outDegreeOf(n) == 0)
-						.collect(Collectors.toList()));
+				stop = patterns.size() == inNumPatterns;
 			}
+			else
+				stop = true;
 		}
 
 		return patterns;
@@ -146,6 +128,11 @@ public class PatternExtraction
 					new StringComponentNameProvider<>());
 			File temp = File.createTempFile("semgraph", ".dot");
 			exporter.exportGraph(graph, new FileWriter(temp));
+
+			File conllTemp = File.createTempFile("semgraph", ".conll");
+			ConLLAcces conll = new ConLLAcces();
+			String graphConll = conll.writeGraphs(Collections.singleton(graph));
+			FileUtils.writeStringToFile(conllTemp, graphConll, Charset.forName("UTF-16"));
 		}
 		catch (Exception e)
 		{
@@ -188,132 +175,173 @@ public class PatternExtraction
 	}
 
 	/**
-	 * Starting from an initial node, extract a heavy subgraph by greedily adding edges to directed subgraph
-	 * @return a heavy subgraph which is compact and has high weights
+	 * Local beam search for a heavy subgraph.
+	 * @param k size of the beam
+	 * @param g the graph
+	 * @param edgeWeight cost of weights in subgraph, is substracted from node weights
+	 * @return a heavy subgraph or null if no graph was found
 	 */
-	private static SubGraph extractHeavySubgraph(Node inInitialNode, SemanticGraph inBaseGraph, double inEdgeWeight)
+	private static SubGraph extractHeavySubgraph(int k, SemanticGraph g, double edgeWeight)
 	{
-		PriorityQueue<Pair<SubGraph, Double>> rankedExpansions =
+		// All jgrapht graphs are tested for equality by comparing their vertex and edge sets.
+		// Nodes are equal if they share the same id.
+		// Edges are equal if they're the same instance, which is fine as all expansions are beam with a subset of
+		// the edges of the base graph, so instances will match.
+
+		// Get k top ranked non-predicative nodes
+		List<Node> topNodes = g.vertexSet().stream()
+				.filter(n -> !g.isPredicate(n)) // is not a predicate
+				.filter(n -> g.inDegreeOf(n) > 0) // is argument of some predicate
+				.sorted((v1, v2) -> Double.compare(v2.weight, v1.weight))// swapped v1 and v2 to obtain descending order
+				.limit(k)
+				.collect(Collectors.toList());
+
+		if (topNodes.isEmpty())
+			return null;
+
+		// Create beam of open states: start subgraphs resulting from applying first expansion to top nodes
+		PriorityQueue<Pair<SubGraph, Double>> beam =
 			new PriorityQueue<>((s1, s2) -> Double.compare(s2.getRight(), s1.getRight())); // swapped s1 and s2 to obtain descending order
-		SubGraph subgraph = new SubGraph(inBaseGraph, inInitialNode);
+		topNodes.stream()
+				.map(n -> new SubGraph(g, n))
+				.map(PatternExtraction::getExpansions) // get expanded subgraphs
+				.flatMap(Set::stream)
+				.map(s -> Pair.of(s, calculateWeight(s, edgeWeight)))
+				.forEach(beam::add);
 
-		// calculate expansions, weight them and add to sorted queue
-		Set<SubGraph> expansions = getExpansions(subgraph);
-		expansions.forEach(s -> rankedExpansions.add(Pair.of(s, calculateWeight(s, inEdgeWeight))));
+		// Create set of visited subgraphs that have already been expanded (visited states)
+		Set<SubGraph> visited = new HashSet<>();
+		beam.forEach(p -> visited.add(p.getLeft()));
 
-		//double q = inBaseGraph.edgeSet().size() * inEdgeWeight; // Q of an empty subgraph equals to the constant term D(V)
-		boolean stop;
+		Set<Pair<SubGraph, Double>> next;
 		do
 		{
-			if (expansions.isEmpty())
-				stop = true;
-			else
-			{
-				Pair<SubGraph, Double> firstItem = rankedExpansions.poll();
-				SubGraph bestExpansion = firstItem.getKey();
-				//double newValue = firstItem.getValue();
-				//double delta = newValue - q;
-				//stop = delta <= 0.0;
-				stop = !getVerbalRoots(bestExpansion).isEmpty();
-				subgraph = bestExpansion;
-				if (!stop)
-				{
-					//q = newValue;
-					// recalculate and rank expansions for new subgraph
-					expansions = getExpansions(subgraph);
-					rankedExpansions.clear();
-					expansions.forEach(s -> rankedExpansions.add(Pair.of(s, calculateWeight(s, inEdgeWeight))));
-				}
-			}
+			// Expand subgraphs in beam to find potential next states to visit
+			next = beam.stream()
+					.map(Pair::getLeft)
+					.map(PatternExtraction::getExpansions) // get expanded beam
+					.flatMap(Set::stream)
+					.filter(s -> !visited.contains(s)) // discard visited states
+					.map(s -> Pair.of(s, calculateWeight(s, edgeWeight))) // weight subgraph
+					.collect(Collectors.toSet());
+
+			// Update list of visited states
+			next.forEach(p -> visited.add(p.getLeft()));
+
+			// Update beam: 1- add new states to it
+			beam.addAll(next);
+			// Update beam: 2- poll top k states
+			PriorityQueue<Pair<SubGraph, Double>> bestSubgraphs = new PriorityQueue<>((s1, s2) -> Double.compare(s2.getRight(), s1.getRight()));
+			IntStream.range(0, min(k, beam.size()))
+					.mapToObj(i -> beam.poll())
+					.forEach(bestSubgraphs::add);
+
+			// Update beam: 3- replace old beam with top k states
+			beam.clear();
+			beam.addAll(bestSubgraphs);
+
 		}
-		while (!stop);
+		while (!next.isEmpty());
 
-		return subgraph;
+		if (beam.isEmpty())
+			return null;
+
+		return beam.poll().getLeft();
 	}
 
 	/**
-	 * Returns the set of expansions of a subgraph relative to the graph it is being extracted from.
-	 * Candidate nodes which correspond to predicates are automatically expanded to incorporate all their arguments.
-	 * @param subgraph subgraph to be expanded
-	 * @return a set of expanded subgraphs
-	 */
-	private static Set<SubGraph> getExpansions(SubGraph subgraph)
-	{
-		return subgraph.vertexSet().stream()
-				.map(v -> getExpansions(subgraph, v)) // get expansions for each node
-				.flatMap(List::stream)
-				.map(e -> new SubGraph(subgraph, e)) // create new subgraph for each expansion
-				.collect(Collectors.toSet());
-	}
-
-	private static List<List<Edge>> getExpansions(SubGraph subGraph, Node node)
-	{
-		DirectedGraph<Node, Edge> base = subGraph.getBase();
-		List<List<Edge>> expansionList = new ArrayList<>();
-
-		// Each edge leads to a candidate expansion
-		base.edgesOf(node).stream()
-				.filter(e -> !subGraph.containsEdge(e))
-				.forEach(e -> {
-					List<Edge> expansion = new ArrayList<>();
-					expansion.add(e);
-
-					// New nodes are automatically expanded to incorporate all their arguments
-					Node otherNode = base.getEdgeSource(e) == node ? base.getEdgeTarget(e) : base.getEdgeSource(e);
-					expandNode(subGraph, otherNode).stream()
-							.filter(arg -> e != arg) // be careful not add e twice
-							.forEach(expansion::add);
-					expansionList.add(expansion);
-				});
-
-		return expansionList;
-	}
-
-	private static List<Edge> expandNode(SubGraph pattern, Node node)
-	{
-		DirectedGraph<Node, Edge> g = pattern.getBase();
-		return g.outgoingEdgesOf(node).stream()
-				.filter(e -> e.isArg)
-				.filter(e -> !pattern.containsEdge(e))
-				.map(e -> {
-					List<Edge> expansion = new ArrayList<>();
-					expansion.add(e);
-					expansion.addAll(expandNode(pattern, g.getEdgeTarget(e)));
-					return expansion;
-				})
-				.flatMap(List::stream)
-				.collect(Collectors.toList());
-	}
-
-	/**
-	 * Calculates the cost of a pattern as a combination of node weights and edge distances
-	 * @param pattern pattern to weight
+	 * Calculates the cost of a subgraph as a combination of node weights and edge distances
+	 * @param s subgraph to weight
 	 * @param edgeWeight fixed weight assigned to each edge
-	 * @return cost of the pattern
+	 * @return cost of the subgraph
 	 */
-	private static double calculateWeight(SubGraph pattern, double edgeWeight)
+	private static double calculateWeight(SubGraph s, double edgeWeight)
 	{
-		double ws = pattern.vertexSet().stream()
+		double ws = s.vertexSet().stream()
 				.mapToDouble(n -> n.weight)
 				.sum();
-		double ds = pattern.edgeSet().size() * edgeWeight; // assign edges the average node weight
-		double dv = pattern.getBase().edgeSet().size() * edgeWeight;
+		double ds = s.edgeSet().size() * edgeWeight; // assign edges the average node weight
+		double dv = s.getBase().edgeSet().size() * edgeWeight;
 		return lambda*ws - ds + dv;
 	}
 
+	/**
+	 * Returns the set of expansions of a subgraph relative to the graph it belongs to.
+	 * @return a set of expanded subgraphs
+	 */
+	private static Set<SubGraph> getExpansions(SubGraph s)
+	{
+		Set<SubGraph> expansions = getRootExpansions(s);
+		expansions.addAll(getLeafExpansions(s));
+		expansions.forEach(PatternExtraction::addArguments);
 
-	private static Set<Node> getVerbalRoots(SubGraph s)
+		return expansions.stream()
+				.filter(e -> isInflectedVerb((SemanticGraph)e.getBase(), e.getRoot())) // Discard non-verbal roots
+				.collect(Collectors.toSet());
+	}
+
+	/**
+	 * Given a graph g and a rooted subgraph s, return a new subgraph for each verbal node in g that is an ancestor
+	 * of the root of s. Each returned subgraph contains s plus additional nodes and edges in g.
+	 * @return expanded set of subgraphs
+	 */
+	private static Set<SubGraph> getRootExpansions(SubGraph s)
+	{
+		Set<SubGraph> trees = new HashSet<>();
+		trees.add(s);
+
+		Node root = s.getRoot();
+		if (s.getBase().inDegreeOf(root) == 0 || isInflectedVerb((SemanticGraph)s.getBase(), root))
+		{
+			return trees;
+		}
+		else
+		{
+			return s.getBase().incomingEdgesOf(root).stream()
+					.map(e -> new SubGraph(s, e))
+					.map(PatternExtraction::getRootExpansions)
+					.flatMap(Set::stream)
+					.collect(Collectors.toSet());
+		}
+	}
+
+	/**
+	 * Given a semantic graph g and a rooted subgraph s, return all subgraphs resulting from adding to s an edge in g
+	 * indicating a non-arg relation where the governor is a node in s.
+	 * @return expanded set of subgraphs
+	 */
+	private static Set<SubGraph> getLeafExpansions(SubGraph s)
+	{
+		return s.vertexSet().stream()
+				.flatMap(v -> s.getBase().outgoingEdgesOf(v).stream()
+						.filter(e -> !e.isArg)
+						.filter(e -> !s.containsEdge(e)))
+				.map(e -> new SubGraph(s, e))
+				.collect(Collectors.toSet());
+	}
+
+	/**
+	 * Given a semantic graph g and a rooted subgraph s, recursively adds all arguments of any node of s in g.
+	 */
+	private static void addArguments(SubGraph s)
+	{
+		List<Edge> edgesToArgs;
+		do
+		{
+			edgesToArgs = s.vertexSet().stream()
+					.flatMap(v -> s.getBase().outgoingEdgesOf(v).stream()
+							.filter(Edge::isArg)
+							.filter(e -> !s.containsEdge(e)))
+					.collect(Collectors.toList());
+			edgesToArgs.forEach(s::expand);
+		}
+		while (!edgesToArgs.isEmpty());
+	}
+
+	private static boolean isInflectedVerb(SemanticGraph g, Node n)
 	{
 		String[] inflectedVerbs = {"VBD", "VBP", "VBZ"};
-
-		return s.vertexSet().stream()
-				.filter(v -> ((SemanticGraph)s.getBase()).isPredicate(v)) // is a predicate
-				.filter(v -> s.inDegreeOf(v) == 0) // is a root
-				.filter(v -> // is a definite verb
-				{
-					String p = ((AnnotatedEntity)v.getEntity()).getAnnotation().getPOS();
-					return Arrays.stream(inflectedVerbs).anyMatch(pos -> pos.equals(p));
-				})
-				.collect(Collectors.toSet());
+		String pos = ((AnnotatedEntity) n.getEntity()).getAnnotation().getPOS();
+		return g.isPredicate(n) && Arrays.stream(inflectedVerbs).anyMatch(pos::equals);
 	}
 }

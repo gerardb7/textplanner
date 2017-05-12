@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-
 /**
  * Patterns extracted from a semantic graph are encoded as semantic trees.
  */
@@ -21,40 +20,32 @@ public class SemanticTree extends SimpleDirectedGraph<Node, Edge>
 	private static int counter = 0;
 
 	/**
-	 * Factory method: transforms a directed graph pattern into a set of trees with the given roots
-	 * @return a set of semantic trees, one per each root in the pattern
+	 * Factory method: transforms a single-root directed acyclic graph into a a tree
+	 * @return a semantic trees
 	 */
-	public static Set<SemanticTree> createTrees(SemanticGraph.SubGraph s, Set<Node> roots)
+	public static SemanticTree createTree(SemanticGraph.SubGraph s)
 	{
-		roots.forEach(r -> { assert s.containsVertex(r); });
-
 		// Create copy of subgraph to be transformed
-		SemanticGraph m = new SemanticGraph(Edge.class);
-		s.vertexSet().forEach(m::addVertex);
-		s.edgeSet().forEach(e -> m.addEdge(s.getEdgeSource(e), s.getEdgeTarget(e), e));
-
-		// Collect nodes with multiple parents
-		Set<Node> nodesToReplicate = m.vertexSet().stream()
-				.filter(v -> m.inDegreeOf(v) > 1)
-				.collect(Collectors.toSet());
+		SemanticGraph s2 = new SemanticGraph(Edge.class);
+		s.vertexSet().forEach(s2::addVertex);
+		s.edgeSet().forEach(e -> s2.addEdge(s.getEdgeSource(e), s.getEdgeTarget(e), e));
 
 		// Iteratively replicate nodes until all nodes have a one or no parents -> directed graph becomes a multitree
-		while (!nodesToReplicate.isEmpty())
+		Set<Node> nodesToReplicate;
+		do
 		{
-			nodesToReplicate.forEach(n -> replicateNode(m, n));
-			nodesToReplicate = m.vertexSet().stream()
-					.filter(v -> m.inDegreeOf(v) > 1)
+			nodesToReplicate = s2.vertexSet().stream()
+					.filter(v -> s2.inDegreeOf(v) > 1)
 					.collect(Collectors.toSet());
+			nodesToReplicate.forEach(n -> replicateNode(s2, n));
 		}
+		while (!nodesToReplicate.isEmpty());
 
-		// Create one tree per root
-		Set<SemanticTree> trees = roots.stream()
-				.map(SemanticTree::new)
-				.collect(Collectors.toSet());
+		// Create and populate tree
+		SemanticTree t = new SemanticTree(s.getRoot());
+		s2.outgoingEdgesOf(t.root).forEach(e -> t.populate(s2, e));
 
-		// Populate trees
-		trees.forEach(t -> m.outgoingEdgesOf(t.root).forEach(e -> t.populate(m, e)));
-		return trees;
+		return t;
 	}
 
 	private static void replicateNode(SemanticGraph g, Node n)
