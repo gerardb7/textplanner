@@ -83,14 +83,14 @@ public class StatsReporter
 				.collect(Collectors.toList());
 
 		// Collect similarity values
-		List<Double> senseValues = nodes.stream()
+	/*	List<Double> senseValues = nodes.stream()
 				.mapToDouble(e1 -> nodes.stream()
 						.filter(e2 -> e1 != e2)
 						.mapToDouble(e2 -> sense != null ? sense.computeSimilarity(e1.getEntity(), e2.getEntity()) : 0.0)
 						.map(d -> d < o.simLowerBound ? 0.0 : d)
 						.average().orElse(0.0))
 				.boxed()
-				.collect(Collectors.toList());
+				.collect(Collectors.toList());*/
 		List<Double> mergedValues = nodesWithSense.stream()
 				.mapToDouble(e1 -> nodesWithSense.stream()
 						.filter(e2 -> e1 != e2)
@@ -99,17 +99,17 @@ public class StatsReporter
 						.average().orElse(0.0))
 				.boxed()
 				.collect(Collectors.toList());
-		List<Double> wordValues = nodes.stream()
+	/*	List<Double> wordValues = nodes.stream()
 				.mapToDouble(e1 -> nodes.stream()
 						.filter(e2 -> e1 != e2)
 						.mapToDouble(e2 -> word != null ? word.computeSimilarity(e1.getEntity(), e2.getEntity()) : 0.0)
 						.map(d -> d < o.simLowerBound ? 0.0 : d)
 						.average().orElse(0.0))
 				.boxed()
-				.collect(Collectors.toList());
+				.collect(Collectors.toList());*/
 
 		// Collect similarity values weighted by relevance
-		List<Double> senseRelValues = nodes.stream()
+/*		List<Double> senseRelValues = nodes.stream()
 				.mapToDouble(e1 -> nodes.stream()
 						.filter(e2 -> e1 != e2)
 						.mapToDouble(e2 -> {
@@ -121,7 +121,7 @@ public class StatsReporter
 						})
 						.average().orElse(0.0))
 				.boxed()
-				.collect(Collectors.toList());
+				.collect(Collectors.toList());*/
 		List<Double> mergedRelValues = nodesWithSense.stream()
 				.mapToDouble(e1 -> nodesWithSense.stream()
 						.filter(e2 -> e1 != e2)
@@ -135,7 +135,7 @@ public class StatsReporter
 						.average().orElse(0.0))
 				.boxed()
 				.collect(Collectors.toList());
-		List<Double> wordRelValues = nodes.stream()
+/*		List<Double> wordRelValues = nodes.stream()
 				.mapToDouble(e1 -> nodes.stream()
 						.filter(e2 -> e1 != e2)
 						.mapToDouble(e2 -> {
@@ -147,7 +147,7 @@ public class StatsReporter
 						})
 						.average().orElse(0.0))
 				.boxed()
-				.collect(Collectors.toList());
+				.collect(Collectors.toList());*/
 
 		// Set up metrics
 		TFIDF corpusMetric = (TFIDF)rel;
@@ -169,16 +169,16 @@ public class StatsReporter
 			double rank = e.getWeight();
 			long fq = freqs.get(e.getEntity().getEntityLabel());
 			long df = corpusMetric.corpus.getFrequency(e.getEntity());
-			double ss = nodes.contains(e) ? senseValues.get(nodes.indexOf(e)) : -1.0;
+//			double ss = nodes.contains(e) ? senseValues.get(nodes.indexOf(e)) : -1.0;
 			double ms = nodesWithSense.contains(e) ? mergedValues.get(nodesWithSense.indexOf(e)) : -1.0;
-			double ws = nodes.contains(e) ? wordValues.get(nodes.indexOf(e)) : -1.0;
-			double ssrel = nodes.contains(e) ? senseRelValues.get(nodes.indexOf(e)) : -1.0;
+//			double ws = nodes.contains(e) ? wordValues.get(nodes.indexOf(e)) : -1.0;
+//			double ssrel = nodes.contains(e) ? senseRelValues.get(nodes.indexOf(e)) : -1.0;
 			double msrel = nodesWithSense.contains(e) ? mergedRelValues.get(nodesWithSense.indexOf(e)) : -1.0;
-			double wsrel = nodes.contains(e) ? wordRelValues.get(nodes.indexOf(e)) : -1.0;
+//			double wsrel = nodes.contains(e) ? wordRelValues.get(nodes.indexOf(e)) : -1.0;
 
 			w.write(nodes.indexOf(e) +"\t" + e + "\t" + f.format(tfIdf) + "\t" + f.format(rank) + "\t" + fq + "\t" + df + "\t" +
-					f.format(ss) + "\t" + f.format(ms) + "\t" + f.format(ws) + "\t" +
-					f.format(ssrel) + "\t" + f.format(msrel) + "\t" + f.format(wsrel) + "\n");
+					/*f.format(ss) + "\t" +*/ f.format(ms) + "\t" + /*1f.format(ws) + "\t" +*/
+					/*f.format(ssrel) + "\t" +*/ f.format(msrel) /*+ "\t" + f.format(wsrel)*/ + "\n");
 		});
 		w.write("\n");
 
