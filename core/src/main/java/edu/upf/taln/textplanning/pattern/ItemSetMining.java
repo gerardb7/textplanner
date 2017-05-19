@@ -101,7 +101,7 @@ public class ItemSetMining
 				.map(m -> itemSets.stream()
 						.filter(s -> s.containsAll(m)) // find sets that contain this maximal set
 						.map(is -> inContents.get(itemSets.indexOf(is))) // find corresponding tree
-						.min((t1, t2) -> Integer.compare(t1.getPreOrder().size(), t2.getPreOrder().size()))) // min length
+						.min(Comparator.comparingInt(t -> t.getPreOrder().size()))) // min length
 				.map(Optional::get)
 				.collect(Collectors.toList()); // yes, we do want to preserve duplicate trees
 
@@ -281,7 +281,7 @@ public class ItemSetMining
 		t.outgoingEdgesOf(inOldRoot).stream()
 				.map(t::getEdgeTarget)
 				.filter(n ->    (inCompulsoryNodes.contains(n) ||
-								t.incomingEdgesOf(n).iterator().next().isArg ||
+								t.incomingEdgesOf(n).iterator().next().isArg() ||
 								isPlainModifier(t, n) ||
 								isNegation(n) ||
 								isNumber(n) ||
@@ -293,7 +293,7 @@ public class ItemSetMining
 					Node c = new Node(n.getEntity().getEntityLabel(), e, 0.0);
 					t.addVertex(c);
 					Edge e1 = t.incomingEdgesOf(n).iterator().next();
-					Edge e2 = new Edge(e1.role, e1.isArg);
+					Edge e2 = new Edge(e1.getRole(), e1.isArg());
 					t.addEdge(inNewRoot, c, e2);
 					populateSubTree(t, n, c, inCompulsoryNodes);
 				}); // recursive call

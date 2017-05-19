@@ -57,9 +57,9 @@ public class PowerIterationRanking
 		IntStream.range(0, n).forEach(i ->
 				IntStream.range(i, n).forEach(j -> // starting from i avoids calculating symmetric co-occurrence twice
 				{
-					Node ni = nodes.get(i);
+				Node ni = nodes.get(i);
 					Node nj = nodes.get(j);
-					double sij = cooccur(g, ni, nj) ? 1.0 : 0.0;
+					double sij = i == j ? 1.0 : (cooccur(g, ni, nj) ? 1.0 : 0.0);
 					m_graph.set(i, j, sij);
 					m_graph.set(j, i, sij);
 				}));

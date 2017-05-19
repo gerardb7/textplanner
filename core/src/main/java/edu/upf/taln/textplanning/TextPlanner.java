@@ -36,11 +36,12 @@ public final class TextPlanner
 	public static class Options
 	{
 		public int numPatterns = 10; // Number of patterns to return
-		public double dampingRelevance = 0.3; // damping factor to control bias towards prior relevance of entities
-		public double dampingSyntactic = 0.1; // damping factor to control bias towards deep-syntactic co-occurrence between entities
+		public double dampingRelevance = 0.5; // damping factor to control bias towards prior relevance of entities
+		public double dampingSyntactic = 0.2; // damping factor to control bias towards deep-syntactic co-occurrence between entities
 		public double rankingStopThreshold = 0.0001; // stopping threshold for the main ranking algorithm
 		public double relevanceLowerBound = 0.1; // Entities with relevance below this value have their score set to 0
-		public double simLowerBound = 0.1; // Pairs of entities with similarity below this value have their score set to 0
+		public double simLowerBound = 0.0; // Pairs of entities with similarity below this value have their score set to 0
+		public double patternLambda = 0.75; // Controls balance between weight of nodes and cost of edges during pattern extraction
 		public boolean generateStats = true;
 		public String stats = "";
 
@@ -54,7 +55,8 @@ public final class TextPlanner
 			return "Params: numPatterns=" + numPatterns + " damping_rel=" + f.format(dampingRelevance) +
 					" damping_synt=" + f.format(dampingSyntactic) +
 					" delta=" + f.format(rankingStopThreshold) + " min_rel=" + f.format(relevanceLowerBound) +
-					" min_sim=" + f.format(simLowerBound) + "\n\n" + stats;
+					" min_sim=" + f.format(simLowerBound) + " pattern_lambda=" + f.format(patternLambda) +
+					"\n\n" + stats;
 		}
 	}
 
@@ -108,7 +110,7 @@ public final class TextPlanner
 			log.info("**Extracting patterns**");
 			timer.reset(); timer.start();
 
-			Set<SemanticTree> patterns = PatternExtraction.extract(contentGraph, inOptions.numPatterns);
+			Set<SemanticTree> patterns = PatternExtraction.extract(contentGraph, inOptions.numPatterns, inOptions.patternLambda);
 			log.info("Pattern extraction took " + timer.stop());
 
 			// 5- Sort the trees into a coherence-optimized list

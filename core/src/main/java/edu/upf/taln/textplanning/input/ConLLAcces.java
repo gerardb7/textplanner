@@ -199,14 +199,14 @@ public class ConLLAcces implements DocumentAccess
 				quotesToRemove.add(quote);
 				Edge i = t.incomingEdgesOf(quote).iterator().next();
 				Edge o = t.outgoingEdgesOf(quote).iterator().next();
-				Edge e = new Edge(i.role, i.isArg);
+				Edge e = new Edge(i.getRole(), i.isArg());
 				t.addEdge(t.getEdgeSource(i), t.getEdgeTarget(o), e);
 			});
 			t.removeAllVertices(quotesToRemove);
 
 			// Coords
 			List<Edge> coords = t.edgeSet().stream()
-					.filter(e -> e.role.equals("COORD"))
+					.filter(e -> e.getRole().equals("COORD"))
 					.filter(e -> ((AnnotatedEntity)t.getEdgeTarget(e).getEntity()).getAnnotation().getPOS().equals("CC"))
 					.collect(Collectors.toList());
 			List<Triple<Node, Node, Edge>> edgesToAdd = new ArrayList<>();
@@ -217,7 +217,7 @@ public class ConLLAcces implements DocumentAccess
 				// First item in coordination acts as governor of coord node, reverse relation so that coord governs both items
 				Node item = t.getEdgeSource(e);
 				Node coord = t.getEdgeTarget(e);
-				Edge reversedEdge = new Edge("I", e.isArg);
+				Edge reversedEdge = new Edge("I", true);
 				edgesToAdd.add(Triple.of(coord, item, reversedEdge)); // reverse of e: coord -I-> item
 				edgesToRemove.add(e);
 
@@ -225,7 +225,7 @@ public class ConLLAcces implements DocumentAccess
 				if (t.inDegreeOf(item) == 1)
 				{
 					Edge e2 = t.incomingEdgesOf(item).iterator().next();
-					Edge newE2 = new Edge(e2.role, e2.isArg);
+					Edge newE2 = new Edge(e2.getRole(), e2.isArg());
 					edgesToAdd.add(Triple.of(t.getEdgeSource(e2), coord, newE2));
 					edgesToRemove.add(e2);
 				}
@@ -270,7 +270,7 @@ public class ConLLAcces implements DocumentAccess
 									Edge e = t.incomingEdgesOf(n).iterator().next();
 									Node gov = t.getEdgeSource(e);
 									int govIndex = nodes.indexOf(gov);
-									govs.add(Pair.of(e.role, govIndex));
+									govs.add(Pair.of(e.getRole(), govIndex));
 								}
 
 								return Pair.of(i, govs);
@@ -309,7 +309,7 @@ public class ConLLAcces implements DocumentAccess
 								g.incomingEdgesOf(n).forEach(e -> {
 									Node gov = g.getEdgeSource(e);
 									int govIndex = nodes.indexOf(gov);
-									govs.add(Pair.of(e.role, govIndex));
+									govs.add(Pair.of(e.getRole(), govIndex));
 								});
 
 								return Pair.of(i, govs);

@@ -49,7 +49,7 @@ public class ContentGraphCreator
 				{
 					try
 					{
-						SemanticGraph.Edge e2 = new SemanticGraph.Edge(e.role, e.isArg);
+						SemanticGraph.Edge e2 = new SemanticGraph.Edge(e.getRole(), e.isArg());
 						graph.addEdge(govNode, depNode, e2);
 					}
 					catch (Exception ex)

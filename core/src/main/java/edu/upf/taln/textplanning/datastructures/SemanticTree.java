@@ -7,7 +7,6 @@ import org.jgrapht.graph.SimpleDirectedGraph;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -15,100 +14,64 @@ import java.util.stream.Collectors;
  */
 public class SemanticTree extends SimpleDirectedGraph<Node, Edge>
 {
-	private final Node root;
-	private final double position;
-	private static int counter = 0;
+	private Node root; // not final
+	private final double position; // for annotated trees
 
-	/**
-	 * Factory method: transforms a single-root directed acyclic graph into a a tree
-	 * @return a semantic trees
-	 */
-	public static SemanticTree createTree(SemanticGraph.SubGraph s)
+	public SemanticTree(Node root)
 	{
-		// Create copy of subgraph to be transformed
-		SemanticGraph s2 = new SemanticGraph(Edge.class);
-		s.vertexSet().forEach(s2::addVertex);
-		s.edgeSet().forEach(e -> s2.addEdge(s.getEdgeSource(e), s.getEdgeTarget(e), e));
-
-		// Iteratively replicate nodes until all nodes have a one or no parents -> directed graph becomes a multitree
-		Set<Node> nodesToReplicate;
-		do
-		{
-			nodesToReplicate = s2.vertexSet().stream()
-					.filter(v -> s2.inDegreeOf(v) > 1)
-					.collect(Collectors.toSet());
-			nodesToReplicate.forEach(n -> replicateNode(s2, n));
-		}
-		while (!nodesToReplicate.isEmpty());
-
-		// Create and populate tree
-		SemanticTree t = new SemanticTree(s.getRoot());
-		s2.outgoingEdgesOf(t.root).forEach(e -> t.populate(s2, e));
-
-		return t;
+		this(root, 1);
 	}
 
-	private static void replicateNode(SemanticGraph g, Node n)
-	{
-		assert g.containsVertex(n);
-		Set<Edge> inLinks = g.incomingEdgesOf(n);
-		Set<Edge> outLinks = g.outgoingEdgesOf(n);
-
-		for (Edge i : inLinks)
-		{
-			Node s = g.getEdgeSource(i);
-			String newId = n.getId() + "_" + ++counter;
-			Node r = new Node(newId, n.getEntity(), n.getWeight());
-			g.addVertex(r);
-			Edge sr = new Edge(i.role, i.isArg);
-			g.addEdge(s, r, sr);
-			outLinks.forEach(o -> {
-					Edge o2 = new Edge(o.role, o.isArg);
-					g.addEdge(r, g.getEdgeTarget(o), o2);
-			});
-		}
-
-		// remove original node and edges from graph
-		g.removeVertex(n);
-	}
-
-	private SemanticTree(Node inRoot)
+	public SemanticTree(Node root, double position)
 	{
 		super(Edge.class);
-		root = inRoot;
-		this.addVertex(inRoot);
-		position = 1; // for unannotated trees
+		this.root = root;
+		this.addVertex(this.root);
+		this.position = position; // annotated trees
 	}
 
-	public SemanticTree(Node inRoot, double positon)
+	public SemanticTree(SemanticTree other)
 	{
 		super(Edge.class);
-		root = inRoot;
-		this.addVertex(inRoot);
-		this.position = positon; // annotated trees
+
+		// Copy pointers to nodes and replicate edges
+		other.vertexSet().forEach(this::addVertex);
+		other.edgeSet().forEach(ei ->
+				this.addEdge(this.getEdgeSource(ei), this.getEdgeTarget(ei), new Edge(ei.getRole(), ei.isArg())));
+
+		this.root = other.root;
+		this.position = other.position;
 	}
 
 	public double getPosition()
 	{
 		return position;
 	}
+	public Node getRoot() { return root; }
 
 	/**
-	 * Recursive method, expands tree starting from an edge in a simple directed graph.
-	 * The source of the edge must be already part of the tree.
-	 * If the target is also part of the tree, then a copy of the target node is created
-	 * and added to the tree to prevent cycles.
+	 * Expands tree by adding an edge e going from a node in the tree s to a new node t
+	 * @param s node in the tree
+	 * @param t node to be added to the tree
+	 * @param e edge to be added between s and t
 	 */
-	private void populate(SemanticGraph p, Edge e)
+	public void expand(Node s, Node t, Edge e)
 	{
-		assert (p.containsEdge(e) && !this.containsEdge(e)); // no cycles allowed in tree!
-		Node s = p.getEdgeSource(e);
-		Node t = p.getEdgeTarget(e);
-		assert (this.containsVertex(s) && !containsVertex(t)); // no multiple parents allowed in tree!
+		if (!isValidExpansion(s, t))
+			throw new RuntimeException("Invalid extension");
 
 		addVertex(t);
 		addEdge(s, t, e);
-		p.outgoingEdgesOf(t).forEach(e2 -> populate(p, e2)); // Recursively add new edges
+	}
+
+	private boolean isValidExpansion(Node s, Node t)
+	{
+		if (!containsVertex(s))
+			return false; // source must always be a node in the tree
+		else if (containsVertex(t))
+			return false; // target must be a node which is not part of the tree
+
+		return true;
 	}
 
 	/**
@@ -134,11 +97,6 @@ public class SemanticTree extends SimpleDirectedGraph<Node, Edge>
 		return preorder;
 	}
 
-	public Node getRoot()
-	{
-		return this.root;
-	}
-
 	/**
 	 * @return true if node has one or more arguments
 	 */
@@ -151,7 +109,7 @@ public class SemanticTree extends SimpleDirectedGraph<Node, Edge>
 	{
 		return root + (outDegreeOf(root) == 0 ? " // " : "") +
 				getPreOrder().stream()
-				.map(e -> " -" + e.role + "-> " + getEdgeTarget(e) + (outDegreeOf(getEdgeTarget(e)) == 0 ? " // " : ""))
+				.map(e -> " -" + e.getRole() + "-> " + getEdgeTarget(e) + (outDegreeOf(getEdgeTarget(e)) == 0 ? " // " : ""))
 				.reduce(String::concat).orElse("");
 	}
 }
