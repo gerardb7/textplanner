@@ -26,7 +26,7 @@ public class PatternExtraction
 	 * @param numPatterns number of patterns to extract
 	 * @return the set of extracted patterns
 	 */
-	public static Set<SemanticTree> extract(SemanticGraph g, int numPatterns, double lambda)
+	public static Set<SemanticTree> extract(SemanticGraph g, int numPatterns, int beamSize, double lambda)
 	{
 		// Work out average node weight, which will be used as weight for edges
 		double avgWeight = g.vertexSet().stream().mapToDouble(Node::getWeight).average().orElse(1.0);
@@ -36,7 +36,7 @@ public class PatternExtraction
 		boolean stop = patterns.size() == numPatterns;
 		while(!stop)
 		{
-			SemanticTree heavySubtree = extractHeavySubtree(1, g, avgWeight, lambda);
+			SemanticTree heavySubtree = extractHeavySubtree(beamSize, g, avgWeight, lambda);
 			if (heavySubtree != null)
 			{
 				patterns.add(heavySubtree);
@@ -55,26 +55,26 @@ public class PatternExtraction
 
 	/**
 	 * Local beam search for suboptimal heavy tree.
-	 * @param k size of the beam
+	 * @param beamSize size of the beam
 	 * @param g content graph
 	 * @param edgeWeight cost of edges in subtree, is substracted from node weights
 	 * @param lambda balancing factor between node weight and edge cost
 	 * @return a heavy subtree or null if no graph was found
 	 */
-	private static SemanticTree extractHeavySubtree(int k, SemanticGraph g, double edgeWeight, double lambda)
+	private static SemanticTree extractHeavySubtree(int beamSize, SemanticGraph g, double edgeWeight, double lambda)
 	{
 		// All jgrapht graphs are tested for equality by comparing their vertex and edge sets.
 		// Nodes are equal if they share the same id.
 		// Edges are equal if they're have the same role, both are args, have the same weight, and source and target
 		// nodes are also equal.
 
-		// Start off from k top ranked verbal predicates
+		// Start off from beamSize top ranked verbal predicates
 		List<Node> topNodes = g.vertexSet().stream()
 				.filter(n -> isInflectedVerb(g, n)) // is a predicate
 				.filter(n -> g.inDegreeOf(n) == 0) // is root
 				.filter(n -> g.outDegreeOf(n) > 0) // is connected
 				.sorted((v1, v2) -> Double.compare(v2.getWeight(), v1.getWeight()))// swapped v1 and v2 to obtain descending order
-				.limit(k)
+				.limit(1) // Start from top node
 				.collect(Collectors.toList());
 
 		if (topNodes.isEmpty())
@@ -110,13 +110,13 @@ public class PatternExtraction
 
 			// Update beam: 1- add new states to it
 			beam.addAll(next);
-			// Update beam: 2- poll top k states
+			// Update beam: 2- poll top beamSize states
 			PriorityQueue<Pair<SemanticTree, Double>> bestSubtrees = new PriorityQueue<>((s1, s2) -> Double.compare(s2.getRight(), s1.getRight()));
-			IntStream.range(0, min(k, beam.size()))
+			IntStream.range(0, min(beamSize, beam.size()))
 					.mapToObj(i -> beam.poll())
 					.forEach(bestSubtrees::add);
 
-			// Update beam: 3- replace old beam with top k states
+			// Update beam: 3- replace old beam with top beamSize states
 			beam.clear();
 			beam.addAll(bestSubtrees);
 
