@@ -2,7 +2,6 @@ package edu.upf.taln.textplanning;
 
 import Jama.Matrix;
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.coherence.DiscoursePlanner;
 import edu.upf.taln.textplanning.datastructures.ContentGraphCreator;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
@@ -18,7 +17,6 @@ import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.IntStream;
 
 
@@ -111,14 +109,14 @@ public final class TextPlanner
 			log.info("**Extracting patterns**");
 			timer.reset(); timer.start();
 
-			Set<SemanticTree> patterns = PatternExtraction.extract(contentGraph, inOptions.numPatterns,
+			List<SemanticTree> patterns = PatternExtraction.extract(contentGraph, inOptions.numPatterns,
 					inOptions.patternBeamSize, inOptions.patternLambda);
 			log.info("Pattern extraction took " + timer.stop());
 
 			// 5- Sort the trees into a coherence-optimized list
 			log.info("**Structuring patterns**");
 			timer.reset(); timer.start();
-			List<SemanticTree> patternList = DiscoursePlanner.structurePatterns(patterns, similarity);
+			//patterns = DiscoursePlanner.structurePatterns(patterns, similarity);
 			log.info("Pattern structuring took " + timer.stop());
 
 			// 6- Generate stats (optional)
@@ -131,7 +129,7 @@ public final class TextPlanner
 				log.info("Stats generation took " + timer.stop());
 			}
 
-			return patternList;
+			return patterns;
 		}
 		catch (Exception e)
 		{

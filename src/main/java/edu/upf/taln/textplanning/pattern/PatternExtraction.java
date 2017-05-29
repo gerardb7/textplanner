@@ -24,15 +24,15 @@ public class PatternExtraction
 	 * Extracts tree-like patterns from a content graph
 	 * @param g a content graph
 	 * @param numPatterns number of patterns to extract
-	 * @return the set of extracted patterns
+	 * @return a list of patterns sorted by relevance
 	 */
-	public static Set<SemanticTree> extract(SemanticGraph g, int numPatterns, int beamSize, double lambda)
+	public static List<SemanticTree> extract(SemanticGraph g, int numPatterns, int beamSize, double lambda)
 	{
 		// Work out average node weight, which will be used as weight for edges
 		double avgWeight = g.vertexSet().stream().mapToDouble(Node::getWeight).average().orElse(1.0);
 
 		// Extract patterns
-		Set<SemanticTree> patterns = new HashSet<>();
+		List<SemanticTree> patterns = new ArrayList<>();
 		boolean stop = patterns.size() == numPatterns;
 		while(!stop)
 		{
@@ -166,7 +166,7 @@ public class PatternExtraction
 	private static Set<SemanticTree> getLeafExpansions(SemanticGraph g, SemanticTree t)
 	{
 		return t.vertexSet().stream()
-				.filter(v -> v.getCoref() == null) // replicated nodes -> ignore
+				.filter(v -> !v.getCoref().isPresent()) // replicated nodes -> ignore
 				.flatMap(n -> g.outgoingEdgesOf(n).stream()
 						.filter(e -> !e.isArg()) // Only edges which point to non-argumental relations
 						.filter(e -> !PatternExtraction.containsEdge(t, g.getEdgeSource(e), g.getEdgeTarget(e), e))) // check that e not in t
@@ -189,7 +189,7 @@ public class PatternExtraction
 		do
 		{
 			edgesToArgs = t.vertexSet().stream()
-					.filter(v -> v.getCoref() == null) // replicated nodes -> ignore
+					.filter(v -> !v.getCoref().isPresent()) // replicated nodes -> ignore
 					.flatMap(v -> g.outgoingEdgesOf(v).stream()  // collect edges to new args in g AND not in t
 							.filter(Edge::isArg)
 							.filter(e -> !PatternExtraction.containsEdge(t, g.getEdgeSource(e), g.getEdgeTarget(e), e))) // check again that e not in t

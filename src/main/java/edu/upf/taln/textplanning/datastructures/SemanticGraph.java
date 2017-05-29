@@ -3,6 +3,8 @@ package edu.upf.taln.textplanning.datastructures;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.SimpleDirectedGraph;
 
+import java.util.Optional;
+
 /**
  * A semantic graph is a rooted directed simple graph with weighted nodes and labels on both edges and nodes.
  */
@@ -57,7 +59,7 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 			weight = w;
 		}
 
-		public String getCoref() { return this.coref; }
+		public Optional<String> getCoref() { return Optional.ofNullable(this.coref); }
 
 		public boolean corefers(Node n)
 		{

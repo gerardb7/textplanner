@@ -23,7 +23,7 @@ public final class SEWSolr implements Corpus
 	private final long numDocs;
 	private final static Logger log = LoggerFactory.getLogger(SEWSolr.class);
 	private final static Cache cache = new Cache();
-	public final static DebugAid debug = new DebugAid(SEWSolr.class.getName()); // encapsulates non-immutable behavior used for debugging purposes
+	private final static DebugAid debug = new DebugAid(SEWSolr.class.getName()); // encapsulates non-immutable behavior used for debugging purposes
 
 	public SEWSolr(String inURL) throws RuntimeException
 	{
@@ -69,7 +69,7 @@ public final class SEWSolr implements Corpus
 	 * (Multiword expressions annotate by large nominal phrases)
 	 * @return the string representation of a key corresponding to the given entity
 	 */
-	private String getKey(Entity inEntity)
+	public static String getKey(Entity inEntity)
 	{
 		String label = inEntity.getEntityLabel();
 		if (label.startsWith("bn:") && label.endsWith("n"))
@@ -113,4 +113,6 @@ public final class SEWSolr implements Corpus
 
 		return count;
 	}
+
+
 }

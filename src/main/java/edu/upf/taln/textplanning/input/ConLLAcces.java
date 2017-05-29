@@ -255,9 +255,20 @@ public class ConLLAcces implements DocumentAccess
 
 					List<Annotation> anns = nodes.stream()
 							.map(Node::getEntity)
-							.filter(AnnotatedEntity.class::isInstance)
 							.map(AnnotatedEntity.class::cast)
 							.map(AnnotatedEntity::getAnnotation)
+							.collect(Collectors.toList());
+
+					// Collect coreferring nodes
+					List<Optional<Annotation>> coref = nodes.stream()
+							.map(Node::getCoref)
+							.map(o -> o.orElse(""))
+							.map(id -> nodes.stream()
+									.filter(n -> n.getId().equals(id))
+									.findFirst())
+							.map(o -> o.map(Node::getEntity))
+							.map(o -> o.map(AnnotatedEntity.class::cast))
+							.map(o -> o.map(AnnotatedEntity::getAnnotation))
 							.collect(Collectors.toList());
 
 					// Collect governor to dependent mappings
@@ -278,7 +289,7 @@ public class ConLLAcces implements DocumentAccess
 							.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
 
 
-					return nodesToConll(anns, governors);
+					return nodesToConll(anns, governors, coref);
 				})
 				.map(s -> "0\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\tslex=Sentence\n" + s + "\n")
 				.reduce(String::concat).orElse("");
@@ -316,7 +327,7 @@ public class ConLLAcces implements DocumentAccess
 							})
 							.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
 
-					return this.nodesToConll(anns, governors);
+					return this.nodesToConll(anns, governors, new ArrayList<>());
 				})
 				.map(s -> "0\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\tslex=Sentence\n" + s + "\n")
 				.reduce(String::concat).orElse("");
@@ -349,7 +360,8 @@ public class ConLLAcces implements DocumentAccess
 		}
 	}
 
-	private String nodesToConll(List<Annotation> inNodes, Map<Integer, List<Pair<String, Integer>>> inGovernors)
+	private String nodesToConll(List<Annotation> inNodes, Map<Integer, List<Pair<String, Integer>>> inGovernors,
+	                            List<Optional<Annotation>> coref)
 	{
 		// Iterate nodes again, this time producing conll
 		StringBuilder conll = new StringBuilder();
@@ -376,6 +388,11 @@ public class ConLLAcces implements DocumentAccess
 			{
 				String ref = node.getSense().startsWith("bn:") ? node.getSense() : "bn:" + node.getSense();
 				features.merge("bnId", ref, (v1, v2) -> v2);
+			}
+			if (!coref.isEmpty() && coref.get(id).isPresent())
+			{
+				Annotation corefAnn = coref.get(id).get();
+				features.merge("coref_id", Integer.toString(inNodes.indexOf(corefAnn) + 1), (v1, v2) -> v2);
 			}
 			feats = features.entrySet().stream()
 					.map(e -> e.getKey() + "=" + e.getValue())

@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning;
 import com.beust.jcommander.*;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.corpora.Corpus;
+import edu.upf.taln.textplanning.corpora.FreqsFile;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
@@ -148,6 +149,29 @@ public class ConLLDriver
 		return new TextPlanner(corpusMetric, sim);
 	}
 
+	/**
+	 * Instantiates a planner that takes as input DSynt trees encoded using ConLL
+	 * It uses the following resources:
+	 * @param frequenciesFile file containing pre-computed frequencies of items
+	 * @param embeddingsFile path to the file containing the word vectors obtained from the Google News Corpus
+	 * @param t type of embeddings
+	 * @return an instance of the TextPlanner class
+	 */
+	@SuppressWarnings("WeakerAccess")
+	public static TextPlanner createConLLPlanner(Path frequenciesFile, Path embeddingsFile, EmbeddingsType t) throws Exception
+	{
+		Corpus corpus = new FreqsFile(frequenciesFile);
+		WeightingFunction corpusMetric = new TFIDF(corpus);
+		EntitySimilarity sim = null;
+		switch (t)
+		{
+			case word: sim = new Word2Vec(embeddingsFile); break;
+			case sense: sim = new SensEmbed(embeddingsFile, false); break;
+			case merged: sim = new SensEmbed(embeddingsFile, true);	break;
+		}
+
+		return new TextPlanner(corpusMetric, sim);
+	}
 
 	/**
 	 * Instantiates a planner that uses random relevance weighting and similarity calculations.

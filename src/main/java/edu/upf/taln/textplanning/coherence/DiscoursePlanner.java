@@ -8,7 +8,10 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.PriorityQueue;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -24,11 +27,11 @@ public class DiscoursePlanner
 	 * Orders a set of patterns by taking into account both their pair-wise similarity and their average relevance
 	 * scores.
 	 *
-	 * @param patterns set of patterns to structure
+	 * @param patterns list of patterns to structure
 	 * @param entitySim similarity function between pairs of entities in the patterns
 	 * @return list of patterns
 	 */
-	public static List<SemanticTree> structurePatterns(Set<SemanticTree> patterns, EntitySimilarity entitySim)
+	public static List<SemanticTree> structurePatterns(List<SemanticTree> patterns, EntitySimilarity entitySim)
 	{
 		// Weight patterns by averaging their node weights
 		//noinspection RedundantTypeArguments
