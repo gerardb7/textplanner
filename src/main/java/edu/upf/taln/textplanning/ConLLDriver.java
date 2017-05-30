@@ -26,7 +26,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Executes the text planner from one or more ConLL encoded files.
@@ -105,16 +104,18 @@ public class ConLLDriver
 		@Parameter(description = "Input folder", arity = 1, converter = PathConverter.class,
 				validateWith = PathToExistingFolder.class, required = true)
 		private List<Path> input;
-		@Parameter(names = "-solr", description = "URL of Solr index", required = true)
-		private String solrUrl;
+		@Parameter(names = "-solr", description = "URL of Solr index")
+		private String solrUrl = "http://10.55.0.41:443/solr/sewDataAnnSen";
 		@Parameter(names = "-e", description = "Path to file containing embeddings",
 				converter = PathConverter.class, validateWith = PathToExistingFile.class, required = true)
 		private Path embeddings = null;
-		@Parameter(names = "-t", description = "Type of embeddings", converter = EmbeddingsTypeConverter.class,
-				required = true)
-		private EmbeddingsType type;
+		@Parameter(names = "-f", description = "Path to file containing pre-computed frequencies",
+				converter = PathConverter.class, validateWith = PathToExistingFile.class)
+		private Path frequencies = null;
+		@Parameter(names = "-t", description = "Type of embeddings", converter = EmbeddingsTypeConverter.class)
+		private EmbeddingsType type = EmbeddingsType.merged;
 		@Parameter(names = "-debug", description = "Debug mode")
-		private boolean debug;
+		private boolean debug = false;
 	}
 
 
@@ -134,7 +135,6 @@ public class ConLLDriver
 //		final String solrUrl = "http://10.55.0.41:443/solr/sewDataAnnSen";
 //		final Path word2vecPath = Paths.get("/home/gerard/data/GoogleNews-vectors-negative300.bin");
 //		final Path senseEmbedPath = Paths.get("/home/gerard/data/sense/babelfy_vectors_merged_senses_only");
-//		final Path inputPath = Paths.get("/home/gerard/Baixades/test/");
 
 		Corpus corpus = new SEWSolr(solrUrl);
 		WeightingFunction corpusMetric = new TFIDF(corpus);
@@ -228,8 +228,13 @@ public class ConLLDriver
 	{
 		CMLArgs cmlArgs = new CMLArgs();
 		new JCommander(cmlArgs, args);
-		TextPlanner planner = ConLLDriver.createConLLPlanner(cmlArgs.solrUrl, cmlArgs.embeddings, cmlArgs.type);
+		TextPlanner planner;
+		if (cmlArgs.frequencies != null)
+			planner = ConLLDriver.createConLLPlanner(cmlArgs.frequencies, cmlArgs.embeddings, cmlArgs.type);
+		else
+			planner = ConLLDriver.createConLLPlanner(cmlArgs.solrUrl, cmlArgs.embeddings, cmlArgs.type);
 		TextPlanner.Options options = new TextPlanner.Options();
+		options.simLowerBound = 0.5;
 		log.info("Planning parameters " + options);
 
 		Path inputFolder = cmlArgs.input.get(0);
@@ -237,13 +242,11 @@ public class ConLLDriver
 		try
 		{
 			// Collect files from folder
-			List<Path> files = new ArrayList<>();
-			try (Stream<Path> paths = Files.walk(inputFolder, 1))
-			{
-				files.addAll(paths.filter(Files::isRegularFile)
-//					.filter(p -> !p.getFileName().startsWith("plan_"))
-						.collect(Collectors.toList()));
-			}
+			List<Path> files = Files.walk(inputFolder, 1)
+					.filter(Files::isRegularFile)
+					.filter(p -> p.toString().endsWith("deep_g.conll"))
+					.sorted()
+					.collect(Collectors.toList());
 
 			String planConll = ConLLDriver.runPlanner(planner, files, options);
 

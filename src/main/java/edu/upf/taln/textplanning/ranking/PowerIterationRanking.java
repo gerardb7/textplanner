@@ -92,9 +92,11 @@ public class PowerIterationRanking
 		IntStream.range(0, n).forEach(i ->
 			IntStream.range(0, n).forEach(j -> {
 				double brj = b[j]; // bias towards relevance of j
-				double bsij = m_graph.get(i, j); // content graph bias
+				boolean sbij = cooccur(g, nodes.get(i), nodes.get(j));
+				//double bsij = m_graph.get(i, j); // content graph bias
 				double sij = m_sim.get(i, j); // sim of i and j
-				double pij = d1 * brj + d2 * bsij + (1.0 - d1 - d2) * sij; // biased prob of going from i to j
+//				double pij = d1 * brj + d2 * bsij + (1.0 - d1 - d2) * sij; // biased prob of going from i to j
+				double pij = d1 * brj + (1.0 - d1)*(sbij ? 1.0 : sij);
 				m_sim.set(i, j, pij);
 			}));
 		// No need to normalize again

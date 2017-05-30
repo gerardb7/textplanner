@@ -69,7 +69,7 @@ public final class SEWSolr implements Corpus
 	 * (Multiword expressions annotate by large nominal phrases)
 	 * @return the string representation of a key corresponding to the given entity
 	 */
-	public static String getKey(Entity inEntity)
+	private static String getKey(Entity inEntity)
 	{
 		String label = inEntity.getEntityLabel();
 		if (label.startsWith("bn:") && label.endsWith("n"))

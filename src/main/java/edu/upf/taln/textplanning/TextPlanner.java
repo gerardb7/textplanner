@@ -39,8 +39,8 @@ public final class TextPlanner
 		public double rankingStopThreshold = 0.0001; // stopping threshold for the main ranking algorithm
 		public double relevanceLowerBound = 0.1; // Entities with relevance below this value have their score set to 0
 		public double simLowerBound = 0.0; // Pairs of entities with similarity below this value have their score set to 0
-		public int patternBeamSize = 10; // Size of the beam used when searching for optimal patterns
-		public double patternLambda = 0.75; // Controls balance between weight of nodes and cost of edges during pattern extraction
+		public int patternBeamSize = 100; // Size of the beam used when searching for optimal patterns
+		public double patternLambda = 0.5; // Controls balance between weight of nodes and cost of edges during pattern extraction
 		public boolean generateStats = true;
 		public String stats = "";
 

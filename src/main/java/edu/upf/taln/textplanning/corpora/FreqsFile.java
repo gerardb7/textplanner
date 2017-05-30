@@ -24,6 +24,7 @@ public class FreqsFile implements Corpus
 
 	public FreqsFile(Path file) throws IOException
 	{
+		log.info("Loading frequencies file " + file);
 		FileInputStream fs = new FileInputStream(file.toFile());
 		InputStreamReader isr = new InputStreamReader(fs, StandardCharsets.UTF_8);
 		BufferedReader br = new BufferedReader(isr);
@@ -36,19 +37,19 @@ public class FreqsFile implements Corpus
 		while ((line = br.readLine()) != null)
 		{
 			String[] parts = line.split("=");
-			freqs.put(parts[0], Long.valueOf(parts[1]));
+			freqs.put(parts[0].toLowerCase(), Long.valueOf(parts[1]));
 		}
 	}
 
 	@Override
 	public long getFrequency(Entity inEntity)
 	{
-		if (!freqs.containsKey(inEntity.getEntityLabel()))
+		if (!freqs.containsKey(inEntity.getEntityLabel().toLowerCase()))
 		{
 			log.warn("No frequency for entity " + inEntity);
 			return 0;
 		}
-		return freqs.get(inEntity.getEntityLabel());
+		return freqs.get(inEntity.getEntityLabel().toLowerCase());
 	}
 
 	@Override

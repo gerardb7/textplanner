@@ -73,6 +73,8 @@ public class TFIDF implements WeightingFunction
 
 	private boolean ignoreEntity(Entity e)
 	{
+//		AnnotatedEntity ann = (AnnotatedEntity)e;
+//		return ann.getAnnotation().getSense() == null;
 		String l = e.getEntityLabel();
 		return (l.equals("_") || l.equals("\"") || l.equals("\'") || l.equals(",") || l.equals(";") || l.equals("--") ||
 				l.equals("-"));
