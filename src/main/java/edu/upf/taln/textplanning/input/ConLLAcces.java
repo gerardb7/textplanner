@@ -90,8 +90,8 @@ public class ConLLAcces implements DocumentAccess
 
 					if (id >= 1 && !failedSentence)
 					{
-						String lemma = columns[1];
 						String form = columns[2];
+						String lemma = columns[1];
 						String pos = columns[4];
 						String feats = columns[6];
 						Map<String, String> features = Splitter.on("|").withKeyValueSeparator("=").split(feats);

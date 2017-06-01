@@ -10,6 +10,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static java.lang.Math.min;
 
@@ -221,14 +222,14 @@ public class PatternExtraction
 	 */
 	private static boolean containsEdge(SemanticTree t, Node source, Node dest, Edge e)
 	{
-		Set<Node> sources_tree = t.vertexSet().stream().filter(n -> n.equals(source) || n.corefers(source)).collect(Collectors.toSet());
-		Set<Node> targets_tree = t.vertexSet().stream().filter(n -> n.equals(dest) || n.corefers(dest)).collect(Collectors.toSet());
-		return sources_tree.stream()
+		Stream<Node> sources_tree = t.vertexSet().stream().filter(n -> n.equals(source) || n.corefers(source));
+		Stream<Node> targets_tree = t.vertexSet().stream().filter(n -> n.equals(dest) || n.corefers(dest));
+		return sources_tree
 				.map(t::outgoingEdgesOf)
 				.flatMap(Set::stream)
 				.filter(e2 -> e.getRole().equals(e2.getRole()) && e.isArg() == e2.isArg())
 				.map(t::getEdgeTarget)
-				.anyMatch(targets_tree::contains);
+				.anyMatch(n1 -> targets_tree.anyMatch(n1::equals));
 	}
 
 	private static boolean isInflectedVerb(SemanticGraph g, Node n)

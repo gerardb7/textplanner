@@ -23,7 +23,6 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -188,28 +187,32 @@ public class ConLLDriver
 
 
 	@SuppressWarnings("WeakerAccess")
-	public static String runPlanner(TextPlanner p, List<Path> inputFiles, TextPlanner.Options options)
+	public static String runPlanner(TextPlanner p, TextPlanner.Options options, List<Path> files)
+	{
+		List<String> conlls = files.stream()
+				.map(f -> {
+					try	{ return new String(Files.readAllBytes(f), Charset.forName("UTF-8")); }
+					catch (IOException e) {	throw new RuntimeException(e); }
+				})
+				.collect(Collectors.toList());
+
+		ConLLAcces conll = new ConLLAcces();
+		List<SemanticTree> trees = conlls.stream()
+				.map(conll::readTrees)
+				.flatMap(List::stream)
+				.collect(Collectors.toList());
+		// Read trees from conll files
+
+		return runPlanner(p, trees, options);
+	}
+
+	public static String runPlanner(TextPlanner p, List<SemanticTree> trees, TextPlanner.Options options)
 	{
 		try
 		{
 			Stopwatch timer = Stopwatch.createStarted();
 
-			// Read trees from conll files
 			ConLLAcces conll = new ConLLAcces();
-			List<SemanticTree> trees = new ArrayList<>();
-			inputFiles.forEach(d -> {
-				String inConll;
-				try
-				{
-					inConll = new String(Files.readAllBytes(d), Charset.forName("UTF-8"));
-				}
-				catch (IOException e)
-				{
-					throw new RuntimeException(e);
-				}
-				trees.addAll(conll.readTrees(inConll));
-			});
-
 			conll.postProcessTrees(trees);
 			List<SemanticTree> plan = p.planText(trees, options);
 			String result = conll.writeTrees(plan);
@@ -248,7 +251,7 @@ public class ConLLDriver
 					.sorted()
 					.collect(Collectors.toList());
 
-			String planConll = ConLLDriver.runPlanner(planner, files, options);
+			String planConll = ConLLDriver.runPlanner(planner, options, files);
 
 //			log.info("Solr queries: " + SEWSolr.debug.toString());
 //			log.info("Word form vector lookups: " + PatternSimilarity.numWordSuccessfulLookups + " successful, " +

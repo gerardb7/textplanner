@@ -88,7 +88,7 @@ public class PowerIterationRanking
 		// Prob i->j = d1*rel_bias(j) + d2*graph_bias(i,j) (1-d1 - d2)*sim(i,j)
 		// The resulting matrix is row-normalized because both b and m are normalized
 		double d1 = inOptions.dampingRelevance;
-		double d2 = inOptions.dampingSyntactic;
+		//double d2 = inOptions.dampingSyntactic;
 		IntStream.range(0, n).forEach(i ->
 			IntStream.range(0, n).forEach(j -> {
 				double brj = b[j]; // bias towards relevance of j
