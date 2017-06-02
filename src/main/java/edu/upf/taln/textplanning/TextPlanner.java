@@ -36,7 +36,7 @@ public final class TextPlanner
 		public int numPatterns = 10; // Number of patterns to return
 		public double dampingRelevance = 0.2; // damping factor to control bias towards prior relevance of entities
 		public double rankingStopThreshold = 0.0001; // stopping threshold for the main ranking algorithm
-		public double minRelevance = 0.1; // Entities with relevance below this value have their score set to 0
+		public double minRelevance = 0.0001; // pseudocount α for additive smoothing of relevance values
 		public double simLowerBound = 0.0; // Pairs of entities with similarity below this value have their score set to 0
 		public int patternBeamSize = 10; // Size of the beam used when searching for optimal patterns
 		public double patternLambda = 0.5; // Controls balance between weight of nodes and cost of edges during pattern extraction

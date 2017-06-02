@@ -55,7 +55,7 @@ public class PowerIterationRanking
 		double[] b = nodes.stream()
 				.map(Node::getEntity)
 				.mapToDouble(inWeighting::weight)
-				.map(w -> w = Math.max(inOptions.minRelevance, w)) // smooth relevance to avoid non-positive values
+				.map(w -> w = Math.max(inOptions.minRelevance, (1.0/n)*w)) // Laplace smoothing to avoid non-positive values
 				.toArray();
 		log.info(StatsReporter.getMatrixStats(new Matrix(b, 1)));
 		double accum = Arrays.stream(b).sum();
