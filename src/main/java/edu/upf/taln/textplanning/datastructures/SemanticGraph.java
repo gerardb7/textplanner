@@ -15,7 +15,7 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 		private final String id; // unique id, determines if two nodes are the same!
 		private final Entity entity;
 		private double weight;
-		private final String coref; // id of node with which this node corefers
+		private final String coref; // id of node with which this node corefers, used in semantic trees
 
 		public Node(String id, Entity e)
 		{

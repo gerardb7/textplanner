@@ -236,8 +236,8 @@ public class ConLLDriver
 			planner = ConLLDriver.createConLLPlanner(cmlArgs.frequencies, cmlArgs.embeddings, cmlArgs.type);
 		else
 			planner = ConLLDriver.createConLLPlanner(cmlArgs.solrUrl, cmlArgs.embeddings, cmlArgs.type);
+
 		TextPlanner.Options options = new TextPlanner.Options();
-		options.simLowerBound = 0.5;
 		log.info("Planning parameters " + options);
 
 		Path inputFolder = cmlArgs.input.get(0);
@@ -252,13 +252,6 @@ public class ConLLDriver
 					.collect(Collectors.toList());
 
 			String planConll = ConLLDriver.runPlanner(planner, options, files);
-
-//			log.info("Solr queries: " + SEWSolr.debug.toString());
-//			log.info("Word form vector lookups: " + PatternSimilarity.numWordSuccessfulLookups + " successful, " +
-//					PatternSimilarity.numWordFailedLookups + " failed");
-//			log.info("Word sense vector lookups: " + PatternSimilarity.numSenseSuccessfulLookups + " successful, " +
-//					PatternSimilarity.numSenseFailedLookups + " failed");
-//			log.info("********************************************************");
 
 			Path outputFile = Paths.get(System.getProperty("user.dir") + File.separator + "plan.conll");
 			try (PrintWriter outs = new PrintWriter(outputFile.toString()))

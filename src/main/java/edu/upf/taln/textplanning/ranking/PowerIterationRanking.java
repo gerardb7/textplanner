@@ -30,6 +30,15 @@ public class PowerIterationRanking
 	 * biased against prior relevance and connections in the graph.
 	 * Approach has similarities to Otterbacher et al. 2009 paper "Biased LexRank" (p.5)
 	 *
+	 *
+	 * "a probability matrix should be a square matrix with (a) nonnegative entries and (b) each row sum equal to 1.
+	 * Given a probability matrix A, the page ranks π=(π1,π2,...,πN) are the equilibrium probabilities
+	 * such that πA=π. When all entries of A are positive, the Perron-Frobenius theorem guarantees that these
+	 * equilibrium probabilities are unique. If A is also symmetric, its column sums are equal to row sums, and hence
+	 * all equal to 1. Therefore, π=(1/N)(1,1,...,1) is the unique probability vector that satisfies
+	 * πA=π, i.e. all page ranks must be equal to each other"
+	 * Taken from https://math.stackexchange.com/questions/55863/when-will-pagerank-fail
+	 *
 	 * @param g content graph where nodes have entities associated to them
 	 * @param inWeighting relevance weighting function for entities
 	 * @param inSimilarity similarity metric for pairs of entities
@@ -41,87 +50,64 @@ public class PowerIterationRanking
 	{
 		List<Node> nodes = new ArrayList<>(g.vertexSet());
 
-		// Create relevance row vector by applying weighting function to node's entities
+		// Create *strictly positive* relevance row vector by applying weighting function to node's entities
 		int n = nodes.size();
 		double[] b = nodes.stream()
 				.map(Node::getEntity)
 				.mapToDouble(inWeighting::weight)
-				.map(w -> w < inOptions.relevanceLowerBound ? 0.0 : w) // apply lower bound
+				.map(w -> w = Math.max(inOptions.minRelevance, w)) // smooth relevance to avoid non-positive values
 				.toArray();
 		log.info(StatsReporter.getMatrixStats(new Matrix(b, 1)));
 		double accum = Arrays.stream(b).sum();
 		IntStream.range(0, n).forEach(i -> b[i] /= accum); // normalize vector with sum of row
 
-		// Create an adjacency matrix for the content graph
-		Matrix m_graph = new Matrix(n, n);
+		// Create *non-symmetric non-negative* similarity matrix from sim function and links in content graph
+		Matrix m = new Matrix(n, n);
 		IntStream.range(0, n).forEach(i ->
-				IntStream.range(i, n).forEach(j -> // starting from i avoids calculating symmetric co-occurrence twice
-				{
-				Node ni = nodes.get(i);
-					Node nj = nodes.get(j);
-					double sij = i == j ? 1.0 : (cooccur(g, ni, nj) ? 1.0 : 0.0);
-					m_graph.set(i, j, sij);
-					m_graph.set(j, i, sij);
-				}));
-		log.info("Content graph adjacency matrix:");
-		log.info(StatsReporter.getMatrixStats(m_graph));
-		normalize(m_graph);
-
-		// Create similarity matrix by applying function to pairs of nodes
-		Matrix m_sim = new Matrix(n, n);
-		IntStream.range(0, n).forEach(i ->
-				IntStream.range(i, n).forEach(j -> // starting from i avoids calculating symmetric similarity twice
+				IntStream.range(0, n).forEach(j ->
 				{
 					Entity ei = nodes.get(i).getEntity();
 					Entity ej = nodes.get(j).getEntity();
-					double sij = inSimilarity.computeSimilarity(ei, ej);
-					if (sij < inOptions.simLowerBound) // apply lower bound
+					double sij = isGovernor(g, nodes.get(i), nodes.get(j)) ? 1.0
+							: inSimilarity.computeSimilarity(ei, ej);
+					// apply lower bound
+					if (sij < inOptions.simLowerBound)
 						sij = 0.0;
-					m_sim.set(i, j, sij);
-					m_sim.set(j, i, sij);
+					m.set(i, j, sij);
 				}));
 		log.info("Similarity matrix:");
-		log.info(StatsReporter.getMatrixStats(m_sim));
-		normalize(m_sim);
+		log.info(StatsReporter.getMatrixStats(m));
+		normalize(m);
 
-		// Bias each row using relevance bias with damping factor d1, and graph bias with damping factor d2:
-		// Prob i->j = d1*rel_bias(j) + d2*graph_bias(i,j) (1-d1 - d2)*sim(i,j)
+		// Bias each row in m using relevance bias b and damping factor d
+		// Prob i->j = d*b(j) + (1.0-d)*m(i,j)
 		// The resulting matrix is row-normalized because both b and m are normalized
-		double d1 = inOptions.dampingRelevance;
-		//double d2 = inOptions.dampingSyntactic;
+		double d = inOptions.dampingRelevance;
+		Matrix bm = new Matrix(n, n);
 		IntStream.range(0, n).forEach(i ->
 			IntStream.range(0, n).forEach(j -> {
 				double brj = b[j]; // bias towards relevance of j
-				boolean sbij = cooccur(g, nodes.get(i), nodes.get(j));
-				//double bsij = m_graph.get(i, j); // content graph bias
-				double sij = m_sim.get(i, j); // sim of i and j
-//				double pij = d1 * brj + d2 * bsij + (1.0 - d1 - d2) * sij; // biased prob of going from i to j
-				double pij = d1 * brj + (1.0 - d1)*(sbij ? 1.0 : sij);
-				m_sim.set(i, j, pij);
+				double sij = m.get(i, j); // sim of i and j
+				double pij = d * brj + (1.0 - d)*sij; // brj is positive, so pij also provided d > 0.0
+				bm.set(i, j, pij);
 			}));
 		// No need to normalize again
 
 		log.info("Biased similarity matrix:");
-		log.info(StatsReporter.getMatrixStats(m_sim));
+		log.info(StatsReporter.getMatrixStats(bm));
 
-		return m_sim;
+		return bm;
 	}
 
 
 	/**
-	 * @return true if both nodes are connected through an edge in the content graph
+	 * @return true if n1 is governor of n2 in g, i.e. if an edge n1->n2 exists in g
 	 */
-	private static boolean cooccur(SemanticGraph g, Node n1, Node n2)
+	private static boolean isGovernor(SemanticGraph g, Node n1, Node n2)
 	{
-		boolean isGovernorOf = g.incomingEdgesOf(n1).stream()
+		return  g.incomingEdgesOf(n2).stream()
 					.map(g::getEdgeSource)
-					.anyMatch(n -> n == n2);
-
-		boolean isDependentOf = g.outgoingEdgesOf(n1).stream()
-				.map(g::getEdgeTarget)
-				.anyMatch(n -> n == n2);
-
-		return isGovernorOf || isDependentOf;
+					.anyMatch(n -> n == n1);
 	}
 
 	/**

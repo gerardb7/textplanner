@@ -34,13 +34,13 @@ public final class TextPlanner
 	public static class Options
 	{
 		public int numPatterns = 10; // Number of patterns to return
-		public double dampingRelevance = 0.5; // damping factor to control bias towards prior relevance of entities
+		public double dampingRelevance = 0.2; // damping factor to control bias towards prior relevance of entities
 		public double rankingStopThreshold = 0.0001; // stopping threshold for the main ranking algorithm
-		public double relevanceLowerBound = 0.1; // Entities with relevance below this value have their score set to 0
+		public double minRelevance = 0.1; // Entities with relevance below this value have their score set to 0
 		public double simLowerBound = 0.0; // Pairs of entities with similarity below this value have their score set to 0
-		public int patternBeamSize = 100; // Size of the beam used when searching for optimal patterns
+		public int patternBeamSize = 10; // Size of the beam used when searching for optimal patterns
 		public double patternLambda = 0.5; // Controls balance between weight of nodes and cost of edges during pattern extraction
-		public boolean generateStats = true;
+		public boolean generateStats = false;
 		public String stats = "";
 
 		@Override
@@ -51,7 +51,7 @@ public final class TextPlanner
 			f.setMaximumFractionDigits(3);
 			f.setMinimumFractionDigits(3);
 			return "Params: numPatterns=" + numPatterns + " damping_rel=" + f.format(dampingRelevance) +
-					" delta=" + f.format(rankingStopThreshold) + " min_rel=" + f.format(relevanceLowerBound) +
+					" delta=" + f.format(rankingStopThreshold) + " min_rel=" + f.format(minRelevance) +
 					" min_sim=" + f.format(simLowerBound) + " pattern_lambda=" + f.format(patternLambda) +
 					"\n\n" + stats;
 		}

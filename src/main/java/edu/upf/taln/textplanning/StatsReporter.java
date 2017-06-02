@@ -84,7 +84,7 @@ public class StatsReporter
 							double s = sense != null ? sense.computeSimilarity(e1.getEntity(), e2.getEntity()) : 0.0;
 							double r = rel.weight(e2.getEntity());
 							s = s < o.simLowerBound ? 0.0 : s;
-							r = r < o.relevanceLowerBound ? 0.0 : r;
+							r = Math.max(o.minRelevance, r);
 							return s*r;
 						})
 						.average().orElse(0.0))
@@ -97,7 +97,7 @@ public class StatsReporter
 							double s = sim != null ? sim.computeSimilarity(e1.getEntity(), e2.getEntity()) : 0.0;
 							double r = rel.weight(e2.getEntity());
 							s = s < o.simLowerBound ? 0.0 : s;
-							r = r < o.relevanceLowerBound ? 0.0 : r;
+							r = Math.max(o.minRelevance, r);
 							return s*r;
 						})
 						.average().orElse(0.0))
@@ -110,7 +110,7 @@ public class StatsReporter
 							double s = word != null ? word.computeSimilarity(e1.getEntity(), e2.getEntity()) : 0.0;
 							double r = rel.weight(e2.getEntity());
 							s = s < o.simLowerBound ? 0.0 : s;
-							r = r < o.relevanceLowerBound ? 0.0 : r;
+							r = Math.max(o.minRelevance, r);
 							return s*r;
 						})
 						.average().orElse(0.0))
