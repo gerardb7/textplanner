@@ -126,16 +126,11 @@ public class SemanticGraph extends SimpleDirectedGraph<SemanticGraph.Node, Seman
 			}
 
 			Edge edge = (Edge) o;
+			if (isArg != edge.isArg || !role.equals(edge.role))
+				return false;
 
-			if (isArg != edge.isArg)
-			{
-				return false;
-			}
-			else if (!role.equals(edge.role))
-			{
-				return false;
-			}
-			else if ((getSource() == null && edge.getSource() != null) || (getTarget() == null && edge.getTarget() != null))
+			//noinspection SimplifiableIfStatement
+			if ((getSource() == null && edge.getSource() != null) || (getTarget() == null && edge.getTarget() != null))
 				return false;
 			return getSource().equals(edge.getSource()) && getTarget().equals(edge.getTarget());
 		}

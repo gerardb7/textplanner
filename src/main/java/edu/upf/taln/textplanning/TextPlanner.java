@@ -34,10 +34,10 @@ public final class TextPlanner
 	public static class Options
 	{
 		public int numPatterns = 10; // Number of patterns to return
-		public double dampingRelevance = 0.2; // damping factor to control bias towards prior relevance of entities
-		public double rankingStopThreshold = 0.0001; // stopping threshold for the main ranking algorithm
+		public double dampingRelevance = 0.6; // damping factor to control bias towards prior relevance of entities
+		public double rankingStopThreshold = 0.00000001; // stopping threshold for the main ranking algorithm
 		public double minRelevance = 0.0001; // pseudocount α for additive smoothing of relevance values
-		public double simLowerBound = 0.0; // Pairs of entities with similarity below this value have their score set to 0
+		public double simLowerBound = 0.6; // Pairs of entities with similarity below this value have their score set to 0
 		public int patternBeamSize = 10; // Size of the beam used when searching for optimal patterns
 		public double patternLambda = 0.5; // Controls balance between weight of nodes and cost of edges during pattern extraction
 		public boolean generateStats = false;
@@ -48,11 +48,11 @@ public final class TextPlanner
 		{
 			NumberFormat f = NumberFormat.getInstance();
 			f.setRoundingMode(RoundingMode.UP);
-			f.setMaximumFractionDigits(3);
+			//f.setMaximumFractionDigits(10);
 			f.setMinimumFractionDigits(3);
-			return "Params: numPatterns=" + numPatterns + " damping_rel=" + f.format(dampingRelevance) +
-					" delta=" + f.format(rankingStopThreshold) + " min_rel=" + f.format(minRelevance) +
-					" min_sim=" + f.format(simLowerBound) + " pattern_lambda=" + f.format(patternLambda) +
+			return "numPatterns=" + numPatterns + " damping_rel=" + f.format(dampingRelevance) +
+					" ranking_threshold=" + f.format(rankingStopThreshold) + " min_rel=" + f.format(minRelevance) +
+					" min_sim=" + f.format(simLowerBound) + " beam_size=" + patternBeamSize + " pattern_lambda=" + f.format(patternLambda) +
 					"\n\n" + stats;
 		}
 	}
@@ -107,8 +107,7 @@ public final class TextPlanner
 			log.info("**Extracting patterns**");
 			timer.reset(); timer.start();
 
-			List<SemanticTree> patterns = PatternExtraction.extract(contentGraph, inOptions.numPatterns,
-					inOptions.patternBeamSize, inOptions.patternLambda);
+			List<SemanticTree> patterns = PatternExtraction.extract(contentGraph, inOptions.numPatterns, inOptions.patternLambda);
 			log.info("Pattern extraction took " + timer.stop());
 
 			// 5- Sort the trees into a coherence-optimized list

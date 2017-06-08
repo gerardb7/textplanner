@@ -6,11 +6,12 @@ import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -55,9 +56,7 @@ public class EmbeddingUtils
 
 		log.info("Calculating subset");
 		Stopwatch timer = Stopwatch.createStarted();
-		ConLLAcces reader = new ConLLAcces();
-		String conll = new String(Files.readAllBytes(inConllPath), Charset.forName("UTF-8"));
-		List<SemanticTree> trees = reader.readTrees(conll);
+		List<SemanticTree> trees = loadTrees(inConllPath);
 
 		//TODO consider removing code manipulating IRIs
 		// Collect all senses in conll
@@ -251,6 +250,43 @@ public class EmbeddingUtils
 		return meanVectors;
 	}
 
+	private static List<SemanticTree> loadTrees(Path p) throws IOException
+	{
+		ConLLAcces conll = new ConLLAcces();
+		List<SemanticTree> trees = new ArrayList<>();
+
+		List<Path> folders = Files.walk(p)
+				.filter(Files::isDirectory)
+				.sorted()
+				.collect(Collectors.toList());
+
+		for (Path d : folders)
+		{
+			List<Path> files = Files.list(d)
+					.filter(Files::isRegularFile)
+					.filter(f -> f.toString().endsWith("deep_g.conll"))
+					.sorted()
+					.collect(Collectors.toList());
+			files.stream()
+					.map(f ->
+					{
+						try
+						{
+							return FileUtils.readFileToString(f.toFile(), StandardCharsets.UTF_8);
+						}
+						catch (Exception e)
+						{
+							throw new RuntimeException(e);
+						}
+					})
+					.map(conll::readTrees)
+					.flatMap(List::stream)
+					.forEach(trees::add);
+		}
+
+		return trees;
+	}
+
 	public static void main(String[] args) throws Exception
 	{
 		if (args.length < 2)
@@ -292,7 +328,7 @@ public class EmbeddingUtils
 				if (args.length != 4)
 				{
 					System.err.println("Wrong number of args." +
-							"Usage: embedutils subset embeddings_file conll_file output_file");
+							"Usage: embedutils subset embeddings_file conll_folder output_file");
 					System.exit(-1);
 				}
 
@@ -304,19 +340,13 @@ public class EmbeddingUtils
 				}
 
 				Path conllPath = Paths.get(args[2]);
-				if (!Files.exists(conllPath) || !Files.isRegularFile(conllPath))
+				if (!Files.exists(conllPath) || !Files.isDirectory(conllPath))
 				{
 					System.err.println("Cannot open " + conllPath);
 					System.exit(-1);
 				}
 
 				Path outPath = Paths.get(args[3]);
-				if (!Files.isRegularFile(outPath))
-				{
-					System.err.println("Cannot create " + outPath);
-					System.exit(-1);
-				}
-
 				subsetEmbeddings(embeddingsPath, conllPath, outPath);
 				break;
 			}

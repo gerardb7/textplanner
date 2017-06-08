@@ -1,14 +1,9 @@
 package edu.upf.taln.textplanning.datastructures;
 
-import edu.upf.taln.textplanning.input.ConLLAcces;
-import org.apache.commons.io.FileUtils;
-import org.jgrapht.ext.DOTExporter;
-import org.jgrapht.ext.IntegerComponentNameProvider;
-import org.jgrapht.ext.StringComponentNameProvider;
+import org.jgrapht.alg.CycleDetector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.nio.charset.Charset;
 import java.util.*;
 
 /**
@@ -16,6 +11,8 @@ import java.util.*;
  */
 public class ContentGraphCreator
 {
+	private final static Logger log = LoggerFactory.getLogger(ContentGraphCreator.class);
+
 	/**
 	 * Creates a pattern extraction graph
 	 * @param trees list of annotated trees
@@ -64,24 +61,30 @@ public class ContentGraphCreator
 			}
 		});
 
-		try
+		CycleDetector<SemanticGraph.Node, SemanticGraph.Edge> detector = new CycleDetector<>(graph);
+		if (detector.detectCycles())
 		{
-			DOTExporter<SemanticGraph.Node, SemanticGraph.Edge> exporter = new DOTExporter<>(
-					new IntegerComponentNameProvider<>(),
-					new StringComponentNameProvider<>(),
-					new StringComponentNameProvider<>());
-			File temp = File.createTempFile("semgraph", ".dot");
-			exporter.exportGraph(graph, new FileWriter(temp));
-
-			File conllTemp = File.createTempFile("semgraph", ".conll");
-			ConLLAcces conll = new ConLLAcces();
-			String graphConll = conll.writeGraphs(Collections.singleton(graph));
-			FileUtils.writeStringToFile(conllTemp, graphConll, Charset.forName("UTF-16"));
+			log.warn("Content graph has cycles: " + detector.findCycles());
 		}
-		catch (Exception e)
-		{
-			throw new RuntimeException(e);
-		}
+//
+//		try
+//		{
+//			DOTExporter<SemanticGraph.Node, SemanticGraph.Edge> exporter = new DOTExporter<>(
+//					new IntegerComponentNameProvider<>(),
+//					new StringComponentNameProvider<>(),
+//					new StringComponentNameProvider<>());
+//			File temp = File.createTempFile("semgraph", ".dot");
+//			exporter.exportGraph(graph, new FileWriter(temp));
+//
+//			File conllTemp = File.createTempFile("semgraph", ".conll");
+//			ConLLAcces conll = new ConLLAcces();
+//			String graphConll = conll.writeGraphs(Collections.singleton(graph));
+//			FileUtils.writeStringToFile(conllTemp, graphConll, Charset.forName("UTF-16"));
+//		}
+//		catch (Exception e)
+//		{
+//			throw new RuntimeException(e);
+//		}
 
 		return graph;
 	}
@@ -107,11 +110,17 @@ public class ContentGraphCreator
 
 	private static String predicateToString(SemanticTree t, SemanticGraph.Node p)
 	{
-		StringBuilder str = new StringBuilder(p.getEntity().getEntityLabel());
+
+		List<String> dependents = new ArrayList<>();
 		for (SemanticGraph.Edge e : t.outgoingEdgesOf(p))
 		{
-			str.append("_").append(e.getRole()).append("-").append(t.getEdgeTarget(e).getEntity().getEntityLabel());
+			dependents.add(e.getRole() + "-" + t.getEdgeTarget(e).getEntity().getEntityLabel());
 		}
+
+		StringBuilder str = new StringBuilder(p.getEntity().getEntityLabel());
+		dependents.stream()
+				.sorted(Comparator.naturalOrder())
+				.forEach(s -> str.append("_").append(s));
 
 		return str.toString();
 	}
