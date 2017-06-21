@@ -17,7 +17,6 @@ import java.text.NumberFormat;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Generates statistics about a document containing annotations of deep syntactic trees.
@@ -293,15 +292,15 @@ public class StatsReporter
 //		}
 
 		// Report similarity
-		w.write("\nSimilarity table\n");
-		IntStream.range(0, nodes.size())
-				.mapToObj(i -> i + "\t" + nodes.stream()
-						.mapToDouble(entity -> sim.computeSimilarity(nodes.get(i).getEntity(), entity.getEntity()))
-						.map(d -> d < o.simLowerBound ? 0.0 : d)
-						.mapToObj(f::format)
-						.collect(Collectors.joining("\t")))
-				.forEach(row -> w.write(row + "\n"));
-		w.write("\n");
+//		w.write("\nSimilarity table\n");
+//		IntStream.range(0, nodes.size())
+//				.mapToObj(i -> i + "\t" + nodes.stream()
+//						.mapToDouble(entity -> sim.computeSimilarity(nodes.get(i).getEntity(), entity.getEntity()))
+//						.map(d -> d < o.simLowerBound ? 0.0 : d)
+//						.mapToObj(f::format)
+//						.collect(Collectors.joining("\t")))
+//				.forEach(row -> w.write(row + "\n"));
+//		w.write("\n");
 		return w.toString();
 	}
 

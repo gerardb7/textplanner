@@ -46,7 +46,7 @@ public class FreqsFile implements Corpus
 	{
 		if (!freqs.containsKey(inEntity.getEntityLabel().toLowerCase()))
 		{
-			log.warn("No frequency for entity " + inEntity);
+			log.warn("No frequency for entity " + inEntity.getEntityLabel().toLowerCase());
 			return 0;
 		}
 		return freqs.get(inEntity.getEntityLabel().toLowerCase());

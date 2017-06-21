@@ -1,7 +1,6 @@
 package edu.upf.taln.textplanning;
 
 import com.beust.jcommander.*;
-import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.corpora.FreqsFile;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
@@ -176,7 +175,7 @@ public class ConLLDriver
 	 * Instantiates a planner that uses random relevance weighting and similarity calculations.
 	 * @return an instance of the TextPlanner class
 	 */
-	@SuppressWarnings("WeakerAccess")
+	@SuppressWarnings({"WeakerAccess", "unused"})
 	public static TextPlanner createRandomPlanner() throws Exception
 	{
 		WeightingFunction corpusMetric = new Random();
@@ -206,19 +205,15 @@ public class ConLLDriver
 		return runPlanner(p, trees, options);
 	}
 
+	@SuppressWarnings("WeakerAccess")
 	public static String runPlanner(TextPlanner p, List<SemanticTree> trees, TextPlanner.Options options)
 	{
 		try
 		{
-			Stopwatch timer = Stopwatch.createStarted();
-
 			ConLLAcces conll = new ConLLAcces();
 			conll.postProcessTrees(trees);
 			List<SemanticTree> plan = p.planText(trees, options);
-			String result = conll.writeTrees(plan);
-			log.info("Planning took " + timer.stop());
-
-			return result;
+			return conll.writeTrees(plan);
 		}
 		catch (Exception e)
 		{
@@ -238,6 +233,7 @@ public class ConLLDriver
 			planner = ConLLDriver.createConLLPlanner(cmlArgs.solrUrl, cmlArgs.embeddings, cmlArgs.type);
 
 		TextPlanner.Options options = new TextPlanner.Options();
+		options.generateStats = true;
 		log.info("Planning parameters " + options);
 
 		Path inputFolder = cmlArgs.input.get(0);
@@ -247,7 +243,7 @@ public class ConLLDriver
 			// Collect files from folder
 			List<Path> files = Files.walk(inputFolder, 1)
 					.filter(Files::isRegularFile)
-					.filter(p -> p.toString().endsWith("deep_g.conll"))
+					.filter(p -> p.toString().endsWith("_deep_r.conll"))
 					.sorted()
 					.collect(Collectors.toList());
 

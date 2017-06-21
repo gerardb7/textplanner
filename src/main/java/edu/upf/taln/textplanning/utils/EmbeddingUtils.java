@@ -50,13 +50,13 @@ public class EmbeddingUtils
 	 * @param inConllPath      path to the conll file
 	 * @param inOutPath        path to the new embeddings file
 	 */
-	private static void subsetEmbeddings(Path inEmbeddingsPath, Path inConllPath, Path inOutPath) throws Exception
+	private static void subsetEmbeddings(Path inEmbeddingsPath, Path inConllPath, Path inOutPath, String extension) throws Exception
 	{
 		Map<String, List<double[]>> allVectors = parseEmbeddingsFile(inEmbeddingsPath, true, true);
 
 		log.info("Calculating subset");
 		Stopwatch timer = Stopwatch.createStarted();
-		List<SemanticTree> trees = loadTrees(inConllPath);
+		List<SemanticTree> trees = loadTrees(inConllPath, extension);
 
 		//TODO consider removing code manipulating IRIs
 		// Collect all senses in conll
@@ -250,7 +250,7 @@ public class EmbeddingUtils
 		return meanVectors;
 	}
 
-	private static List<SemanticTree> loadTrees(Path p) throws IOException
+	private static List<SemanticTree> loadTrees(Path p, String extension) throws IOException
 	{
 		ConLLAcces conll = new ConLLAcces();
 		List<SemanticTree> trees = new ArrayList<>();
@@ -264,7 +264,7 @@ public class EmbeddingUtils
 		{
 			List<Path> files = Files.list(d)
 					.filter(Files::isRegularFile)
-					.filter(f -> f.toString().endsWith("deep_g.conll"))
+					.filter(f -> f.toString().endsWith(extension))
 					.sorted()
 					.collect(Collectors.toList());
 			files.stream()
@@ -325,10 +325,10 @@ public class EmbeddingUtils
 			}
 			case "subset":
 			{
-				if (args.length != 4)
+				if (args.length != 5)
 				{
 					System.err.println("Wrong number of args." +
-							"Usage: embedutils subset embeddings_file conll_folder output_file");
+							"Usage: embedutils subset embeddings_file conll_folder extension output_file");
 					System.exit(-1);
 				}
 
@@ -346,8 +346,10 @@ public class EmbeddingUtils
 					System.exit(-1);
 				}
 
-				Path outPath = Paths.get(args[3]);
-				subsetEmbeddings(embeddingsPath, conllPath, outPath);
+				String extension = args[3];
+
+				Path outPath = Paths.get(args[4]);
+				subsetEmbeddings(embeddingsPath, conllPath, outPath, extension);
 				break;
 			}
 			default:

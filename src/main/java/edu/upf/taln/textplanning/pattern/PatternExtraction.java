@@ -34,18 +34,20 @@ public class PatternExtraction
 		// Work out average node weight, which will be used as weight for edges
 		double avgWeight = g.vertexSet().stream().mapToDouble(Node::getWeight).average().orElse(1.0);
 
-		// Collect verbal roots
-		Set<Node> roots = g.vertexSet().stream()
+		// Collect verbal roots and select top ranked
+		List<Node> roots = g.vertexSet().stream()
 				.filter(n -> isInflectedVerb(g, n)) // is a predicate
 				.filter(n -> g.inDegreeOf(n) == 0) // is root
 				.filter(n -> g.outDegreeOf(n) > 0) // is connected
-				.collect(Collectors.toSet());
+				.sorted((r1, r2) -> Double.compare(r2.getWeight(), r1.getWeight()))
+				.limit(numPatterns)
+				.collect(Collectors.toList());
 
 		if (roots.isEmpty())
 			return null;
 
-		// Expand to initial trees, and select top ranked
-		Set<Pair<SemanticTree, Double>> initialTrees = roots.stream()
+		// Expand to initial trees
+		List<Pair<SemanticTree, Double>> initialTrees = roots.stream()
 				.map(SemanticTree::new)
 				.map(t ->
 				{
@@ -54,8 +56,8 @@ public class PatternExtraction
 				})
 				.map(t -> Pair.of(t, calculateWeight(g, t, avgWeight, lambda)))
 				.sorted((s1, s2) -> Double.compare(s2.getRight(), s1.getRight()))
-				.limit(numPatterns)
-				.collect(Collectors.toSet());
+				.distinct()
+				.collect(Collectors.toList());
 
 		// Find best expansion for each tree
 		Set<Pair<SemanticTree, Double>> topTrees = new HashSet<>();
@@ -69,7 +71,10 @@ public class PatternExtraction
 						.map(ext -> Pair.of(ext, calculateWeight(g, ext, avgWeight, lambda)))
 						.max(Comparator.comparing(Pair::getValue)); // greedy search
 
-				if (bestExtension.isPresent() && bestExtension.get().getRight() > t.getRight())
+				double currentValue = currentTree.getRight();
+				double newValue = bestExtension.isPresent() ? bestExtension.get().getRight() : currentValue;
+
+				if (newValue > currentValue)
 				{
 					 currentTree = bestExtension.get();
 				}
@@ -91,17 +96,17 @@ public class PatternExtraction
 	/**
 	 * Calculates the cost of a tree as a combination of node weights and edge distances
 	 * @param g graph containing the tree
-	 * @param s tree to weight
+	 * @param t tree to weight
 	 * @param edgeWeight fixed weight assigned to each edge
 	 * @return cost of the tree
 	 */
-	private static double calculateWeight(SemanticGraph g, SemanticTree s, double edgeWeight, double lambda)
+	private static double calculateWeight(SemanticGraph g, SemanticTree t, double edgeWeight, double lambda)
 	{
-		double ws = s.vertexSet().stream()
+		double ws = t.vertexSet().stream()
 				.mapToDouble(Node::getWeight)
 				.sum();
-		double ds = s.edgeSet().size() * edgeWeight; // assign edges the average node weight
-		double dv = g.edgeSet().size() * edgeWeight;
+		double ds = t.edgeSet().size() * edgeWeight; // cost of edges in tree
+		double dv = g.edgeSet().size() * edgeWeight; // cost of all edges in graph, used to keep weighting function nonnegative
 		return lambda*ws - ds + dv;
 	}
 

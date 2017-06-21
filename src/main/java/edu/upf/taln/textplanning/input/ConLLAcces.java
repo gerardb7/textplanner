@@ -90,11 +90,14 @@ public class ConLLAcces implements DocumentAccess
 
 					if (id >= 1 && !failedSentence)
 					{
-						String form = columns[2];
-						String lemma = columns[1];
+						String form = columns[1];
+						String lemma = columns[2];
 						String pos = columns[4];
 						String feats = columns[6];
 						Map<String, String> features = Splitter.on("|").withKeyValueSeparator("=").split(feats);
+						if (features.containsKey("original_slex"))
+							form = features.get("original_slex");
+
 						String relationName = features.getOrDefault("fn", null);
 						String ref = features.getOrDefault("bnId", null);
 						if (pos.equals("_"))

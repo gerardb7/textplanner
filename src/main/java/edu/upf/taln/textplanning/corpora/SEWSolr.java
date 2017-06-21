@@ -22,7 +22,8 @@ public final class SEWSolr implements Corpus
 	private final HttpSolrClient server;
 	private final long numDocs;
 	private final static Logger log = LoggerFactory.getLogger(SEWSolr.class);
-	private final static Cache cache = new Cache();
+	private final static Cache freqCache = new Cache();
+	private final static Cache coocurrenceCache = new Cache();
 	private final static DebugAid debug = new DebugAid(SEWSolr.class.getName()); // encapsulates non-immutable behavior used for debugging purposes
 
 	public SEWSolr(String inURL) throws RuntimeException
@@ -43,17 +44,41 @@ public final class SEWSolr implements Corpus
 
 	public long getFrequency(Entity inEntity)
 	{
-		// Get key use in look ups in the cache and solr
+		// Get key use in look ups in the freqCache and solr
 		String key = getKey(inEntity);
 		try
 		{
-			if (cache.containsKey(key))
-				return cache.get(key);
+			if (freqCache.containsKey(key))
+				return freqCache.get(key);
 			else
 			{
 				long freq = queryFrequency(key);
-				cache.put(key, freq);
+				freqCache.put(key, freq);
 				return freq;
+			}
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+	}
+
+	public long getCooccurrence(Entity e1, Entity e2)
+	{
+		// Get key use in look ups in the freqCache and solr
+		String k1 = getKey(e1);
+		String k2 = getKey(e2);
+		String cacheKey = k1 + "-" + k2;
+		try
+		{
+			if (coocurrenceCache.containsKey(cacheKey))
+				return coocurrenceCache.get(cacheKey);
+			else
+			{
+				long cooc = queryCooccurrence(k1, k2);
+				coocurrenceCache.put(cacheKey, cooc);
+				return cooc;
 			}
 		}
 		catch (Exception e)
@@ -85,17 +110,53 @@ public final class SEWSolr implements Corpus
 	@Override
 	public long getNumDocs() { return this.numDocs; }
 
-	private long queryFrequency(String inKey) throws IOException, SolrServerException
+	private long queryFrequency(String key) throws IOException, SolrServerException
 	{
 		String queryString;
-		String key = inKey.replace(":", "\\:").replace("-", "\\-").replace("\"", "\\\"");
-		if (key.startsWith("bn\\:"))
+		String k = key.replace(":", "\\:").replace("-", "\\-").replace("\"", "\\\"");
+		if (k.startsWith("bn\\:"))
 		{
-			queryString = "annotationId:" + key;
+			queryString = "annotationId:" + k;
 		}
 		else
-			queryString = "text:" + key;
+			queryString = "text:" + k;
 
+		SolrQuery query = new SolrQuery(queryString);
+		query.setRows(0); // don't request  data
+		Stopwatch timer = Stopwatch.createStarted();
+		long count = 0;
+		try
+		{
+			count = server.query(query).getResults().getNumFound();
+		}
+		catch (Exception e)
+		{
+			log.error("Query " + query + " failed: " + e);
+
+		}
+		debug.registerQuery(timer.stop().elapsed(TimeUnit.MILLISECONDS));
+
+		return count;
+	}
+
+	private long queryCooccurrence(String key1, String key2)
+	{
+		String k1 = key1.replace(":", "\\:").replace("-", "\\-").replace("\"", "\\\"");
+		String k2 = key2.replace(":", "\\:").replace("-", "\\-").replace("\"", "\\\"");
+		if (k1.startsWith("bn\\:"))
+		{
+			k1 = "annotationId:" + k1;
+		}
+		else
+			k1 = "text:" + k1;
+		if (k2.startsWith("bn\\:"))
+		{
+			k2 = "annotationId:" + k2;
+		}
+		else
+			k2 = "text:" + k2;
+
+		String queryString = k1 + " AND " + k2;
 		SolrQuery query = new SolrQuery(queryString);
 		query.setRows(0); // don't request  data
 		Stopwatch timer = Stopwatch.createStarted();

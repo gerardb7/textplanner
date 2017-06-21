@@ -57,7 +57,8 @@ public class PowerIterationRanking
 				.mapToDouble(inWeighting::weight)
 				.map(w -> w = Math.max(inOptions.minRelevance, (1.0/n)*w)) // Laplace smoothing to avoid non-positive values
 				.toArray();
-		log.info(StatsReporter.getMatrixStats(new Matrix(b, 1)));
+		log.debug("Relevance matrix:");
+		log.debug(StatsReporter.getMatrixStats(new Matrix(b, 1)));
 		double accum = Arrays.stream(b).sum();
 		IntStream.range(0, n).forEach(i -> b[i] /= accum); // normalize vector with sum of row
 
@@ -75,8 +76,8 @@ public class PowerIterationRanking
 						sij = 0.0;
 					m.set(i, j, sij);
 				}));
-		log.info("Similarity matrix:");
-		log.info(StatsReporter.getMatrixStats(m));
+		log.debug("Similarity matrix:");
+		log.debug(StatsReporter.getMatrixStats(m));
 		normalize(m);
 
 		// Bias each row in m using relevance bias b and damping factor d
@@ -93,8 +94,8 @@ public class PowerIterationRanking
 			}));
 		// No need to normalize again
 
-		log.info("Biased similarity matrix:");
-		log.info(StatsReporter.getMatrixStats(bm));
+		log.debug("Biased similarity matrix:");
+		log.debug(StatsReporter.getMatrixStats(bm));
 
 		return bm;
 	}
@@ -132,7 +133,7 @@ public class PowerIterationRanking
 		int n = a.getColumnDimension();
 		Matrix v = new Matrix(n, 1, 1.0 / n); // v is the distribution vector that will get iteratively updated
 
-		log.info("Starting power iteration");
+		log.debug("Starting power iteration");
 		int numIterations = 0;
 		double delta;
 		do
@@ -150,7 +151,7 @@ public class PowerIterationRanking
 			v = tmp;
 			if (++numIterations % 100 == 0)
 			{
-				log.info("..." + numIterations + " iterations");
+				log.debug("..." + numIterations + " iterations");
 			}
 		}
 		while (delta >= e); // stopping criterion: delta falls below a certain threshold

@@ -20,8 +20,8 @@ public class PatternSimilarityTest
 	@Test
 	public void testGetSimilarity() throws Exception
 	{
-		ConLLAcces reader = new ConLLAcces();
-		List<SemanticTree> trees = reader.readTrees("src/test/resources/test_dummy.conll");
+		ConLLAcces conll = new ConLLAcces();
+		List<SemanticTree> trees = conll.readTrees("src/test/resources/test_dummy.conll");
 		SemanticTree tree1 = trees.get(0);
 		SemanticTree tree2 = trees.get(1);
 		SemanticTree tree3 = trees.get(2);
@@ -33,7 +33,6 @@ public class PatternSimilarityTest
 		EntitySimilarity combined = new Random();
 		PatternSimilarity simCalc = new PatternSimilarity(combined);
 
-		ConLLAcces conll = new ConLLAcces();
 		System.out.println("OrderedTree 1:\n" + conll.writeTrees(Collections.singleton(tree1)));
 		System.out.println("OrderedTree 2:\n" + conll.writeTrees(Collections.singleton(tree2)));
 		System.out.println("OrderedTree 3:\n" + conll.writeTrees(Collections.singleton(tree3)));

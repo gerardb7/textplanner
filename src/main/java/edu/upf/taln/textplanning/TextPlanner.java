@@ -33,13 +33,12 @@ public final class TextPlanner
 
 	public static class Options
 	{
-		public int numPatterns = 10; // Number of patterns to return
-		public double dampingRelevance = 0.6; // damping factor to control bias towards prior relevance of entities
+		public int numPatterns = 25; // Number of patterns to return
+		public double dampingRelevance = 0.8; // damping factor to control bias towards prior relevance of entities
 		public double rankingStopThreshold = 0.00000001; // stopping threshold for the main ranking algorithm
 		public double minRelevance = 0.0001; // pseudocount α for additive smoothing of relevance values
 		public double simLowerBound = 0.6; // Pairs of entities with similarity below this value have their score set to 0
-		public int patternBeamSize = 10; // Size of the beam used when searching for optimal patterns
-		public double patternLambda = 0.5; // Controls balance between weight of nodes and cost of edges during pattern extraction
+		public double patternLambda = 1.0; // Controls balance between weight of nodes and cost of edges during pattern extraction
 		public boolean generateStats = false;
 		public String stats = "";
 
@@ -52,7 +51,7 @@ public final class TextPlanner
 			f.setMinimumFractionDigits(3);
 			return "numPatterns=" + numPatterns + " damping_rel=" + f.format(dampingRelevance) +
 					" ranking_threshold=" + f.format(rankingStopThreshold) + " min_rel=" + f.format(minRelevance) +
-					" min_sim=" + f.format(simLowerBound) + " beam_size=" + patternBeamSize + " pattern_lambda=" + f.format(patternLambda) +
+					" min_sim=" + f.format(simLowerBound) + " pattern_lambda=" + f.format(patternLambda) +
 					"\n\n" + stats;
 		}
 	}
@@ -76,16 +75,16 @@ public final class TextPlanner
 	{
 		try
 		{
-			log.info("***Planning started***");
+			log.info("Planning started");
 
 			// 1- Create content graph
-			log.info("**Creating content graph**");
+			log.info("Creating content graph");
 			Stopwatch timer = Stopwatch.createStarted();
 			SemanticGraph contentGraph = ContentGraphCreator.createContentGraph(inContents);
 			log.info("Graph creation took " + timer.stop());
 
 			// 2- Create entity ranking matrix
-			log.info("**Creating ranking matrix**");
+			log.info("Creating ranking matrix");
 			timer.reset(); timer.start();
 			weighting.setCollection(inContents);
 			Matrix rankingMatrix =
@@ -93,7 +92,7 @@ public final class TextPlanner
 			log.info("Creation of ranking matrix took " + timer.stop());
 
 			// 3- Rank entities using biased semantic ranking and power iteration method
-			log.info("**Power iteration ranking**");
+			log.info("Power iteration ranking");
 			timer.reset(); timer.start();
 			Matrix finalDistribution = PowerIterationRanking.run(rankingMatrix, inOptions.rankingStopThreshold);
 			log.info("Power iteration ranking took " + timer.stop());
@@ -104,14 +103,14 @@ public final class TextPlanner
 					.forEach(i -> nodes.get(i).setWeight(ranking[i]));
 
 			// 4- Extract patterns from content graph
-			log.info("**Extracting patterns**");
+			log.info("Extracting patterns");
 			timer.reset(); timer.start();
 
 			List<SemanticTree> patterns = PatternExtraction.extract(contentGraph, inOptions.numPatterns, inOptions.patternLambda);
 			log.info("Pattern extraction took " + timer.stop());
 
 			// 5- Sort the trees into a coherence-optimized list
-			log.info("**Structuring patterns**");
+			log.info("Structuring patterns");
 			timer.reset(); timer.start();
 			//patterns = DiscoursePlanner.structurePatterns(patterns, similarity);
 			log.info("Pattern structuring took " + timer.stop());
@@ -119,7 +118,7 @@ public final class TextPlanner
 			// 6- Generate stats (optional)
 			if (inOptions.generateStats)
 			{
-				log.info("**Generating stats**");
+				log.info("Generating stats");
 				timer.reset();
 				timer.start();
 				inOptions.stats = StatsReporter.reportStats(inContents, weighting, similarity, contentGraph, inOptions);
@@ -130,7 +129,7 @@ public final class TextPlanner
 		}
 		catch (Exception e)
 		{
-			log.error("***Planning failed***");
+			log.error("Planning failed");
 			throw new RuntimeException(e);
 		}
 	}

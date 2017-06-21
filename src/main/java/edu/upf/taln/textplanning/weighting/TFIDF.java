@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.weighting;
 
 import edu.upf.taln.textplanning.corpora.Corpus;
+import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
 import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
@@ -36,13 +37,12 @@ public class TFIDF implements WeightingFunction
 				.map(SemanticTree::vertexSet)
 				.map(p -> p.stream()
 						.map(Node::getEntity)
+						.filter(this::isNominal)
 						.filter(e -> !ignoreEntity(e))
 						.collect(Collectors.toList()))
 				.flatMap(List::stream)
 				// Entity objects are tested for equality according to their unique labels
 				.collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
-
-		//long maxFreq = freqs.values().stream().mapToLong(Long::valueOf).max().orElse(1);
 
 		// Calculate tf*idf values of the collection relative to the corpus
 		for (Entity e : freqs.keySet())
@@ -55,8 +55,18 @@ public class TFIDF implements WeightingFunction
 		}
 
 		// Normalize values to [0..1]
-		double maxTfidf = tfidf.values().stream().mapToDouble(Double::valueOf).max().orElse(1.0);
+		double maxTfidf = tfidf.values().stream().mapToDouble(d -> d).max().orElse(1.0);
 		tfidf.keySet().forEach(e -> tfidf.replace(e, tfidf.get(e) / maxTfidf));
+
+		// Set the tf*idf score of non-nominal entities to the avg of all remaining entities
+		double avgTfidf = tfidf.values().stream().mapToDouble(d -> d).average().orElse(0.0);
+		inCollection.stream()
+				.map(SemanticTree::vertexSet)
+				.flatMap(p -> p.stream()
+						.map(Node::getEntity)
+						.filter(e -> !isNominal(e))
+						.filter(e -> !ignoreEntity(e)))
+				.forEach(e -> tfidf.put(e, avgTfidf));
 	}
 
 	@Override
@@ -71,10 +81,14 @@ public class TFIDF implements WeightingFunction
 		return tfidf.get(e);
 	}
 
+	private boolean isNominal(Entity e)
+	{
+		AnnotatedEntity ann = (AnnotatedEntity)e;
+		return ann.getAnnotation().getPOS().startsWith("N"); // nominals only
+	}
+
 	private boolean ignoreEntity(Entity e)
 	{
-//		AnnotatedEntity ann = (AnnotatedEntity)e;
-//		return ann.getAnnotation().getSense() == null;
 		String l = e.getEntityLabel();
 		return (l.equals("_") || l.equals("\"") || l.equals("\'") || l.equals(",") || l.equals(";") || l.equals("--") ||
 				l.equals("-"));

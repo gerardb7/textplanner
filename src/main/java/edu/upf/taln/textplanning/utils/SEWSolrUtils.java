@@ -88,7 +88,7 @@ public class SEWSolrUtils
 	private static void queryFrequencies(Path basePath, String extension, Path outputFile) throws IOException
 	{
 		log.info("Quering frequencies for entities in " + basePath);
-		ConLLAcces conll = new ConLLAcces();
+		ConLLAcces conll = new ConLLAcces(); // assuming surface conlls with forms in second column
 		SEWSolr sew = new SEWSolr(solrUrl);
 		StringWriter w = new StringWriter();
 
@@ -123,6 +123,7 @@ public class SEWSolrUtils
 		List<String> freqs = entities.stream()
 				.peek(e -> log.info("Query for " + e.getEntityLabel() + " " + entities.indexOf(e) + "/" + entities.size()))
 				.mapToLong(sew::getFrequency)
+				.peek(f -> log.info("f=" + f))
 				.mapToObj(Long::toString)
 				.collect(Collectors.toList());
 		IntStream.range(0, entities.size())
