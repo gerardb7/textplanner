@@ -1,26 +1,21 @@
 package edu.upf.taln.textplanning.datastructures;
 
 /**
- * Base class for semantic entities (word senses, individuals in SW datasets, database cells, etc.)
- * Please note that two entities are the same if they share the same label.
+ * An entity can be a word sense, an individual in KB or dataset, a database cells, etc.
+ * Immutable class
  */
-public abstract class Entity
+public final class Entity
 {
-	public abstract String getEntityLabel();
+	private final String label;
+	private double weight;
+
+	public Entity(String label) { this(label, 0.0); }
+	public Entity(String label, double weight) { this.label = label; this.weight = weight; }
+
+	public String getLabel() { return label; }
+	public double getWeight() { return weight; }
+	public void setWeight(double w) { weight = w; }
 
 	@Override
-	public boolean equals(Object obj)
-	{
-		if (!(obj instanceof Entity))
-			return false;
-
-		Entity other = (Entity) obj;
-		return getEntityLabel().equals(other.getEntityLabel());
-	}
-
-	@Override
-	public int hashCode()
-	{
-		return getEntityLabel().hashCode();
-	}
+	public String toString() { return label; }
 }

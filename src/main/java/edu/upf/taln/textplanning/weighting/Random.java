@@ -1,22 +1,20 @@
 package edu.upf.taln.textplanning.weighting;
 
-import edu.upf.taln.textplanning.datastructures.Entity;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * Used for testing
  */
-public class Random implements WeightingFunction
+public final class Random implements WeightingFunction
 {
-	//private final java.util.Random random = new java.util.Random();
 	@Override
-	public void setCollection(List<SemanticTree> inCollection) { }
+	public void setContents(Set<SemanticGraph> contents) { }
 
 	@Override
-	public double weight(Entity inEntity)
+	public double weight(String item)
 	{
-		return inEntity.getEntityLabel().hashCode();
+		return item.hashCode();
 	}
 }

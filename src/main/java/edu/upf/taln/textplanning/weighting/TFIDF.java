@@ -1,14 +1,14 @@
 package edu.upf.taln.textplanning.weighting;
 
 import edu.upf.taln.textplanning.corpora.Corpus;
-import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
 import edu.upf.taln.textplanning.datastructures.Entity;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -17,10 +17,10 @@ import java.util.stream.Collectors;
  * Augmented tf is obtained from a list of annotated trees analyzed from a collection of documents.
  * IDF is obtained from a corpus.
  */
-public class TFIDF implements WeightingFunction
+public final class TFIDF implements WeightingFunction
 {
-	public final Corpus corpus;
-	private final Map<Entity, Double> tfidf = new HashMap<>();
+	private final Corpus corpus;
+	private final Map<String, Double> tfidf = new HashMap<>();
 
 	public TFIDF(Corpus inCorpus)
 	{
@@ -28,69 +28,85 @@ public class TFIDF implements WeightingFunction
 	}
 
 	@Override
-	public void setCollection(List<SemanticTree> inCollection)
+	public void setContents(Set<SemanticGraph> contents)
 	{
 		tfidf.clear();
 
-		// Collect frequency of entities in the collection
-		Map<Entity, Long> freqs = inCollection.stream()
-				.map(SemanticTree::vertexSet)
+		// Collect frequency of annotated senses and forms in the contents
+		Map<String, Long> freqs = contents.stream()
+				.map(SemanticGraph::vertexSet)
 				.map(p -> p.stream()
-						.map(Node::getEntity)
 						.filter(this::isNominal)
-						.filter(e -> !ignoreEntity(e))
+						.map(n -> {
+							// todo review whether form should also get tf-idf value (1)
+							Set<String> entities = n.getCandidates().stream().map(Entity::getLabel).collect(Collectors.toSet());
+							if (entities.isEmpty())
+								entities.add(n.getAnnotation().getForm());
+							return entities;
+						})
+						.flatMap(Set::stream)
+						.filter(i -> !ignoreItem(i))
 						.collect(Collectors.toList()))
 				.flatMap(List::stream)
-				// Entity objects are tested for equality according to their unique labels
 				.collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
 		// Calculate tf*idf values of the collection relative to the corpus
-		for (Entity e : freqs.keySet())
+		for (String i : freqs.keySet())
 		{
-			long f = freqs.containsKey(e) ? freqs.get(e) : 0;
+			long f = freqs.containsKey(i) ? freqs.get(i) : 0;
 			double tf = 1 + Math.log(f); // logarithmically scaled
 			//double tf = f; //0.5 + 0.5*(f/maxFreq); // augmented frequency
-			double idf = Math.log(corpus.getNumDocs() / (1 + corpus.getFrequency(e)));
-			tfidf.put(e, tf * idf);
+			double idf = Math.log(corpus.getNumDocs() / (1 + corpus.getFrequency(i)));
+			tfidf.put(i, tf * idf);
 		}
 
 		// Normalize values to [0..1]
 		double maxTfidf = tfidf.values().stream().mapToDouble(d -> d).max().orElse(1.0);
 		tfidf.keySet().forEach(e -> tfidf.replace(e, tfidf.get(e) / maxTfidf));
 
-		// Set the tf*idf score of non-nominal entities to the avg of all remaining entities
+		// Set the tf*idf score of non-nominal items to the avg of nominal items
 		double avgTfidf = tfidf.values().stream().mapToDouble(d -> d).average().orElse(0.0);
-		inCollection.stream()
-				.map(SemanticTree::vertexSet)
+		contents.stream()
+				.map(SemanticGraph::vertexSet)
 				.flatMap(p -> p.stream()
-						.map(Node::getEntity)
-						.filter(e -> !isNominal(e))
-						.filter(e -> !ignoreEntity(e)))
+						.filter(n -> !isNominal(n))
+						.map(n -> {
+							// todo review whether form should also get tf-idf value (2)
+							Set<String> entities = n.getCandidates().stream().map(Entity::getLabel).collect(Collectors.toSet());
+							if (entities.isEmpty())
+								entities.add(n.getAnnotation().getForm());
+							return entities;
+						})
+						.flatMap(Set::stream)
+						.filter(i -> !ignoreItem(i)))
 				.forEach(e -> tfidf.put(e, avgTfidf));
 	}
 
 	@Override
-	public double weight(Entity e)
+	public double weight(String item)
 	{
-		if (ignoreEntity(e))
+		if (ignoreItem(item))
 			return 0.0;
 
-		if (!tfidf.containsKey(e))
-			throw new RuntimeException("Cannot calculate tfidf value for unseen entity " + e);
+		if (!tfidf.containsKey(item))
+			throw new RuntimeException("Cannot calculate tfidf value for unseen item " + item);
 
-		return tfidf.get(e);
+		return tfidf.get(item);
 	}
 
-	private boolean isNominal(Entity e)
+	public long getFrequency(String item)
 	{
-		AnnotatedEntity ann = (AnnotatedEntity)e;
-		return ann.getAnnotation().getPOS().startsWith("N"); // nominals only
+		return corpus.getFrequency(item);
 	}
 
-	private boolean ignoreEntity(Entity e)
+	private boolean isNominal(Node n)
 	{
-		String l = e.getEntityLabel();
-		return (l.equals("_") || l.equals("\"") || l.equals("\'") || l.equals(",") || l.equals(";") || l.equals("--") ||
-				l.equals("-"));
+		return n.getAnnotation().getPOS().startsWith("N"); // nominals only
+	}
+
+	private boolean ignoreItem(String i)
+	{
+		return (i.equals("_") || i.equals("\"") || i.equals("\'") || i.equals(",") || i.equals(";") || i.equals("--") ||
+				i.equals("-"));
 	}
 }

@@ -1,8 +1,9 @@
-package edu.upf.taln.textplanning.coherence;
+package edu.upf.taln.textplanning.discourse;
 
+import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
-import edu.upf.taln.textplanning.similarity.EntitySimilarity;
+import edu.upf.taln.textplanning.similarity.ItemSimilarity;
 import edu.upf.taln.textplanning.similarity.PatternSimilarity;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.graph.DefaultWeightedEdge;
@@ -31,13 +32,14 @@ public class DiscoursePlanner
 	 * @param entitySim similarity function between pairs of entities in the patterns
 	 * @return list of patterns
 	 */
-	public static List<SemanticTree> structurePatterns(List<SemanticTree> patterns, EntitySimilarity entitySim)
+	public static List<SemanticTree> structurePatterns(List<SemanticTree> patterns, ItemSimilarity entitySim)
 	{
 		// Weight patterns by averaging their node weights
 		//noinspection RedundantTypeArguments
 		List<Pair<SemanticTree, Double>> rankedPatterns = patterns.stream()
 				.map(p -> Pair.of(p, p.vertexSet().stream()
-						.mapToDouble(Node::getWeight)
+						.map(Node::getEntity)
+						.mapToDouble(Entity::getWeight)
 						.average().orElse(0.0)))
 				.sorted(Comparator.comparing(Pair<SemanticTree, Double>::getRight).reversed())
 				.collect(Collectors.toList());

@@ -1,6 +1,6 @@
 package edu.upf.taln.textplanning.pattern;
 
-import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
+import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
@@ -32,14 +32,18 @@ public class PatternExtraction
 		// nodes are also equal.
 
 		// Work out average node weight, which will be used as weight for edges
-		double avgWeight = g.vertexSet().stream().mapToDouble(Node::getWeight).average().orElse(1.0);
+		// todo consider working out average weight with all candidate references, not just disambiguated ones
+		double avgWeight = g.vertexSet().stream()
+				.map(Node::getEntity)
+				.mapToDouble(Entity::getWeight)
+				.average().orElse(1.0);
 
 		// Collect verbal roots and select top ranked
 		List<Node> roots = g.vertexSet().stream()
 				.filter(n -> isInflectedVerb(g, n)) // is a predicate
 				.filter(n -> g.inDegreeOf(n) == 0) // is root
 				.filter(n -> g.outDegreeOf(n) > 0) // is connected
-				.sorted((r1, r2) -> Double.compare(r2.getWeight(), r1.getWeight()))
+				.sorted((r1, r2) -> Double.compare(r2.getEntity().getWeight(), r1.getEntity().getWeight()))
 				.limit(numPatterns)
 				.collect(Collectors.toList());
 
@@ -72,9 +76,9 @@ public class PatternExtraction
 						.max(Comparator.comparing(Pair::getValue)); // greedy search
 
 				double currentValue = currentTree.getRight();
-				double newValue = bestExtension.isPresent() ? bestExtension.get().getRight() : currentValue;
+				double newValue = bestExtension.map(Pair::getRight).orElse(currentValue);
 
-				if (newValue > currentValue)
+				if (bestExtension.isPresent() && newValue > currentValue)
 				{
 					 currentTree = bestExtension.get();
 				}
@@ -103,7 +107,7 @@ public class PatternExtraction
 	private static double calculateWeight(SemanticGraph g, SemanticTree t, double edgeWeight, double lambda)
 	{
 		double ws = t.vertexSet().stream()
-				.mapToDouble(Node::getWeight)
+				.mapToDouble(n -> n.getEntity().getWeight())
 				.sum();
 		double ds = t.edgeSet().size() * edgeWeight; // cost of edges in tree
 		double dv = g.edgeSet().size() * edgeWeight; // cost of all edges in graph, used to keep weighting function nonnegative
@@ -180,7 +184,7 @@ public class PatternExtraction
 		{
 			// replicate node to preserve tree structure
 			String newId = n.getId() + "_" + ++i;
-			r = new Node(newId, n.getEntity(), n.getWeight(), n.getId()); // create coreferent node
+			r = new Node(newId, n.getEntity(), n.getAnnotation(), n.getId()); // create coreferent node
 		}
 
 		return r;
@@ -208,7 +212,7 @@ public class PatternExtraction
 	private static boolean isInflectedVerb(SemanticGraph g, Node n)
 	{
 		String[] inflectedVerbs = {"VBD", "VBP", "VBZ"};
-		String pos = ((AnnotatedEntity) n.getEntity()).getAnnotation().getPOS();
+		String pos = n.getAnnotation().getPOS();
 		return g.isPredicate(n) && Arrays.stream(inflectedVerbs).anyMatch(pos::equals);
 	}
 }

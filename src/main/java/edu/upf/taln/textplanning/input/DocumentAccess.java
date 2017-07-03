@@ -1,7 +1,6 @@
 package edu.upf.taln.textplanning.input;
 
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
-import org.jgrapht.graph.DefaultEdge;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 
 import java.io.IOException;
 import java.util.List;
@@ -11,20 +10,5 @@ import java.util.List;
  */
 public interface DocumentAccess
 {
-	class LabelledEdge extends DefaultEdge
-	{
-		private final String label;
-
-		public LabelledEdge(String inLabel)
-		{
-			label = inLabel;
-		}
-
-		public String getLabel()
-		{
-			return label;
-		}
-	}
-
-	List<SemanticTree> readTrees(String inDocumentContents) throws IOException;
+	List<SemanticGraph> readStructures(String inDocumentContents) throws IOException;
 }

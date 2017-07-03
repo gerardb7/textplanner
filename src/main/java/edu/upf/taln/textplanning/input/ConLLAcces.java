@@ -1,14 +1,15 @@
 package edu.upf.taln.textplanning.input;
 
 import com.google.common.base.Splitter;
-import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
 import edu.upf.taln.textplanning.datastructures.Annotation;
+import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
+import org.jgrapht.alg.ConnectivityInspector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +33,7 @@ public class ConLLAcces implements DocumentAccess
 	 * @return a list of trees
 	 */
 	@Override
-	public List<SemanticTree> readTrees(String inDocumentContents)
+	public List<SemanticGraph> readStructures(String inDocumentContents)
 	{
 		try
 		{
@@ -43,12 +44,11 @@ public class ConLLAcces implements DocumentAccess
 			StringReader reader = new StringReader(inDocumentContents);
 			BufferedReader bufferReader = new BufferedReader(reader);
 
-			List<SemanticTree> trees = new ArrayList<>();
+			List<SemanticGraph> graphs = new ArrayList<>();
 			List<Annotation> anns = new ArrayList<>();
-			Map<Integer, List<Pair<String, Integer>>> governors = new HashMap<>();
-			//int rootId = -1;
+			Map<Integer, List<Integer>> governors = new HashMap<>();
 			Set<Integer> roots = new HashSet<>();
-			int sentence = 0;
+			int structure = 0;
 			boolean failedSentence = false;
 
 			String line;
@@ -72,20 +72,16 @@ public class ConLLAcces implements DocumentAccess
 					{
 						if (!failedSentence)
 						{
-							// Create tree from previously collected nodes
-							double position = ((double) (numStructures - sentence)) / ((double) numStructures);
-							roots.stream()
-									.map(r -> createTree(r, anns, governors, position))
-									.forEach(trees::add);
+							// Create graph from previously collected nodes
+							graphs.addAll(createGraphs(anns, governors));
 						}
 
 						// Reset variables
 						failedSentence = false;
-						++sentence;
+						++structure;
 						anns.clear();
 						governors.clear();
 						roots.clear();
-						//rootId = -1;
 					}
 
 					if (id >= 1 && !failedSentence)
@@ -99,7 +95,6 @@ public class ConLLAcces implements DocumentAccess
 							form = features.get("original_slex");
 
 						String relationName = features.getOrDefault("fn", null);
-						String ref = features.getOrDefault("bnId", null);
 						if (pos.equals("_"))
 						{
 							if (features.containsKey("dpos"))
@@ -112,38 +107,38 @@ public class ConLLAcces implements DocumentAccess
 							}
 						}
 
-						double conf = features.containsKey("conf") ?
-								Double.parseDouble(features.get("conf")) : 0.0;
 						List<Integer> govns = Arrays.stream(columns[8].split(",")).map(Integer::parseInt).collect(Collectors.toList());
 						List<String> roles = Arrays.stream(columns[10].split(",")).collect(Collectors.toList());
 
 						// Perform some checks
 						if (govns.isEmpty() || roles.isEmpty())
 						{
-							log.error("Token in sentence " + sentence + " has no governor or role specified, skipping sentence");
+							log.error("Token in structure " + structure + " has no governor or role specified, skipping structure");
 							failedSentence = true;
 						}
 						if (govns.size() != roles.size())
 						{
-							log.error("Token in sentence " + sentence + " has different number of roles and governors, skipping sentence");
+							log.error("Token in structure " + structure + " has different number of roles and governors, skipping structure");
 							failedSentence = true;
 						}
 						if (govns.size() > 1)
-							log.warn("Token in sentence " + sentence + " has multiple governors, keeping first and ignoring the rest");
+							log.warn("Token in structure " + structure + " has multiple governors, keeping first and ignoring the rest");
+
+						long offsetStart = Long.valueOf(features.getOrDefault("start_string", "0"));
+						long offsetEnd = Long.valueOf(features.getOrDefault("end_string", "0"));
 
 						int gov = govns.get(0);
 						String role = roles.get(0);
-						Annotation ann = new Annotation("s" + sentence + "-w" + id, form, lemma, pos, feats, ref, conf,
-								relationName, role, line);
+						Annotation ann = new Annotation("s" + structure + "-w" + id, form, lemma, pos, feats, relationName, role, line, offsetStart, offsetEnd);
 						anns.add(ann);
 
 						if (gov > 0)
-							governors.computeIfAbsent(gov, v -> new ArrayList<>()).add(Pair.of(role, id));
+							governors.computeIfAbsent(gov, v -> new ArrayList<>()).add(id);
 						else if (gov == 0)
 						{
 							if (roots.size() == 1)
 							{
-								log.warn("Sentence " + sentence + " has multiple roots");
+								log.warn("Structure " + structure + " has multiple roots");
 							}
 							roots.add(id);
 						}
@@ -151,18 +146,17 @@ public class ConLLAcces implements DocumentAccess
 				}
 				catch (Exception e)
 				{
-					log.error("Parsing of sentence " + sentence + " failed, skipping sentence: " + e);
+					log.error("Parsing of structure " + structure + " failed, skipping structure: " + e);
 					failedSentence = true;
 				}
 			}
 
 			// Create last tree
-			double position = ((double)(numStructures - sentence)) / ((double)numStructures);
 			roots.stream()
-					.map(r -> createTree(r, anns, governors, position))
-					.forEach(trees::add);
+					.map(r -> createGraphs(anns, governors))
+					.forEach(graphs::addAll);
 
-			return trees;
+			return graphs;
 		}
 		catch (Exception e)
 		{
@@ -176,6 +170,8 @@ public class ConLLAcces implements DocumentAccess
 	 * - Quote nodes are removed
 	 * - Coordinations are changed so that coordination acts as predicate governing coordinated elements
 	 * @param inTrees trees to be modified
+	 *
+	 * todo remove this after moving from dsynt to semantic structures
 	 */
 	public void postProcessTrees(List<SemanticTree> inTrees)
 	{
@@ -183,7 +179,7 @@ public class ConLLAcces implements DocumentAccess
 		{
 			// Quotes: first pass
 			List<Node> quotes = t.vertexSet().stream()
-					.filter(v -> v.getEntity().getEntityLabel().equals("_"))
+					.filter(v -> v.getAnnotation().getForm().equals("_"))
 					.collect(Collectors.toList());
 
 			List<Node> quotesToRemove = quotes.stream()
@@ -193,7 +189,7 @@ public class ConLLAcces implements DocumentAccess
 
 			// Quotes: second pass
 			quotes = t.vertexSet().stream()
-					.filter(v -> v.getEntity().getEntityLabel().equals("_"))
+					.filter(v -> v.getAnnotation().getForm().equals("_"))
 					.collect(Collectors.toList());
 			quotesToRemove.clear();
 			quotes.stream()
@@ -210,7 +206,7 @@ public class ConLLAcces implements DocumentAccess
 			// Coords
 			List<Edge> coords = t.edgeSet().stream()
 					.filter(e -> e.getRole().equals("COORD"))
-					.filter(e -> ((AnnotatedEntity)t.getEdgeTarget(e).getEntity()).getAnnotation().getPOS().equals("CC"))
+					.filter(e -> t.getEdgeTarget(e).getAnnotation().getPOS().equals("CC"))
 					.collect(Collectors.toList());
 			List<Triple<Node, Node, Edge>> edgesToAdd = new ArrayList<>();
 			List<Edge> edgesToRemove = new ArrayList<>();
@@ -256,22 +252,13 @@ public class ConLLAcces implements DocumentAccess
 							.map(t::getEdgeTarget)
 							.forEach(nodes::add);
 
-					List<Annotation> anns = nodes.stream()
-							.map(Node::getEntity)
-							.map(AnnotatedEntity.class::cast)
-							.map(AnnotatedEntity::getAnnotation)
-							.collect(Collectors.toList());
-
 					// Collect coreferring nodes
-					List<Optional<Annotation>> coref = nodes.stream()
+					List<Optional<Node>> coref = nodes.stream()
 							.map(Node::getCoref)
 							.map(o -> o.orElse(""))
 							.map(id -> nodes.stream()
 									.filter(n -> n.getId().equals(id))
 									.findFirst())
-							.map(o -> o.map(Node::getEntity))
-							.map(o -> o.map(AnnotatedEntity.class::cast))
-							.map(o -> o.map(AnnotatedEntity::getAnnotation))
 							.collect(Collectors.toList());
 
 					// Collect governor to dependent mappings
@@ -292,7 +279,7 @@ public class ConLLAcces implements DocumentAccess
 							.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
 
 
-					return nodesToConll(anns, governors, coref);
+					return nodesToConll(nodes, governors, coref);
 				})
 				.map(s -> "0\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\tslex=Sentence\n" + s + "\n")
 				.reduce(String::concat).orElse("");
@@ -308,12 +295,6 @@ public class ConLLAcces implements DocumentAccess
 		return graphs.stream()
 				.map(g -> {
 					List<Node> nodes = new ArrayList<>(g.vertexSet());
-					List<Annotation> anns = nodes.stream()
-							.map(Node::getEntity)
-							.filter(AnnotatedEntity.class::isInstance)
-							.map(AnnotatedEntity.class::cast)
-							.map(AnnotatedEntity::getAnnotation)
-							.collect(Collectors.toList());
 
 					// Collect governor to dependent mappings
 					Map<Integer, List<Pair<String, Integer>>> governors = IntStream.range(0, nodes.size())
@@ -330,7 +311,7 @@ public class ConLLAcces implements DocumentAccess
 							})
 							.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
 
-					return this.nodesToConll(anns, governors, new ArrayList<>());
+					return this.nodesToConll(nodes, governors, new ArrayList<>());
 				})
 				.map(s -> "0\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\tslex=Sentence\n" + s + "\n")
 				.reduce(String::concat).orElse("");
@@ -363,14 +344,15 @@ public class ConLLAcces implements DocumentAccess
 		}
 	}
 
-	private String nodesToConll(List<Annotation> inNodes, Map<Integer, List<Pair<String, Integer>>> inGovernors,
-	                            List<Optional<Annotation>> coref)
+	private String nodesToConll(List<Node> inNodes, Map<Integer, List<Pair<String, Integer>>> inGovernors,
+	                            List<Optional<Node>> coref)
 	{
 		// Iterate nodes again, this time producing conll
 		StringBuilder conll = new StringBuilder();
 		for (int id = 0; id < inNodes.size(); ++id)
 		{
-			Annotation node = inNodes.get(id);
+			Node node = inNodes.get(id);
+			Annotation ann = node.getAnnotation();
 			List<String> govIDs = inGovernors.get(id).stream()
 					.filter(p -> p.getRight() != null)
 					.map(p -> p.getRight() + 1)
@@ -381,30 +363,29 @@ public class ConLLAcces implements DocumentAccess
 					.map(Pair::getLeft)
 					.collect(Collectors.toList());
 			String roless = roles.isEmpty() ? "ROOT" : String.join(",", roles);
-			String feats = node.getFeats();
+			String feats = ann.getFeats();
 			Map<String, String> features = new HashMap<>(Splitter.on("|").withKeyValueSeparator("=").split(feats));
-			if (node.getRelation() != null)
+			if (ann.getRelation() != null)
 			{
-				features.merge("fn", node.getRelation(), (v1, v2) -> v2);
+				features.merge("fn", ann.getRelation(), (v1, v2) -> v2);
 			}
-			if (node.getSense() != null)
+			if (node.getEntity().getLabel().startsWith("bn:"))
 			{
-				String ref = node.getSense().startsWith("bn:") ? node.getSense() : "bn:" + node.getSense();
-				features.merge("bnId", ref, (v1, v2) -> v2);
+				features.merge("bnId", node.getEntity().getLabel(), (v1, v2) -> v2);
 			}
 			if (!coref.isEmpty() && coref.get(id).isPresent())
 			{
-				Annotation corefAnn = coref.get(id).get();
+				Node corefAnn = coref.get(id).get();
 				features.merge("coref_id", Integer.toString(inNodes.indexOf(corefAnn) + 1), (v1, v2) -> v2);
 			}
 			feats = features.entrySet().stream()
 					.map(e -> e.getKey() + "=" + e.getValue())
 					.reduce((e1, e2) -> e1 + "|" + e2).orElse("");
 			String entityConll = id + 1 + "\t" +
-					node.getLemma() + "\t" +
-					node.getForm() + "\t" +
+					ann.getLemma() + "\t" +
+					ann.getForm() + "\t" +
 					"_\t" +
-					node.getPOS() + "\t" +
+					ann.getPOS() + "\t" +
 					"_\t" +
 					feats + "\t" +
 					"_\t" +
@@ -422,56 +403,54 @@ public class ConLLAcces implements DocumentAccess
 		return conll.toString();
 	}
 
-	private SemanticTree createTree(int inRootId, List<Annotation> annotations,
-	                                 Map<Integer, List<Pair<String, Integer>>> inGovernors, double inPosition)
+	private Set<SemanticGraph> createGraphs(List<Annotation> annotations,
+	                                 Map<Integer, List<Integer>> inGovernors)
 	{
-		// Create tree with a root
-		Annotation a = annotations.get(inRootId - 1);
-		Node root = createNode(a);
-		SemanticTree tree =	new SemanticTree(root, inPosition);
+		// Create graph and add vertices
+		SemanticGraph graph = new SemanticGraph(Edge.class);
+		List<Node> nodes = new ArrayList<>();
+		annotations.stream()
+				.map(this::createNode)
+				.peek(nodes::add)
+				.forEach(graph::addVertex);
 
-		List<Pair<Integer, Node>> currentGovernors = new ArrayList<>();
-		currentGovernors.add(Pair.of(inRootId, tree.getRoot()));
-
-		while (!currentGovernors.isEmpty())
+		for (int i : inGovernors.keySet())
 		{
-			List<Pair<Integer, Node>> newGovernors = currentGovernors.stream()
-					.map(node -> {
-						int governorId = node.getLeft();
-						List<Pair<String, Integer>> dependents =
-								inGovernors.computeIfAbsent(governorId, v -> new ArrayList<>());
-						return dependents.stream()
-								.map(d -> Pair.of(d.getRight(), Pair.of(annotations.get(d.getRight() - 1), d.getLeft())))
-								.map(d -> {
-									// Create new nodes for governor and dependent
-									Node gov = node.getRight();
-									Annotation ann = d.getRight().getLeft();
-									Node dep = createNode(ann);
-									tree.addVertex(dep);
-
-									// Create new edge between governor and dependent
-									Edge e = new Edge(ann.getRole(), ann.isArgument());
-									tree.addEdge(gov, dep, e);
-
-									// Return dependent as new governor
-									Integer depId = d.getLeft();
-									return Pair.of(depId, dep);
-								})
-								.collect(Collectors.toList());
-					})
-					.flatMap(List::stream)
-					.collect(Collectors.toList());
-
-			currentGovernors.clear();
-			currentGovernors.addAll(newGovernors);
+			Node gov = nodes.get(i);
+			for (int j : inGovernors.get(i))
+			{
+				Node dep = nodes.get(j);
+				Annotation ann = annotations.get(j);
+				Edge e = new Edge(ann.getRole(), ann.isArgument());
+				graph.addEdge(gov, dep, e);
+			}
 		}
 
-		return tree;
+		// If resulting graph isn't connected (i.e. multiple roots), split into maximally connected subgraphs
+		Set<SemanticGraph> graphs = new HashSet<>();
+		ConnectivityInspector<Node, Edge> conn = new ConnectivityInspector<>(graph);
+		if (!conn.isGraphConnected())
+		{
+			List<Set<Node>> sets = conn.connectedSets();
+			for (Set<Node> set : sets)
+			{
+				SemanticGraph g = new SemanticGraph(Edge.class);
+				set.forEach(g::addVertex);
+				set.forEach(v -> graph.outgoingEdgesOf(v).forEach(e -> g.addEdge(v, graph.getEdgeTarget(e), e)));
+				graphs.add(g);
+			}
+		}
+
+		return graphs;
 	}
 
+	/**
+	 *
+	 */
 	private Node createNode(Annotation a)
 	{
-		AnnotatedEntity e = new AnnotatedEntity(a);
-		return new Node(a.getId(), e, 0.0); // no weight, no conll
+		// Create dummy entity for each token using wordform
+		Entity e = new Entity(a.getForm());
+		return new Node(a.getId(), e, a);
 	}
 }

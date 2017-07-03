@@ -1,6 +1,5 @@
 package edu.upf.taln.textplanning.corpora;
 
-import edu.upf.taln.textplanning.datastructures.Entity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,14 +41,14 @@ public class FreqsFile implements Corpus
 	}
 
 	@Override
-	public long getFrequency(Entity inEntity)
+	public long getFrequency(String item)
 	{
-		if (!freqs.containsKey(inEntity.getEntityLabel().toLowerCase()))
+		if (!freqs.containsKey(item))
 		{
-			log.warn("No frequency for entity " + inEntity.getEntityLabel().toLowerCase());
+			log.warn("No frequency for entity " + item);
 			return 0;
 		}
-		return freqs.get(inEntity.getEntityLabel().toLowerCase());
+		return freqs.get(item);
 	}
 
 	@Override

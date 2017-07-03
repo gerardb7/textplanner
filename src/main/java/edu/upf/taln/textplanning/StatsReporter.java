@@ -1,12 +1,10 @@
 package edu.upf.taln.textplanning;
 
 import Jama.Matrix;
-import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
 import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
-import edu.upf.taln.textplanning.similarity.EntitySimilarity;
+import edu.upf.taln.textplanning.similarity.ItemSimilarity;
 import edu.upf.taln.textplanning.weighting.TFIDF;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.apache.commons.collections4.ListUtils;
@@ -23,8 +21,8 @@ import java.util.stream.Collectors;
  */
 public class StatsReporter
 {
-	public static String reportStats(List<SemanticTree> t, WeightingFunction rel,
-	                                 EntitySimilarity sim, SemanticGraph g,
+	public static String reportStats(Set<SemanticGraph> structures, WeightingFunction rel,
+	                                 ItemSimilarity sim, SemanticGraph g,
 	                                 TextPlanner.Options o)
 	{
 		// Set up formatting
@@ -37,16 +35,18 @@ public class StatsReporter
 		// Collect nodes, nodesWithSense, nodesWithoutSense, etc.
 		List<Node> nodes = new ArrayList<>(g.vertexSet());
 		List<Node> nodesWithSense = nodes.stream()
-				.filter(n -> ((AnnotatedEntity)n.getEntity()).getAnnotation().getSense() != null)
+				.filter(n -> n.getEntity().getLabel().startsWith("bn:"))
 				.collect(Collectors.toList());
 		List<Node> nodesWithNominalSense = nodesWithSense.stream()
-				.filter(n -> ((AnnotatedEntity)n.getEntity()).getAnnotation().getSense().endsWith("n"))
+				.filter(n -> n.getEntity().getLabel().startsWith("bn:"))
+				.filter(n -> n.getEntity().getLabel().endsWith("n"))
 				.collect(Collectors.toList());
 //		List<Node> nodesWithoutSense = nodes.stream()
 //				.filter(n -> ((AnnotatedEntity)n.getEntity()).getAnnotation().getSense() == null)
 //				.collect(Collectors.toList());
 		List<Node> nodesWithNonNominalSense = nodes.stream()
-				.filter(n -> ((AnnotatedEntity)n.getEntity()).getAnnotation().getSense() == null || ((AnnotatedEntity)n.getEntity()).getAnnotation().getSense().endsWith("n"))
+				.filter(n -> n.getEntity().getLabel().startsWith("bn:"))
+				.filter(n -> !n.getEntity().getLabel().endsWith("n"))
 				.collect(Collectors.toList());
 
 		// Collect similarity values
@@ -61,7 +61,7 @@ public class StatsReporter
 		List<Double> mergedValues = nodesWithSense.stream()
 				.mapToDouble(e1 -> nodesWithSense.stream()
 						.filter(e2 -> e1 != e2)
-						.mapToDouble(e2 -> sim.computeSimilarity(e1.getEntity(), e2.getEntity()))
+						.mapToDouble(e2 -> sim.computeSimilarity(e1.getEntity().getLabel(), e2.getEntity().getLabel()))
 						.map(d -> d < o.simLowerBound ? 0.0 : d)
 						.average().orElse(0.0))
 				.boxed()
@@ -93,8 +93,8 @@ public class StatsReporter
 				.mapToDouble(e1 -> nodesWithSense.stream()
 						.filter(e2 -> e1 != e2)
 						.mapToDouble(e2 -> {
-							double s = sim != null ? sim.computeSimilarity(e1.getEntity(), e2.getEntity()) : 0.0;
-							double r = rel.weight(e2.getEntity());
+							double s = sim != null ? sim.computeSimilarity(e1.getEntity().getLabel(), e2.getEntity().getLabel()) : 0.0;
+							double r = rel.weight(e2.getEntity().getLabel());
 							s = s < o.simLowerBound ? 0.0 : s;
 							r = Math.max(o.minRelevance, r);
 							return s*r;
@@ -119,11 +119,11 @@ public class StatsReporter
 		// Set up metrics
 		TFIDF corpusMetric = (TFIDF)rel;
 
-		Map<String, Long> freqs = t.stream()
-				.map(SemanticTree::vertexSet)
+		Map<String, Long> freqs = structures.stream()
+				.map(SemanticGraph::vertexSet)
 				.map(p -> p.stream()
 						.map(Node::getEntity)
-						.map(Entity::getEntityLabel)
+						.map(Entity::getLabel)
 						.collect(Collectors.toList()))
 				.flatMap(List::stream)
 				.collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
@@ -135,10 +135,10 @@ public class StatsReporter
 		nodes.forEach(e -> {
 			int node = nodes.indexOf(e);
 			String id  = nodes.get(node).getId();
-			double tfIdf = corpusMetric.weight(e.getEntity());
-			double rank = e.getWeight();
-			long fq = freqs.get(e.getEntity().getEntityLabel());
-			long df = corpusMetric.corpus.getFrequency(e.getEntity());
+			double tfIdf = corpusMetric.weight(e.getEntity().getLabel());
+			double rank = e.getEntity().getWeight();
+			long fq = freqs.get(e.getEntity().getLabel());
+			long df = corpusMetric.getFrequency(e.getEntity().getLabel());
 //			double ss = nodes.contains(e) ? senseValues.get(nodes.indexOf(e)) : -1.0;
 			double ms = nodesWithSense.contains(e) ? mergedValues.get(nodesWithSense.indexOf(e)) : -1.0;
 //			double ws = nodes.contains(e) ? wordValues.get(nodes.indexOf(e)) : -1.0;
@@ -147,8 +147,8 @@ public class StatsReporter
 //			double wsrel = nodes.contains(e) ? wordRelValues.get(nodes.indexOf(e)) : -1.0;
 
 			w.write(node +"\t" + e + "\t" + id + "\t" + f.format(tfIdf) + "\t" + f.format(rank) + "\t" + fq + "\t" + df + "\t" +
-					/*f.format(ss) + "\t" +*/ f.format(ms) + "\t" + /*1f.format(ws) + "\t" +*/
-					/*f.format(ssrel) + "\t" +*/ f.format(msrel) /*+ "\t" + f.format(wsrel)*/ + "\n");
+					/*f.format(ss) + "\structures" +*/ f.format(ms) + "\t" + /*1f.format(ws) + "\structures" +*/
+					/*f.format(ssrel) + "\structures" +*/ f.format(msrel) /*+ "\structures" + f.format(wsrel)*/ + "\n");
 		});
 		w.write("\n");
 
@@ -161,30 +161,27 @@ public class StatsReporter
 			w.write("Babelfy: " + f.format(ratio) + "% of senses are nominal\n");
 		}
 
-		Set<AnnotatedEntity> sensesInSEW = nodesWithSense.stream()
-				.filter(e -> corpusMetric.corpus.getFrequency(e.getEntity()) > 0)
+		Set<Entity> sensesInSEW = nodesWithSense.stream()
+				.filter(e -> corpusMetric.getFrequency(e.getEntity().getLabel()) > 0)
 				.map(Node::getEntity)
-				.map(AnnotatedEntity.class::cast)
 				.collect(Collectors.toSet());
 		{
 			double ratio = ((double) sensesInSEW.size() / (double) nodesWithSense.size()) * 100.0;
 			w.write("SEW: " + f.format(ratio) + "% senses defined (" + sensesInSEW.size()
 					+ "/" + nodesWithSense.size() + ")\n");
 		}
-		Set<AnnotatedEntity> nominalSensesInSEW = nodesWithNominalSense.stream()
-				.filter(e -> corpusMetric.corpus.getFrequency(e.getEntity()) > 0)
+		Set<Entity> nominalSensesInSEW = nodesWithNominalSense.stream()
+				.filter(e -> corpusMetric.getFrequency(e.getEntity().getLabel()) > 0)
 				.map(Node::getEntity)
-				.map(AnnotatedEntity.class::cast)
 				.collect(Collectors.toSet());
 		{
 			double ratio = ((double) nominalSensesInSEW.size() / (double) nodesWithNominalSense.size()) * 100.0;
 			w.write("SEW: " + f.format(ratio) + "% nominal senses defined (" + nominalSensesInSEW.size()
 					+ "/" + nodesWithNominalSense.size() + ")\n");
 		}
-		Set<AnnotatedEntity>formsInSEW = nodesWithNonNominalSense.stream()
-				.filter(e -> corpusMetric.corpus.getFrequency(e.getEntity()) > 0)
+		Set<Entity>formsInSEW = nodesWithNonNominalSense.stream()
+				.filter(e -> corpusMetric.getFrequency(e.getEntity().getLabel()) > 0)
 				.map(Node::getEntity)
-				.map(AnnotatedEntity.class::cast)
 				.collect(Collectors.toSet());
 		{
 			double ratio = ((double) formsInSEW.size() / (double) nodesWithNonNominalSense.size()) * 100.0;
@@ -234,9 +231,9 @@ public class StatsReporter
 		if (sim != null)
 		{
 			{
-				Set<AnnotatedEntity> definedSenses = nodesWithSense.stream()
+				Set<String> definedSenses = nodesWithSense.stream()
 						.map(Node::getEntity)
-						.map(AnnotatedEntity.class::cast)
+						.map(Entity::getLabel)
 						.filter(sim::isDefinedFor)
 						.collect(Collectors.toSet());
 				double ratio = ((double) definedSenses.size() / (double) nodesWithSense.size()) * 100.0;
@@ -244,14 +241,13 @@ public class StatsReporter
 						nodesWithSense.size() + ")\n");
 				w.write("Merged SensEmbed: undefined senses " + ListUtils.removeAll(nodesWithSense, definedSenses).stream()
 						.map(Node::getEntity)
-						.map(AnnotatedEntity.class::cast)
-						.map(AnnotatedEntity::toString)
+						.map(Entity::getLabel)
 						.collect(Collectors.joining(",")) + "\n");
 			}
 			{
-				Set<AnnotatedEntity> definedForms = nodesWithNominalSense.stream()
+				Set<String> definedForms = nodesWithNominalSense.stream()
 						.map(Node::getEntity)
-						.map(AnnotatedEntity.class::cast)
+						.map(Entity::getLabel)
 						.filter(sim::isDefinedFor)
 						.collect(Collectors.toSet());
 				double ratio = ((double) definedForms.size() / (double) nodesWithNominalSense.size()) * 100.0;
@@ -294,11 +290,11 @@ public class StatsReporter
 		// Report similarity
 //		w.write("\nSimilarity table\n");
 //		IntStream.range(0, nodes.size())
-//				.mapToObj(i -> i + "\t" + nodes.stream()
+//				.mapToObj(i -> i + "\structures" + nodes.stream()
 //						.mapToDouble(entity -> sim.computeSimilarity(nodes.get(i).getEntity(), entity.getEntity()))
 //						.map(d -> d < o.simLowerBound ? 0.0 : d)
 //						.mapToObj(f::format)
-//						.collect(Collectors.joining("\t")))
+//						.collect(Collectors.joining("\structures")))
 //				.forEach(row -> w.write(row + "\n"));
 //		w.write("\n");
 		return w.toString();

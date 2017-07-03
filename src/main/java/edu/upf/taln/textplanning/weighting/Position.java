@@ -1,47 +1,49 @@
 package edu.upf.taln.textplanning.weighting;
 
-import edu.upf.taln.textplanning.datastructures.Entity;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import org.apache.commons.collections4.ListUtils;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.*;
 
 /**
- * This weighting function scores items according to their average position in a collection of documents.
- * Scoring is done using a gaussian function to decrease scoring as sentence position increases.
+ * This weighting function scores entities according to the average position of their mentions in the text.
+ * Scoring is done using a gaussian function to decrease scoring as their position increases.
  */
-public class Position implements WeightingFunction
+public final class Position implements WeightingFunction
 {
 	private final Map<String, Double> avgPositions = new HashMap<>();
 
 	@Override
-	public void setCollection(List<SemanticTree> inCollection)
+	public void setContents(Set<SemanticGraph> structures)
 	{
-		final Map<String, List<Double>> positions = new HashMap<>();
-		inCollection.forEach(t ->
-				t.vertexSet().stream()
-						.map(n -> n.getEntity().getEntityLabel())
-						.forEach(s -> positions.merge(s, Collections.singletonList(t.getPosition()), ListUtils::union)));
+		final Map<String, List<Long>> positions = new HashMap<>();
+
+		long maxOffset = structures.stream()
+			.mapToLong(s -> s.vertexSet().stream()
+					.mapToLong(n -> n.getAnnotation().getOffsetEnd())
+					.max().orElse(1))
+			.max().orElse(1);
+
+		structures.forEach(s ->
+				s.vertexSet().forEach(n ->
+						n.getCandidates().forEach(e ->
+								positions.merge(e.getLabel(), Collections.singletonList(n.getAnnotation().getOffsetStart()), ListUtils::union))));
 
 		avgPositions.clear();
-		avgPositions.putAll(positions.entrySet().stream()
-				.collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream()
-						.mapToDouble(Double::valueOf)
-						.average()
-						.orElse(1.0))));
+		positions.keySet().forEach(e ->
+		{
+			double avg = positions.get(e).stream()
+					.mapToDouble(offset -> offset/maxOffset)
+					.average()
+					.orElse(0.0);
+			avgPositions.put(e, avg);
+		});
 	}
 
 	@Override
-	public double weight(Entity inEntity)
+	public double weight(String item)
 	{
-		// final double a = 1.0;
-		// final double b = 0.0;
-		// final double c = 0.3333;
-		double x = avgPositions.get(inEntity.getEntityLabel());
+		double x = avgPositions.get(item);
 		return Math.exp(-(Math.pow(x, 2)/0.2)); // simplified gaussian formula omitting coefficients
 	}
 }

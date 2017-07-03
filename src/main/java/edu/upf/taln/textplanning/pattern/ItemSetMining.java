@@ -3,8 +3,8 @@ package edu.upf.taln.textplanning.pattern;
 import ca.pfv.spmf.algorithms.frequentpatterns.fpgrowth.AlgoFPMax;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemset;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemsets;
-import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
 import edu.upf.taln.textplanning.datastructures.Annotation;
+import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
@@ -29,11 +29,8 @@ public class ItemSetMining
 	public Set<SemanticTree> getPatterns(List<SemanticTree> inContents)
 	{
 		// Collect sets of relevant annotations from trees
-		List<Set<AnnotatedEntity>> annSets = inContents.stream()
+		List<Set<Node>> annSets = inContents.stream()
 				.map(t -> t.vertexSet().stream()
-						.map(Node::getEntity)
-						.filter(AnnotatedEntity.class::isInstance)
-						.map(AnnotatedEntity.class::cast)
 						.filter(ItemSetMining::isItem)
 						.collect(Collectors.toSet()))
 				.collect(Collectors.toList());
@@ -41,7 +38,8 @@ public class ItemSetMining
 		// Now convert annotation sets to item sets by picking their labels
 		List<Set<String>> itemSets = annSets.stream()
 				.map(as -> as.stream()
-						.map(AnnotatedEntity::getEntityLabel)
+						.map(Node::getEntity)
+						.map(Entity::getLabel)
 						.collect(Collectors.toSet()))
 				.collect(Collectors.toList());
 
@@ -111,11 +109,7 @@ public class ItemSetMining
 			Map<String, String> refsAndForms = inContents.stream()
 					.map(SemanticTree::vertexSet)
 					.flatMap(Set::stream)
-					.map(Node::getEntity)
-					.filter(AnnotatedEntity.class::isInstance)
-					.map(AnnotatedEntity.class::cast)
-					.map(AnnotatedEntity::getAnnotation)
-					.collect(Collectors.toMap(a -> a.getSense() != null ? a.getSense() : "none", Annotation::getForm, (r1, r2) -> r1));
+					.collect(Collectors.toMap(n -> n.getEntity().getLabel(), n -> n.getAnnotation().getForm(), (n1, n2) -> n1));
 
 			List<String> setStrings = filteredMaximalSets.stream()
 					.map(s -> s.stream()
@@ -140,41 +134,41 @@ public class ItemSetMining
 	/**
 	 * Decides whether an annotation can be considered an item based on the data it annotates
 	 *
-	 * @param inAnn annotation to be evaluated
+	 * @param n annotation to be evaluated
 	 * @return true if it annotates entity
 	 */
-	private static boolean isItem(AnnotatedEntity inAnn)
+	private static boolean isItem(Node n)
 	{
-		return !inAnn.getAnnotation().getLemma().startsWith("be_") &&
-				(inAnn.getAnnotation().getPOS().startsWith("NN") || // nouns
-						inAnn.getAnnotation().getPOS().startsWith("VB") || // verbs
-						inAnn.getAnnotation().getPOS().startsWith("JJ") || // nominal modifiers
-						inAnn.getAnnotation().getPOS().startsWith("CD") || // cardinal numbers
-						inAnn.getAnnotation().getPOS().startsWith("FW")) && // and foreign words
-				!inAnn.getAnnotation().getForm().equals("_"); // some punctuation marks such as quotes end up here as underscores
+		return !n.getAnnotation().getLemma().startsWith("be_") &&
+				(n.getAnnotation().getPOS().startsWith("NN") || // nouns
+						n.getAnnotation().getPOS().startsWith("VB") || // verbs
+						n.getAnnotation().getPOS().startsWith("JJ") || // nominal modifiers
+						n.getAnnotation().getPOS().startsWith("CD") || // cardinal numbers
+						n.getAnnotation().getPOS().startsWith("FW")) && // and foreign words
+				!n.getAnnotation().getForm().equals("_"); // some punctuation marks such as quotes end up here as underscores
 	}
 
 	private static boolean hasVerb(Set<String> inSet)
 	{
-		return inSet.stream().filter(ItemSetMining::isVerb).findFirst().isPresent();
+		return inSet.stream().anyMatch(ItemSetMining::isVerb);
 	}
 
-	private static boolean isVerb(String inItem)
+	private static boolean isVerb(String item)
 	{
-		if (inItem.endsWith("v"))
+		if (item.startsWith("bn:") && item.endsWith("v"))
 			return true;
 		String[] verbs = {"VB", "VBD", "VBG", "VBN", "VBP", "VBZ"};
-		return Arrays.stream(verbs).anyMatch(inItem::endsWith);
+		return Arrays.stream(verbs).anyMatch(item::endsWith);
 	}
 
-	private static boolean hasNominalSense(Set<String> inSet)
+	private static boolean hasNominalSense(Set<String> set)
 	{
-		return inSet.stream().filter(ItemSetMining::isNominalSense).findFirst().isPresent();
+		return set.stream().anyMatch(ItemSetMining::isNominalSense);
 	}
 
-	private static boolean isNominalSense(String inItem)
+	private static boolean isNominalSense(String item)
 	{
-		return inItem.endsWith("n");
+		return item.startsWith("bn:") && item.endsWith("n");
 	}
 
 	/**
@@ -190,7 +184,7 @@ public class ItemSetMining
 		// Collect nodes which correspond to the items in the itemset
 		Set<Node> itemSetNodes = inItemSet.stream()
 				.map(item -> t.vertexSet().stream()
-						.filter(n -> n.getEntity().getEntityLabel().equals(item)))
+						.filter(n -> n.getEntity().getLabel().equals(item)))
 				.flatMap(Function.identity())
 				.collect(Collectors.toSet()); // removes duplicates
 
@@ -288,9 +282,9 @@ public class ItemSetMining
 								isPlainAdverb(t, n) ||
 								isName(n)) && !isVerbWithRelative(t, n))
 				.forEach(n -> {
-					Annotation a = ((AnnotatedEntity) n.getEntity()).getAnnotation();
-					AnnotatedEntity e = new AnnotatedEntity(a);
-					Node c = new Node(n.getEntity().getEntityLabel(), e, 0.0);
+					Annotation a = n.getAnnotation();
+					Entity e = n.getEntity();
+					Node c = new Node(n.getEntity().getLabel(), e, a);
 					t.addVertex(c);
 					Edge e1 = t.incomingEdgesOf(n).iterator().next();
 					Edge e2 = new Edge(e1.getRole(), e1.isArg());
@@ -301,7 +295,7 @@ public class ItemSetMining
 
 	private static boolean isPlainModifier(SemanticTree t, Node n)
 	{
-		Annotation a = ((AnnotatedEntity) n.getEntity()).getAnnotation();
+		Annotation a = n.getAnnotation();
 		String role = a.getRole();
 		boolean isLeaf = t.outDegreeOf(n) == 0;
 		String[] pos = {"DT", "NN", "RB", "JJ"};
@@ -310,7 +304,7 @@ public class ItemSetMining
 
 	private static boolean isNegation(Node n)
 	{
-		Annotation a = ((AnnotatedEntity) n.getEntity()).getAnnotation();
+		Annotation a = n.getAnnotation();
 		String[] forms = {"no", "not"};
 		String[] pos = {"RB", "JJ"};
 		return Arrays.stream(pos).anyMatch(p -> p.equals(a.getPOS())) &&
@@ -319,14 +313,14 @@ public class ItemSetMining
 
 	private static boolean isNumber(Node n)
 	{
-		Annotation a = ((AnnotatedEntity) n.getEntity()).getAnnotation();
+		Annotation a = n.getAnnotation();
 		String[] pos = {"CD"};
 		return Arrays.stream(pos).anyMatch(p -> p.equals(a.getPOS()));
 	}
 
 	private static boolean isPlainAdverb(SemanticTree t, Node n)
 	{
-		Annotation a = ((AnnotatedEntity) n.getEntity()).getAnnotation();
+		Annotation a = n.getAnnotation();
 		boolean isLeaf = t.outDegreeOf(n) == 0;
 		String[] pos = {"WRB"};
 		return isLeaf && Arrays.stream(pos).anyMatch(p -> p.equals(a.getPOS()));
@@ -343,8 +337,8 @@ public class ItemSetMining
 		if (t.outDegreeOf(n) != 1)
 			return false;
 		Edge dependent = t.outgoingEdgesOf(n).iterator().next();
-		Annotation a = ((AnnotatedEntity) n.getEntity()).getAnnotation();
-		Annotation c = ((AnnotatedEntity)t.getEdgeTarget(dependent).getEntity()).getAnnotation();
+		Annotation a = n.getAnnotation();
+		Annotation c = t.getEdgeTarget(dependent).getAnnotation();
 		return a.getPOS().startsWith("VB") &&
 				t.outDegreeOf(n) == 1 &&
 				c.getPOS().equalsIgnoreCase("WDT");
@@ -352,7 +346,7 @@ public class ItemSetMining
 
 	private static boolean isName(Node n)
 	{
-		Annotation a = ((AnnotatedEntity) n.getEntity()).getAnnotation();
+		Annotation a = n.getAnnotation();
 		return a.getRole().equals("NAME");
 	}
 

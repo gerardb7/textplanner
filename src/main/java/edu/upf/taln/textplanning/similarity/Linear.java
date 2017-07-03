@@ -1,46 +1,44 @@
 package edu.upf.taln.textplanning.similarity;
 
-import edu.upf.taln.textplanning.datastructures.Entity;
-
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * Linear combination of other weighting functions.
  */
-public class Linear implements EntitySimilarity
+public class Linear implements ItemSimilarity
 {
-	private final Map<EntitySimilarity, Double> functions;
-	public Linear(Map<EntitySimilarity, Double> inFunctions)
+	private final Map<ItemSimilarity, Double> functions;
+	public Linear(Map<ItemSimilarity, Double> inFunctions)
 	{
 		functions = inFunctions;
 	}
 
 
-	public Map<EntitySimilarity, Double> getFunctions()
+	public Map<ItemSimilarity, Double> getFunctions()
 	{
-		Map<EntitySimilarity, Double> l = new HashMap<>();
+		Map<ItemSimilarity, Double> l = new HashMap<>();
 		l.putAll(functions);
 		return l;
 	}
 
 	@Override
-	public boolean isDefinedFor(Entity e)
+	public boolean isDefinedFor(String i)
 	{
 		return false;
 	}
 
 	@Override
-	public boolean isDefinedFor(Entity e1, Entity e2)
+	public boolean isDefinedFor(String item1, String item2)
 	{
 		return false;
 	}
 
 	@Override
-	public double computeSimilarity(Entity e1, Entity e2)
+	public double computeSimilarity(String item1, String item2)
 	{
 		return functions.entrySet().stream()
-				.mapToDouble(p -> p.getKey().computeSimilarity(e1, e2) * p.getValue())
+				.mapToDouble(p -> p.getKey().computeSimilarity(item1, item2) * p.getValue())
 				.sum();
 	}
 }

@@ -1,15 +1,14 @@
 package edu.upf.taln.textplanning.weighting;
 
-import edu.upf.taln.textplanning.datastructures.Entity;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * Interface for weighting functions
  */
 public interface WeightingFunction
 {
-	void setCollection(List<SemanticTree> inCollection);
-	double weight(Entity inEntity);
+	void setContents(Set<SemanticGraph> contents);
+	double weight(String item);
 }

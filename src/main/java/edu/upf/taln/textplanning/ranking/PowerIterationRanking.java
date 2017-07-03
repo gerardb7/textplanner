@@ -3,20 +3,17 @@ package edu.upf.taln.textplanning.ranking;
 import Jama.Matrix;
 import edu.upf.taln.textplanning.StatsReporter;
 import edu.upf.taln.textplanning.TextPlanner;
-import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph;
-import edu.upf.taln.textplanning.similarity.EntitySimilarity;
+import edu.upf.taln.textplanning.similarity.ItemSimilarity;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
-
-import static edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 
 /**
  * Implementation of a power iteration algorithm for ranking with Markov chains.
@@ -26,7 +23,7 @@ public class PowerIterationRanking
 	private final static Logger log = LoggerFactory.getLogger(PowerIterationRanking.class);
 
 	/**
-	 * Creates joint stochastic matrix for a content graph based on a similarity function between node's entities
+	 * Creates joint stochastic matrix for a set of entities based on a similarity function between node's entities
 	 * biased against prior relevance and connections in the graph.
 	 * Approach has similarities to Otterbacher et al. 2009 paper "Biased LexRank" (p.5)
 	 *
@@ -39,21 +36,20 @@ public class PowerIterationRanking
 	 * πA=π, i.e. all page ranks must be equal to each other"
 	 * Taken from https://math.stackexchange.com/questions/55863/when-will-pagerank-fail
 	 *
-	 * @param g content graph where nodes have entities associated to them
+	 * @param entities items to rank (word senses, individuals in a KB, etc)
+	 * @param structures structures (e.g. relations in a KB or extracted from text) containing references to the entities
 	 * @param inWeighting relevance weighting function for entities
 	 * @param inSimilarity similarity metric for pairs of entities
 	 * @param inOptions algorithm options
 	 * @return a similarity matrix
 	 */
-	public static Matrix createRankingMatrix(SemanticGraph g, WeightingFunction inWeighting,
-	                                         EntitySimilarity inSimilarity, TextPlanner.Options inOptions)
+	public static Matrix createRankingMatrix(List<String> entities, Set<SemanticGraph> structures,
+	                                         WeightingFunction inWeighting,
+	                                         ItemSimilarity inSimilarity, TextPlanner.Options inOptions)
 	{
-		List<Node> nodes = new ArrayList<>(g.vertexSet());
-
 		// Create *strictly positive* relevance row vector by applying weighting function to node's entities
-		int n = nodes.size();
-		double[] b = nodes.stream()
-				.map(Node::getEntity)
+		int n = entities.size();
+		double[] b = entities.stream()
 				.mapToDouble(inWeighting::weight)
 				.map(w -> w = Math.max(inOptions.minRelevance, (1.0/n)*w)) // Laplace smoothing to avoid non-positive values
 				.toArray();
@@ -67,9 +63,9 @@ public class PowerIterationRanking
 		IntStream.range(0, n).forEach(i ->
 				IntStream.range(0, n).forEach(j ->
 				{
-					Entity ei = nodes.get(i).getEntity();
-					Entity ej = nodes.get(j).getEntity();
-					double sij = isGovernor(g, nodes.get(i), nodes.get(j)) ? 1.0
+					String ei = entities.get(i);
+					String ej = entities.get(j);
+					double sij = isGoverned(structures, entities.get(i), entities.get(j)) ? 1.0
 							: inSimilarity.computeSimilarity(ei, ej);
 					// apply lower bound
 					if (sij < inOptions.simLowerBound)
@@ -100,15 +96,18 @@ public class PowerIterationRanking
 		return bm;
 	}
 
-
 	/**
-	 * @return true if n1 is governor of n2 in g, i.e. if an edge n1->n2 exists in g
+	 * @return true if an edge n1->n2 exists in any of the input structures such that n1 mentions e1 and n2 mentions e2
 	 */
-	private static boolean isGovernor(SemanticGraph g, Node n1, Node n2)
+	private static boolean isGoverned(Set<SemanticGraph> structures, String e1, String e2)
 	{
-		return  g.incomingEdgesOf(n2).stream()
-					.map(g::getEdgeSource)
-					.anyMatch(n -> n == n1);
+		return structures.stream()
+				.anyMatch(s -> s.vertexSet().stream()
+						.filter(v -> v.mentions(e1))
+						.map(s::outgoingEdgesOf)
+						.flatMap(Set::stream)
+						.map(s::getEdgeTarget)
+						.anyMatch(v -> v.mentions(e2)));
 	}
 
 	/**

@@ -1,10 +1,14 @@
 package edu.upf.taln.textplanning.datastructures;
 
+import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
 import org.jgrapht.alg.CycleDetector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Produces content graphs from sets of semantic trees
@@ -15,37 +19,38 @@ public class ContentGraphCreator
 
 	/**
 	 * Creates a pattern extraction graph
-	 * @param trees list of annotated trees
+	 * @param structures list of structures, e.g. relations in a KB, parses extracted from text
 	 * @return a semantic graph
 	 */
-	public static SemanticGraph createContentGraph(List<SemanticTree> trees)
+	public static SemanticGraph createContentGraph(Set<SemanticGraph> structures)
 	{
 		// Create empty graph
 		SemanticGraph graph = new SemanticGraph(SemanticGraph.Edge.class);
-		Map<String, Set<SemanticGraph.Node>> ids = new HashMap<>();
 
-		// Iterate triples in each tree and populate graph from them
-		trees.forEach(t -> {
-			for (SemanticGraph.Edge e : t.edgeSet())
+		// Iterate triples in each input structure and populate graph
+		structures.forEach(s -> {
+			for (SemanticGraph.Edge e : s.edgeSet())
 			{
-				SemanticGraph.Node governor = t.getEdgeSource(e);
-				SemanticGraph.Node dependent = t.getEdgeTarget(e);
+				Node governor = s.getEdgeSource(e);
+				Node dependent = s.getEdgeTarget(e);
 
 				// Add governing tree node to graph
-				SemanticGraph.Node govNode = createGraphNode(t, governor);
-				graph.addVertex(govNode); // does nothing if node existed
-				ids.computeIfAbsent(govNode.getId(), v -> new HashSet<>()).add(governor);
+				Node govNode = createGraphNode(s, governor);
+				graph.addVertex(govNode); // does nothing if a node with same id was already added
 
 				// Add dependent tree node to graph
-				SemanticGraph.Node depNode = createGraphNode(t, dependent);
-				graph.addVertex(depNode); // does nothing if node existed
-				ids.computeIfAbsent(depNode.getId(), v -> new HashSet<>()).add(dependent);
+				Node depNode = createGraphNode(s, dependent);
+				graph.addVertex(depNode); // does nothing if a node with same id was already added
 
-				// Add edge
+				// Ignore loops.
+				// To see how loops may occur in semantic trees, consider "West Nickel Mines Amish School
+				// shooting", where "West Nickel Mines Amish School" and "Amish School shooting" are assigned
+				// the same synset (same id and therefore same node) and are linked through a NAME relation.
 				if (!govNode.getId().equals(depNode.getId()))
 				{
 					try
 					{
+						// Add edge
 						SemanticGraph.Edge e2 = new SemanticGraph.Edge(e.getRole(), e.isArg());
 						graph.addEdge(govNode, depNode, e2);
 					}
@@ -54,14 +59,10 @@ public class ContentGraphCreator
 						throw new RuntimeException("Failed to add edge between " + govNode.getId() + " and " + depNode.getId() + ": " + ex);
 					}
 				}
-				// Ignore loops.
-				// To see how loops may occur in semantic trees, consider "West Nickel Mines Amish School
-				// shooting", where "West Nickel Mines Amish School" and "Amish School shooting" are assigned
-				// the same synset (same id and therefore same node) and are linked through a NAME relation.
 			}
 		});
 
-		CycleDetector<SemanticGraph.Node, SemanticGraph.Edge> detector = new CycleDetector<>(graph);
+		CycleDetector<Node, SemanticGraph.Edge> detector = new CycleDetector<>(graph);
 		if (detector.detectCycles())
 		{
 			log.warn("Content graph has cycles: " + detector.findCycles());
@@ -90,34 +91,40 @@ public class ContentGraphCreator
 	}
 
 	/**
-	 * Creates a graph node from a tree node.
-	 * A single graph node is created for all non-predicative tree nodes with the same label.
-	 * A single graph node is created for all predicates with same label and same dependent labels.
-	 * The graph node is assigned a weight.
-	 * @param t a tree
-	 * @param n a node in the tree
+	 * Creates a content graph node from a node in an input structure.
+	 * A single graph node is created for all structure nodes corresponding to the same entity.
+	 * A single graph node is created for all relation-nodes in the structures that share exactly the same arguments.
+	 * Each graph node is assigned a weight.
+	 * @param g a structure
+	 * @param n a node in g
 	 *
 	 * @return a graph node
 	 */
-	private static SemanticGraph.Node createGraphNode(SemanticTree t, SemanticGraph.Node n)
+	private static Node createGraphNode(SemanticGraph g, Node n)
 	{
-		String id = n.getEntity().getEntityLabel();
-		if (t.isPredicate(n) || id.equals("_")) // if a predicate use predicate and argument labels as id
-			id = predicateToString(t, n);
+		String id = getId(n);
 
-		return new SemanticGraph.Node(id, n.getEntity());
+		// todo check if underscores have already been filtered
+		if (g.isPredicate(n) || id.equals("_")) // if a predicate use predicate and argument labels as id
+			id = predicateToString(g, n);
+
+		return new Node(id, n.getEntity(), n.getAnnotation());
 	}
 
-	private static String predicateToString(SemanticTree t, SemanticGraph.Node p)
+	private static String getId(Node n)
 	{
+		return n.getEntity().getLabel();
+	}
 
+	private static String predicateToString(SemanticGraph g, Node p)
+	{
 		List<String> dependents = new ArrayList<>();
-		for (SemanticGraph.Edge e : t.outgoingEdgesOf(p))
+		for (SemanticGraph.Edge e : g.outgoingEdgesOf(p))
 		{
-			dependents.add(e.getRole() + "-" + t.getEdgeTarget(e).getEntity().getEntityLabel());
+			dependents.add(e.getRole() + "-" + getId(g.getEdgeTarget(e)));
 		}
 
-		StringBuilder str = new StringBuilder(p.getEntity().getEntityLabel());
+		StringBuilder str = new StringBuilder(getId(p));
 		dependents.stream()
 				.sorted(Comparator.naturalOrder())
 				.forEach(s -> str.append("_").append(s));

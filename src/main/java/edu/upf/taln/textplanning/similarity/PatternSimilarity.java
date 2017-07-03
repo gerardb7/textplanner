@@ -11,11 +11,11 @@ import unnonouno.treedist.TreeEditDistance;
  */
 public final class PatternSimilarity
 {
-	private final EntitySimilarity entitySimilarity;
+	private final ItemSimilarity itemSimilarity;
 
-	public PatternSimilarity(EntitySimilarity inEntitySimilarity)
+	public PatternSimilarity(ItemSimilarity inItemSimilarity)
 	{
-		entitySimilarity = inEntitySimilarity;
+		itemSimilarity = inItemSimilarity;
 	}
 
 	/**
@@ -52,8 +52,8 @@ public final class PatternSimilarity
 	/**
 	 * Callback method called from tree edit algorithm (i.e. SemanticScore class)
 	 */
-	public double getSimilarity(Entity inAnn1, Entity inAnn2)
+	public double getSimilarity(Entity e1, Entity e2)
 	{
-		return entitySimilarity.computeSimilarity(inAnn1, inAnn2);
+		return itemSimilarity.computeSimilarity(e1.getLabel(), e2.getLabel());
 	}
 }

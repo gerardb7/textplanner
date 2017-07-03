@@ -1,6 +1,5 @@
 package edu.upf.taln.textplanning;
 
-import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.similarity.SensEmbed;
 import org.junit.Assert;
 import org.junit.Test;
@@ -12,35 +11,19 @@ import java.nio.file.Paths;
  */
 public class SensEmbedTest
 {
-	private static class TestEntity extends Entity
-	{
-		public final String id;
-
-		public TestEntity(String id)
-		{
-			this.id = id;
-		}
-
-		@Override
-		public String getEntityLabel()
-		{
-			return null;
-		}
-	}
-
-	private static final TestEntity id1 = new TestEntity("bn:00028015n");
-	private static final TestEntity id2 = new TestEntity("bn:00076732n");
-	private static final TestEntity id3 = new TestEntity("bn:00094089v");
-	private static final TestEntity id4 = new TestEntity("bn:00086931v");
-	private static final TestEntity id5 = new TestEntity("bn:00094089v");
-	private static final TestEntity id6 = new TestEntity("bn:00063329n");
-	private static final TestEntity id7 = new TestEntity("bn:00024591n");
-	private static final TestEntity id8 = new TestEntity("bn:00088421v");
+	private static final String id1 = "bn:00028015n";
+	private static final String id2 = "bn:00076732n";
+	private static final String id3 = "bn:00094089v";
+	private static final String id4 = "bn:00086931v";
+	private static final String id5 = "bn:00094089v";
+	private static final String id6 = "bn:00063329n";
+	private static final String id7 = "bn:00024591n";
+	private static final String id8 = "bn:00088421v";
 
 	@Test
 	public void testComputeSimilarity() throws Exception
 	{
-		SensEmbed vectors = new SensEmbed(Paths.get("src/test/resources/test_dummy_vectors"), true);
+		SensEmbed vectors = new SensEmbed(Paths.get("src/test/resources/test_dummy_vectors"));
 
 
 		double sim11 = vectors.computeSimilarity(id1, id1);

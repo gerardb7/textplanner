@@ -77,7 +77,11 @@
 			<artifactId>jgrapht-ext</artifactId>
 			<version>1.0.1</version>
 		</dependency>
-
+		<dependency>
+			<groupId>it.uniroma1.lcl.babelnet</groupId>
+			<artifactId>babelnet-api</artifactId>
+			<version>3.7</version>
+		</dependency>
 <!--		<dependency>
 			<groupId>org.deeplearning4j</groupId>
 			<artifactId>deeplearning4j-core</artifactId>
@@ -94,6 +98,44 @@
 			<version>0.8.0</version>
 		</dependency>-->
 	</dependencies>
+
+	<distributionManagement>
+		<repository>
+			<id>archiva.internal</id>
+			<name>Internal Release Repository</name>
+			<url>http://maven-taln.s.upf.edu/repository/internal/</url>
+		</repository>
+		<snapshotRepository>
+			<id>archiva.snapshots</id>
+			<name>Internal Snapshot Repository</name>
+			<url>http://maven-taln.s.upf.edu/repository/snapshots/</url>
+		</snapshotRepository>
+	</distributionManagement>
+
+	<repositories>
+		<repository>
+			<id>taln-repo-internal</id>
+			<name>TALN internal repo</name>
+			<url>http://maven-taln.s.upf.edu/repository/internal/</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+		<repository>
+			<id>taln-repo-snapshots</id>
+			<name>TALN internal repo</name>
+			<url>http://maven-taln.s.upf.edu/repository/snapshots/</url>
+			<releases>
+				<enabled>false</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
 
 	<build>
 		<plugins>

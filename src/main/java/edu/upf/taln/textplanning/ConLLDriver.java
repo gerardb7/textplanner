@@ -4,9 +4,11 @@ import com.beust.jcommander.*;
 import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.corpora.FreqsFile;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.disambiguation.BabelNetAnnotator;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.similarity.EntitySimilarity;
+import edu.upf.taln.textplanning.similarity.ItemSimilarity;
 import edu.upf.taln.textplanning.similarity.SensEmbed;
 import edu.upf.taln.textplanning.similarity.Word2Vec;
 import edu.upf.taln.textplanning.weighting.Random;
@@ -23,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -67,7 +70,7 @@ public class ConLLDriver
 
 	public enum EmbeddingsType
 	{
-		word, sense, merged;
+		word, sense;
 		// converter that will be used later
 		public static EmbeddingsType fromString(String code) {
 
@@ -111,7 +114,7 @@ public class ConLLDriver
 				converter = PathConverter.class, validateWith = PathToExistingFile.class)
 		private Path frequencies = null;
 		@Parameter(names = "-t", description = "Type of embeddings", converter = EmbeddingsTypeConverter.class)
-		private EmbeddingsType type = EmbeddingsType.merged;
+		private EmbeddingsType type = EmbeddingsType.sense;
 		@Parameter(names = "-debug", description = "Debug mode")
 		private boolean debug = false;
 	}
@@ -136,15 +139,14 @@ public class ConLLDriver
 
 		Corpus corpus = new SEWSolr(solrUrl);
 		WeightingFunction corpusMetric = new TFIDF(corpus);
-		EntitySimilarity sim = null;
+		ItemSimilarity sim = null;
 		switch (t)
 		{
 			case word: sim = new Word2Vec(embeddingsFile); break;
-			case sense: sim = new SensEmbed(embeddingsFile, false); break;
-			case merged: sim = new SensEmbed(embeddingsFile, true);	break;
+			case sense: sim = new SensEmbed(embeddingsFile); break;
 		}
 
-		return new TextPlanner(corpusMetric, sim);
+		return new TextPlanner(corpusMetric, sim, new BabelNetAnnotator());
 	}
 
 	/**
@@ -160,15 +162,14 @@ public class ConLLDriver
 	{
 		Corpus corpus = new FreqsFile(frequenciesFile);
 		WeightingFunction corpusMetric = new TFIDF(corpus);
-		EntitySimilarity sim = null;
+		ItemSimilarity sim = null;
 		switch (t)
 		{
 			case word: sim = new Word2Vec(embeddingsFile); break;
-			case sense: sim = new SensEmbed(embeddingsFile, false); break;
-			case merged: sim = new SensEmbed(embeddingsFile, true);	break;
+			case sense: sim = new SensEmbed(embeddingsFile); break;
 		}
 
-		return new TextPlanner(corpusMetric, sim);
+		return new TextPlanner(corpusMetric, sim, new BabelNetAnnotator());
 	}
 
 	/**
@@ -179,9 +180,9 @@ public class ConLLDriver
 	public static TextPlanner createRandomPlanner() throws Exception
 	{
 		WeightingFunction corpusMetric = new Random();
-		EntitySimilarity sim = new edu.upf.taln.textplanning.similarity.Random();
+		ItemSimilarity sim = new edu.upf.taln.textplanning.similarity.Random();
 
-		return new TextPlanner(corpusMetric, sim);
+		return new TextPlanner(corpusMetric, sim, new BabelNetAnnotator());
 	}
 
 
@@ -196,23 +197,23 @@ public class ConLLDriver
 				.collect(Collectors.toList());
 
 		ConLLAcces conll = new ConLLAcces();
-		List<SemanticTree> trees = conlls.stream()
-				.map(conll::readTrees)
+		Set<SemanticGraph> graphs = conlls.stream()
+				.map(conll::readStructures)
 				.flatMap(List::stream)
-				.collect(Collectors.toList());
+				.collect(Collectors.toSet());
 		// Read trees from conll files
 
-		return runPlanner(p, trees, options);
+		return runPlanner(p, graphs, options);
 	}
 
 	@SuppressWarnings("WeakerAccess")
-	public static String runPlanner(TextPlanner p, List<SemanticTree> trees, TextPlanner.Options options)
+	public static String runPlanner(TextPlanner p, Set<SemanticGraph> graphs, TextPlanner.Options options)
 	{
 		try
 		{
 			ConLLAcces conll = new ConLLAcces();
-			conll.postProcessTrees(trees);
-			List<SemanticTree> plan = p.planText(trees, options);
+			//conll.postProcessTrees(graphs);
+			List<SemanticTree> plan = p.planText(graphs, options);
 			return conll.writeTrees(plan);
 		}
 		catch (Exception e)

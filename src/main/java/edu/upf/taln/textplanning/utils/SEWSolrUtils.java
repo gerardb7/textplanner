@@ -4,7 +4,6 @@ import com.beust.jcommander.*;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
 import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -112,23 +111,24 @@ public class SEWSolrUtils
 						throw new RuntimeException(e);
 					}
 				})
-				.map(conll::readTrees)
+				.map(conll::readStructures)
 				.flatMap(List::stream)
-				.map(SemanticTree::vertexSet)
+				.map(SemanticGraph::vertexSet)
 				.flatMap(Set::stream)
 				.map(SemanticGraph.Node::getEntity)
 				.distinct()
 				.collect(Collectors.toList());
 		log.info("Running queries");
 		List<String> freqs = entities.stream()
-				.peek(e -> log.info("Query for " + e.getEntityLabel() + " " + entities.indexOf(e) + "/" + entities.size()))
+				.peek(e -> log.info("Query for " + e.getLabel() + " " + entities.indexOf(e) + "/" + entities.size()))
+				.map(Entity::getLabel)
 				.mapToLong(sew::getFrequency)
 				.peek(f -> log.info("f=" + f))
 				.mapToObj(Long::toString)
 				.collect(Collectors.toList());
 		IntStream.range(0, entities.size())
 				.forEach(i -> {
-					w.append(entities.get(i).getEntityLabel());
+					w.append(entities.get(i).getLabel());
 					w.append("=");
 					w.append(freqs.get(i));
 					w.append("\n");

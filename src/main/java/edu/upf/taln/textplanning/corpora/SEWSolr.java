@@ -1,8 +1,6 @@
 package edu.upf.taln.textplanning.corpora;
 
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.datastructures.AnnotatedEntity;
-import edu.upf.taln.textplanning.datastructures.Entity;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
@@ -42,18 +40,16 @@ public final class SEWSolr implements Corpus
 		}
 	}
 
-	public long getFrequency(Entity inEntity)
+	public long getFrequency(String item)
 	{
-		// Get key use in look ups in the freqCache and solr
-		String key = getKey(inEntity);
 		try
 		{
-			if (freqCache.containsKey(key))
-				return freqCache.get(key);
+			if (freqCache.containsKey(item))
+				return freqCache.get(item);
 			else
 			{
-				long freq = queryFrequency(key);
-				freqCache.put(key, freq);
+				long freq = queryFrequency(item);
+				freqCache.put(item, freq);
 				return freq;
 			}
 		}
@@ -64,19 +60,16 @@ public final class SEWSolr implements Corpus
 		}
 	}
 
-	public long getCooccurrence(Entity e1, Entity e2)
+	public long getCooccurrence(String i1, String i2)
 	{
-		// Get key use in look ups in the freqCache and solr
-		String k1 = getKey(e1);
-		String k2 = getKey(e2);
-		String cacheKey = k1 + "-" + k2;
+		String cacheKey = i1 + "-" + i2;
 		try
 		{
 			if (coocurrenceCache.containsKey(cacheKey))
 				return coocurrenceCache.get(cacheKey);
 			else
 			{
-				long cooc = queryCooccurrence(k1, k2);
+				long cooc = queryCooccurrence(i1, i2);
 				coocurrenceCache.put(cacheKey, cooc);
 				return cooc;
 			}
@@ -85,25 +78,6 @@ public final class SEWSolr implements Corpus
 		{
 			e.printStackTrace();
 			throw new RuntimeException(e);
-		}
-	}
-
-	/**
-	 * BabelNet annotations in SEW have good coverage of nominal phrases but not so good for other grammatical categories.
-	 * For this reason we look up BabelNet synsets when they annotate to NPs, and use the word forms otherwise.
-	 * (Multiword expressions annotate by large nominal phrases)
-	 * @return the string representation of a key corresponding to the given entity
-	 */
-	private static String getKey(Entity inEntity)
-	{
-		String label = inEntity.getEntityLabel();
-		if (label.startsWith("bn:") && label.endsWith("n"))
-		{
-			return label;
-		}
-		else
-		{
-			return ((AnnotatedEntity)inEntity).getAnnotation().getForm();
 		}
 	}
 

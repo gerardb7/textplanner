@@ -2,9 +2,9 @@ package edu.upf.taln.textplanning.utils;
 
 import com.beust.jcommander.*;
 import edu.upf.taln.textplanning.ConLLDriver;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.similarity.EntitySimilarity;
+import edu.upf.taln.textplanning.similarity.ItemSimilarity;
 import edu.upf.taln.textplanning.similarity.PatternSimilarity;
 import edu.upf.taln.textplanning.similarity.SensEmbed;
 import edu.upf.taln.textplanning.similarity.Word2Vec;
@@ -61,7 +61,7 @@ public class SemanticTextualSimilarityOutput
 
 	private enum EmbeddingsType
 	{
-		Word2Vec, SensEmbed, MergedSensEmbed;
+		Word2Vec, MergedSensEmbed;
 		// converter that will be used later
 		public static EmbeddingsType fromString(String code) {
 
@@ -113,17 +113,16 @@ public class SemanticTextualSimilarityOutput
 		CMLArgs cmlArgs = new CMLArgs();
 		new JCommander(cmlArgs, args);
 
-		EntitySimilarity sim = null;
+		ItemSimilarity sim = null;
 		switch (cmlArgs.type)
 		{
 			case Word2Vec: sim = new Word2Vec(cmlArgs.embeddings); break;
-			case SensEmbed: sim = new SensEmbed(cmlArgs.embeddings, false); break;
-			case MergedSensEmbed: sim = new SensEmbed(cmlArgs.embeddings, true);	break;
+			case MergedSensEmbed: sim = new SensEmbed(cmlArgs.embeddings);	break;
 		}
 		PatternSimilarity msgSim = new PatternSimilarity(sim);
 		String conll = new String(Files.readAllBytes(cmlArgs.input.get(0)), Charset.forName("UTF-8"));
 		ConLLAcces reader = new ConLLAcces();
-		List<SemanticTree> trees = reader.readTrees(conll);
+		List<SemanticGraph> trees = reader.readStructures(conll);
 		StringWriter writer = new StringWriter();
 		NumberFormat format = NumberFormat.getInstance();
 		format.setRoundingMode(RoundingMode.HALF_UP);

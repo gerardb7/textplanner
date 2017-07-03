@@ -3,8 +3,8 @@ package edu.upf.taln.textplanning.utils;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
 import edu.upf.taln.textplanning.datastructures.Entity;
+import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -56,15 +56,15 @@ public class EmbeddingUtils
 
 		log.info("Calculating subset");
 		Stopwatch timer = Stopwatch.createStarted();
-		List<SemanticTree> trees = loadTrees(inConllPath, extension);
+		List<SemanticGraph> graphs = loadStructures(inConllPath, extension);
 
 		//TODO consider removing code manipulating IRIs
 		// Collect all senses in conll
-		Set<String> senses = trees.stream()
-				.map(SemanticTree::vertexSet)
+		Set<String> senses = graphs.stream()
+				.map(SemanticGraph::vertexSet)
 				.flatMap(Set::stream)
 				.map(Node::getEntity)
-				.map(Entity::getEntityLabel)
+				.map(Entity::getLabel)
 //				.map(factory::createIRI)
 //				.map(IRI::getLocalName)
 				.map(s -> {
@@ -250,10 +250,10 @@ public class EmbeddingUtils
 		return meanVectors;
 	}
 
-	private static List<SemanticTree> loadTrees(Path p, String extension) throws IOException
+	private static List<SemanticGraph> loadStructures(Path p, String extension) throws IOException
 	{
 		ConLLAcces conll = new ConLLAcces();
-		List<SemanticTree> trees = new ArrayList<>();
+		List<SemanticGraph> graphs = new ArrayList<>();
 
 		List<Path> folders = Files.walk(p)
 				.filter(Files::isDirectory)
@@ -279,12 +279,12 @@ public class EmbeddingUtils
 							throw new RuntimeException(e);
 						}
 					})
-					.map(conll::readTrees)
+					.map(conll::readStructures)
 					.flatMap(List::stream)
-					.forEach(trees::add);
+					.forEach(graphs::add);
 		}
 
-		return trees;
+		return graphs;
 	}
 
 	public static void main(String[] args) throws Exception

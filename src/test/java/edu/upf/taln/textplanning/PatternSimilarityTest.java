@@ -2,7 +2,7 @@ package edu.upf.taln.textplanning;
 
 import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.similarity.EntitySimilarity;
+import edu.upf.taln.textplanning.similarity.ItemSimilarity;
 import edu.upf.taln.textplanning.similarity.PatternSimilarity;
 import edu.upf.taln.textplanning.similarity.Random;
 import org.junit.Assert;
@@ -21,16 +21,17 @@ public class PatternSimilarityTest
 	public void testGetSimilarity() throws Exception
 	{
 		ConLLAcces conll = new ConLLAcces();
-		List<SemanticTree> trees = conll.readTrees("src/test/resources/test_dummy.conll");
+		// todo fix this once figured out wether output should be trees or graphs
+		List<SemanticTree> trees = null;// conll.readStructures("src/test/resources/test_dummy.conll");
 		SemanticTree tree1 = trees.get(0);
 		SemanticTree tree2 = trees.get(1);
 		SemanticTree tree3 = trees.get(2);
 		SemanticTree tree4 = trees.get(3);
 		SemanticTree tree5 = trees.get(4);
 
-		EntitySimilarity wordVectors = null; //new word("/home/gerard/data/GoogleNews-vectors-negative300.bin");
-		EntitySimilarity senseVectors = null; //new sense("/home/gerard/data/sense/babelfy_vectors_merged_senses_only");
-		EntitySimilarity combined = new Random();
+		ItemSimilarity wordVectors = null; //new word("/home/gerard/data/GoogleNews-vectors-negative300.bin");
+		ItemSimilarity senseVectors = null; //new sense("/home/gerard/data/sense/babelfy_vectors_merged_senses_only");
+		ItemSimilarity combined = new Random();
 		PatternSimilarity simCalc = new PatternSimilarity(combined);
 
 		System.out.println("OrderedTree 1:\n" + conll.writeTrees(Collections.singleton(tree1)));
