@@ -4,6 +4,7 @@ import com.beust.jcommander.*;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
 import edu.upf.taln.textplanning.datastructures.Entity;
 import edu.upf.taln.textplanning.datastructures.SemanticGraph;
+import edu.upf.taln.textplanning.disambiguation.BabelNetAnnotator;
 import edu.upf.taln.textplanning.input.ConLLAcces;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -81,13 +82,14 @@ public class SEWSolrUtils
 	/**
 	 * Reads conll files under a base folder and queries the frequency of item in them.
 	 * @param basePath base path to be searched recursively
-	 * @param extension only files matching this extension will be parsed
+	 * @param extension only files matching this extension will be considered
 	 * @param outputFile path to new file where frequencies are stored
 	 */
 	private static void queryFrequencies(Path basePath, String extension, Path outputFile) throws IOException
 	{
 		log.info("Quering frequencies for entities in " + basePath);
 		ConLLAcces conll = new ConLLAcces(); // assuming surface conlls with forms in second column
+		BabelNetAnnotator bn = new BabelNetAnnotator();
 		SEWSolr sew = new SEWSolr(solrUrl);
 		StringWriter w = new StringWriter();
 
@@ -97,7 +99,7 @@ public class SEWSolrUtils
 
 		// Second line is a long list of entity keys and corresponding frequencies
 		log.info("Reading files");
-		List<Entity> entities = Files.walk(basePath)
+		Set<SemanticGraph> structures = Files.walk(basePath)
 				.filter(Files::isRegularFile)
 				.filter(p -> p.toString().endsWith(extension))
 				.map(p ->
@@ -113,11 +115,19 @@ public class SEWSolrUtils
 				})
 				.map(conll::readStructures)
 				.flatMap(List::stream)
+				.collect(Collectors.toSet());
+
+		// Annotate candidate entities
+		log.info("Annotating candidates");
+		bn.annotateCandidates(structures);
+
+		List<Entity> entities = structures.stream()
 				.map(SemanticGraph::vertexSet)
 				.flatMap(Set::stream)
 				.map(SemanticGraph.Node::getEntity)
 				.distinct()
 				.collect(Collectors.toList());
+
 		log.info("Running queries");
 		List<String> freqs = entities.stream()
 				.peek(e -> log.info("Query for " + e.getLabel() + " " + entities.indexOf(e) + "/" + entities.size()))

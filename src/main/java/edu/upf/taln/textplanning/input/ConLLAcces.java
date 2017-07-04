@@ -124,8 +124,14 @@ public class ConLLAcces implements DocumentAccess
 						if (govns.size() > 1)
 							log.warn("Token in structure " + structure + " has multiple governors, keeping first and ignoring the rest");
 
-						long offsetStart = Long.valueOf(features.getOrDefault("start_string", "0"));
-						long offsetEnd = Long.valueOf(features.getOrDefault("end_string", "0"));
+						// todo temporary fix to be reverted once offsets are back into conll
+						String id0 = features.getOrDefault("id0", "0");
+						if (id0.endsWith("_elid"))
+							id0 = id0.substring(0, id0.indexOf('_'));
+						long offsetStart = Long.valueOf(id0);
+						long offsetEnd = Long.valueOf(id0);
+//						long offsetStart = Long.valueOf(features.getOrDefault("start_string", "0"));
+//						long offsetEnd = Long.valueOf(features.getOrDefault("end_string", "0"));
 
 						int gov = govns.get(0);
 						String role = roles.get(0);
@@ -133,7 +139,7 @@ public class ConLLAcces implements DocumentAccess
 						anns.add(ann);
 
 						if (gov > 0)
-							governors.computeIfAbsent(gov, v -> new ArrayList<>()).add(id);
+							governors.computeIfAbsent(gov-1, v -> new ArrayList<>()).add(id-1);
 						else if (gov == 0)
 						{
 							if (roots.size() == 1)
@@ -440,6 +446,8 @@ public class ConLLAcces implements DocumentAccess
 				graphs.add(g);
 			}
 		}
+		else
+			graphs.add(graph);
 
 		return graphs;
 	}

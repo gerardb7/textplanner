@@ -9,7 +9,6 @@ import it.uniroma1.lcl.babelnet.BabelSynset;
 import it.uniroma1.lcl.babelnet.BabelSynsetID;
 import it.uniroma1.lcl.babelnet.data.BabelPOS;
 import it.uniroma1.lcl.jlt.util.Language;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,9 +57,15 @@ public class BabelNetAnnotator implements EntityDisambiguator
 				.collect(Collectors.groupingBy(m -> m.getSurfaceForm() + "_" + m.getHead().getAnnotation().getPOS()));
 
 		// Collect candidate entities for each label
-		Map<String, Set<Entity>> labels2Entities = label2Mentions.keySet().stream()
-				.map(l -> Pair.of(l, getEntities(l)))
-				.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
+		Map<String, Set<Entity>> labels2Entities = new HashMap<>();
+		int counter = 0;
+		for (String l : label2Mentions.keySet())
+		{
+			if (++counter % 100 == 0)
+				log.info("Retrieved candidates for " + counter + " mention forms out of " + label2Mentions.keySet().size());
+			Set<Entity> entities = getEntities(l);
+			labels2Entities.put(l, entities);
+		}
 
 		// Assign candidate labels to nodes in the structures
 		labels2Entities.keySet().forEach(l -> // given a label l
@@ -217,8 +222,8 @@ public class BabelNetAnnotator implements EntityDisambiguator
 	private List<Mention> collectNominalMentions(SemanticGraph s, List<Node> tokens)
 	{
 		return IntStream.range(0, tokens.size())
-				.mapToObj(i -> IntStream.range(i, 7)
-						.mapToObj(j -> tokens.subList(i, i + j))
+				.mapToObj(i -> IntStream.range(0, 7)
+						.mapToObj(j -> tokens.subList(i, Math.min(i + j + 1, tokens.size())))
 						.map(l ->
 						{
 							Optional<Node> h = getNominalHead(l, s);
@@ -258,7 +263,7 @@ public class BabelNetAnnotator implements EntityDisambiguator
 	{
 		// Use surface form of mention as label
 		String form = s.substring(0, s.lastIndexOf('_'));
-		String pos = s.substring(s.lastIndexOf('_' + 1));
+		String pos = s.substring(s.lastIndexOf('_') + 1);
 		BabelPOS bnPOS = BN_POS_EN.get(pos);
 
 		// Get candidate entities using strict matching
