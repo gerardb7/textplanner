@@ -3,11 +3,9 @@ package edu.upf.taln.textplanning.pattern;
 import ca.pfv.spmf.algorithms.frequentpatterns.fpgrowth.AlgoFPMax;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemset;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemsets;
-import edu.upf.taln.textplanning.datastructures.Annotation;
-import edu.upf.taln.textplanning.datastructures.Entity;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph.Edge;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.structures.*;
+import org.jgrapht.GraphPath;
+import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,20 +24,19 @@ public class ItemSetMining
 	private final boolean debug = true;
 	private final static Logger log = LoggerFactory.getLogger(ItemSetMining.class);
 
-	public Set<SemanticTree> getPatterns(List<SemanticTree> inContents)
+	public Set<ContentPattern> getPatterns(List<ContentGraph> inContents)
 	{
-		// Collect sets of relevant annotations from trees
-		List<Set<Node>> annSets = inContents.stream()
-				.map(t -> t.vertexSet().stream()
-						.filter(ItemSetMining::isItem)
+		// Collect sets of relevant nodes from trees
+		List<Set<Entity>> annSets = inContents.stream()
+				.map(s -> s.vertexSet().stream()
+						.filter(e -> isItem(s.getAnchors(e).get(0)))
 						.collect(Collectors.toSet()))
 				.collect(Collectors.toList());
 
 		// Now convert annotation sets to item sets by picking their labels
 		List<Set<String>> itemSets = annSets.stream()
 				.map(as -> as.stream()
-						.map(Node::getEntity)
-						.map(Entity::getLabel)
+						.map(Entity::getId)
 						.collect(Collectors.toSet()))
 				.collect(Collectors.toList());
 
@@ -90,26 +87,26 @@ public class ItemSetMining
 				.map(ms -> itemSets.stream()
 						.filter(is -> is.containsAll(ms))  // find sets that contain this maximal set
 						.map(is -> inContents.get(itemSets.indexOf(is))) // find corresponding tree
-						.mapToDouble(SemanticTree::getPosition)
+						.mapToDouble(s -> 0.0) // todo this needs to be fixed
 						.average().orElse(0.0))
 				.collect(Collectors.toList());
 
-		// For each maximal itemset, find the shortest tree that contains it
-		List<SemanticTree> shortestTrees = filteredMaximalSets.stream()
+		// For each maximal itemset, find the smallest graph that contains it
+		List<ContentGraph> shortestTrees = filteredMaximalSets.stream()
 				.map(m -> itemSets.stream()
 						.filter(s -> s.containsAll(m)) // find sets that contain this maximal set
-						.map(is -> inContents.get(itemSets.indexOf(is))) // find corresponding tree
-						.min(Comparator.comparingInt(t -> t.getPreOrder().size()))) // min length
+						.map(is -> inContents.get(itemSets.indexOf(is))) // find corresponding graph
+						.min(Comparator.comparingInt(t -> t.vertexSet().size()))) // min length
 				.map(Optional::get)
-				.collect(Collectors.toList()); // yes, we do want to preserve duplicate trees
+				.collect(Collectors.toList()); // yes, we do want to preserve duplicate graphs
 
 		//noinspection ConstantConditions
 		if (debug)
 		{
 			Map<String, String> refsAndForms = inContents.stream()
-					.map(SemanticTree::vertexSet)
+					.map(ContentGraph::vertexSet)
 					.flatMap(Set::stream)
-					.collect(Collectors.toMap(n -> n.getEntity().getLabel(), n -> n.getAnnotation().getForm(), (n1, n2) -> n1));
+					.collect(Collectors.toMap(Entity::getId, n -> "", (n1, n2) -> n1)); // todo fix code to get forms
 
 			List<String> setStrings = filteredMaximalSets.stream()
 					.map(s -> s.stream()
@@ -127,7 +124,7 @@ public class ItemSetMining
 
 		// Find subtrees for each shortest tree and maximal set
 		return IntStream.range(0, filteredMaximalSets.size())
-				.mapToObj(i -> getSubTree(shortestTrees.get(i), filteredMaximalSets.get(i), avgPositions.get(i)))
+				.mapToObj(i -> getSubGraph(shortestTrees.get(i), filteredMaximalSets.get(i), avgPositions.get(i)))
 				.collect(Collectors.toSet()); // this where we remove duplicates
 	}
 
@@ -137,15 +134,15 @@ public class ItemSetMining
 	 * @param n annotation to be evaluated
 	 * @return true if it annotates entity
 	 */
-	private static boolean isItem(Node n)
+	private static boolean isItem(AnnotatedWord n)
 	{
-		return !n.getAnnotation().getLemma().startsWith("be_") &&
-				(n.getAnnotation().getPOS().startsWith("NN") || // nouns
-						n.getAnnotation().getPOS().startsWith("VB") || // verbs
-						n.getAnnotation().getPOS().startsWith("JJ") || // nominal modifiers
-						n.getAnnotation().getPOS().startsWith("CD") || // cardinal numbers
-						n.getAnnotation().getPOS().startsWith("FW")) && // and foreign words
-				!n.getAnnotation().getForm().equals("_"); // some punctuation marks such as quotes end up here as underscores
+		return !n.getLemma().startsWith("be_") &&
+				(n.getPOS().startsWith("NN") || // nouns
+						n.getPOS().startsWith("VB") || // verbs
+						n.getPOS().startsWith("JJ") || // nominal modifiers
+						n.getPOS().startsWith("CD") || // cardinal numbers
+						n.getPOS().startsWith("FW")) && // and foreign words
+				!n.getForm().equals("_"); // some punctuation marks such as quotes end up here as underscores
 	}
 
 	private static boolean hasVerb(Set<String> inSet)
@@ -175,47 +172,46 @@ public class ItemSetMining
 	 * Given a tree and an itemset corresponding to a subset of its nodes, return a subtree spanning over all these
 	 * nodes and satisfying certain linguistic constraints.
 	 *
-	 * @param t    the original tree
+	 * @param g    the original tree
 	 * @param inItemSet an itemset where each item corresponds to one or more nodes in the tree
 	 * @return a subtree
 	 */
-	private SemanticTree getSubTree(SemanticTree t, Set<String> inItemSet, double inPosition)
+	private ContentPattern getSubGraph(ContentGraph g, Set<String> inItemSet, double inPosition)
 	{
 		// Collect nodes which correspond to the items in the itemset
-		Set<Node> itemSetNodes = inItemSet.stream()
-				.map(item -> t.vertexSet().stream()
-						.filter(n -> n.getEntity().getLabel().equals(item)))
+		Set<Entity> itemSetNodes = inItemSet.stream()
+				.map(item -> g.vertexSet().stream()
+						.filter(n -> n.getId().equals(item)))
 				.flatMap(Function.identity())
 				.collect(Collectors.toSet()); // removes duplicates
 
 		// Find a common ancestor for them
-		Optional<Node> commonAncestor = getCommonAncestor(t, itemSetNodes);
+		Optional<Entity> commonAncestor = getCommonAncestor(g, itemSetNodes);
 		if (!commonAncestor.isPresent())
 			throw new RuntimeException("No common ancestor found. Structure is not a tree?");
 
-		// Expand set of node to include all nodes in their paths to the root
-		Set<Node> nodes = itemSetNodes.stream()
-				.map(n -> getPath(t, commonAncestor.get(), n))
+		// Expand set of nodes to include all nodes in their shortest paths to the root
+		Set<Entity> nodes = itemSetNodes.stream()
+				.map(n -> getPath(g, commonAncestor.get(), n))
 				.flatMap(List::stream)
 				.collect(Collectors.toSet());
 
-		// Determine the subtree that spans over all the nodes
-		SemanticTree subTree =
-				new SemanticTree(commonAncestor.get(), inPosition);
-		populateSubTree(t, commonAncestor.get(), subTree.getRoot(), nodes);
+		// Determine the subgraph that spans over all the nodes
+		ContentPattern subGraph = new ContentPattern(g, commonAncestor.get());
+		populateSubGraph(g, subGraph, nodes);
 
-		return subTree;
+		return subGraph;
 	}
 
 	/**
-	 * Find the closest common ancestor to a set of nodes in a tree.
+	 * Find the closest common ancestor to a set of nodes in a rooted DAG.
 	 * @param inNodes set of nodes
 	 * @return common parent, if any
 	 */
-	private static Optional<Node> getCommonAncestor(SemanticTree t, Set<Node> inNodes)
+	private static Optional<Entity> getCommonAncestor(ContentGraph t, Set<Entity> inNodes)
 	{
-		Optional<Node> commonAncestor = Optional.empty();
-		Set<Node> ancestors = new HashSet<>();
+		Optional<Entity> commonAncestor = Optional.empty();
+		Set<Entity> ancestors = new HashSet<>();
 		ancestors.addAll(inNodes);
 		while (!commonAncestor.isPresent())
 		{
@@ -237,116 +233,95 @@ public class ItemSetMining
 	}
 
 	/**
-	 * Given a node in a tree and one of its descendants, return the path from one to the other
-	 *
-	 * @param inAncestor       a node
-	 * @param inDescendent a descendent of @inNode
-	 * @return the sequence of nodes in the path
+	 * Given a node in a DAG and one of its descendants, return the shortest path from one to the other
 	 */
-	private static List<Node> getPath(SemanticTree t, Node inAncestor, Node inDescendent)
+	private static List<Entity> getPath(ContentGraph t, Entity a, Entity d)
 	{
-		Node currentNode = inDescendent;
-		List<Node> path = new ArrayList<>();
-		path.add(currentNode);
-
-		// Find the (unique) path to the ancestor
-		while (currentNode != inAncestor)
-		{
-			if (t.getRoot() == currentNode)
-			{
-				throw new RuntimeException("Cannot find a path between nodes " + inAncestor.getEntity() + " and " + inDescendent.getEntity());
-			}
-			currentNode = t.getEdgeSource(t.incomingEdgesOf(currentNode).iterator().next());
-			path.add(currentNode);
-		}
-
-		return path;
+		GraphPath<Entity, Role> path = DijkstraShortestPath.findPathBetween(t, a, d);
+		return path.getVertexList();
 	}
 
 	/**
-	 * Creates a subtree with root @inNewRoot from another tree with root @inOldRoot
+	 * Creates a rooted subgraph of a DAG
 	 *
-	 * @param inOldRoot         the root of the supertree
-	 * @param inNewRoot         the root of the subtree
-	 * @param inCompulsoryNodes set of nodes in the supertree which must be part of the subtree
+	 * @param nodes set of nodes in the base graph which must be part of the subgraph
 	 */
-	private static void populateSubTree(SemanticTree t, Node inOldRoot, Node inNewRoot, Set<Node> inCompulsoryNodes)
+	private static void populateSubGraph(ContentGraph g, ContentPattern s, Set<Entity> nodes)
 	{
-		t.outgoingEdgesOf(inOldRoot).stream()
-				.map(t::getEdgeTarget)
-				.filter(n ->    (inCompulsoryNodes.contains(n) ||
-								t.incomingEdgesOf(n).iterator().next().isArg() ||
-								isPlainModifier(t, n) ||
-								isNegation(n) ||
-								isNumber(n) ||
-								isPlainAdverb(t, n) ||
-								isName(n)) && !isVerbWithRelative(t, n))
-				.forEach(n -> {
-					Annotation a = n.getAnnotation();
-					Entity e = n.getEntity();
-					Node c = new Node(n.getEntity().getLabel(), e, a);
-					t.addVertex(c);
-					Edge e1 = t.incomingEdgesOf(n).iterator().next();
-					Edge e2 = new Edge(e1.getRole(), e1.isArg());
-					t.addEdge(inNewRoot, c, e2);
-					populateSubTree(t, n, c, inCompulsoryNodes);
-				}); // recursive call
+		// todo fix this
+//		s.outgoingEdgesOf(s.getRoot()).stream()
+//				.map(s::getEdgeTarget)
+//				.filter(n ->    (nodes.contains(n) ||
+//								s.incomingEdgesOf(n).iterator().next().isCore() ||
+//								isPlainModifier(s, n) ||
+//								isNegation(n) ||
+//								isNumber(n) ||
+//								isPlainAdverb(s, n) ||
+//								isName(n)) && !isVerbWithRelative(s, n))
+//				.forEach(n -> {
+//					s.addVertex(c);
+//					Role e1 = s.incomingEdgesOf(n).iterator().next();
+//					Role e2 = new Role(e1.getRole(), e1.isCore());
+//					s.addEdge(inNewRoot, c, e2);
+//					populateSubGraph(s, n, c, inCompulsoryNodes);
+//				}); // recursive call
 	}
 
-	private static boolean isPlainModifier(SemanticTree t, Node n)
+	private static boolean isPlainModifier(ContentGraph g, Entity e)
 	{
-		Annotation a = n.getAnnotation();
+		AnnotatedWord a = g.getAnchors(e).get(0);
 		String role = a.getRole();
-		boolean isLeaf = t.outDegreeOf(n) == 0;
+		boolean isLeaf = g.outDegreeOf(e) == 0;
 		String[] pos = {"DT", "NN", "RB", "JJ"};
 		return role.equals("ATTR") && isLeaf && Arrays.stream(pos).anyMatch(p -> p.equals(a.getPOS()));
 	}
 
-	private static boolean isNegation(Node n)
+	private static boolean isNegation(ContentGraph g, Entity e)
 	{
-		Annotation a = n.getAnnotation();
+		AnnotatedWord a = g.getAnchors(e).get(0);
 		String[] forms = {"no", "not"};
 		String[] pos = {"RB", "JJ"};
 		return Arrays.stream(pos).anyMatch(p -> p.equals(a.getPOS())) &&
 				Arrays.stream(forms).anyMatch(f -> f.equals(a.getForm()));
 	}
 
-	private static boolean isNumber(Node n)
+	private static boolean isNumber(ContentGraph g, Entity e)
 	{
-		Annotation a = n.getAnnotation();
+		AnnotatedWord a = g.getAnchors(e).get(0);
 		String[] pos = {"CD"};
 		return Arrays.stream(pos).anyMatch(p -> p.equals(a.getPOS()));
 	}
 
-	private static boolean isPlainAdverb(SemanticTree t, Node n)
+	private static boolean isPlainAdverb(ContentGraph g, Entity e)
 	{
-		Annotation a = n.getAnnotation();
-		boolean isLeaf = t.outDegreeOf(n) == 0;
+		AnnotatedWord a = g.getAnchors(e).get(0);
+		boolean isLeaf = g.outDegreeOf(e) == 0;
 		String[] pos = {"WRB"};
 		return isLeaf && Arrays.stream(pos).anyMatch(p -> p.equals(a.getPOS()));
 	}
 
-//	private static boolean isInflectedVerb(Annotation inAnn)
+//	private static boolean isInflectedVerb(WordAnnotation inAnn)
 //	{
 //		String[] inflectedVerbs = {"VBD", "VBP", "VBZ"};
 //		return Arrays.stream(inflectedVerbs).anyMatch(pos -> pos.equals(inAnn.getPOS()));
 //	}
 
-	private static boolean isVerbWithRelative(SemanticTree t, Node n)
+	private static boolean isVerbWithRelative(ContentGraph g, Entity e)
 	{
-		if (t.outDegreeOf(n) != 1)
+		AnnotatedWord a = g.getAnchors(e).get(0);
+		if (g.outDegreeOf(e) != 1)
 			return false;
-		Edge dependent = t.outgoingEdgesOf(n).iterator().next();
-		Annotation a = n.getAnnotation();
-		Annotation c = t.getEdgeTarget(dependent).getAnnotation();
+		Role dependent = g.outgoingEdgesOf(e).iterator().next();
+		Entity d = g.getEdgeTarget(dependent);
+		AnnotatedWord dAnn = g.getAnchors(d).get(0);
 		return a.getPOS().startsWith("VB") &&
-				t.outDegreeOf(n) == 1 &&
-				c.getPOS().equalsIgnoreCase("WDT");
+				g.outDegreeOf(e) == 1 &&
+				dAnn.getPOS().equalsIgnoreCase("WDT");
 	}
 
-	private static boolean isName(Node n)
+	private static boolean isName(ContentGraph g, Entity e)
 	{
-		Annotation a = n.getAnnotation();
+		AnnotatedWord a = g.getAnchors(e).get(0);
 		return a.getRole().equals("NAME");
 	}
 

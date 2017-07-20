@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning.similarity;
 
-import edu.upf.taln.textplanning.datastructures.Entity;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
+import edu.upf.taln.textplanning.structures.ContentPattern;
+import edu.upf.taln.textplanning.structures.Entity;
 import unnonouno.treedist.EditScore;
 import unnonouno.treedist.TreeEditDistance;
 
@@ -11,11 +11,11 @@ import unnonouno.treedist.TreeEditDistance;
  */
 public final class PatternSimilarity
 {
-	private final ItemSimilarity itemSimilarity;
+	private final EntitySimilarity sim;
 
-	public PatternSimilarity(ItemSimilarity inItemSimilarity)
+	public PatternSimilarity(EntitySimilarity s)
 	{
-		itemSimilarity = inItemSimilarity;
+		sim = s;
 	}
 
 	/**
@@ -27,7 +27,7 @@ public final class PatternSimilarity
 	 * @param inTree2 2nd tree
 	 * @return a similarity metric normalized to [0,1.0]
 	 */
-	public double getSimilarity(SemanticTree inTree1, SemanticTree inTree2)
+	public double getSimilarity(ContentPattern inTree1, ContentPattern inTree2)
 	{
 		SemanticTreeProxy tree1 = new SemanticTreeProxy(inTree1);
 		SemanticTreeProxy tree2 = new SemanticTreeProxy(inTree2);
@@ -54,6 +54,6 @@ public final class PatternSimilarity
 	 */
 	public double getSimilarity(Entity e1, Entity e2)
 	{
-		return itemSimilarity.computeSimilarity(e1.getLabel(), e2.getLabel());
+		return sim.computeSimilarity(e1, e2);
 	}
 }

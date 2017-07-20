@@ -4,14 +4,12 @@ import com.beust.jcommander.*;
 import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.corpora.FreqsFile;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
 import edu.upf.taln.textplanning.disambiguation.BabelNetAnnotator;
-import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.similarity.ItemSimilarity;
+import edu.upf.taln.textplanning.input.CoNLLFormat;
+import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.similarity.SensEmbed;
-import edu.upf.taln.textplanning.similarity.Word2Vec;
-import edu.upf.taln.textplanning.weighting.Random;
+import edu.upf.taln.textplanning.structures.ContentPattern;
+import edu.upf.taln.textplanning.structures.LinguisticStructure;
 import edu.upf.taln.textplanning.weighting.TFIDF;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.slf4j.Logger;
@@ -119,7 +117,6 @@ public class ConLLDriver
 		private boolean debug = false;
 	}
 
-
 	private final static Logger log = LoggerFactory.getLogger(ConLLDriver.class);
 
 	/**
@@ -127,11 +124,10 @@ public class ConLLDriver
 	 * It uses the following resources:
 	 * @param solrUrl url of solr server containing an index of the Semantically Enriched Wikipedia (SEW)
 	 * @param embeddingsFile path to the file containing the word vectors obtained from the Google News Corpus
-	 * @param t type of embeddings
 	 * @return an instance of the TextPlanner class
 	 */
 	@SuppressWarnings("WeakerAccess")
-	public static TextPlanner createConLLPlanner(String solrUrl, Path embeddingsFile, EmbeddingsType t) throws Exception
+	public static TextPlanner createConLLPlanner(String solrUrl, Path embeddingsFile) throws Exception
 	{
 //		final String solrUrl = "http://10.55.0.41:443/solr/sewDataAnnSen";
 //		final Path word2vecPath = Paths.get("/home/gerard/data/GoogleNews-vectors-negative300.bin");
@@ -139,14 +135,8 @@ public class ConLLDriver
 
 		Corpus corpus = new SEWSolr(solrUrl);
 		WeightingFunction corpusMetric = new TFIDF(corpus);
-		ItemSimilarity sim = null;
-		switch (t)
-		{
-			case word: sim = new Word2Vec(embeddingsFile); break;
-			case sense: sim = new SensEmbed(embeddingsFile); break;
-		}
-
-		return new TextPlanner(corpusMetric, sim, new BabelNetAnnotator());
+		EntitySimilarity esim = new SensEmbed(embeddingsFile);
+		return new TextPlanner(corpusMetric, esim, new BabelNetAnnotator());
 	}
 
 	/**
@@ -154,37 +144,16 @@ public class ConLLDriver
 	 * It uses the following resources:
 	 * @param frequenciesFile file containing pre-computed frequencies of items
 	 * @param embeddingsFile path to the file containing the word vectors obtained from the Google News Corpus
-	 * @param t type of embeddings
 	 * @return an instance of the TextPlanner class
 	 */
 	@SuppressWarnings("WeakerAccess")
-	public static TextPlanner createConLLPlanner(Path frequenciesFile, Path embeddingsFile, EmbeddingsType t) throws Exception
+	public static TextPlanner createConLLPlanner(Path frequenciesFile, Path embeddingsFile) throws Exception
 	{
 		Corpus corpus = new FreqsFile(frequenciesFile);
 		WeightingFunction corpusMetric = new TFIDF(corpus);
-		ItemSimilarity sim = null;
-		switch (t)
-		{
-			case word: sim = new Word2Vec(embeddingsFile); break;
-			case sense: sim = new SensEmbed(embeddingsFile); break;
-		}
-
-		return new TextPlanner(corpusMetric, sim, new BabelNetAnnotator());
+		EntitySimilarity esim = new SensEmbed(embeddingsFile);
+		return new TextPlanner(corpusMetric, esim, new BabelNetAnnotator());
 	}
-
-	/**
-	 * Instantiates a planner that uses random relevance weighting and similarity calculations.
-	 * @return an instance of the TextPlanner class
-	 */
-	@SuppressWarnings({"WeakerAccess", "unused"})
-	public static TextPlanner createRandomPlanner() throws Exception
-	{
-		WeightingFunction corpusMetric = new Random();
-		ItemSimilarity sim = new edu.upf.taln.textplanning.similarity.Random();
-
-		return new TextPlanner(corpusMetric, sim, new BabelNetAnnotator());
-	}
-
 
 	@SuppressWarnings("WeakerAccess")
 	public static String runPlanner(TextPlanner p, TextPlanner.Options options, List<Path> files)
@@ -196,25 +165,24 @@ public class ConLLDriver
 				})
 				.collect(Collectors.toList());
 
-		ConLLAcces conll = new ConLLAcces();
-		Set<SemanticGraph> graphs = conlls.stream()
+		CoNLLFormat conll = new CoNLLFormat();
+		Set<LinguisticStructure> graphs = conlls.stream()
 				.map(conll::readStructures)
 				.flatMap(List::stream)
 				.collect(Collectors.toSet());
-		// Read trees from conll files
+		// Read structures from conll files
 
 		return runPlanner(p, graphs, options);
 	}
 
 	@SuppressWarnings("WeakerAccess")
-	public static String runPlanner(TextPlanner p, Set<SemanticGraph> graphs, TextPlanner.Options options)
+	public static String runPlanner(TextPlanner p, Set<LinguisticStructure> graphs, TextPlanner.Options options)
 	{
 		try
 		{
-			ConLLAcces conll = new ConLLAcces();
-			//conll.postProcessTrees(graphs);
-			List<SemanticTree> plan = p.planText(graphs, options);
-			return conll.writeTrees(plan);
+			CoNLLFormat conll = new CoNLLFormat();
+			List<ContentPattern> plan = p.plan(graphs, options);
+			return conll.writePatterns(plan);
 		}
 		catch (Exception e)
 		{
@@ -229,9 +197,9 @@ public class ConLLDriver
 		new JCommander(cmlArgs, args);
 		TextPlanner planner;
 		if (cmlArgs.frequencies != null)
-			planner = ConLLDriver.createConLLPlanner(cmlArgs.frequencies, cmlArgs.embeddings, cmlArgs.type);
+			planner = ConLLDriver.createConLLPlanner(cmlArgs.frequencies, cmlArgs.embeddings);
 		else
-			planner = ConLLDriver.createConLLPlanner(cmlArgs.solrUrl, cmlArgs.embeddings, cmlArgs.type);
+			planner = ConLLDriver.createConLLPlanner(cmlArgs.solrUrl, cmlArgs.embeddings);
 
 		TextPlanner.Options options = new TextPlanner.Options();
 		options.generateStats = true;

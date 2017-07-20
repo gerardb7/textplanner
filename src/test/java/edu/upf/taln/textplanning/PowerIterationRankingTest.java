@@ -1,9 +1,10 @@
 package edu.upf.taln.textplanning;
 
 import Jama.Matrix;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.ranking.PowerIterationRanking;
-import edu.upf.taln.textplanning.similarity.ItemSimilarity;
+import edu.upf.taln.textplanning.similarity.EntitySimilarity;
+import edu.upf.taln.textplanning.structures.Entity;
+import edu.upf.taln.textplanning.structures.LinguisticStructure;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.junit.Test;
 
@@ -30,7 +31,7 @@ public class PowerIterationRankingTest
 		public DummyWeighting(int exp) { this.exp = exp; }
 
 		@Override
-		public void setContents(Set<SemanticGraph> contents) { }
+		public void setContents(Set<LinguisticStructure> contents) { }
 
 		@Override
 		public double weight(String item)
@@ -42,15 +43,15 @@ public class PowerIterationRankingTest
 		}
 	}
 
-	private static class DummySimilarity implements ItemSimilarity
+	private static class DummySimilarity implements EntitySimilarity
 	{
-		@Override public boolean isDefinedFor(String item) { return true; }
-		@Override public boolean isDefinedFor(String item1, String item2) {	return true; }
+		@Override public boolean isDefinedFor(Entity item) { return true; }
+		@Override public boolean isDefinedFor(Entity item1, Entity item2) {	return true; }
 
-		@Override public double computeSimilarity(String item1, String item2)
+		@Override public double computeSimilarity(Entity item1, Entity item2)
 		{
-			int i1 = Integer.parseInt(item1);
-			int i2 = Integer.parseInt(item2);
+			int i1 = Integer.parseInt(item1.getId());
+			int i2 = Integer.parseInt(item2.getId());
 
 			double k = counter;
 			double d = (double) Math.abs(i1 - i2);
@@ -72,7 +73,7 @@ public class PowerIterationRankingTest
 		options.dampingRelevance = 0.3;
 		options.generateStats = true;
 		DummyWeighting weight = new DummyWeighting(5);
-		Matrix rankingMatrix = null; // PowerIterationRanking.createRankingMatrix(entities, weight, new DummySimilarity(), options);
+		Matrix rankingMatrix = null; // PowerIterationRanking.createCandidateRankingMatrix(entities, weight, new DummySimilarity(), options);
 		Matrix result = PowerIterationRanking.run(rankingMatrix, options.rankingStopThreshold);
 
 		double[] weights = entities.stream().mapToDouble(weight::weight).toArray();

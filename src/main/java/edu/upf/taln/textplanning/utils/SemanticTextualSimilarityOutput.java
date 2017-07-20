@@ -2,12 +2,10 @@ package edu.upf.taln.textplanning.utils;
 
 import com.beust.jcommander.*;
 import edu.upf.taln.textplanning.ConLLDriver;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph;
-import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.similarity.ItemSimilarity;
-import edu.upf.taln.textplanning.similarity.PatternSimilarity;
+import edu.upf.taln.textplanning.input.CoNLLFormat;
+import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.similarity.SensEmbed;
-import edu.upf.taln.textplanning.similarity.Word2Vec;
+import edu.upf.taln.textplanning.structures.LinguisticStructure;
 
 import java.io.StringWriter;
 import java.math.RoundingMode;
@@ -113,16 +111,11 @@ public class SemanticTextualSimilarityOutput
 		CMLArgs cmlArgs = new CMLArgs();
 		new JCommander(cmlArgs, args);
 
-		ItemSimilarity sim = null;
-		switch (cmlArgs.type)
-		{
-			case Word2Vec: sim = new Word2Vec(cmlArgs.embeddings); break;
-			case MergedSensEmbed: sim = new SensEmbed(cmlArgs.embeddings);	break;
-		}
-		PatternSimilarity msgSim = new PatternSimilarity(sim);
+		EntitySimilarity sim = new SensEmbed(cmlArgs.embeddings);
+		//PatternSimilarity msgSim = new PatternSimilarity(sim);
 		String conll = new String(Files.readAllBytes(cmlArgs.input.get(0)), Charset.forName("UTF-8"));
-		ConLLAcces reader = new ConLLAcces();
-		List<SemanticGraph> trees = reader.readStructures(conll);
+		CoNLLFormat reader = new CoNLLFormat();
+		List<LinguisticStructure> trees = reader.readStructures(conll);
 		StringWriter writer = new StringWriter();
 		NumberFormat format = NumberFormat.getInstance();
 		format.setRoundingMode(RoundingMode.HALF_UP);
@@ -136,7 +129,7 @@ public class SemanticTextualSimilarityOutput
 			writer.append("\n");
 		}
 
-		// @todo Fix input and output of class
+
 		//Files.write(sim., writer.toString().getBytes());
 	}
 }

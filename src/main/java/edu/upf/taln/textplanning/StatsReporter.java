@@ -1,303 +1,198 @@
 package edu.upf.taln.textplanning;
 
 import Jama.Matrix;
-import edu.upf.taln.textplanning.datastructures.Entity;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
-import edu.upf.taln.textplanning.similarity.ItemSimilarity;
-import edu.upf.taln.textplanning.weighting.TFIDF;
+import edu.upf.taln.textplanning.similarity.EntitySimilarity;
+import edu.upf.taln.textplanning.structures.LinguisticStructure;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
-import org.apache.commons.collections4.ListUtils;
 
-import java.io.StringWriter;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.Set;
 
 /**
  * Generates statistics about a document containing annotations of deep syntactic trees.
  */
 public class StatsReporter
 {
-	public static String reportStats(Set<SemanticGraph> structures, WeightingFunction rel,
-	                                 ItemSimilarity sim, SemanticGraph g,
+	public static String reportStats(Set<LinguisticStructure> structures, WeightingFunction rel,
+	                                 EntitySimilarity sim, LinguisticStructure g,
 	                                 TextPlanner.Options o)
 	{
-		// Set up formatting
-		NumberFormat f = NumberFormat.getInstance();
-		f.setRoundingMode(RoundingMode.UP);
-		f.setMaximumFractionDigits(6);
-		f.setMinimumFractionDigits(6);
-		StringWriter w = new StringWriter();
 
-		// Collect nodes, nodesWithSense, nodesWithoutSense, etc.
-		List<Node> nodes = new ArrayList<>(g.vertexSet());
-		List<Node> nodesWithSense = nodes.stream()
-				.filter(n -> n.getEntity().getLabel().startsWith("bn:"))
-				.collect(Collectors.toList());
-		List<Node> nodesWithNominalSense = nodesWithSense.stream()
-				.filter(n -> n.getEntity().getLabel().startsWith("bn:"))
-				.filter(n -> n.getEntity().getLabel().endsWith("n"))
-				.collect(Collectors.toList());
-//		List<Node> nodesWithoutSense = nodes.stream()
-//				.filter(n -> ((AnnotatedEntity)n.getEntity()).getAnnotation().getSense() == null)
+		// todo rethink stats reporting
+//		// Set up formatting
+//		NumberFormat f = NumberFormat.getInstance();
+//		f.setRoundingMode(RoundingMode.UP);
+//		f.setMaximumFractionDigits(6);
+//		f.setMinimumFractionDigits(6);
+//		StringWriter w = new StringWriter();
+//
+//		// Collect nodes, nodesWithSense, nodesWithoutSense, etc.
+//		List<AnnotatedWord> nodes = new ArrayList<>(g.vertexSet());
+//		List<AnnotatedWord> nodesWithSense = nodes.stream()
+//				.filter(n -> n.getBestCandidate().isPresent())
+//				.filter(n -> n.getBestCandidate().map(Candidate::getEntity).map(Entity::getId).orElse("").startsWith("bn:"))
 //				.collect(Collectors.toList());
-		List<Node> nodesWithNonNominalSense = nodes.stream()
-				.filter(n -> n.getEntity().getLabel().startsWith("bn:"))
-				.filter(n -> !n.getEntity().getLabel().endsWith("n"))
-				.collect(Collectors.toList());
-
-		// Collect similarity values
-	/*	List<Double> senseValues = nodes.stream()
-				.mapToDouble(e1 -> nodes.stream()
-						.filter(e2 -> e1 != e2)
-						.mapToDouble(e2 -> sense != null ? sense.computeSimilarity(e1.getEntity(), e2.getEntity()) : 0.0)
-						.map(d -> d < o.simLowerBound ? 0.0 : d)
-						.average().orElse(0.0))
-				.boxed()
-				.collect(Collectors.toList());*/
-		List<Double> mergedValues = nodesWithSense.stream()
-				.mapToDouble(e1 -> nodesWithSense.stream()
-						.filter(e2 -> e1 != e2)
-						.mapToDouble(e2 -> sim.computeSimilarity(e1.getEntity().getLabel(), e2.getEntity().getLabel()))
-						.map(d -> d < o.simLowerBound ? 0.0 : d)
-						.average().orElse(0.0))
-				.boxed()
-				.collect(Collectors.toList());
-	/*	List<Double> wordValues = nodes.stream()
-				.mapToDouble(e1 -> nodes.stream()
-						.filter(e2 -> e1 != e2)
-						.mapToDouble(e2 -> word != null ? word.computeSimilarity(e1.getEntity(), e2.getEntity()) : 0.0)
-						.map(d -> d < o.simLowerBound ? 0.0 : d)
-						.average().orElse(0.0))
-				.boxed()
-				.collect(Collectors.toList());*/
-
-		// Collect similarity values weighted by relevance
-/*		List<Double> senseRelValues = nodes.stream()
-				.mapToDouble(e1 -> nodes.stream()
-						.filter(e2 -> e1 != e2)
-						.mapToDouble(e2 -> {
-							double s = sense != null ? sense.computeSimilarity(e1.getEntity(), e2.getEntity()) : 0.0;
-							double r = rel.weight(e2.getEntity());
-							s = s < o.simLowerBound ? 0.0 : s;
-							r = Math.max(o.minRelevance, r);
-							return s*r;
-						})
-						.average().orElse(0.0))
-				.boxed()
-				.collect(Collectors.toList());*/
-		List<Double> mergedRelValues = nodesWithSense.stream()
-				.mapToDouble(e1 -> nodesWithSense.stream()
-						.filter(e2 -> e1 != e2)
-						.mapToDouble(e2 -> {
-							double s = sim != null ? sim.computeSimilarity(e1.getEntity().getLabel(), e2.getEntity().getLabel()) : 0.0;
-							double r = rel.weight(e2.getEntity().getLabel());
-							s = s < o.simLowerBound ? 0.0 : s;
-							r = Math.max(o.minRelevance, r);
-							return s*r;
-						})
-						.average().orElse(0.0))
-				.boxed()
-				.collect(Collectors.toList());
-/*		List<Double> wordRelValues = nodes.stream()
-				.mapToDouble(e1 -> nodes.stream()
-						.filter(e2 -> e1 != e2)
-						.mapToDouble(e2 -> {
-							double s = word != null ? word.computeSimilarity(e1.getEntity(), e2.getEntity()) : 0.0;
-							double r = rel.weight(e2.getEntity());
-							s = s < o.simLowerBound ? 0.0 : s;
-							r = Math.max(o.minRelevance, r);
-							return s*r;
-						})
-						.average().orElse(0.0))
-				.boxed()
-				.collect(Collectors.toList());*/
-
-		// Set up metrics
-		TFIDF corpusMetric = (TFIDF)rel;
-
-		Map<String, Long> freqs = structures.stream()
-				.map(SemanticGraph::vertexSet)
-				.map(p -> p.stream()
-						.map(Node::getEntity)
-						.map(Entity::getLabel)
-						.collect(Collectors.toList()))
-				.flatMap(List::stream)
-				.collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
-
-		// Report metrics for each collection
-		w.write("Scoring of nodes\n");
-		//w.write("num\tlabel\tid\ttfidf\trank\tf\tdf\tsense\tmerged\tword\tsenserel\tmergedrel\twordrel\n");
-		w.write("num\tlabel\tid\ttfidf\trank\tf\tdf\tsim\tsim+rel\n");
-		nodes.forEach(e -> {
-			int node = nodes.indexOf(e);
-			String id  = nodes.get(node).getId();
-			double tfIdf = corpusMetric.weight(e.getEntity().getLabel());
-			double rank = e.getEntity().getWeight();
-			long fq = freqs.get(e.getEntity().getLabel());
-			long df = corpusMetric.getFrequency(e.getEntity().getLabel());
-//			double ss = nodes.contains(e) ? senseValues.get(nodes.indexOf(e)) : -1.0;
-			double ms = nodesWithSense.contains(e) ? mergedValues.get(nodesWithSense.indexOf(e)) : -1.0;
-//			double ws = nodes.contains(e) ? wordValues.get(nodes.indexOf(e)) : -1.0;
-//			double ssrel = nodes.contains(e) ? senseRelValues.get(nodes.indexOf(e)) : -1.0;
-			double msrel = nodesWithSense.contains(e) ? mergedRelValues.get(nodesWithSense.indexOf(e)) : -1.0;
-//			double wsrel = nodes.contains(e) ? wordRelValues.get(nodes.indexOf(e)) : -1.0;
-
-			w.write(node +"\t" + e + "\t" + id + "\t" + f.format(tfIdf) + "\t" + f.format(rank) + "\t" + fq + "\t" + df + "\t" +
-					/*f.format(ss) + "\structures" +*/ f.format(ms) + "\t" + /*1f.format(ws) + "\structures" +*/
-					/*f.format(ssrel) + "\structures" +*/ f.format(msrel) /*+ "\structures" + f.format(wsrel)*/ + "\n");
-		});
-		w.write("\n");
-
-		{
-			double ratio = ((double) nodesWithSense.size() / (double) nodes.size()) * 100.0;
-			w.write("Babelfy: " + f.format(ratio) + "% of entities have a sense\n");
-		}
-		{
-			double ratio = ((double) nodesWithNominalSense.size() / (double) nodesWithSense.size()) * 100.0;
-			w.write("Babelfy: " + f.format(ratio) + "% of senses are nominal\n");
-		}
-
-		Set<Entity> sensesInSEW = nodesWithSense.stream()
-				.filter(e -> corpusMetric.getFrequency(e.getEntity().getLabel()) > 0)
-				.map(Node::getEntity)
-				.collect(Collectors.toSet());
-		{
-			double ratio = ((double) sensesInSEW.size() / (double) nodesWithSense.size()) * 100.0;
-			w.write("SEW: " + f.format(ratio) + "% senses defined (" + sensesInSEW.size()
-					+ "/" + nodesWithSense.size() + ")\n");
-		}
-		Set<Entity> nominalSensesInSEW = nodesWithNominalSense.stream()
-				.filter(e -> corpusMetric.getFrequency(e.getEntity().getLabel()) > 0)
-				.map(Node::getEntity)
-				.collect(Collectors.toSet());
-		{
-			double ratio = ((double) nominalSensesInSEW.size() / (double) nodesWithNominalSense.size()) * 100.0;
-			w.write("SEW: " + f.format(ratio) + "% nominal senses defined (" + nominalSensesInSEW.size()
-					+ "/" + nodesWithNominalSense.size() + ")\n");
-		}
-		Set<Entity>formsInSEW = nodesWithNonNominalSense.stream()
-				.filter(e -> corpusMetric.getFrequency(e.getEntity().getLabel()) > 0)
-				.map(Node::getEntity)
-				.collect(Collectors.toSet());
-		{
-			double ratio = ((double) formsInSEW.size() / (double) nodesWithNonNominalSense.size()) * 100.0;
-			w.write("SEW: " + f.format(ratio) + "% forms (of words not annotated with nominal senses) defined ("
-					+ formsInSEW.size()	+ "/" + nodesWithNonNominalSense.size() + ")\n");
-		}
-
-//		if (sense != null)
+//		List<AnnotatedWord> nodesWithNominalSense = nodesWithSense.stream()
+//				.filter(n -> {
+//					String l = n.getBestCandidate().map(Candidate::getEntity).map(Entity::getId).orElse("");
+//					return l.startsWith("bn:") && l.endsWith("n");
+//				})
+//				.collect(Collectors.toList());
+//
+//		List<AnnotatedWord> nodesWithNonNominalSense = nodes.stream()
+//				.filter(n -> {
+//					String l = n.getBestCandidate().map(Candidate::getEntity).map(Entity::getId).orElse("");
+//					return l.startsWith("bn:") && l.endsWith("n");
+//				})
+//				.collect(Collectors.toList());
+//
+//		List<Double> mergedValues = nodesWithSense.stream()
+//				.map(AnnotatedWord::getBestCandidate)
+//				.filter(Optional::isPresent)
+//				.map(Optional::get)
+//				.map(Candidate::getEntity)
+//				.distinct()
+//				.mapToDouble(e1 -> nodesWithSense.stream()
+//						.map(AnnotatedWord::getBestCandidate)
+//						.filter(Optional::isPresent)
+//						.map(Optional::get)
+//						.map(Candidate::getEntity)
+//						.distinct()
+//						.filter(e2 -> e2 != e1)
+//						.mapToDouble(e2 -> sim.computeSimilarity(e1, e2))
+//						.map(d -> d < o.simLowerBound ? 0.0 : d)
+//						.average().orElse(0.0))
+//				.boxed()
+//				.collect(Collectors.toList());
+//
+//		List<Double> mergedRelValues = nodesWithSense.stream()
+//				.map(AnnotatedWord::getBestCandidate)
+//				.filter(Optional::isPresent)
+//				.map(Optional::get)
+//				.map(Candidate::getEntity)
+//				.distinct()
+//				.mapToDouble(e1 -> nodesWithSense.stream()
+//						.map(AnnotatedWord::getBestCandidate)
+//						.filter(Optional::isPresent)
+//						.map(Optional::get)
+//						.map(Candidate::getEntity)
+//						.distinct()
+//						.filter(e2 -> e2 != e1)
+////						.mapToDouble(e2 -> sim.computeSimilarity(e1, e2))
+//						.mapToDouble(e2 -> {
+//							double s = sim != null ? sim.computeSimilarity(e1.getEntity(), e2.getEntity()) : 0.0;
+//							double r = rel.weight(e2.getEntity().getId());
+//							s = s < o.simLowerBound ? 0.0 : s;
+//							r = Math.max(o.minRelevance, r);
+//							return s*r;
+//						})
+//						.average().orElse(0.0))
+//				.boxed()
+//				.collect(Collectors.toList());
+//
+//
+//		// Set up metrics
+//		TFIDF corpusMetric = (TFIDF)rel;
+//
+//		Map<String, Long> freqs = structures.stream()
+//				.map(LinguisticStructure::vertexSet)
+//				.map(p -> p.stream()
+//						.map(AnnotatedWord::getEntity)
+//						.map(Entity::getId)
+//						.collect(Collectors.toList()))
+//				.flatMap(List::stream)
+//				.collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+//
+//		// Report metrics for each collection
+//		w.write("Scoring of nodes\n");
+//		w.write("num\tlabel\tid\ttfidf\trank\tf\tdf\tsim\tsim+rel\n");
+//		nodes.forEach(e -> {
+//			int node = nodes.indexOf(e);
+//			String id  = nodes.get(node).toString();
+//			double tfIdf = corpusMetric.weight(e.getEntity().getId());
+//			double rank = e.getEntity().getWeight();
+//			long fq = freqs.get(e.getEntity().getId());
+//			long df = corpusMetric.getFrequency(e.getEntity().getId());
+//			double ms = nodesWithSense.contains(e) ? mergedValues.get(nodesWithSense.indexOf(e)) : -1.0;
+//			double msrel = nodesWithSense.contains(e) ? mergedRelValues.get(nodesWithSense.indexOf(e)) : -1.0;
+//
+//			w.write(node +"\t" + e + "\t" + id + "\t" + f.format(tfIdf) + "\t" + f.format(rank) + "\t" + fq + "\t" + df + "\t" +
+//					 f.format(ms) + "\t" + f.format(msrel) + "\n");
+//		});
+//		w.write("\n");
+//
+//		{
+//			double ratio = ((double) nodesWithSense.size() / (double) nodes.size()) * 100.0;
+//			w.write("Babelfy: " + f.format(ratio) + "% of entities have a sense\n");
+//		}
+//		{
+//			double ratio = ((double) nodesWithNominalSense.size() / (double) nodesWithSense.size()) * 100.0;
+//			w.write("Babelfy: " + f.format(ratio) + "% of senses are nominal\n");
+//		}
+//
+//		Set<Entity> sensesInSEW = nodesWithSense.stream()
+//				.filter(e -> corpusMetric.getFrequency(e.getEntity().getId()) > 0)
+//				.map(AnnotatedWord::getEntity)
+//				.collect(Collectors.toSet());
+//		{
+//			double ratio = ((double) sensesInSEW.size() / (double) nodesWithSense.size()) * 100.0;
+//			w.write("SEW: " + f.format(ratio) + "% senses defined (" + sensesInSEW.size()
+//					+ "/" + nodesWithSense.size() + ")\n");
+//		}
+//		Set<Entity> nominalSensesInSEW = nodesWithNominalSense.stream()
+//				.filter(e -> corpusMetric.getFrequency(e.getEntity().getId()) > 0)
+//				.map(AnnotatedWord::getEntity)
+//				.collect(Collectors.toSet());
+//		{
+//			double ratio = ((double) nominalSensesInSEW.size() / (double) nodesWithNominalSense.size()) * 100.0;
+//			w.write("SEW: " + f.format(ratio) + "% nominal senses defined (" + nominalSensesInSEW.size()
+//					+ "/" + nodesWithNominalSense.size() + ")\n");
+//		}
+//		Set<Entity>formsInSEW = nodesWithNonNominalSense.stream()
+//				.filter(e -> corpusMetric.getFrequency(e.getEntity().getId()) > 0)
+//				.map(AnnotatedWord::getEntity)
+//				.collect(Collectors.toSet());
+//		{
+//			double ratio = ((double) formsInSEW.size() / (double) nodesWithNonNominalSense.size()) * 100.0;
+//			w.write("SEW: " + f.format(ratio) + "% forms (of words not annotated with nominal senses) defined ("
+//					+ formsInSEW.size()	+ "/" + nodesWithNonNominalSense.size() + ")\n");
+//		}
+//
+//
+//
+//		if (sim != null)
 //		{
 //			{
-//				Set<AnnotatedEntity> definedEntities = nodes.stream()
-//						.map(Node::getEntity)
-//						.map(AnnotatedEntity.class::cast)
-//						.filter(sense::isDefinedFor)
-//						.collect(Collectors.toSet());
-//				double ratio = ((double) definedEntities.size() / (double) nodes.size()) * 100.0;
-//				w.write("sense: " + f.format(ratio) + "% entities defined (" + definedEntities.size() + "/" +
-//						nodes.size() + ")\n");
-//				w.write("sense: undefined entities " + ListUtils.removeAll(nodesWithSense, definedEntities).stream()
-//						.map(Node::getEntity)
-//						.map(AnnotatedEntity.class::cast)
-//						.map(AnnotatedEntity::toString)
-//						.collect(Collectors.joining(",")) + "\n");
-//			}
-//			{
-//				Set<AnnotatedEntity> definedSenses = nodesWithSense.stream()
-//						.map(Node::getEntity)
-//						.map(AnnotatedEntity.class::cast)
-//						.filter(sense::isDefinedFor)
+//				Set<String> definedSenses = nodesWithSense.stream()
+//						.map(AnnotatedWord::getEntity)
+//						.filter(sim::isDefinedFor)
+//						.map(Entity::getId)
 //						.collect(Collectors.toSet());
 //				double ratio = ((double) definedSenses.size() / (double) nodesWithSense.size()) * 100.0;
-//				w.write("sense: " + f.format(ratio) + "% senses defined (" + definedSenses.size() +
-//						"/" + nodesWithSense.size() + ")\n");
-//			}
-//			{
-//				Set<AnnotatedEntity> definedForms = nodesWithoutSense.stream()
-//						.map(Node::getEntity)
-//						.map(AnnotatedEntity.class::cast)
-//						.filter(sense::isDefinedFor)
-//						.collect(Collectors.toSet());
-//				double ratio = ((double) definedForms.size() / (double) nodesWithoutSense.size()) * 100.0;
-//				w.write("sense: " + f.format(ratio) + "% forms of entities without sense defined (" + definedForms.size() +
-//						"/" + nodesWithoutSense.size() + ")\n");
-//			}
-//		}
-
-		if (sim != null)
-		{
-			{
-				Set<String> definedSenses = nodesWithSense.stream()
-						.map(Node::getEntity)
-						.map(Entity::getLabel)
-						.filter(sim::isDefinedFor)
-						.collect(Collectors.toSet());
-				double ratio = ((double) definedSenses.size() / (double) nodesWithSense.size()) * 100.0;
-				w.write("Merged SensEmbed: " + f.format(ratio) + "% senses defined (" + definedSenses.size() + "/" +
-						nodesWithSense.size() + ")\n");
-				w.write("Merged SensEmbed: undefined senses " + ListUtils.removeAll(nodesWithSense, definedSenses).stream()
-						.map(Node::getEntity)
-						.map(Entity::getLabel)
-						.collect(Collectors.joining(",")) + "\n");
-			}
-			{
-				Set<String> definedForms = nodesWithNominalSense.stream()
-						.map(Node::getEntity)
-						.map(Entity::getLabel)
-						.filter(sim::isDefinedFor)
-						.collect(Collectors.toSet());
-				double ratio = ((double) definedForms.size() / (double) nodesWithNominalSense.size()) * 100.0;
-				w.write("Merged SensEmbed: " + f.format(ratio) + "% nominal senses defined (" + definedForms.size() +
-						"/" + nodesWithNominalSense.size() + ")\n");
-			}
-		}
-
-//		if (word != null)
-//		{
-//			{
-//				Set<AnnotatedEntity> definedForms = nodes.stream()
-//						.map(Node::getEntity)
-//						.map(AnnotatedEntity.class::cast)
-//						.filter(word::isDefinedFor)
-//						.collect(Collectors.toSet());
-//				double ratio = ((double) definedForms.size() / (double) nodes.size()) * 100.0;
-//				w.write("word: " + f.format(ratio) + "% forms defined ("
-//						+ definedForms.size() + "/" + nodes.size() + ")\n");
-//			}
-//			{
-//				Set<AnnotatedEntity> definedForms = nodesWithoutSense.stream()
-//						.map(Node::getEntity)
-//						.map(AnnotatedEntity.class::cast)
-//						.filter(word::isDefinedFor)
-//						.collect(Collectors.toSet());
-//				double ratio = ((double) definedForms.size() / (double) nodesWithoutSense.size()) * 100.0;
-//				w.write("word: " + f.format(ratio) + "% forms of entitites with no sense defined ("
-//						+ definedForms.size() + "/" + nodesWithoutSense.size() + ")\n");
-//
-//				w.write("word: undefined forms " + ListUtils.removeAll(nodesWithoutSense, definedForms).stream()
-//						.map(Node::getEntity)
-//						.map(AnnotatedEntity.class::cast)
-//						.map(AnnotatedEntity::getAnnotation)
-//						.map(Annotation::getForm)
+//				w.write("Merged SensEmbed: " + f.format(ratio) + "% senses defined (" + definedSenses.size() + "/" +
+//						nodesWithSense.size() + ")\n");
+//				w.write("Merged SensEmbed: undefined senses " + ListUtils.removeAll(nodesWithSense, definedSenses).stream()
+//						.map(AnnotatedWord::getEntity)
+//						.map(Entity::getId)
 //						.collect(Collectors.joining(",")) + "\n");
 //			}
+//			{
+//				Set<String> definedForms = nodesWithNominalSense.stream()
+//						.map(AnnotatedWord::getEntity)
+//						.filter(sim::isDefinedFor)
+//						.map(Entity::getId)
+//						.collect(Collectors.toSet());
+//				double ratio = ((double) definedForms.size() / (double) nodesWithNominalSense.size()) * 100.0;
+//				w.write("Merged SensEmbed: " + f.format(ratio) + "% nominal senses defined (" + definedForms.size() +
+//						"/" + nodesWithNominalSense.size() + ")\n");
+//			}
 //		}
+//
+//		return w.toString();
 
-		// Report similarity
-//		w.write("\nSimilarity table\n");
-//		IntStream.range(0, nodes.size())
-//				.mapToObj(i -> i + "\structures" + nodes.stream()
-//						.mapToDouble(entity -> sim.computeSimilarity(nodes.get(i).getEntity(), entity.getEntity()))
-//						.map(d -> d < o.simLowerBound ? 0.0 : d)
-//						.mapToObj(f::format)
-//						.collect(Collectors.joining("\structures")))
-//				.forEach(row -> w.write(row + "\n"));
-//		w.write("\n");
-		return w.toString();
+		return "";
 	}
 
 	public static String getMatrixStats(Matrix inMatrix)

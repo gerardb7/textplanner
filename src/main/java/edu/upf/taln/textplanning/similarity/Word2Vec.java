@@ -13,7 +13,7 @@ import java.nio.file.Path;
 /**
  * Computes similarity between word forms according to word distributional vectors
  */
-public class Word2Vec implements ItemSimilarity
+public class Word2Vec
 {
 //	private final WordVectors vectors;
 	private final static Logger log = LoggerFactory.getLogger(Word2Vec.class);
@@ -26,14 +26,12 @@ public class Word2Vec implements ItemSimilarity
 		log.info("Loading took " + timer.stop());
 	}
 
-	@Override
 	public boolean isDefinedFor(String item)
 	{
 //		return vectors.hasWord(item);
 		return false;
 	}
 
-	@Override
 	public boolean isDefinedFor(String item1, String item2)
 	{
 //		return vectors.hasWord(item1) &&
@@ -41,7 +39,6 @@ public class Word2Vec implements ItemSimilarity
 		return false;
 	}
 
-	@Override
 	public double computeSimilarity(String item1, String item2)
 	{
 

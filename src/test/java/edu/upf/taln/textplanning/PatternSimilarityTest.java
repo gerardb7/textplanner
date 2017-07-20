@@ -1,13 +1,14 @@
 package edu.upf.taln.textplanning;
 
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
-import edu.upf.taln.textplanning.input.ConLLAcces;
-import edu.upf.taln.textplanning.similarity.ItemSimilarity;
+import edu.upf.taln.textplanning.input.CoNLLFormat;
+import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.similarity.PatternSimilarity;
-import edu.upf.taln.textplanning.similarity.Random;
+import edu.upf.taln.textplanning.similarity.SensEmbed;
+import edu.upf.taln.textplanning.structures.ContentPattern;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 
@@ -20,25 +21,22 @@ public class PatternSimilarityTest
 	@Test
 	public void testGetSimilarity() throws Exception
 	{
-		ConLLAcces conll = new ConLLAcces();
-		// todo fix this once figured out wether output should be trees or graphs
-		List<SemanticTree> trees = null;// conll.readStructures("src/test/resources/test_dummy.conll");
-		SemanticTree tree1 = trees.get(0);
-		SemanticTree tree2 = trees.get(1);
-		SemanticTree tree3 = trees.get(2);
-		SemanticTree tree4 = trees.get(3);
-		SemanticTree tree5 = trees.get(4);
+		CoNLLFormat conll = new CoNLLFormat();
+		List<ContentPattern> trees = null;// conll.readStructures("src/test/resources/test_dummy.conll");
+		ContentPattern tree1 = trees.get(0);
+		ContentPattern tree2 = trees.get(1);
+		ContentPattern tree3 = trees.get(2);
+		ContentPattern tree4 = trees.get(3);
+		ContentPattern tree5 = trees.get(4);
 
-		ItemSimilarity wordVectors = null; //new word("/home/gerard/data/GoogleNews-vectors-negative300.bin");
-		ItemSimilarity senseVectors = null; //new sense("/home/gerard/data/sense/babelfy_vectors_merged_senses_only");
-		ItemSimilarity combined = new Random();
-		PatternSimilarity simCalc = new PatternSimilarity(combined);
+		EntitySimilarity senseVectors = new SensEmbed(Paths.get("/home/gerard/data/sense/babelfy_vectors_merged_senses_only"));
+		PatternSimilarity simCalc = new PatternSimilarity(senseVectors);
 
-		System.out.println("OrderedTree 1:\n" + conll.writeTrees(Collections.singleton(tree1)));
-		System.out.println("OrderedTree 2:\n" + conll.writeTrees(Collections.singleton(tree2)));
-		System.out.println("OrderedTree 3:\n" + conll.writeTrees(Collections.singleton(tree3)));
-		System.out.println("OrderedTree 4:\n" + conll.writeTrees(Collections.singleton(tree4)));
-		System.out.println("OrderedTree 5:\n" + conll.writeTrees(Collections.singleton(tree5)));
+		System.out.println("OrderedTree 1:\n" + conll.writePatterns(Collections.singleton(tree1)));
+		System.out.println("OrderedTree 2:\n" + conll.writePatterns(Collections.singleton(tree2)));
+		System.out.println("OrderedTree 3:\n" + conll.writePatterns(Collections.singleton(tree3)));
+		System.out.println("OrderedTree 4:\n" + conll.writePatterns(Collections.singleton(tree4)));
+		System.out.println("OrderedTree 5:\n" + conll.writePatterns(Collections.singleton(tree5)));
 
 		double sim12 = simCalc.getSimilarity(tree1, tree2);
 		System.out.println("Similarity 1-2 = " + sim12);

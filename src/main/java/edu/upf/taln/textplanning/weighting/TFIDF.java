@@ -1,9 +1,10 @@
 package edu.upf.taln.textplanning.weighting;
 
 import edu.upf.taln.textplanning.corpora.Corpus;
-import edu.upf.taln.textplanning.datastructures.Entity;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
+import edu.upf.taln.textplanning.structures.AnnotatedWord;
+import edu.upf.taln.textplanning.structures.Candidate;
+import edu.upf.taln.textplanning.structures.Entity;
+import edu.upf.taln.textplanning.structures.LinguisticStructure;
 
 import java.util.HashMap;
 import java.util.List;
@@ -28,21 +29,23 @@ public final class TFIDF implements WeightingFunction
 	}
 
 	@Override
-	public void setContents(Set<SemanticGraph> contents)
+	public void setContents(Set<LinguisticStructure> contents)
 	{
 		tfidf.clear();
 
 		// Collect frequency of annotated senses and forms in the contents
 		Map<String, Long> freqs = contents.stream()
-				.map(SemanticGraph::vertexSet)
+				.map(LinguisticStructure::vertexSet)
 				.map(p -> p.stream()
 						.filter(this::isNominal)
 						.map(n -> {
-							// todo review whether form should also get tf-idf value (1)
-							Set<String> entities = n.getCandidates().stream().map(Entity::getLabel).collect(Collectors.toSet());
-							if (entities.isEmpty())
-								entities.add(n.getAnnotation().getForm());
-							return entities;
+							return n.getCandidates().stream()
+									.map(Candidate::getEntity)
+									.map(Entity::getReference)
+									.collect(Collectors.toSet());
+//							if (entities.isEmpty())
+//								entities.add(n.getForm());
+//							return entities;
 						})
 						.flatMap(Set::stream)
 						.filter(i -> !ignoreItem(i))
@@ -67,15 +70,16 @@ public final class TFIDF implements WeightingFunction
 		// Set the tf*idf score of non-nominal items to the avg of nominal items
 		double avgTfidf = tfidf.values().stream().mapToDouble(d -> d).average().orElse(0.0);
 		contents.stream()
-				.map(SemanticGraph::vertexSet)
+				.map(LinguisticStructure::vertexSet)
 				.flatMap(p -> p.stream()
 						.filter(n -> !isNominal(n))
 						.map(n -> {
-							// todo review whether form should also get tf-idf value (2)
-							Set<String> entities = n.getCandidates().stream().map(Entity::getLabel).collect(Collectors.toSet());
-							if (entities.isEmpty())
-								entities.add(n.getAnnotation().getForm());
-							return entities;
+							return n.getCandidates().stream()
+									.map(Candidate::getEntity)
+									.map(Entity::getReference)
+									.collect(Collectors.toSet());
+//							if (entities.isEmpty())
+//								entities.add(n.getForm());
 						})
 						.flatMap(Set::stream)
 						.filter(i -> !ignoreItem(i)))
@@ -99,9 +103,9 @@ public final class TFIDF implements WeightingFunction
 		return corpus.getFrequency(item);
 	}
 
-	private boolean isNominal(Node n)
+	private boolean isNominal(AnnotatedWord n)
 	{
-		return n.getAnnotation().getPOS().startsWith("N"); // nominals only
+		return n.getPOS().startsWith("N"); // nominals only
 	}
 
 	private boolean ignoreItem(String i)

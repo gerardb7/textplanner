@@ -1,6 +1,6 @@
 package edu.upf.taln.textplanning.similarity;
 
-import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
+import edu.upf.taln.textplanning.structures.Entity;
 import unnonouno.treedist.EditScore;
 
 
@@ -25,13 +25,13 @@ public final class SemanticTreeEditScore implements EditScore
 	@Override
 	public double replace(int i1, int i2)
 	{
-		Node e1 = tree1.getEntity(i1);
-		Node e2 = tree2.getEntity(i2);
+		Entity e1 = tree1.getEntity(i1);
+		Entity e2 = tree2.getEntity(i2);
 
 		// Score is inverse of similarity
 		assert e1 != null;
 		assert e2 != null;
-		return 1.0 - sim.getSimilarity(e1.getEntity(), e2.getEntity());
+		return 1.0 - sim.getSimilarity(e1, e2);
 	}
 
 	@Override

@@ -20,7 +20,7 @@ public class TreeValidator
 	{
 		if (visited.contains(node))
 		{
-			throw new IllegalArgumentException("This tree has a loop. Node "
+			throw new IllegalArgumentException("This tree has a loop. AnnotatedWord "
 					+ node + " appears two times.");
 		}
 		visited.add(node);
@@ -31,7 +31,7 @@ public class TreeValidator
 			if (parent != node)
 			{
 				String message = String.format(
-						"Node %d is a child of node %d, but its parent is %d.",
+						"AnnotatedWord %d is a child of node %d, but its parent is %d.",
 						child, node, parent);
 				throw new IllegalArgumentException(message);
 			}

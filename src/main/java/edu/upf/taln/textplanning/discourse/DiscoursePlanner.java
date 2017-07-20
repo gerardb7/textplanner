@@ -1,10 +1,9 @@
 package edu.upf.taln.textplanning.discourse;
 
-import edu.upf.taln.textplanning.datastructures.Entity;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
-import edu.upf.taln.textplanning.datastructures.SemanticTree;
-import edu.upf.taln.textplanning.similarity.ItemSimilarity;
+import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.similarity.PatternSimilarity;
+import edu.upf.taln.textplanning.structures.ContentPattern;
+import edu.upf.taln.textplanning.structures.Entity;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
@@ -29,19 +28,18 @@ public class DiscoursePlanner
 	 * scores.
 	 *
 	 * @param patterns list of patterns to structure
-	 * @param entitySim similarity function between pairs of entities in the patterns
+	 * @param sim similarity function between pairs of entities in the patterns
 	 * @return list of patterns
 	 */
-	public static List<SemanticTree> structurePatterns(List<SemanticTree> patterns, ItemSimilarity entitySim)
+	public static List<ContentPattern> structurePatterns(List<ContentPattern> patterns, EntitySimilarity sim)
 	{
 		// Weight patterns by averaging their node weights
 		//noinspection RedundantTypeArguments
-		List<Pair<SemanticTree, Double>> rankedPatterns = patterns.stream()
+		List<Pair<ContentPattern, Double>> rankedPatterns = patterns.stream()
 				.map(p -> Pair.of(p, p.vertexSet().stream()
-						.map(Node::getEntity)
 						.mapToDouble(Entity::getWeight)
 						.average().orElse(0.0)))
-				.sorted(Comparator.comparing(Pair<SemanticTree, Double>::getRight).reversed())
+				.sorted(Comparator.comparing(Pair<ContentPattern, Double>::getRight).reversed())
 				.collect(Collectors.toList());
 
 		// Create graph with patterns as vertices
@@ -50,7 +48,7 @@ public class DiscoursePlanner
 		IntStream.range(0, n).forEach(g::addVertex);
 
 		// Weight edges according to similarity function
-		PatternSimilarity sim = new PatternSimilarity(entitySim);
+		PatternSimilarity psim = new PatternSimilarity(sim);
 		IntStream.range(0, n).forEach(i ->
 				IntStream.range(0, n).forEach(j ->
 				{
@@ -59,7 +57,7 @@ public class DiscoursePlanner
 					if (g.containsEdge(i, j))
 						return;
 					DefaultWeightedEdge e = g.addEdge(i, j);
-					double s = sim.getSimilarity(rankedPatterns.get(i).getKey(), rankedPatterns.get(j).getKey());
+					double s = psim.getSimilarity(rankedPatterns.get(i).getKey(), rankedPatterns.get(j).getKey());
 					g.setEdgeWeight(e, s);
 				}));
 

@@ -2,10 +2,12 @@ package edu.upf.taln.textplanning.utils;
 
 import com.beust.jcommander.*;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
-import edu.upf.taln.textplanning.datastructures.Entity;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph;
 import edu.upf.taln.textplanning.disambiguation.BabelNetAnnotator;
-import edu.upf.taln.textplanning.input.ConLLAcces;
+import edu.upf.taln.textplanning.input.CoNLLFormat;
+import edu.upf.taln.textplanning.structures.AnnotatedWord;
+import edu.upf.taln.textplanning.structures.Candidate;
+import edu.upf.taln.textplanning.structures.Entity;
+import edu.upf.taln.textplanning.structures.LinguisticStructure;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,7 +90,7 @@ public class SEWSolrUtils
 	private static void queryFrequencies(Path basePath, String extension, Path outputFile) throws IOException
 	{
 		log.info("Quering frequencies for entities in " + basePath);
-		ConLLAcces conll = new ConLLAcces(); // assuming surface conlls with forms in second column
+		CoNLLFormat conll = new CoNLLFormat(); // assuming surface conlls with forms in second column
 		BabelNetAnnotator bn = new BabelNetAnnotator();
 		SEWSolr sew = new SEWSolr(solrUrl);
 		StringWriter w = new StringWriter();
@@ -99,7 +101,7 @@ public class SEWSolrUtils
 
 		// Second line is a long list of entity keys and corresponding frequencies
 		log.info("Reading files");
-		Set<SemanticGraph> structures = Files.walk(basePath)
+		Set<LinguisticStructure> structures = Files.walk(basePath)
 				.filter(Files::isRegularFile)
 				.filter(p -> p.toString().endsWith(extension))
 				.map(p ->
@@ -121,24 +123,34 @@ public class SEWSolrUtils
 		log.info("Annotating candidates");
 		bn.annotateCandidates(structures);
 
-		List<Entity> entities = structures.stream()
-				.map(SemanticGraph::vertexSet)
+		List<String> entities = structures.stream()
+				.map(LinguisticStructure::vertexSet)
 				.flatMap(Set::stream)
-				.map(SemanticGraph.Node::getEntity)
+				.map(AnnotatedWord::getCandidates)
+				.flatMap(Set::stream)
+				.map(Candidate::getEntity)
+				.map(Entity::getId)
 				.distinct()
 				.collect(Collectors.toList());
 
+		structures.stream()
+				.map(LinguisticStructure::vertexSet)
+				.flatMap(Set::stream)
+				.filter(n -> n.getCandidates().isEmpty())
+				.map(AnnotatedWord::getForm)
+				.distinct()
+				.forEach(entities::add);
+
 		log.info("Running queries");
 		List<String> freqs = entities.stream()
-				.peek(e -> log.info("Query for " + e.getLabel() + " " + entities.indexOf(e) + "/" + entities.size()))
-				.map(Entity::getLabel)
+				.peek(e -> log.info("Query for " + e + " " + entities.indexOf(e) + "/" + entities.size()))
 				.mapToLong(sew::getFrequency)
 				.peek(f -> log.info("f=" + f))
 				.mapToObj(Long::toString)
 				.collect(Collectors.toList());
 		IntStream.range(0, entities.size())
 				.forEach(i -> {
-					w.append(entities.get(i).getLabel());
+					w.append(entities.get(i));
 					w.append("=");
 					w.append(freqs.get(i));
 					w.append("\n");

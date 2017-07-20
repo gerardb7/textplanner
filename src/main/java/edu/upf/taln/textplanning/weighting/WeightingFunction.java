@@ -1,6 +1,6 @@
 package edu.upf.taln.textplanning.weighting;
 
-import edu.upf.taln.textplanning.datastructures.SemanticGraph;
+import edu.upf.taln.textplanning.structures.LinguisticStructure;
 
 import java.util.Set;
 
@@ -9,6 +9,6 @@ import java.util.Set;
  */
 public interface WeightingFunction
 {
-	void setContents(Set<SemanticGraph> contents);
+	void setContents(Set<LinguisticStructure> contents);
 	double weight(String item);
 }

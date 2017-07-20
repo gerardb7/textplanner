@@ -1,0 +1,24 @@
+package edu.upf.taln.textplanning.structures;
+
+import org.apache.commons.collections4.ListUtils;
+import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
+
+import java.util.*;
+
+/**
+ * A content graph is a directed acyclic graph with entities as nodes and edges indicating roles.
+ * Optionally, a content graph may list anchors for its entities, i.e. mentions of the entities in texts.
+ * Anchors can be used, for instance, to support linguistic generation.
+ */
+public class ContentGraph  extends DirectedAcyclicGraph<Entity, Role>
+{
+	private final Map<Entity, List<AnnotatedWord>> anchors = new HashMap<>();
+
+	public ContentGraph(Class<? extends Role> edgeClass)
+	{
+		super(edgeClass);
+	}
+
+	public void addAnchor(Entity e, AnnotatedWord a) { anchors.merge(e, Collections.singletonList(a), ListUtils::union); }
+	public List<AnnotatedWord> getAnchors(Entity e) { return new ArrayList<>(anchors.get(e)); }
+}

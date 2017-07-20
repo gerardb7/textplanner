@@ -1,14 +1,11 @@
-package edu.upf.taln.textplanning.datastructures;
+package edu.upf.taln.textplanning.structures;
 
-import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
+import edu.upf.taln.textplanning.structures.Candidate.Type;
 import org.jgrapht.alg.CycleDetector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Produces content graphs from sets of semantic trees
@@ -22,36 +19,36 @@ public class ContentGraphCreator
 	 * @param structures list of structures, e.g. relations in a KB, parses extracted from text
 	 * @return a semantic graph
 	 */
-	public static SemanticGraph createContentGraph(Set<SemanticGraph> structures)
+	public static ContentGraph createContentGraph(Set<LinguisticStructure> structures)
 	{
 		// Create empty graph
-		SemanticGraph graph = new SemanticGraph(SemanticGraph.Edge.class);
+		ContentGraph graph = new ContentGraph(Role.class);
 
 		// Iterate triples in each input structure and populate graph
 		structures.forEach(s -> {
-			for (SemanticGraph.Edge e : s.edgeSet())
+			for (Role e : s.edgeSet())
 			{
-				Node governor = s.getEdgeSource(e);
-				Node dependent = s.getEdgeTarget(e);
+				AnnotatedWord governor = s.getEdgeSource(e);
+				AnnotatedWord dependent = s.getEdgeTarget(e);
 
-				// Add governing tree node to graph
-				Node govNode = createGraphNode(s, governor);
+				// Add governing node to graph
+				Entity govNode = createGraphNode(s, governor);
 				graph.addVertex(govNode); // does nothing if a node with same id was already added
 
 				// Add dependent tree node to graph
-				Node depNode = createGraphNode(s, dependent);
+				Entity depNode = createGraphNode(s, dependent);
 				graph.addVertex(depNode); // does nothing if a node with same id was already added
 
 				// Ignore loops.
 				// To see how loops may occur in semantic trees, consider "West Nickel Mines Amish School
 				// shooting", where "West Nickel Mines Amish School" and "Amish School shooting" are assigned
-				// the same synset (same id and therefore same node) and are linked through a NAME relation.
+				// the same nominal synset (therefore same node) and are linked through a NAME relation.
 				if (!govNode.getId().equals(depNode.getId()))
 				{
 					try
 					{
 						// Add edge
-						SemanticGraph.Edge e2 = new SemanticGraph.Edge(e.getRole(), e.isArg());
+						Role e2 = new Role(e.getRole(), e.isCore());
 						graph.addEdge(govNode, depNode, e2);
 					}
 					catch (Exception ex)
@@ -62,7 +59,7 @@ public class ContentGraphCreator
 			}
 		});
 
-		CycleDetector<Node, SemanticGraph.Edge> detector = new CycleDetector<>(graph);
+		CycleDetector<Entity, Role> detector = new CycleDetector<>(graph);
 		if (detector.detectCycles())
 		{
 			log.warn("Content graph has cycles: " + detector.findCycles());
@@ -70,7 +67,7 @@ public class ContentGraphCreator
 //
 //		try
 //		{
-//			DOTExporter<SemanticGraph.Node, SemanticGraph.Edge> exporter = new DOTExporter<>(
+//			DOTExporter<LinguisticStructure.AnnotatedWord, LinguisticStructure.Edge> exporter = new DOTExporter<>(
 //					new IntegerComponentNameProvider<>(),
 //					new StringComponentNameProvider<>(),
 //					new StringComponentNameProvider<>());
@@ -78,7 +75,7 @@ public class ContentGraphCreator
 //			exporter.exportGraph(graph, new FileWriter(temp));
 //
 //			File conllTemp = File.createTempFile("semgraph", ".conll");
-//			ConLLAcces conll = new ConLLAcces();
+//			CoNLLFormat conll = new CoNLLFormat();
 //			String graphConll = conll.writeGraphs(Collections.singleton(graph));
 //			FileUtils.writeStringToFile(conllTemp, graphConll, Charset.forName("UTF-16"));
 //		}
@@ -91,40 +88,37 @@ public class ContentGraphCreator
 	}
 
 	/**
-	 * Creates a content graph node from a node in an input structure.
-	 * A single graph node is created for all structure nodes corresponding to the same entity.
-	 * A single graph node is created for all relation-nodes in the structures that share exactly the same arguments.
-	 * Each graph node is assigned a weight.
+	 * Creates an Entity object which will act as a node in the content graph
+	 * A single node is created for all mentions to non-predicative entities.
+	 * A node is created for each predicative word, even if they share the same sense.
 	 * @param g a structure
 	 * @param n a node in g
 	 *
 	 * @return a graph node
 	 */
-	private static Node createGraphNode(SemanticGraph g, Node n)
+	private static Entity createGraphNode(LinguisticStructure g, AnnotatedWord n)
 	{
-		String id = getId(n);
+		Optional<Entity> entity = n.getBestCandidate().map(Candidate::getEntity);
+		String ref = entity.map(Entity::getReference).orElse(n.getForm());
+		String id = g.isPredicate(n) ? getIdForPredicate(g,n) : ref;
+		Type type = entity.map(Entity::getType).orElse(Type.Other);
+		double value = entity.map(Entity::getWeight).orElse(0.0);
 
-		// todo check if underscores have already been filtered
-		if (g.isPredicate(n) || id.equals("_")) // if a predicate use predicate and argument labels as id
-			id = predicateToString(g, n);
-
-		return new Node(id, n.getEntity(), n.getAnnotation());
+		return new Entity(id, ref, type, value);
 	}
 
-	private static String getId(Node n)
-	{
-		return n.getEntity().getLabel();
-	}
+	// use a counter to guarantee that ids for predicates are unique
+	private static long predicateIdCounter = 0;
 
-	private static String predicateToString(SemanticGraph g, Node p)
+	private static String getIdForPredicate(LinguisticStructure g, AnnotatedWord p)
 	{
 		List<String> dependents = new ArrayList<>();
-		for (SemanticGraph.Edge e : g.outgoingEdgesOf(p))
+		for (Role e : g.outgoingEdgesOf(p))
 		{
-			dependents.add(e.getRole() + "-" + getId(g.getEdgeTarget(e)));
+			dependents.add(e.getRole() + "-" + g.getEdgeTarget(e).getForm());
 		}
 
-		StringBuilder str = new StringBuilder(getId(p));
+		StringBuilder str = new StringBuilder(++predicateIdCounter + "_" + p.getForm());
 		dependents.stream()
 				.sorted(Comparator.naturalOrder())
 				.forEach(s -> str.append("_").append(s));

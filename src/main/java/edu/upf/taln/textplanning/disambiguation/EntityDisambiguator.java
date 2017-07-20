@@ -1,8 +1,7 @@
 package edu.upf.taln.textplanning.disambiguation;
 
-import edu.upf.taln.textplanning.datastructures.SemanticGraph;
+import edu.upf.taln.textplanning.structures.LinguisticStructure;
 
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -11,7 +10,7 @@ import java.util.Set;
  */
 public interface EntityDisambiguator
 {
-	void annotateCandidates(Set<SemanticGraph> structures);
-	void expandCandidates(Set<SemanticGraph> structures);
-	void disambiguate(Set<SemanticGraph> structures, Map<String, Double> rankedEntities);
+	void annotateCandidates(Set<LinguisticStructure> structures);
+	void expandCandidates(Set<LinguisticStructure> structures);
+	void disambiguate(Set<LinguisticStructure> structures);
 }

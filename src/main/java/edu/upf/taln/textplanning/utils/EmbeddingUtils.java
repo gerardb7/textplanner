@@ -2,22 +2,21 @@ package edu.upf.taln.textplanning.utils;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
-import edu.upf.taln.textplanning.datastructures.Entity;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph;
-import edu.upf.taln.textplanning.datastructures.SemanticGraph.Node;
-import edu.upf.taln.textplanning.input.ConLLAcces;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.LineIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -46,52 +45,34 @@ public class EmbeddingUtils
 	 * Given a file containing sense embeddings and a conll file, produces a smaller embeddings file containing only
 	 * the vectors for the senses found in the conll file
 	 *
-	 * @param inEmbeddingsPath path to the file containing the embeddings
-	 * @param inConllPath      path to the conll file
-	 * @param inOutPath        path to the new embeddings file
+	 * @param embeddingsPath path to the file containing the embeddings
+	 * @param synsetsPath path to file containing list of BabelNet synset ids
+	 * @param outPath path to the new embeddings file
 	 */
-	private static void subsetEmbeddings(Path inEmbeddingsPath, Path inConllPath, Path inOutPath, String extension) throws Exception
+	private static void subsetEmbeddings(Path embeddingsPath, Path synsetsPath, Path outPath) throws Exception
 	{
-		Map<String, List<double[]>> allVectors = parseEmbeddingsFile(inEmbeddingsPath, true, true);
+		Map<String, List<double[]>> allVectors = parseEmbeddingsFile(embeddingsPath, true, true);
 
 		log.info("Calculating subset");
 		Stopwatch timer = Stopwatch.createStarted();
-		List<SemanticGraph> graphs = loadStructures(inConllPath, extension);
+		List<String> synsets = parseSysnsetsFile(synsetsPath);
 
-		//TODO consider removing code manipulating IRIs
-		// Collect all senses in conll
-		Set<String> senses = graphs.stream()
-				.map(SemanticGraph::vertexSet)
-				.flatMap(Set::stream)
-				.map(Node::getEntity)
-				.map(Entity::getLabel)
-//				.map(factory::createIRI)
-//				.map(IRI::getLocalName)
-				.map(s -> {
-					if (s.startsWith("s"))
-					{
-						s = "bn:" + s.substring(1, s.length());
-					}
-					if (!s.startsWith("bn:"))
-					{
-						s = "bn:" + s;
-					}
-
-					return s;
-				}) // concat with '+' inefficient but not that many senses
-				.distinct()
-				.collect(Collectors.toSet());
 
 		// Filter vectors to those in the conll
 		Map<String, List<double[]>> subsetVectors = allVectors.entrySet().stream()
-				.filter(e -> senses.contains(e.getKey()))
+				.filter(e -> synsets.contains(e.getKey()))
 				.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+		long numNominalSynsets = synsets.stream().filter(s -> s.endsWith("n")).count();
+		long numNominalVectors = subsetVectors.keySet().stream().filter(s -> s.endsWith("n")).count();
+		log.info("Read " + synsets.size() + " synset ids (" + numNominalSynsets + " nominal) and found vectors for " +
+				subsetVectors.keySet().size() + " (" + numNominalVectors + " nominal)");
 		log.info("Subset creation took " + timer.stop());
 
 
 		// Average and store vectors to file
 		Map<String, double[]> meanVectors = averageEmbeddings(subsetVectors);
-		writeEmbeddingsToFile(meanVectors, inOutPath);
+		writeEmbeddingsToFile(meanVectors, outPath);
 	}
 
 	/**
@@ -155,6 +136,30 @@ public class EmbeddingUtils
 		log.info("Parsing complete: " + numVectorsRead + " vectors read and " + numVectorsKept + " vectors stored");
 
 		return allVectors;
+	}
+
+	private static List<String> parseSysnsetsFile(Path p) throws IOException
+	{
+		LineIterator it = FileUtils.lineIterator(p.toFile(), "UTF-8");
+		boolean firstLine = true;
+		List<String> synsets = new ArrayList<>();
+		try
+		{
+			while (it.hasNext())
+			{
+				String line = it.nextLine();
+				if (firstLine)
+					firstLine = false;
+				else
+					synsets.add(line.substring(0, line.indexOf('=')));
+			}
+		}
+		finally
+		{
+			LineIterator.closeQuietly(it);
+		}
+
+		return synsets;
 	}
 
 	/**
@@ -250,43 +255,6 @@ public class EmbeddingUtils
 		return meanVectors;
 	}
 
-	private static List<SemanticGraph> loadStructures(Path p, String extension) throws IOException
-	{
-		ConLLAcces conll = new ConLLAcces();
-		List<SemanticGraph> graphs = new ArrayList<>();
-
-		List<Path> folders = Files.walk(p)
-				.filter(Files::isDirectory)
-				.sorted()
-				.collect(Collectors.toList());
-
-		for (Path d : folders)
-		{
-			List<Path> files = Files.list(d)
-					.filter(Files::isRegularFile)
-					.filter(f -> f.toString().endsWith(extension))
-					.sorted()
-					.collect(Collectors.toList());
-			files.stream()
-					.map(f ->
-					{
-						try
-						{
-							return FileUtils.readFileToString(f.toFile(), StandardCharsets.UTF_8);
-						}
-						catch (Exception e)
-						{
-							throw new RuntimeException(e);
-						}
-					})
-					.map(conll::readStructures)
-					.flatMap(List::stream)
-					.forEach(graphs::add);
-		}
-
-		return graphs;
-	}
-
 	public static void main(String[] args) throws Exception
 	{
 		if (args.length < 2)
@@ -325,10 +293,10 @@ public class EmbeddingUtils
 			}
 			case "subset":
 			{
-				if (args.length != 5)
+				if (args.length != 4)
 				{
 					System.err.println("Wrong number of args." +
-							"Usage: embedutils subset embeddings_file conll_folder extension output_file");
+							"Usage: embedutils subset embeddings_file synsets_file output_file");
 					System.exit(-1);
 				}
 
@@ -339,17 +307,15 @@ public class EmbeddingUtils
 					System.exit(-1);
 				}
 
-				Path conllPath = Paths.get(args[2]);
-				if (!Files.exists(conllPath) || !Files.isDirectory(conllPath))
+				Path synsetsPath = Paths.get(args[2]);
+				if (!Files.exists(synsetsPath) || !Files.isRegularFile(synsetsPath))
 				{
-					System.err.println("Cannot open " + conllPath);
+					System.err.println("Cannot open " + synsetsPath);
 					System.exit(-1);
 				}
 
-				String extension = args[3];
-
-				Path outPath = Paths.get(args[4]);
-				subsetEmbeddings(embeddingsPath, conllPath, outPath, extension);
+				Path outPath = Paths.get(args[3]);
+				subsetEmbeddings(embeddingsPath, synsetsPath, outPath);
 				break;
 			}
 			default:

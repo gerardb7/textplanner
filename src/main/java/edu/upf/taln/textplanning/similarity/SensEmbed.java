@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.similarity;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
+import edu.upf.taln.textplanning.structures.Entity;
 import edu.upf.taln.textplanning.utils.EmbeddingUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -15,7 +16,7 @@ import java.util.stream.Collectors;
 /**
  * Computes similarity between word senses according to SenseEmbed distributional vectors
  */
-public class SensEmbed implements ItemSimilarity
+public class SensEmbed implements EntitySimilarity
 {
 	private final ImmutableMap<String, double[]> vectors;
 	private final static Logger log = LoggerFactory.getLogger(SensEmbed.class);
@@ -41,27 +42,27 @@ public class SensEmbed implements ItemSimilarity
 	}
 
 	@Override
-	public boolean isDefinedFor(String i)
+	public boolean isDefinedFor(Entity e)
 	{
-		return vectors.containsKey(i);
+		return vectors.containsKey(e.getId());
 	}
 
 	@Override
-	public boolean isDefinedFor(String item1, String item2)
+	public boolean isDefinedFor(Entity e1, Entity e2)
 	{
-		return vectors.containsKey(item1) && vectors.containsKey(item2);
+		return vectors.containsKey(e1.getId()) && vectors.containsKey(e2.getId());
 	}
 
 	@Override
-	public double computeSimilarity(String item1, String item2)
+	public double computeSimilarity(Entity e1, Entity e2)
 	{
-		if (item1.equals(item2))
+		if (e1 == e2 || e1.getId().equals(e2.getId()))
 			return 1.0;
-		if (!isDefinedFor(item1, item2))
+		if (!isDefinedFor(e1, e2))
 			return 0.0;
 
-		double[] v1 = vectors.get(item1);
-		double[] v2 = vectors.get(item2);
+		double[] v1 = vectors.get(e1.getId());
+		double[] v2 = vectors.get(e2.getId());
 
 		double dotProduct = 0.0;
 		double normA = 0.0;
