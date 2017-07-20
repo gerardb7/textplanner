@@ -28,8 +28,6 @@ public class PowerIterationRanking
 {
 	private final static Logger log = LoggerFactory.getLogger(PowerIterationRanking.class);
 
-
-
 	/**
 	 * Power iteration method to obtain a final stationary distribution of a Markov chain
 	 * Implementation based on first method in http://introcs.cs.princeton.edu/java/95linear/MarkovChain.java.html

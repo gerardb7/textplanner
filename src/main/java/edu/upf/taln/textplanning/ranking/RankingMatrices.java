@@ -46,14 +46,14 @@ public class RankingMatrices
 		int n = entities.size();
 
 		// Create *strictly positive* relevance row vector by applying the weighting function to the set of entities
-		double[] b = entities.stream()
+		double[] r = entities.stream()
 				.map(Entity::getId)
 				.mapToDouble(relevance::weight)
 				.map(w -> w = Math.max(o.minRelevance, (1.0/n)*w)) // Laplace smoothing to avoid non-positive values
 				.toArray();
 
-		double accum = Arrays.stream(b).sum();
-		IntStream.range(0, n).forEach(i -> b[i] /= accum); // normalize vector with sum of row
+		double accum = Arrays.stream(r).sum();
+		IntStream.range(0, n).forEach(i -> r[i] /= accum); // normalize vector with sum of row
 
 		// Create *non-symmetric non-negative* similarity matrix from sim function and links in content graph
 		Matrix m = new Matrix(entities.stream()
@@ -64,9 +64,9 @@ public class RankingMatrices
 				.toArray(double[][]::new));
 		normalize(m);
 
-		// Bias each row in m using relevance bias b and damping factor d
-		// Prob i->j = d*b(j) + (1.0-d)*m(i,j)
-		// The resulting matrix is row-normalized because both b and m are normalized
+		// Bias each row in m using relevance bias r and damping factor d
+		// Prob i->j = d*r(j) + (1.0-d)*m(i,j)
+		// The resulting matrix is row-normalized because both r and m are normalized
 		double d = o.dampingRelevance;
 		return new Matrix(entities.stream()
 				.map(e1 -> entities.stream()
@@ -74,7 +74,7 @@ public class RankingMatrices
 							int i = entities.indexOf(e1);
 							int j = entities.indexOf(e2);
 
-							double brj = b[j]; // bias towards relevance of j
+							double brj = r[j]; // bias towards relevance of j
 							double sij = m.get(i, j); // sim of i and j
 							return d * brj + (1.0 - d)*sij; // brj is positive, so pij also provided d > 0.0
 						})
@@ -103,14 +103,29 @@ public class RankingMatrices
 		int num_entities = entities.size();
 
 		// Create *strictly positive* relevance row vector by applying the weighting function to the set of entities
-		double[] b = entities.stream()
+		double[] r = entities.stream()
 				.map(Entity::getId)
 				.mapToDouble(relevance::weight)
 				.map(w -> w = Math.max(o.minRelevance, (1.0/num_entities)*w)) // Laplace smoothing to avoid non-positive values
 				.toArray();
 
-		double accum = Arrays.stream(b).sum();
-		IntStream.range(0, n).forEach(i -> b[i] /= accum); // normalize vector with sum of row
+		double accum_r = Arrays.stream(r).sum();
+		IntStream.range(0, n).forEach(i -> r[i] /= accum_r); // normalize vector with sum of row
+
+		// Create *strictly positive* relevance row vector by applying the weighting function to the set of entities
+		double[] t = candidates.stream()
+				.mapToDouble(c -> {
+						Candidate.Type mtype = c.getMention().getType();
+						Candidate.Type etype = c.getEntity().getType();
+
+						// Mention and candidate type match and are different to
+						boolean indicator = mtype != Candidate.Type.Other && mtype == etype;
+						return indicator ? 0.99 : 0.01; // avoid zeros
+				})
+				.toArray();
+
+		double accum_t = Arrays.stream(t).sum();
+		IntStream.range(0, n).forEach(i -> t[i] /= accum_t); // normalize vector with sum of rows
 
 		// Create *non-symmetric non-negative* similarity matrix from sim function and links in content graph
 		Matrix m = new Matrix(candidates.stream()
@@ -121,10 +136,11 @@ public class RankingMatrices
 				.toArray(double[][]::new));
 		normalize(m);
 
-		// Bias each row in m using relevance bias b and damping factor d
-		// Prob i->j = d*b(j) + (1.0-d)*m(i,j)
-		// The resulting matrix is row-normalized because both b and m are normalized
-		double d = o.dampingRelevance;
+		// Bias each row in m using relevance bias r and type bias t
+		// Prob i->j = a*r(j) + b*t(j) + (1.0-a-b)*m(i,j)
+		// The resulting matrix is row-normalized because both r and m are normalized
+		double a = o.dampingRelevance;
+		double b = o.dampingType;
 		return new Matrix(candidates.stream()
 				.map(c1 -> candidates.stream()
 						.mapToDouble(c2 -> {
@@ -132,9 +148,10 @@ public class RankingMatrices
 							int j = candidates.indexOf(c2);
 							int ej = entities.indexOf(c2.getEntity());
 
-							double brj = b[ej]; // bias towards relevance of j
+							double rj = r[ej]; // bias towards relevance of j
+							double tj = t[ej]; // bias towards type matching of j
 							double sij = m.get(i, j); // sim of i and j
-							return d * brj + (1.0 - d)*sij; // brj is positive, so pij also provided d > 0.0
+							return a * rj + b * tj + (1.0 - a - b)*sij; // brj is positive, so pij also provided d > 0.0
 						})
 						.toArray())
 				.toArray(double[][]::new));

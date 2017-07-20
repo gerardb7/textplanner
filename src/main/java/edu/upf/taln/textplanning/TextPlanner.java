@@ -37,7 +37,8 @@ public final class TextPlanner
 	public static class Options
 	{
 		public int numPatterns = 25; // Number of patterns to return
-		public double dampingRelevance = 0.6; // damping factor to control bias towards prior relevance of entities
+		public double dampingRelevance = 0.2; // controls bias towards entity relevance
+		public double dampingType = 0.1; // controls bias towards type matching in candidates
 		public double rankingStopThreshold = 0.00000001; // stopping threshold for the main ranking algorithm
 		public double minRelevance = 0.0001; // pseudocount α for additive smoothing of relevance values
 		public double simLowerBound = 0.6; // Pairs of entities with similarity below this value have their score set to 0
