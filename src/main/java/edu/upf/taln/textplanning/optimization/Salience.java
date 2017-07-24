@@ -5,6 +5,8 @@ import edu.upf.taln.textplanning.structures.Entity;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.function.BiFunction;
 import java.util.stream.IntStream;
 
 /**
@@ -36,9 +38,19 @@ public class Salience implements Function
 	}
 
 	@Override
-	public void getValueGradient(double[] params, double[] gradient)
+	public void getValueGradient(double[] dist, double[] gradient)
 	{
+		// Kronecker delta function
+		BiFunction<Integer,Integer, Double> d = (i, j) -> (Objects.equals(i, j)) ? 1.0 : 0.0;
 
+		// Some things are better expressed with traditional loops...
+		for (int k = 0; k < dist.length; ++k) // for each partial derivative wrt dist/value k
+		{
+			for (int i = 0; i < dist.length; ++i)
+			{
+				gradient[k] += relevanceValues[i] * dist[i] * (d.apply(i,k) - dist[k]);
+			}
+		}
 	}
 
 }
