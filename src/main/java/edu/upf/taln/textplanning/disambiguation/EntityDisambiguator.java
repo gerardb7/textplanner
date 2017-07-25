@@ -11,6 +11,6 @@ import java.util.Set;
 public interface EntityDisambiguator
 {
 	void annotateCandidates(Set<LinguisticStructure> structures);
-	void expandCandidates(Set<LinguisticStructure> structures);
+//	void expandCandidates(Set<LinguisticStructure> structures);
 	void disambiguate(Set<LinguisticStructure> structures);
 }

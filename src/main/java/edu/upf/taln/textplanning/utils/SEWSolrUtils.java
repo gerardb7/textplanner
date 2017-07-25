@@ -144,7 +144,7 @@ public class SEWSolrUtils
 		log.info("Running queries");
 		List<String> freqs = entities.stream()
 				.peek(e -> log.info("Query for " + e + " " + entities.indexOf(e) + "/" + entities.size()))
-				.mapToLong(sew::getFrequency)
+				.mapToLong(sew::getEntityDocumentCount)
 				.peek(f -> log.info("f=" + f))
 				.mapToObj(Long::toString)
 				.collect(Collectors.toList());

@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 
 /**
- * Interface for classes implementing access to corpora semantically annotated with senses.
+ * Interface for classes implementing access to corpora semantically annotated with entities.
  */
 public interface Corpus
 {
@@ -85,6 +85,8 @@ public interface Corpus
 		}
 	}
 
-	long getFrequency(String item);
+	long getEntityCount(String item);
+	long getEntityDocumentCount(String entity);
+	long getFormEntityCount(String form, String entity);
 	long getNumDocs();
 }

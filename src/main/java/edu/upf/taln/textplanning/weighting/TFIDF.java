@@ -59,7 +59,7 @@ public final class TFIDF implements WeightingFunction
 			long f = freqs.containsKey(i) ? freqs.get(i) : 0;
 			double tf = 1 + Math.log(f); // logarithmically scaled
 			//double tf = f; //0.5 + 0.5*(f/maxFreq); // augmented frequency
-			double idf = Math.log(corpus.getNumDocs() / (1 + corpus.getFrequency(i)));
+			double idf = Math.log(corpus.getNumDocs() / (1 + corpus.getEntityDocumentCount(i)));
 			tfidf.put(i, tf * idf);
 		}
 
@@ -100,7 +100,7 @@ public final class TFIDF implements WeightingFunction
 
 	public long getFrequency(String item)
 	{
-		return corpus.getFrequency(item);
+		return corpus.getEntityDocumentCount(item);
 	}
 
 	private boolean isNominal(AnnotatedWord n)

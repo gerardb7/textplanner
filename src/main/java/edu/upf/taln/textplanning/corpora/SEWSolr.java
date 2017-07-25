@@ -40,16 +40,17 @@ public final class SEWSolr implements Corpus
 		}
 	}
 
-	public long getFrequency(String item)
+	@Override
+	public long getEntityDocumentCount(String entity)
 	{
 		try
 		{
-			if (freqCache.containsKey(item))
-				return freqCache.get(item);
+			if (freqCache.containsKey(entity))
+				return freqCache.get(entity);
 			else
 			{
-				long freq = queryFrequency(item);
-				freqCache.put(item, freq);
+				long freq = queryFrequency(entity);
+				freqCache.put(entity, freq);
 				return freq;
 			}
 		}
@@ -59,6 +60,9 @@ public final class SEWSolr implements Corpus
 			throw new RuntimeException(e);
 		}
 	}
+
+	@Override public long getEntityCount(String entity) { return 0; }
+	@Override public long getFormEntityCount(String entity, String form) {  return 0; }
 
 	public long getCooccurrence(String i1, String i2)
 	{

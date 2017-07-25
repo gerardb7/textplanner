@@ -6,7 +6,6 @@ import it.uniroma1.lcl.babelnet.BabelNet;
 import it.uniroma1.lcl.babelnet.BabelSynset;
 import it.uniroma1.lcl.babelnet.data.BabelPOS;
 import it.uniroma1.lcl.jlt.util.Language;
-import org.apache.commons.lang3.tuple.Triple;
 import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.Subgraph;
@@ -50,7 +49,7 @@ public class BabelNetAnnotator implements EntityDisambiguator
 
 					// Collect sequences of tokens -> mentions
 					List<Mention> mentions = collectNominalMentions(s, tokens);
-					mentions.addAll(collectOtherMentions(s, tokens));
+					mentions.addAll(collectOtherMentions(tokens));
 					return mentions;
 				})
 				.flatMap(List::stream)
@@ -77,95 +76,94 @@ public class BabelNetAnnotator implements EntityDisambiguator
 		reportStats(structures, true);
 	}
 
-	/**
-	 * Simple approach to coreference resolution for nominal expressions: replicate referred entities from mentions
-	 * to others that are substrings of the former.
-	 * Inspired by expansion policy of AGDISTIS (Usbeck et al. 2014)
-	 */
-	@Override
-	public void expandCandidates(Set<LinguisticStructure> structures)
-	{
-		// Collect 'maximal' nominal nodes: nodes with at least a candidate and not subsumed by any candidate of its
-		// governing nodes.
-		// Pair each node with its longest mention
-		Set<Triple<LinguisticStructure, AnnotatedWord, Mention>> maxNominalNodes = structures.stream()
-				// for every structure
-				.map(s -> s.vertexSet().stream()
-						// for every nominal node with candidates
-						.filter(n -> n.getPOS().startsWith("N"))
-						.filter(n -> !n.getCandidates().isEmpty())
-						// map to a triple {structure, node, longest_mention}
-						.map(n -> Triple.of(s, n, n.getMentions().stream()
-								.max(Comparator.comparing(m -> m.getTokens().size())) // longest mention!
-								.orElse(null))) // null should never happen as node has candidates & mentions
-						// keep top nodes only (not subsumed by any mention of a governing node)
-						.filter(t -> s.incomingEdgesOf(t.getMiddle()).stream()
-								.map(s::getEdgeSource)
-								.map(AnnotatedWord::getMentions)
-								.flatMap(Set::stream)
-								.noneMatch(m -> m.contains(t.getRight()))))
-				// place all triples into a single stream
-				.flatMap(Function.identity())
-				.collect(Collectors.toSet());
-
-		// Collect nodes the longest mention of which is a substring of some other node in maxNominalNodes
-		Set<Triple<LinguisticStructure, AnnotatedWord, Mention>> subsumedNodes = maxNominalNodes.stream()
-				.filter(t1 -> t1.getRight().getNumTokens() > 1) // no subsuming is possible if node has just one token
-				.map(t1 ->
-				{
-					Mention m = t1.getRight();
-
-					// Find subsumed maximal nodes: the surface form of their longest mention is a substring of this node's
-					// longest mention
-					final Set<Triple<LinguisticStructure, AnnotatedWord, Mention>> nodes = maxNominalNodes.stream()
-							.filter(t2 -> t1 != t2)
-							.filter(t2 -> m.contains(t2.getRight()))
-							.collect(Collectors.toSet());
-
-					// If a structure contains 2 or more subsumed nodes, and one of them is an ancestor of the others
-					// and contains them, keep only the top containing node.
-					Set<Triple<LinguisticStructure, AnnotatedWord, Mention>> nodesToRemove = nodes.stream()
-							.filter(sn1 -> nodes.stream()
-									.filter(sn2 -> sn1 != sn2)
-									.anyMatch(sn2 ->
-									{
-										AnnotatedWord n1 = sn1.getMiddle();
-										LinguisticStructure s1 = sn1.getLeft();
-										Mention m1 = sn1.getRight();
-										AnnotatedWord n2 = sn2.getMiddle();
-										LinguisticStructure s2 = sn2.getLeft();
-										Mention m2 = sn2.getRight();
-
-										return (s1 == s2) && s1.getDescendants(s1, n2).contains(n1) && m1.contains(m2);
-									}))
-							.collect(Collectors.toSet());
-
-					nodes.removeAll(nodesToRemove);
-
-					return nodes;
-				})
-				.flatMap(Set::stream)
-				.collect(Collectors.toSet());
-
-		// For each subsumed node, if there are multiple nodes containing it, choose the longest one and assign its
-		// candidates to the subsumed node.
-		subsumedNodes
-				.forEach(t1 ->
-				{
-					AnnotatedWord n1 = t1.getMiddle();
-					Mention m1 = t1.getRight();
-					List<Triple<LinguisticStructure, AnnotatedWord, Mention>> subsuming = maxNominalNodes.stream()
-							.filter(t2 -> t2.getRight().contains(m1)).collect(Collectors.toList());
-
-					// todo Coreference: this is obviously too crude: consider choosing closest preceding mention (requires splitting structures into documents) and adding head match constraint
-					subsuming.stream()
-							.max(Comparator.comparing(t2 -> t2.getRight().getTokens().size()))
-							.ifPresent(t2 -> t2.getMiddle().getCandidates().forEach(c -> n1.addCandidate(c.getEntity(), c.getMention())));
-				});
-
-		log.info("Assigned senses to " + subsumedNodes.size() + " coreferent nodes ( " + maxNominalNodes.size() + " maximal nominal nodes)");
-		reportStats(structures, false);
-	}
+//	/**
+//	 * Simple approach to coreference resolution for nominal expressions: replicate referred entities from mentions
+//	 * to others that are substrings of the former.
+//	 * Inspired by expansion policy of AGDISTIS (Usbeck et al. 2014)
+//	 */
+//	@Override
+//	public void expandCandidates(Set<LinguisticStructure> structures)
+//	{
+//		// Collect 'maximal' nominal nodes: nodes with at least a candidate and not subsumed by any candidate of its
+//		// governing nodes.
+//		// Pair each node with its longest mention
+//		Set<Triple<LinguisticStructure, AnnotatedWord, Mention>> maxNominalNodes = structures.stream()
+//				// for every structure
+//				.map(s -> s.vertexSet().stream()
+//						// for every nominal node with candidates
+//						.filter(n -> n.getPOS().startsWith("N"))
+//						.filter(n -> !n.getCandidates().isEmpty())
+//						// map to a triple {structure, node, longest_mention}
+//						.map(n -> Triple.of(s, n, n.getMentions().stream()
+//								.max(Comparator.comparing(m -> m.getTokens().size())) // longest mention!
+//								.orElse(null))) // null should never happen as node has candidates & mentions
+//						// keep top nodes only (not subsumed by any mention of a governing node)
+//						.filter(t -> s.incomingEdgesOf(t.getMiddle()).stream()
+//								.map(s::getEdgeSource)
+//								.map(AnnotatedWord::getMentions)
+//								.flatMap(Set::stream)
+//								.noneMatch(m -> m.contains(t.getRight()))))
+//				// place all triples into a single stream
+//				.flatMap(Function.identity())
+//				.collect(Collectors.toSet());
+//
+//		// Collect nodes the longest mention of which is a substring of some other node in maxNominalNodes
+//		Set<Triple<LinguisticStructure, AnnotatedWord, Mention>> subsumedNodes = maxNominalNodes.stream()
+//				.filter(t1 -> t1.getRight().getNumTokens() > 1) // no subsuming is possible if node has just one token
+//				.map(t1 ->
+//				{
+//					Mention m = t1.getRight();
+//
+//					// Find subsumed maximal nodes: the surface form of their longest mention is a substring of this node's
+//					// longest mention
+//					final Set<Triple<LinguisticStructure, AnnotatedWord, Mention>> nodes = maxNominalNodes.stream()
+//							.filter(t2 -> t1 != t2)
+//							.filter(t2 -> m.contains(t2.getRight()))
+//							.collect(Collectors.toSet());
+//
+//					// If a structure contains 2 or more subsumed nodes, and one of them is an ancestor of the others
+//					// and contains them, keep only the top containing node.
+//					Set<Triple<LinguisticStructure, AnnotatedWord, Mention>> nodesToRemove = nodes.stream()
+//							.filter(sn1 -> nodes.stream()
+//									.filter(sn2 -> sn1 != sn2)
+//									.anyMatch(sn2 ->
+//									{
+//										AnnotatedWord n1 = sn1.getMiddle();
+//										LinguisticStructure s1 = sn1.getLeft();
+//										Mention m1 = sn1.getRight();
+//										AnnotatedWord n2 = sn2.getMiddle();
+//										LinguisticStructure s2 = sn2.getLeft();
+//										Mention m2 = sn2.getRight();
+//
+//										return (s1 == s2) && s1.getDescendants(s1, n2).contains(n1) && m1.contains(m2);
+//									}))
+//							.collect(Collectors.toSet());
+//
+//					nodes.removeAll(nodesToRemove);
+//
+//					return nodes;
+//				})
+//				.flatMap(Set::stream)
+//				.collect(Collectors.toSet());
+//
+//		// For each subsumed node, if there are multiple nodes containing it, choose the longest one and assign its
+//		// candidates to the subsumed node.
+//		subsumedNodes
+//				.forEach(t1 ->
+//				{
+//					AnnotatedWord n1 = t1.getMiddle();
+//					Mention m1 = t1.getRight();
+//					List<Triple<LinguisticStructure, AnnotatedWord, Mention>> subsuming = maxNominalNodes.stream()
+//							.filter(t2 -> t2.getRight().contains(m1)).collect(Collectors.toList());
+//
+//					subsuming.stream()
+//							.max(Comparator.comparing(t2 -> t2.getRight().getTokens().size()))
+//							.ifPresent(t2 -> t2.getMiddle().getCandidates().forEach(c -> n1.addCandidate(c.getEntity(), c.getMention())));
+//				});
+//
+//		log.info("Assigned senses to " + subsumedNodes.size() + " coreferent nodes ( " + maxNominalNodes.size() + " maximal nominal nodes)");
+//		reportStats(structures, false);
+//	}
 
 	/**
 	 * Chooses highest ranked candidate and collapses the word-nodes spanned by the corresponding mention into a single node.
@@ -237,9 +235,9 @@ public class BabelNetAnnotator implements EntityDisambiguator
 						.mapToObj(j -> tokens.subList(i, j + 1))
 						.map(l ->
 						{
+							// May create a new Mention or return an existing one
 							Optional<AnnotatedWord> h = getNominalRoot(l, s);
-							// todo replace with output of NER tool
-							return h.map(n -> new Mention(s, l, l.indexOf(n), Type.Other)).orElse(null);
+							return h.map(annotatedWord -> annotatedWord.addMention(l)).orElse(null);
 						})
 						.filter(Objects::nonNull))
 				.flatMap(Function.identity())
@@ -251,12 +249,11 @@ public class BabelNetAnnotator implements EntityDisambiguator
 	 * @param tokens list of nodes in a structure sorted by textual order
 	 * @return a list of potential mentions to entities together with their heads
 	 */
-	private List<Mention> collectOtherMentions(LinguisticStructure s, List<AnnotatedWord> tokens)
+	private List<Mention> collectOtherMentions(List<AnnotatedWord> tokens)
 	{
 		return tokens.stream()
 				.filter(t -> !t.getPOS().startsWith("N"))
-				// todo replace with output of NER tool
-				.map(t -> new Mention(s, Collections.singletonList(t), 0, Type.Other))
+				.map(t -> t.addMention(Collections.singletonList(t)))
 				.collect(Collectors.toList());
 	}
 
