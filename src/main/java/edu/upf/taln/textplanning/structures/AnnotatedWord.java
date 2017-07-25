@@ -1,9 +1,8 @@
 package edu.upf.taln.textplanning.structures;
 
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
+import edu.upf.taln.textplanning.structures.Candidate.Type;
+
+import java.util.*;
 
 import static java.util.stream.Collectors.toSet;
 
@@ -22,8 +21,9 @@ public final class AnnotatedWord
 	private final String conll; // the conll line this annotation was created from
 	private final long offsetStart;
 	private final long offsetEnd;
-	private Set<Candidate> candidates = new HashSet<>(); // candidate senses and NE types associated tot his word or multiwords (Mention) having this word as their head
-	private AnnotatedWord coref = null; // Coreferring node (first mention in a coreference chain)
+	private Type type = Type.Other;
+	private final Set<Mention> mentions = new HashSet<>();
+	private final Set<Candidate> candidates = new HashSet<>(); // candidate senses and NE types associated tot his word or multiwords (Mention) having this word as their head
 
 	public AnnotatedWord(Document d, LinguisticStructure s, String form, String lemma, String pos, String feats, String role,
 	                     String conll, long offsetStart, long offsetEnd)
@@ -63,26 +63,22 @@ public final class AnnotatedWord
 	public String getConll() { return conll; }
 	public long getOffsetStart() {return offsetStart; }
 	public long getOffsetEnd() { return offsetEnd;}
+	public Type getType() { return type; }
+	public void setType(Type type) { this.type = type; }
 	public Optional<Candidate> getBestCandidate() { return candidates.stream().max(Comparator.comparingDouble(Candidate::getValue)); }
 	public Set<Candidate> getCandidates()
 	{
 		return new HashSet<>(candidates);
 	}
-	public Optional<AnnotatedWord> getCoref()
-	{
-		return Optional.ofNullable(this.coref);
-	}
 
-	public Set<Mention> getMentions()
-	{
-		return candidates.stream().map(Candidate::getMention).collect(toSet());
-	}
 	public Set<Candidate> getCandidates(Mention m)
 	{
 		return candidates.stream()
 				.filter(c -> c.getMention() == m)
 				.collect(toSet());
 	}
+
+	public Set<Mention> getMentions() {	return new HashSet<>(mentions); }
 
 	public Optional<Mention> getMention(Entity e)
 	{
@@ -92,15 +88,25 @@ public final class AnnotatedWord
 				.findFirst();
 	}
 
-	public void addCandidate(Entity e, Mention m)
+	public Optional<Mention> getMention(List<AnnotatedWord> words)
 	{
-		candidates.add(new Candidate(m, e));
+		return mentions.stream()
+				.filter(m -> m.getNumTokens() == words.size())
+				.filter(m -> m.getTokens().equals(words))
+				.findFirst();
 	}
 
-	public boolean corefers(AnnotatedWord n)
+	public Mention addMention(List<AnnotatedWord> words)
 	{
-		return  (coref != null && coref == n) ||
-				(n.coref != null && n.coref == this.coref);
+		Mention m = getMention(words).orElse(new Mention(this.structure, words, words.indexOf(this)));
+		mentions.add(m); // does nothing if m already in mentions
+		return m;
+	}
+
+	public void addCandidate(Entity e, Mention m)
+	{
+		mentions.add(m);
+		candidates.add(new Candidate(m, e));
 	}
 
 	/**

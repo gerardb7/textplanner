@@ -5,6 +5,7 @@ import edu.upf.taln.textplanning.structures.Candidate.Type;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -15,15 +16,14 @@ public final class Mention
 	private final LinguisticStructure s;
 	private final List<AnnotatedWord> tokens = new ArrayList<>();
 	private final int head;
-	private final Type type; // NE type
 	private final List<String> surfaceForm;
+	private Mention coref = null; // Coreferring mention (representative mention in a coreference chain)
 
-	public Mention(LinguisticStructure s, List<AnnotatedWord> tokens, int head, Type type)
+	public Mention(LinguisticStructure s, List<AnnotatedWord> tokens, int head)
 	{
 		this.s = s;
 		this.tokens.addAll(tokens);
 		this.head = head;
-		this.type = type;
 		surfaceForm = tokens.stream()
 				.map(AnnotatedWord::getForm)
 				.collect(Collectors.toList());
@@ -37,15 +37,25 @@ public final class Mention
 
 	public String getSurfaceForm() { return surfaceForm.stream().collect(Collectors.joining(" ")); }
 
-	public Type getType()
+	public Type getType() { return getHead().getType(); } // the NE type of a mention is that of its head
+
+	public Optional<Mention> getCoref()
 	{
-		return type;
+		return Optional.ofNullable(this.coref);
 	}
+	public void setCoref(Mention m) { coref = m; }
 
 	// this mention contains another mention o its surface form contains the other mention surface form (and is larger)
 	public boolean contains(Mention o)
 	{
-		return this.surfaceForm.size() > o.surfaceForm.size() && Collections.indexOfSubList(this.surfaceForm, o.surfaceForm) != -1;
+		return  this.getNumTokens() > o.getNumTokens() &&
+				Collections.indexOfSubList(this.surfaceForm, o.surfaceForm) != -1;
+	}
+
+	public boolean corefers(Mention m)
+	{
+		return  (coref != null && coref == m) || // m is the representative mention for this
+				(m.coref != null && (m.coref == this || m.coref == this.coref)); // or they both have the same representative mention
 	}
 
 	@Override

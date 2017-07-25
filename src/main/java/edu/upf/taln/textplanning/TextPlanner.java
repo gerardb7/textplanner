@@ -163,13 +163,7 @@ public final class TextPlanner
 			disambiguator.annotateCandidates(structures);
 			log.info("WordAnnotation took " + timer.stop());
 
-			// 2- Perform coreference expansion
-			log.info("Coreference using candidate expansion");
-			timer.reset(); timer.start();
-			disambiguator.expandCandidates(structures);
-			log.info("Coreference took " + timer.stop());
-
-			// 3- Create candidate ranking matrix
+			// 2- Create candidate ranking matrix
 			log.info("Creating ranking matrix");
 			timer.reset(); timer.start();
 			List<Candidate> candidates = structures.stream()
@@ -183,7 +177,7 @@ public final class TextPlanner
 					RankingMatrices.createCandidateRankingMatrix(candidates, weighting, sim, inOptions);
 			log.info("Creation of ranking matrix took " + timer.stop());
 
-			// 4- Rank candidates using power iteration method
+			// 3- Rank candidates using power iteration method
 			log.info("Candidate ranking");
 			timer.reset(); timer.start();
 			Matrix finalDistribution = PowerIterationRanking.run(rankingMatrix, inOptions.rankingStopThreshold);
@@ -192,31 +186,31 @@ public final class TextPlanner
 			IntStream.range(0, ranking.length)
 					.forEach(i -> candidates.get(i).setValue(ranking[i])); // assign ranking values to candidates
 
-			// 5- Use ranking to disambiguate candidates in structures and weight nodes
+			// 4- Use ranking to disambiguate candidates in structures and weight nodes
 			log.info("Candidate disambiguation");
 			timer.reset(); timer.start();
 			disambiguator.disambiguate(structures);
 			log.info("Disambiguation took " + timer.stop());
 
-			// 6- Create content graph
+			// 5- Create content graph
 			log.info("Creating content graph");
 			timer.reset(); timer.start();
 			ContentGraph contentGraph = ContentGraphCreator.createContentGraph(structures);
 			log.info("Graph creation took " + timer.stop());
 
-			// 7- Extract patterns from content graph
+			// 6- Extract patterns from content graph
 			log.info("Extracting patterns");
 			timer.reset(); timer.start();
 			List<ContentPattern> patterns = PatternExtraction.extract(contentGraph, inOptions.numPatterns, inOptions.patternLambda);
 			log.info("Pattern extraction took " + timer.stop());
 
-			// 8- Sort the trees into a discourse-optimized list
+			// 7- Sort the trees into a discourse-optimized list
 			log.info("Structuring patterns");
 			timer.reset(); timer.start();
 			//patterns = DiscoursePlanner.structurePatterns(patterns, esim);
 			log.info("Pattern structuring took " + timer.stop());
 
-			// 9- Generate stats (optional)
+			// Generate stats (optional)
 			if (inOptions.generateStats)
 			{
 				log.info("Generating stats");
@@ -235,6 +229,76 @@ public final class TextPlanner
 		}
 	}
 
+
+	/**
+	 * Performs EL/WSD, coreference on a set of documents, and creates a text plan from the resulting disambiguated
+	 * structures.
+	 * @param structures initial set of structures
+	 * @return list of patterns
+	 */
+	public List<ContentPattern> planAndDisambiguateOptimizer(Set<LinguisticStructure> structures, Options inOptions)
+	{
+		try
+		{
+			log.info("Planning started");
+
+			// 1- Annotate structures with candidate entities
+			log.info("Annotating candidates");
+			Stopwatch timer = Stopwatch.createStarted();
+			disambiguator.annotateCandidates(structures);
+			log.info("WordAnnotation took " + timer.stop());
+
+			// 2- Create candidate ranking matrix
+			log.info("Ranking candidates");
+			timer.reset(); timer.start();
+			weighting.setContents(structures);
+			CandidateSimilarity sim = new CandidateSimilarity(esim);
+			// todo sort out access to TFIDF or corpus class
+			//MultiObjectiveOptimizationRanking.optimize(structures, weighting, sim, weighting);
+			log.info("Ranking took " + timer.stop());
+
+			// 3- Use ranking to disambiguate candidates in structures and weight nodes
+			log.info("Candidate disambiguation");
+			timer.reset(); timer.start();
+			disambiguator.disambiguate(structures);
+			log.info("Disambiguation took " + timer.stop());
+
+			// 4- Create content graph
+			log.info("Creating content graph");
+			timer.reset(); timer.start();
+			ContentGraph contentGraph = ContentGraphCreator.createContentGraph(structures);
+			log.info("Graph creation took " + timer.stop());
+
+			// 5- Extract patterns from content graph
+			log.info("Extracting patterns");
+			timer.reset(); timer.start();
+			List<ContentPattern> patterns = PatternExtraction.extract(contentGraph, inOptions.numPatterns, inOptions.patternLambda);
+			log.info("Pattern extraction took " + timer.stop());
+
+			// 6- Sort the trees into a discourse-optimized list
+			log.info("Structuring patterns");
+			timer.reset(); timer.start();
+			//patterns = DiscoursePlanner.structurePatterns(patterns, esim);
+			log.info("Pattern structuring took " + timer.stop());
+
+			// Generate stats (optional)
+			if (inOptions.generateStats)
+			{
+				log.info("Generating stats");
+				timer.reset();
+				timer.start();
+				//inOptions.stats = StatsReporter.reportStats(structures, weighting, sim, contentGraph, inOptions);
+				log.info("Stats generation took " + timer.stop());
+			}
+
+			return patterns;
+		}
+		catch (Exception e)
+		{
+			log.error("Planning failed");
+			throw new RuntimeException(e);
+		}
+	}
 
 
 }
