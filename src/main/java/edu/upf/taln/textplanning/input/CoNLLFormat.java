@@ -29,26 +29,26 @@ public class CoNLLFormat implements DocumentAccess
 	/**
 	 * Reads annotated trees from ConLL file
 	 *
-	 * @param inDocumentContents String containing conll serialization of trees
+	 * @param conll String containing conll serialization of trees
 	 * @return a list of trees
 	 */
 	@Override
-	public List<LinguisticStructure> readStructures(String inDocumentContents)
+	public List<LinguisticStructure> readStructures(String conll)
 	{
 		try
 		{
 			Document d = new Document();
-			int numStructures = getNumberOfStructures(inDocumentContents);
+			int numStructures = getNumberOfStructures(conll);
 			if (numStructures == 0)
 				return new ArrayList<>();
 
-			StringReader reader = new StringReader(inDocumentContents);
+			StringReader reader = new StringReader(conll);
 			BufferedReader bufferReader = new BufferedReader(reader);
 
 			List<LinguisticStructure> graphs = new ArrayList<>();
 			LinguisticStructure currentStructure = new LinguisticStructure(d, Role.class);
 			List<AnnotatedWord> anns = new ArrayList<>();
-			Map<Integer, List<Pair<Integer, String>>> governors = new HashMap<>();
+			Map<Integer, Map<Integer, String>> governors = new HashMap<>();
 			Set<Integer> roots = new HashSet<>();
 			int structure = 0;
 			boolean failedSentence = false;
@@ -97,19 +97,6 @@ public class CoNLLFormat implements DocumentAccess
 						if (features.containsKey("original_slex"))
 							form = features.get("original_slex");
 
-//						String relationName = features.getOrDefault("fn", null);
-//						if (pos.equals("_"))
-//						{
-//							if (features.containsKey("dpos"))
-//							{
-//								pos = features.get("dpos");
-//							}
-//							else if (features.containsKey("spos"))
-//							{
-//								pos = features.get("spos");
-//							}
-//						}
-
 						List<Integer> govns = Arrays.stream(columns[8].split(",")).map(Integer::parseInt).collect(toList());
 						List<String> roles = Arrays.stream(columns[10].split(",")).collect(toList());
 
@@ -136,7 +123,13 @@ public class CoNLLFormat implements DocumentAccess
 							String role = roles.get(i);
 
 							if (gov > 0)
-								governors.computeIfAbsent(gov-1, v -> new ArrayList<>()).add(Pair.of(id-1, role));
+								governors.merge(gov -1, Collections.singletonMap(id-1, role), (m1, m2) -> {
+									// awful, awful code :-(
+									Map<Integer, String> m = new HashMap<>();
+									m.putAll(m1);
+									m.putAll(m2); // overwrites duplicate dependents
+									return m;
+								});
 							else if (gov == 0)
 							{
 								if (roots.size() == 1)
@@ -167,6 +160,32 @@ public class CoNLLFormat implements DocumentAccess
 			e.printStackTrace();
 			throw new RuntimeException("Invalid ConLL: " + e);
 		}
+	}
+
+	public String writeStructures(Collection<LinguisticStructure> structures)
+	{
+		// Get a topological ordering of nodes along with their governors in the graph
+		return structures.stream()
+				.map(g -> {
+					List<AnnotatedWord> nodes = g.getTopologicalOrder();
+					Map<Integer, List<Pair<String, Integer>>> governors = IntStream.range(0, nodes.size())
+							.mapToObj(i -> {
+								final List<Pair<String, Integer>> govs = g.incomingEdgesOf(nodes.get(i)).stream()
+										.map(e -> Pair.of(e.getRole(), nodes.indexOf(g.getEdgeSource(e)))) // source node must be unique!
+										.collect(Collectors.toList());
+								return Pair.of(i, govs);
+							})
+							.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
+
+					// Convert nodes to mentions
+					List<Mention> mentions = nodes.stream()
+							.map(a -> new Mention(g, Collections.singletonList(a), 0))
+							.collect(toList());
+
+					return nodesToConll(Collections.emptyList(), mentions, governors);
+				})
+				.map(s -> "0\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\tslex=Sentence\n" + s + "\n")
+				.reduce(String::concat).orElse("");
 	}
 
 	/**
@@ -200,11 +219,11 @@ public class CoNLLFormat implements DocumentAccess
 							})
 							.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
 
-					List<AnnotatedWord> words = nodes.stream()
+					List<Mention> anchors = nodes.stream()
 							.map(g::getAnchors)
 							.map(l -> l.get(0))
 							.collect(toList());
-					return nodesToConll(nodes, words, governors);
+					return nodesToConll(nodes, anchors, governors);
 				})
 				.map(s -> "0\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\t_\tslex=Sentence\n" + s + "\n")
 				.reduce(String::concat).orElse("");
@@ -237,13 +256,17 @@ public class CoNLLFormat implements DocumentAccess
 		}
 	}
 
-	private String nodesToConll(List<Entity> entities, List<AnnotatedWord> anchors, Map<Integer, List<Pair<String, Integer>>> governors)
+	//
+	private String nodesToConll(List<Entity> entities, List<Mention> anchors, Map<Integer, List<Pair<String, Integer>>> governors)
 	{
 		// Iterate nodes again, this time producing conll
 		StringBuilder conll = new StringBuilder();
-		for (int id = 0; id < entities.size(); ++id)
+		for (int id = 0; id < anchors.size(); ++id)
 		{
-			AnnotatedWord anchor = anchors.get(id);
+			Mention anchor = anchors.get(id);
+			AnnotatedWord head = anchor.getHead(); // use
+			String surface_form = anchor.getSurfaceForm();
+
 			List<String> govIDs = governors.get(id).stream()
 					.filter(p -> p.getRight() != null)
 					.map(p -> p.getRight() + 1)
@@ -255,13 +278,20 @@ public class CoNLLFormat implements DocumentAccess
 					.collect(toList());
 			String roless = roles.isEmpty() ? "ROOT" : String.join(",", roles);
 
-			String feats = anchor.getFeats();
+			String feats = head.getFeats();
 			Map<String, String> features = new HashMap<>(Splitter.on("|").withKeyValueSeparator("=").split(feats));
+			features.merge("form", surface_form, (v1, v2) -> v2);
 
-			Entity entity = entities.get(id);
-			if (entity.getId().startsWith("bn:"))
+			// Add semantic info to feats
+			if (!entities.isEmpty())
 			{
-				features.merge("bnId", entity.getId(), (v1, v2) -> v2);
+				Entity entity = entities.get(id);
+				if (entity.getId().startsWith("bn:"))
+				{
+					features.merge("bnId", entity.getId(), (v1, v2) -> v2);
+				}
+
+				features.merge("NE", entity.getType().toString(), (v1, v2) -> v2);
 			}
 
 			feats = features.entrySet().stream()
@@ -269,10 +299,10 @@ public class CoNLLFormat implements DocumentAccess
 					.reduce((e1, e2) -> e1 + "|" + e2).orElse("");
 
 			String entityConll = id + 1 + "\t" +
-					anchor.getLemma() + "\t" +
-					anchor.getForm() + "\t" +
+					head.getLemma() + "\t" +
+					head.getForm() + "\t" +
 					"_\t" +
-					anchor.getPOS() + "\t" +
+					head.getPOS() + "\t" +
 					"_\t" +
 					feats + "\t" +
 					"_\t" +
@@ -291,7 +321,7 @@ public class CoNLLFormat implements DocumentAccess
 	}
 
 	private Set<LinguisticStructure> createGraphs(Document d, LinguisticStructure s, List<AnnotatedWord> anns,
-	                                              Map<Integer, List<Pair<Integer, String>>> governors)
+	                                              Map<Integer, Map<Integer, String>> governors)
 	{
 		// Create graph and add vertices
 		anns.forEach(s::addVertex);
@@ -299,10 +329,10 @@ public class CoNLLFormat implements DocumentAccess
 		for (int i : governors.keySet())
 		{
 			AnnotatedWord gov = anns.get(i);
-			for (Pair<Integer, String> dep : governors.get(i))
+			for (Map.Entry<Integer, String> dep : governors.get(i).entrySet())
 			{
-				AnnotatedWord dep_word = anns.get(dep.getLeft());
-				String role = dep.getRight();
+				AnnotatedWord dep_word = anns.get(dep.getKey());
+				String role = dep.getValue();
 				Role e = new Role(role, isArgument(role));
 				s.addEdge(gov, dep_word, e);
 			}
@@ -338,8 +368,10 @@ public class CoNLLFormat implements DocumentAccess
 	// For testing purposes
 	public static void main(String[] args) throws IOException
 	{
-		String conll = FileUtils.readFileToString(new File(args[0]), StandardCharsets.UTF_8);
+		String in_conll = FileUtils.readFileToString(new File(args[0]), StandardCharsets.UTF_8);
 		CoNLLFormat format = new CoNLLFormat();
-		List<LinguisticStructure> structures = format.readStructures(conll);
+		List<LinguisticStructure> structures = format.readStructures(in_conll);
+		String out_conll = format.writeStructures(structures);
+		System.out.println(out_conll);
 	}
 }

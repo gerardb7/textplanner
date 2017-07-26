@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.structures;
 
 import edu.upf.taln.textplanning.structures.Candidate.Type;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.alg.CycleDetector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,28 +33,30 @@ public class ContentGraphCreator
 				AnnotatedWord dependent = s.getEdgeTarget(e);
 
 				// Add governing node to graph
-				Entity govNode = createGraphNode(s, governor);
-				graph.addVertex(govNode); // does nothing if a node with same id was already added
+				Pair<Entity, Mention> govNode = createGraphNode(s, governor);
+				graph.addVertex(govNode.getLeft()); // does nothing if a node with same id was already added
+				graph.addAnchor(govNode.getLeft(), govNode.getRight());
 
 				// Add dependent tree node to graph
-				Entity depNode = createGraphNode(s, dependent);
-				graph.addVertex(depNode); // does nothing if a node with same id was already added
+				Pair<Entity, Mention> depNode = createGraphNode(s, dependent);
+				graph.addVertex(depNode.getLeft()); // does nothing if a node with same id was already added
+				graph.addAnchor(depNode.getLeft(), depNode.getRight());
 
 				// Ignore loops.
 				// To see how loops may occur in semantic trees, consider "West Nickel Mines Amish School
 				// shooting", where "West Nickel Mines Amish School" and "Amish School shooting" are assigned
 				// the same nominal synset (therefore same node) and are linked through a NAME relation.
-				if (!govNode.getId().equals(depNode.getId()))
+				if (!govNode.getLeft().getId().equals(depNode.getLeft().getId()))
 				{
 					try
 					{
 						// Add edge
 						Role e2 = new Role(e.getRole(), e.isCore());
-						graph.addEdge(govNode, depNode, e2);
+						graph.addEdge(govNode.getLeft(), depNode.getLeft(), e2);
 					}
 					catch (Exception ex)
 					{
-						throw new RuntimeException("Failed to add edge between " + govNode.getId() + " and " + depNode.getId() + ": " + ex);
+						throw new RuntimeException("Failed to add edge between " + govNode.getLeft().getId() + " and " + depNode.getLeft().getId() + ": " + ex);
 					}
 				}
 			}
@@ -96,15 +99,17 @@ public class ContentGraphCreator
 	 *
 	 * @return a graph node
 	 */
-	private static Entity createGraphNode(LinguisticStructure g, AnnotatedWord n)
+	private static Pair<Entity, Mention> createGraphNode(LinguisticStructure g, AnnotatedWord n)
 	{
-		Optional<Entity> entity = n.getBestCandidate().map(Candidate::getEntity);
+		Optional<Candidate> candidate = n.getBestCandidate();
+		Optional<Entity> entity = candidate.map(Candidate::getEntity);
+		Mention mention = candidate.map(Candidate::getMention).orElse(new Mention(g, Collections.singletonList(n), 0));
 		String ref = entity.map(Entity::getReference).orElse(n.getForm());
 		String id = g.isPredicate(n) ? getIdForPredicate(g,n) : ref;
 		Type type = entity.map(Entity::getType).orElse(Type.Other);
 		double value = entity.map(Entity::getWeight).orElse(0.0);
 
-		return new Entity(id, ref, type, value);
+		return Pair.of(new Entity(id, ref, type, value), mention);
 	}
 
 	// use a counter to guarantee that ids for predicates are unique

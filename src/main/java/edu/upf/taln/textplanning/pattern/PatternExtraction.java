@@ -47,11 +47,8 @@ public class PatternExtraction
 		// Expand to initial trees
 		List<Pair<ContentPattern, Double>> initialTrees = roots.stream()
 				.map(r -> new ContentPattern(g, r))
-				.map(t ->
-				{
-					PatternExtraction.addArguments(g, t);
-					return t;
-				})
+				.peek(t ->
+						PatternExtraction.addArguments(g, t))
 				.map(t -> Pair.of(t, calculateWeight(g, t, avgWeight, lambda)))
 				.sorted((s1, s2) -> Double.compare(s2.getRight(), s1.getRight()))
 				.distinct()
@@ -194,7 +191,7 @@ public class PatternExtraction
 		String[] inflectedVerbs = {"VBD", "VBP", "VBZ"};
 
 		// Find an anchor for the entity
-		AnnotatedWord anchor = g.getAnchors(e).get(0);
+		AnnotatedWord anchor = g.getAnchors(e).get(0).getHead();
 		String pos = anchor.getPOS();
 
 		// Check if the anchor is an inflected verb with arguments in its linguistic structure

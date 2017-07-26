@@ -29,7 +29,7 @@ public class ItemSetMining
 		// Collect sets of relevant nodes from trees
 		List<Set<Entity>> annSets = inContents.stream()
 				.map(s -> s.vertexSet().stream()
-						.filter(e -> isItem(s.getAnchors(e).get(0)))
+						.filter(e -> isItem(s.getAnchors(e).get(0).getHead()))
 						.collect(Collectors.toSet()))
 				.collect(Collectors.toList());
 
@@ -273,7 +273,7 @@ public class ItemSetMining
 			return false;
 
 		// Sample an anchor and an incoming relation
-		AnnotatedWord a = g.getAnchors(e).get(0);
+		AnnotatedWord a = g.getAnchors(e).get(0).getHead();
 		Role edge = g.incomingEdgesOf(e).iterator().next();
 		String role = edge.getRole();
 		boolean isLeaf = g.outDegreeOf(e) == 0;
@@ -283,7 +283,7 @@ public class ItemSetMining
 
 	private static boolean isNegation(ContentGraph g, Entity e)
 	{
-		AnnotatedWord a = g.getAnchors(e).get(0);
+		AnnotatedWord a = g.getAnchors(e).get(0).getHead();
 		String[] forms = {"no", "not"};
 		String[] pos = {"RB", "JJ"};
 		return Arrays.stream(pos).anyMatch(p -> p.equals(a.getPOS())) &&
@@ -292,14 +292,14 @@ public class ItemSetMining
 
 	private static boolean isNumber(ContentGraph g, Entity e)
 	{
-		AnnotatedWord a = g.getAnchors(e).get(0);
+		AnnotatedWord a = g.getAnchors(e).get(0).getHead();
 		String[] pos = {"CD"};
 		return Arrays.stream(pos).anyMatch(p -> p.equals(a.getPOS()));
 	}
 
 	private static boolean isPlainAdverb(ContentGraph g, Entity e)
 	{
-		AnnotatedWord a = g.getAnchors(e).get(0);
+		AnnotatedWord a = g.getAnchors(e).get(0).getHead();
 		boolean isLeaf = g.outDegreeOf(e) == 0;
 		String[] pos = {"WRB"};
 		return isLeaf && Arrays.stream(pos).anyMatch(p -> p.equals(a.getPOS()));
@@ -313,12 +313,12 @@ public class ItemSetMining
 
 	private static boolean isVerbWithRelative(ContentGraph g, Entity e)
 	{
-		AnnotatedWord a = g.getAnchors(e).get(0);
+		AnnotatedWord a = g.getAnchors(e).get(0).getHead();
 		if (g.outDegreeOf(e) != 1)
 			return false;
 		Role dependent = g.outgoingEdgesOf(e).iterator().next();
 		Entity d = g.getEdgeTarget(dependent);
-		AnnotatedWord dAnn = g.getAnchors(d).get(0);
+		AnnotatedWord dAnn = g.getAnchors(d).get(0).getHead();
 		return a.getPOS().startsWith("VB") &&
 				g.outDegreeOf(e) == 1 &&
 				dAnn.getPOS().equalsIgnoreCase("WDT");
@@ -330,7 +330,7 @@ public class ItemSetMining
 			return false;
 
 		// Sample an anchor and an incoming relation
-		AnnotatedWord a = g.getAnchors(e).get(0);
+		AnnotatedWord a = g.getAnchors(e).get(0).getHead();
 		Role edge = g.incomingEdgesOf(e).iterator().next();
 
 		return edge.getRole().equals("NAME");

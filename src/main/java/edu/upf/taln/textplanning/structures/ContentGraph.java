@@ -12,13 +12,13 @@ import java.util.*;
  */
 public class ContentGraph  extends DirectedAcyclicGraph<Entity, Role>
 {
-	private final Map<Entity, List<AnnotatedWord>> anchors = new HashMap<>();
+	private final Map<Entity, List<Mention>> anchors = new HashMap<>();
 
 	public ContentGraph(Class<? extends Role> edgeClass)
 	{
 		super(edgeClass);
 	}
 
-	public void addAnchor(Entity e, AnnotatedWord a) { anchors.merge(e, Collections.singletonList(a), ListUtils::union); }
-	public List<AnnotatedWord> getAnchors(Entity e) { return new ArrayList<>(anchors.get(e)); }
+	public void addAnchor(Entity e, Mention m) { anchors.merge(e, Collections.singletonList(m), ListUtils::union); }
+	public List<Mention> getAnchors(Entity e) { return new ArrayList<>(anchors.get(e)); }
 }
