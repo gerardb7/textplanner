@@ -17,7 +17,6 @@ public final class AnnotatedWord
 	private final String lemma;
 	private final String POS;
 	private final String feats; // features column produced by relation extraction tool
-	private final String role;
 	private final String conll; // the conll line this annotation was created from
 	private final long offsetStart;
 	private final long offsetEnd;
@@ -25,7 +24,7 @@ public final class AnnotatedWord
 	private final Set<Mention> mentions = new HashSet<>();
 	private final Set<Candidate> candidates = new HashSet<>(); // candidate senses and NE types associated tot his word or multiwords (Mention) having this word as their head
 
-	public AnnotatedWord(Document d, LinguisticStructure s, String form, String lemma, String pos, String feats, String role,
+	public AnnotatedWord(Document d, LinguisticStructure s, String form, String lemma, String pos, String feats,
 	                     String conll, long offsetStart, long offsetEnd)
 	{
 		document = d;
@@ -34,7 +33,6 @@ public final class AnnotatedWord
 		this.lemma = lemma;
 		this.POS = pos;
 		this.feats = feats.replace("rel==", "");
-		this.role = role;
 		this.conll = conll;
 		this.offsetStart = offsetStart;
 		this.offsetEnd = offsetEnd;
@@ -59,7 +57,6 @@ public final class AnnotatedWord
 	{
 		return feats;
 	}
-	public String getRole() { return role; }
 	public String getConll() { return conll; }
 	public long getOffsetStart() {return offsetStart; }
 	public long getOffsetEnd() { return offsetEnd;}
@@ -107,15 +104,6 @@ public final class AnnotatedWord
 	{
 		mentions.add(m);
 		candidates.add(new Candidate(m, e));
-	}
-
-	/**
-	 * @return true if node has an argument role assigned to it
-	 */
-	public boolean isArgument()
-	{
-		return role.equals("I") || role.equals("II") || role.equals("III") || role.equals("IV") || role.equals("V")
-				|| role.equals("VI") || role.equals("VII") || role.equals("VIII") || role.equals("IX") || role.equals("X");
 	}
 
 	@Override

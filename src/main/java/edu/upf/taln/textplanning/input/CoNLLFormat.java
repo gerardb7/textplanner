@@ -2,13 +2,17 @@ package edu.upf.taln.textplanning.input;
 
 import com.google.common.base.Splitter;
 import edu.upf.taln.textplanning.structures.*;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.alg.ConnectivityInspector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
 import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -44,7 +48,7 @@ public class CoNLLFormat implements DocumentAccess
 			List<LinguisticStructure> graphs = new ArrayList<>();
 			LinguisticStructure currentStructure = new LinguisticStructure(d, Role.class);
 			List<AnnotatedWord> anns = new ArrayList<>();
-			Map<Integer, List<Integer>> governors = new HashMap<>();
+			Map<Integer, List<Pair<Integer, String>>> governors = new HashMap<>();
 			Set<Integer> roots = new HashSet<>();
 			int structure = 0;
 			boolean failedSentence = false;
@@ -120,32 +124,27 @@ public class CoNLLFormat implements DocumentAccess
 							log.error("Token in structure " + structure + " has different number of roles and governors, skipping structure");
 							failedSentence = true;
 						}
-						if (govns.size() > 1)
-							log.warn("Token in structure " + structure + " has multiple governors, keeping first and ignoring the rest");
+						long offsetStart = Long.valueOf(features.getOrDefault("start_string", "0"));
+						long offsetEnd = Long.valueOf(features.getOrDefault("end_string", "0"));
 
-						// todo temporary fix to be reverted once offsets are back into conll
-						String id0 = features.getOrDefault("id0", "0");
-						if (id0.endsWith("_elid"))
-							id0 = id0.substring(0, id0.indexOf('_'));
-						long offsetStart = Long.valueOf(id0);
-						long offsetEnd = Long.valueOf(id0);
-//						long offsetStart = Long.valueOf(features.getOrDefault("start_string", "0"));
-//						long offsetEnd = Long.valueOf(features.getOrDefault("end_string", "0"));
-
-						int gov = govns.get(0);
-						String role = roles.get(0);
-						AnnotatedWord ann = new AnnotatedWord(d, currentStructure, form, lemma, pos, feats, role, line, offsetStart, offsetEnd);
+						AnnotatedWord ann = new AnnotatedWord(d, currentStructure, form, lemma, pos, feats, line, offsetStart, offsetEnd);
 						anns.add(ann);
 
-						if (gov > 0)
-							governors.computeIfAbsent(gov-1, v -> new ArrayList<>()).add(id-1);
-						else if (gov == 0)
+						for (int i = 0; i < govns.size(); ++i)
 						{
-							if (roots.size() == 1)
+							int gov = govns.get(i);
+							String role = roles.get(i);
+
+							if (gov > 0)
+								governors.computeIfAbsent(gov-1, v -> new ArrayList<>()).add(Pair.of(id-1, role));
+							else if (gov == 0)
 							{
-								log.warn("Structure " + structure + " has multiple roots");
+								if (roots.size() == 1)
+								{
+									log.warn("Structure " + structure + " has multiple roots");
+								}
+								roots.add(id);
 							}
-							roots.add(id);
 						}
 					}
 				}
@@ -292,19 +291,20 @@ public class CoNLLFormat implements DocumentAccess
 	}
 
 	private Set<LinguisticStructure> createGraphs(Document d, LinguisticStructure s, List<AnnotatedWord> anns,
-	                                              Map<Integer, List<Integer>> inGovernors)
+	                                              Map<Integer, List<Pair<Integer, String>>> governors)
 	{
 		// Create graph and add vertices
 		anns.forEach(s::addVertex);
 
-		for (int i : inGovernors.keySet())
+		for (int i : governors.keySet())
 		{
 			AnnotatedWord gov = anns.get(i);
-			for (int j : inGovernors.get(i))
+			for (Pair<Integer, String> dep : governors.get(i))
 			{
-				AnnotatedWord dep = anns.get(j);
-				Role e = new Role(dep.getRole(), dep.isArgument());
-				s.addEdge(gov, dep, e);
+				AnnotatedWord dep_word = anns.get(dep.getLeft());
+				String role = dep.getRight();
+				Role e = new Role(role, isArgument(role));
+				s.addEdge(gov, dep_word, e);
 			}
 		}
 
@@ -327,5 +327,19 @@ public class CoNLLFormat implements DocumentAccess
 			structures.add(s);
 
 		return structures;
+	}
+
+	private static boolean isArgument(String role)
+	{
+		return role.equals("I") || role.equals("II") || role.equals("III") || role.equals("IV") || role.equals("V")
+				|| role.equals("VI") || role.equals("VII") || role.equals("VIII") || role.equals("IX") || role.equals("X");
+	}
+
+	// For testing purposes
+	public static void main(String[] args) throws IOException
+	{
+		String conll = FileUtils.readFileToString(new File(args[0]), StandardCharsets.UTF_8);
+		CoNLLFormat format = new CoNLLFormat();
+		List<LinguisticStructure> structures = format.readStructures(conll);
 	}
 }

@@ -269,8 +269,13 @@ public class ItemSetMining
 
 	private static boolean isPlainModifier(ContentGraph g, Entity e)
 	{
+		if (g.inDegreeOf(e) == 0)
+			return false;
+
+		// Sample an anchor and an incoming relation
 		AnnotatedWord a = g.getAnchors(e).get(0);
-		String role = a.getRole();
+		Role edge = g.incomingEdgesOf(e).iterator().next();
+		String role = edge.getRole();
 		boolean isLeaf = g.outDegreeOf(e) == 0;
 		String[] pos = {"DT", "NN", "RB", "JJ"};
 		return role.equals("ATTR") && isLeaf && Arrays.stream(pos).anyMatch(p -> p.equals(a.getPOS()));
@@ -321,8 +326,14 @@ public class ItemSetMining
 
 	private static boolean isName(ContentGraph g, Entity e)
 	{
+		if (g.inDegreeOf(e) == 0)
+			return false;
+
+		// Sample an anchor and an incoming relation
 		AnnotatedWord a = g.getAnchors(e).get(0);
-		return a.getRole().equals("NAME");
+		Role edge = g.incomingEdgesOf(e).iterator().next();
+
+		return edge.getRole().equals("NAME");
 	}
 
 }
