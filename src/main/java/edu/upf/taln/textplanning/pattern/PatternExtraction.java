@@ -47,8 +47,7 @@ public class PatternExtraction
 		// Expand to initial trees
 		List<Pair<ContentPattern, Double>> initialTrees = roots.stream()
 				.map(r -> new ContentPattern(g, r))
-				.peek(t ->
-						PatternExtraction.addArguments(g, t))
+				.peek(t -> PatternExtraction.addArguments(g, t))
 				.map(t -> Pair.of(t, calculateWeight(g, t, avgWeight, lambda)))
 				.sorted((s1, s2) -> Double.compare(s2.getRight(), s1.getRight()))
 				.distinct()

@@ -4,13 +4,12 @@ import edu.upf.taln.textplanning.structures.Candidate.Type;
 
 /**
  * An entity can be a word sense, an individual in KB or dataset, a database cells, etc.
- * Immutable class
  */
 public final class Entity
 {
 	private final String id;
 	private final String reference;
-	private final Type type;
+	private Type type;
 	private double weight;
 
 	public Entity(String id, String reference, Type type) { this(id, reference, type, 0.0); }
@@ -25,6 +24,7 @@ public final class Entity
 	public String getId() { return id; }
 	public String getReference() { return reference; }
 	public Type getType() { return type; }
+	public void setType(Type type) { this.type = type; }
 	public double getWeight() { return weight; }
 	public void setWeight(double w) { weight = w; }
 

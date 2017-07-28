@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.structures;
 
 import edu.upf.taln.textplanning.structures.Candidate.Type;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,6 +18,7 @@ public final class Mention
 	private final List<AnnotatedWord> tokens = new ArrayList<>();
 	private final int head;
 	private final List<String> surfaceForm;
+	private final Pair<Long, Long> offsets;
 	private Mention coref = null; // Coreferring mention (representative mention in a coreference chain)
 
 	public Mention(LinguisticStructure s, List<AnnotatedWord> tokens, int head)
@@ -27,22 +29,17 @@ public final class Mention
 		surfaceForm = tokens.stream()
 				.map(AnnotatedWord::getForm)
 				.collect(Collectors.toList());
+		offsets = Pair.of(tokens.get(0).getOffsetStart(), tokens.get(tokens.size()-1).getOffsetEnd());
 	}
 
 	public LinguisticStructure getStructure() { return s; }
 	public List<AnnotatedWord> getTokens() { return new ArrayList<>(tokens);}
 	public int getNumTokens() { return tokens.size();}
-
 	public AnnotatedWord getHead() { return this.tokens.get(head); }
-
 	public String getSurfaceForm() { return surfaceForm.stream().collect(Collectors.joining(" ")); }
-
+	public Pair<Long, Long> getOffsets() { return offsets; }
 	public Type getType() { return getHead().getType(); } // the NE type of a mention is that of its head
-
-	public Optional<Mention> getCoref()
-	{
-		return Optional.ofNullable(this.coref);
-	}
+	public Optional<Mention> getCoref() { return Optional.ofNullable(this.coref); }
 	public void setCoref(Mention m) { coref = m; }
 
 	// this mention contains another mention o its surface form contains the other mention surface form (and is larger)
