@@ -4,7 +4,6 @@ import org.jgrapht.graph.DirectedSubgraph;
 import org.jgrapht.traverse.TopologicalOrderIterator;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.joining;
 
@@ -38,10 +37,8 @@ public class ContentPattern extends DirectedSubgraph<Entity, Role>
 	public List<Entity> getTopologicalOrder()
 	{
 		// Create a total order over the vertex set to guarantee that the returned iterator always iterates over the same sequence
-		Queue<Entity> sortedNodes = vertexSet().stream()
-				.sorted(Comparator.comparing(Entity::getId))
-				.collect(Collectors.toCollection(ArrayDeque::new));
-		TopologicalOrderIterator<Entity, Role> it = new TopologicalOrderIterator<>(this, sortedNodes);
+		PriorityQueue<Entity> queue = new PriorityQueue<>(vertexSet().size(), Comparator.comparing(Entity::getId));
+		TopologicalOrderIterator<Entity, Role> it = new TopologicalOrderIterator<>(this, queue);
 		List<Entity> es = new ArrayList<>();
 		while (it.hasNext())
 		{

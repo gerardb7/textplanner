@@ -103,7 +103,7 @@ public class ContentGraphCreator
 	{
 		Optional<Candidate> candidate = n.getBestCandidate();
 		Optional<Entity> entity = candidate.map(Candidate::getEntity);
-		Mention mention = candidate.map(Candidate::getMention).orElse(new Mention(g, Collections.singletonList(n), 0));
+		Mention mention = candidate.map(Candidate::getMention).orElse(n.addMention(Collections.singletonList(n)));
 		String ref = entity.map(Entity::getReference).orElse(n.getForm());
 		String id = g.isPredicate(n) ? getIdForPredicate(g,n) : ref;
 		Type type = entity.map(Entity::getType).orElse(Type.Other);

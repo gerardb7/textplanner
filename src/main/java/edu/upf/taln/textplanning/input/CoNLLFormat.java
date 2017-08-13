@@ -91,8 +91,6 @@ public class CoNLLFormat implements DocumentAccess
 					{
 						if (!failedSentence)
 						{
-							// Add mentions, entities and candidates to words
-							addMentions(currentStructure, anns);
 							// Create graph(s) from previously collected nodes
 							Set<LinguisticStructure> new_graphs = createGraphs(d, currentStructure, anns, governors);
 							if (new_graphs.size() > 1)
@@ -153,7 +151,7 @@ public class CoNLLFormat implements DocumentAccess
 						{
 							String ref = features.get(BN_ID);
 							Entity e = new Entity(ref + "_" + form, ref, t);
-							Mention m = new Mention(currentStructure, singletonList(ann), 0);
+							Mention m = ann.addMention(singletonList(ann));
 							ann.addCandidate(e, m);
 						}
 
@@ -176,17 +174,20 @@ public class CoNLLFormat implements DocumentAccess
 				catch (Exception e)
 				{
 					log.error("Parsing of structure " + structure + " failed, skipping structure: " + e);
+					e.printStackTrace();
 					failedSentence = true;
 				}
 			}
 
 			// Create last structure
 			LinguisticStructure s = new LinguisticStructure(d, Role.class);
-			addMentions(s, anns);
 			Set<LinguisticStructure> new_graphs = createGraphs(d, s, anns, governors);
 			if (new_graphs.size() > 1)
 				log.warn("Structure " + structure + " has " + new_graphs.size() + " components");
 			graphs.addAll(new_graphs);
+
+			// Add mentions, entities and candidates to annotated words acting as structure nodes
+			addMentions(graphs);
 
 			return graphs;
 		}
@@ -199,10 +200,9 @@ public class CoNLLFormat implements DocumentAccess
 
 	public String writeStructures(Collection<LinguisticStructure> structures)
 	{
-		// Get a topological ordering of nodes along with their governors in the graph
 		return structures.stream()
 				.map(g -> {
-					List<AnnotatedWord> nodes = g.getTopologicalOrder();
+					List<AnnotatedWord> nodes = g.getTextualOrder(); // // Get a sorted list of nodes
 					Map<Integer, List<Pair<String, Integer>>> governors = IntStream.range(0, nodes.size())
 							.mapToObj(i -> {
 								final List<Pair<String, Integer>> govs = g.incomingEdgesOf(nodes.get(i)).stream()
@@ -211,7 +211,6 @@ public class CoNLLFormat implements DocumentAccess
 								return Pair.of(i, govs);
 							})
 							.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
-
 
 					return wordsToConll(nodes, governors);
 				})
@@ -348,8 +347,11 @@ public class CoNLLFormat implements DocumentAccess
 
 		// Mention spans
 		String spans = word.getMentions().stream()
-				.map(m ->   words.indexOf(m.getTokens().get(0)) + "-" +
-						words.indexOf(m.getTokens().get(m.getNumTokens()-1)))
+				.map(m ->   {
+					int span_start = words.indexOf(m.getTokens().get(0));
+					int span_end = words.indexOf(m.getTokens().get(m.getNumTokens() - 1)) + 1;
+					return span_start + "-" + span_end;
+				})
 				.collect(joining(","));
 		features.put(SPANS, spans);
 
@@ -464,81 +466,88 @@ public class CoNLLFormat implements DocumentAccess
 		return conll.toString();
 	}
 
-	private void addMentions(LinguisticStructure structure, List<AnnotatedWord> anns)
+	private void addMentions(List<LinguisticStructure> structures)
 	{
 		Map<Pair<Long, Long>, Mention> offsets2Mentions = new HashMap<>();
 		Map<Mention, Optional<Pair<Long, Long>>> mentions2Coref = new HashMap<>();
 
-		anns.forEach(word ->
+		for (LinguisticStructure structure : structures)
 		{
-			Map<String, String> features = Splitter.on("|").withKeyValueSeparator("=").split(word.getFeats());
-
-			if (features.containsKey(OFFSETS))
+			List<AnnotatedWord> anns = structure.getTextualOrder();
+			for (AnnotatedWord word : anns)
 			{
-				List<Mention> mentions = Arrays.stream(features.get(SPANS).split(","))
-						.map(s -> s.split("-"))
-						.map(as -> Pair.of(Integer.valueOf(as[0]), Integer.valueOf(as[1])))
-						.map(p -> IntStream.range(p.getLeft(), p.getRight())
-								.mapToObj(anns::get)
-								.collect(toList()))
-						.map(tokens -> new Mention(structure, tokens, tokens.indexOf(word)))
-						.collect(toList());
+				Map<String, String> features = Splitter.on("|").withKeyValueSeparator("=").split(word.getFeats());
 
-				List<Pair<Long, Long>> offsets = Arrays.stream(features.get(OFFSETS).split(","))
-						.map(s -> s.split("-"))
-						.map(as -> Pair.of(Long.valueOf(as[0]), Long.valueOf(as[1])))
-						.collect(toList());
-
-				IntStream.range(0, mentions.size()).forEach(i -> offsets2Mentions.put(offsets.get(i), mentions.get(i)));
-
-				if (features.containsKey(REFERENCES))
+				if (features.containsKey(OFFSETS) && !features.get(OFFSETS).isEmpty())
 				{
-					// Create Entity objects from references
-					List<List<String>> references = Arrays.stream(features.get(REFERENCES).split(","))
-							.map(v -> Arrays.asList(v.split("-")))
-							.collect(toList());
-
-					// Create Entity objects from references
-					List<List<Type>> types = Arrays.stream(features.get(TYPES).split(","))
-							.map(v -> Arrays.stream(v.split("-"))
-									.map(Type::valueOf)
+					List<Mention> mentions = Arrays.stream(features.get(SPANS).split(","))
+							.map(s -> s.split("-"))
+							.map(as -> Pair.of(Integer.valueOf(as[0]), Integer.valueOf(as[1])))
+							.map(p -> IntStream.range(p.getLeft(), p.getRight())
+									.mapToObj(anns::get)
 									.collect(toList()))
+							//.map(tokens -> new Mention(structure, tokens, tokens.indexOf(word)))
+							.map(word::addMention)
 							.collect(toList());
 
-					// Create Entity objects from references
-					List<List<Double>> weights = Arrays.stream(features.get(WEIGHTS).split(","))
-							.map(v -> Arrays.stream(v.split("-"))
-									.map(Double::valueOf)
-									.collect(toList()))
+					List<Pair<Long, Long>> offsets = Arrays.stream(features.get(OFFSETS).split(","))
+							.map(s -> s.split("-"))
+							.map(as -> Pair.of(Long.valueOf(as[0]), Long.valueOf(as[1])))
 							.collect(toList());
 
-					IntStream.range(0, references.size())
-							.forEach(i -> IntStream.range(0, references.get(i).size())
-									.forEach(j -> {
-										String r = references.get(i).get(j);
-										Type t = types.get(i).get(j);
-										double w = weights.get(i).get(j);
-										Entity e = new Entity(word.getForm() + "_" + r, r, t, w);
-										word.addCandidate(e, mentions.get(i));
-									}));
-				}
+					IntStream.range(0, mentions.size()).forEach(i -> offsets2Mentions.put(offsets.get(i), mentions.get(i)));
 
-				if (features.containsKey(COREFERENCES))
-				{
-					List<Optional<Pair<Long, Long>>> coreferences = Arrays.stream(features.get(COREFERENCES).split(","))
-							.map(v -> v.split("-"))
-							.map(a -> a.length == 2 ? Pair.of(Long.valueOf(a[0]), Long.valueOf(a[1])) : null)
-							.map(Optional::ofNullable)
-							.collect(toList());
+					if (features.containsKey(REFERENCES) && !features.get(REFERENCES).isEmpty())
+					{
+						// Create Entity objects from references
+						List<List<String>> references = Arrays.stream(features.get(REFERENCES).split(","))
+								.map(v -> Arrays.asList(v.split("-")))
+								.collect(toList());
 
-					IntStream.range(0, mentions.size()).forEach(i -> mentions2Coref.put(mentions.get(i), coreferences.get(i)));
+						// Create Entity objects from references
+						List<List<Type>> types = Arrays.stream(features.get(TYPES).split(","))
+								.map(v -> Arrays.stream(v.split("-"))
+										.map(Type::valueOf)
+										.collect(toList()))
+								.collect(toList());
+
+						// Create Entity objects from references
+						List<List<Double>> weights = Arrays.stream(features.get(WEIGHTS).split(","))
+								.map(v -> Arrays.stream(v.split("-"))
+										.map(Double::valueOf)
+										.collect(toList()))
+								.collect(toList());
+
+						IntStream.range(0, references.size())
+								.forEach(i -> IntStream.range(0, references.get(i).size())
+										.forEach(j -> {
+											String r = references.get(i).get(j);
+											Type t = types.get(i).get(j);
+											double w = weights.get(i).get(j);
+											Entity e = new Entity(word.getForm() + "_" + r, r, t, w);
+											word.addCandidate(e, mentions.get(i));
+										}));
+					}
+
+					if (features.containsKey(COREFERENCES) && !features.get(COREFERENCES).isEmpty())
+					{
+						List<Optional<Pair<Long, Long>>> coreferences = Arrays.stream(features.get(COREFERENCES).split(","))
+								.map(v -> v.split("-"))
+								.map(a -> a.length == 2 ? Pair.of(Long.valueOf(a[0]), Long.valueOf(a[1])) : null)
+								.map(Optional::ofNullable)
+								.collect(toList());
+
+						IntStream.range(0, mentions.size()).forEach(i -> mentions2Coref.put(mentions.get(i), coreferences.get(i)));
+					}
 				}
 			}
-		});
+		}
 
 		// Set coreference links between pairs of mentions
 		mentions2Coref.keySet().forEach(m -> mentions2Coref.get(m).map(offsets2Mentions::get).ifPresent(m::setCoref));
 	}
+
+
 
 	private Set<LinguisticStructure> createGraphs(Document d, LinguisticStructure s, List<AnnotatedWord> anns,
 	                                              Map<Integer, Map<Integer, String>> governors)
