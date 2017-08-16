@@ -1,5 +1,6 @@
 package edu.upf.taln.textplanning.disambiguation;
 
+import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.structures.*;
 import edu.upf.taln.textplanning.structures.Candidate.Type;
 import it.uniroma1.lcl.babelnet.BabelNet;
@@ -13,6 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.*;
@@ -27,10 +30,26 @@ import static edu.upf.taln.textplanning.disambiguation.POSConverter.BN_POS_EN;
  */
 public class BabelNetAnnotator implements EntityDisambiguator
 {
-	private final BabelNet bn = BabelNet.getInstance();
-	private final DBPediaType dbpedia = new DBPediaType();
+	private final BabelNet bn;
+	private final DBPediaType dbpedia;
 	private final static Logger log = LoggerFactory.getLogger(BabelNetAnnotator.class);
 	private static final int maxMentionTokens = 7;
+
+	public BabelNetAnnotator()
+	{
+		log.info("BabelNetAnnotator: Loading BabelNet instance");
+		Stopwatch timer = Stopwatch.createStarted();
+		PrintStream oldOut = System.err;
+		System.setErr(new PrintStream(new OutputStream() { public void write(int b) {} })); // shut up, BabelNet
+		bn = BabelNet.getInstance();
+		System.setErr(oldOut);
+		log.info("Loading completed in " + timer.stop());
+
+		log.info("BabelNetAnnotator : Setting up DBPedia SPARQL endpoint access");
+		timer.reset(); timer.start();
+		dbpedia = new DBPediaType();
+		log.info("Set up completed in " + timer.stop());
+	}
 
 	/**
 	 * Assigns candidate entities to nodes (tokens) of a given set of structures

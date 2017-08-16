@@ -1,6 +1,9 @@
 package edu.upf.taln.textplanning;
 
-import com.beust.jcommander.*;
+import com.beust.jcommander.IStringConverter;
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParameterException;
 import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.corpora.FreqsFile;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
@@ -10,6 +13,9 @@ import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.similarity.SensEmbed;
 import edu.upf.taln.textplanning.structures.ContentPattern;
 import edu.upf.taln.textplanning.structures.LinguisticStructure;
+import edu.upf.taln.textplanning.utils.CMLCheckers.PathConverter;
+import edu.upf.taln.textplanning.utils.CMLCheckers.PathToExistingFile;
+import edu.upf.taln.textplanning.utils.CMLCheckers.PathToExistingFolder;
 import edu.upf.taln.textplanning.weighting.TFIDF;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.slf4j.Logger;
@@ -31,41 +37,6 @@ import java.util.stream.Collectors;
  */
 public class ConLLDriver
 {
-	public static class PathConverter implements IStringConverter<Path>
-	{
-		@Override
-		public Path convert(String value)
-		{
-			return Paths.get(value);
-		}
-	}
-
-	public static class PathToExistingFile implements IParameterValidator
-	{
-		@Override
-		public void validate(String name, String value) throws ParameterException
-		{
-			Path path = Paths.get(value);
-			if (!Files.exists(path) || !Files.isRegularFile(path))
-			{
-				throw new ParameterException("Cannot open file " + name + " = " + value);
-			}
-		}
-	}
-
-	public static class PathToExistingFolder implements IParameterValidator
-	{
-		@Override
-		public void validate(String name, String value) throws ParameterException
-		{
-			Path path = Paths.get(value);
-			if (!Files.exists(path) || !Files.isDirectory(path))
-			{
-				throw new ParameterException("Cannot open folder " + name + " = " + value);
-			}
-		}
-	}
-
 	public enum EmbeddingsType
 	{
 		word, sense;
@@ -117,6 +88,7 @@ public class ConLLDriver
 		private boolean debug = false;
 	}
 
+	private static final String input_suffix = "_sem_stanford.conll";
 	private final static Logger log = LoggerFactory.getLogger(ConLLDriver.class);
 
 	/**
@@ -181,7 +153,7 @@ public class ConLLDriver
 		try
 		{
 			CoNLLFormat conll = new CoNLLFormat();
-			List<ContentPattern> plan = p.plan(graphs, options);
+			List<ContentPattern> plan = p.planAndDisambiguate(graphs, options);
 			return conll.writePatterns(plan);
 		}
 		catch (Exception e)
@@ -212,7 +184,7 @@ public class ConLLDriver
 			// Collect files from folder
 			List<Path> files = Files.walk(inputFolder, 1)
 					.filter(Files::isRegularFile)
-					.filter(p -> p.toString().endsWith("_deep_r.conll"))
+					.filter(p -> p.toString().endsWith(input_suffix))
 					.sorted()
 					.collect(Collectors.toList());
 

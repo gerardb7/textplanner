@@ -1,5 +1,6 @@
 package edu.upf.taln.textplanning.corpora;
 
+import com.google.common.base.Stopwatch;
 import org.apache.commons.io.FileUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -10,8 +11,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Returns frequencies from a JSON file with pre-computed values.
@@ -27,16 +30,21 @@ public class FreqsFile implements Corpus
 	public FreqsFile(Path file) throws IOException
 	{
 		log.info("Loading frequencies file " + file);
+		Stopwatch timer = Stopwatch.createStarted();
 
 		String json = FileUtils.readFileToString(file.toFile(), StandardCharsets.UTF_8);
 		JSONObject obj = new JSONObject(json);
 		numDocs = obj.getLong("docs");
 		JSONObject form_counts = obj.getJSONObject("mentions");
 
+		int c = 0;
 		for (String form : form_counts.keySet())
 		{
+			if (++c % 100000 == 0)
+				log.info(c + " mentions loaded");
 			JSONArray arr = form_counts.getJSONArray(form);
 			Map<String, Long> counts = new HashMap<>();
+
 			for (int i = 0; i < arr.length(); ++i)
 			{
 				JSONArray form_count = arr.getJSONArray(i);
@@ -49,11 +57,17 @@ public class FreqsFile implements Corpus
 		}
 
 		JSONObject entity_counts = obj.getJSONObject("entities");
+		c = 0;
+
 		for (String id : entity_counts.keySet())
 		{
+			if (++c % 100000 == 0)
+				log.info(c + " entities loaded");
 			long count = entity_counts.getLong(id);
 			sense_doc_counts.put(id, count);
 		}
+
+		log.info("Loaded " + sense_counts.size() + " entities and " + form_sense_counts.size() + " forms in " + timer.stop());
 	}
 
 	@Override
@@ -85,6 +99,14 @@ public class FreqsFile implements Corpus
 	public long getNumDocs()
 	{
 		return numDocs;
+	}
+
+	public Set<String> getEntitiesForForm(String form)
+	{
+		if (form_sense_counts.containsKey(form))
+			return form_sense_counts.get(form).keySet();
+		else
+			return Collections.emptySet();
 	}
 
 	// for testing

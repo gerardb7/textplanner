@@ -499,19 +499,17 @@ public class CoNLLFormat implements DocumentAccess
 
 					if (features.containsKey(REFERENCES) && !features.get(REFERENCES).isEmpty())
 					{
-						// Create Entity objects from references
+						// Create Entity and Candidate objects from references
 						List<List<String>> references = Arrays.stream(features.get(REFERENCES).split(","))
 								.map(v -> Arrays.asList(v.split("-")))
 								.collect(toList());
 
-						// Create Entity objects from references
 						List<List<Type>> types = Arrays.stream(features.get(TYPES).split(","))
 								.map(v -> Arrays.stream(v.split("-"))
 										.map(Type::valueOf)
 										.collect(toList()))
 								.collect(toList());
 
-						// Create Entity objects from references
 						List<List<Double>> weights = Arrays.stream(features.get(WEIGHTS).split(","))
 								.map(v -> Arrays.stream(v.split("-"))
 										.map(Double::valueOf)
