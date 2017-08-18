@@ -4,6 +4,10 @@ import edu.upf.taln.textplanning.structures.Candidate.Type;
 import org.eclipse.rdf4j.query.BooleanQuery;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.sparql.SPARQLRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.net.URLEncoder;
 
 /**
  *
@@ -15,6 +19,7 @@ public class DBPediaType
 	private final static String isPlace = "ASK{ <$r> a <http://dbpedia.org/ontology/Place> }";
 	private final static String isOrganization = "ASK{ <$r> a <http://dbpedia.org/ontology/Organisation> }";
 	private final RepositoryConnection conn;
+	private final static Logger log = LoggerFactory.getLogger(DBPediaType.class);
 
 
 	public DBPediaType()
@@ -27,18 +32,26 @@ public class DBPediaType
 	// Todo increase coverage with yago/Wordnet classes, see https://stackoverflow.com/questions/26008217/yago-ontology-for-entity-disambiguation
 	public Type getType(String r)
 	{
-		String uri = r.replace("DBpedia", "dbpedia");
-		BooleanQuery isPersonQuery = conn.prepareBooleanQuery(isPerson.replace("$r", uri));
-		BooleanQuery isPlaceQuery = conn.prepareBooleanQuery(isPlace.replace("$r", uri));
-		BooleanQuery isOrganizationQuery = conn.prepareBooleanQuery(isOrganization.replace("$r", uri));
+		try
+		{
+			String uri = URLEncoder.encode(r.replace("DBpedia", "dbpedia"), "UTF-8");
+			BooleanQuery isPersonQuery = conn.prepareBooleanQuery(isPerson.replace("$r", uri));
+			BooleanQuery isPlaceQuery = conn.prepareBooleanQuery(isPlace.replace("$r", uri));
+			BooleanQuery isOrganizationQuery = conn.prepareBooleanQuery(isOrganization.replace("$r", uri));
 
-		if (isPersonQuery.evaluate())
-			return Type.Person;
-		else if (isPlaceQuery.evaluate())
-			return Type.Location;
-		else if (isOrganizationQuery.evaluate())
-			return Type.Organization;
-		else
+			if (isPersonQuery.evaluate())
+				return Type.Person;
+			else if (isPlaceQuery.evaluate())
+				return Type.Location;
+			else if (isOrganizationQuery.evaluate())
+				return Type.Organization;
+			else
+				return Type.Other;
+		}
+		catch (Exception e)
+		{
+			log.error("SPARQL queries for resource " + r + " failed, defaulting to type 'Other': " + e);
 			return Type.Other;
+		}
 	}
 }

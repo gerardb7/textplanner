@@ -19,11 +19,14 @@ import java.io.PrintStream;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static edu.upf.taln.textplanning.disambiguation.POSConverter.BN_POS_EN;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * Annotates semantic graphs with BabelNet synsets.
@@ -32,8 +35,8 @@ public class BabelNetAnnotator implements EntityDisambiguator
 {
 	private final BabelNet bn;
 	private final DBPediaType dbpedia;
-	private final static Logger log = LoggerFactory.getLogger(BabelNetAnnotator.class);
 	private static final int maxMentionTokens = 7;
+	private final static Logger log = LoggerFactory.getLogger(BabelNetAnnotator.class);
 
 	public BabelNetAnnotator()
 	{
@@ -55,9 +58,10 @@ public class BabelNetAnnotator implements EntityDisambiguator
 	 * Assigns candidate entities to nodes (tokens) of a given set of structures
 	 */
 	@Override
-	public void annotateCandidates(Set<LinguisticStructure> structures)
+	public void annotateCandidates(Collection<LinguisticStructure> structures)
 	{
 		// Get mentions from nodes in the structures, and group by label
+		log.info("Collecting mentions");
 		Map<String, List<Mention>> label2Mentions = structures.stream()
 				.map(s ->
 				{
@@ -76,15 +80,40 @@ public class BabelNetAnnotator implements EntityDisambiguator
 				.collect(Collectors.groupingBy(m -> m.getSurfaceForm() + "_" + m.getHead().getPOS()));
 
 		// Collect candidate entities for each label
-		Map<String, Set<Entity>> labels2Entities = new HashMap<>();
-		int counter = 0;
-		for (String l : label2Mentions.keySet())
-		{
-			if (++counter % 100 == 0)
-				log.info("Retrieved candidates for " + counter + " mention forms out of " + label2Mentions.keySet().size());
-			Set<Entity> entities = getEntities(l);
-			labels2Entities.put(l, entities);
-		}
+		log.info("Finding candidate BabelNet synsets");
+		AtomicInteger counter = new AtomicInteger(0);
+		Stopwatch timer = Stopwatch.createStarted();
+
+		Map<String, List<BabelSynset>> labels2Synsets = label2Mentions.keySet().stream()
+				.peek(t -> {
+					if (counter.incrementAndGet() % 1000 == 0)
+						log.info("Queried synsets for " + counter.get() + " labels out of " + label2Mentions.keySet().size());
+				})
+				.collect(toMap(l -> l, this::getSynsets));
+		log.info("Synsets retrieved in " + timer.stop());
+
+		// Get DBPedia types an instantiate Entity objects
+		log.info("Querying DBPedia types");
+		counter.set(0);
+		timer.reset(); timer.start();
+
+		Set<BabelSynset> all_synsets = labels2Synsets.values().stream()
+				.flatMap(List::stream)
+				.distinct()
+				.collect(Collectors.toSet());
+		Map<BabelSynset, Type> synsets2Types = all_synsets.stream()
+				.peek(t -> {
+					if (counter.incrementAndGet() % 1000 == 0)
+						log.info("Queried types for " + counter.get() + " synsets forms out of " + all_synsets.size());
+				})
+				.collect(toMap(s -> s, this::getEntityType));
+		log.info("Types queried in " + timer.stop());
+
+		// Instantiate Entity objects from info gathered so far
+		Map<String, Set<Entity>> labels2Entities = labels2Synsets.keySet().stream()
+				.collect(toMap(l -> l, l -> labels2Synsets.get(l).stream()
+						.map(s -> createEntity(s, synsets2Types.get(s), l))
+						.collect(toSet())));
 
 		// Assign mentions and candidate entities to nodes in the structures
 		labels2Entities.keySet().forEach(l -> // given a label l
@@ -95,106 +124,17 @@ public class BabelNetAnnotator implements EntityDisambiguator
 		reportStats(structures, true);
 	}
 
-//	/**
-//	 * Simple approach to coreference resolution for nominal expressions: replicate referred entities from mentions
-//	 * to others that are substrings of the former.
-//	 * Inspired by expansion policy of AGDISTIS (Usbeck et al. 2014)
-//	 */
-//	@Override
-//	public void expandCandidates(Set<LinguisticStructure> structures)
-//	{
-//		// Collect 'maximal' nominal nodes: nodes with at least a candidate and not subsumed by any candidate of its
-//		// governing nodes.
-//		// Pair each node with its longest mention
-//		Set<Triple<LinguisticStructure, AnnotatedWord, Mention>> maxNominalNodes = structures.stream()
-//				// for every structure
-//				.map(s -> s.vertexSet().stream()
-//						// for every nominal node with candidates
-//						.filter(n -> n.getPOS().startsWith("N"))
-//						.filter(n -> !n.getCandidates().isEmpty())
-//						// map to a triple {structure, node, longest_mention}
-//						.map(n -> Triple.of(s, n, n.getMentions().stream()
-//								.max(Comparator.comparing(m -> m.getTokens().size())) // longest mention!
-//								.orElse(null))) // null should never happen as node has candidates & mentions
-//						// keep top nodes only (not subsumed by any mention of a governing node)
-//						.filter(t -> s.incomingEdgesOf(t.getMiddle()).stream()
-//								.map(s::getEdgeSource)
-//								.map(AnnotatedWord::getMentions)
-//								.flatMap(Set::stream)
-//								.noneMatch(m -> m.contains(t.getRight()))))
-//				// place all triples into a single stream
-//				.flatMap(Function.identity())
-//				.collect(Collectors.toSet());
-//
-//		// Collect nodes the longest mention of which is a substring of some other node in maxNominalNodes
-//		Set<Triple<LinguisticStructure, AnnotatedWord, Mention>> subsumedNodes = maxNominalNodes.stream()
-//				.filter(t1 -> t1.getRight().getNumTokens() > 1) // no subsuming is possible if node has just one token
-//				.map(t1 ->
-//				{
-//					Mention m = t1.getRight();
-//
-//					// Find subsumed maximal nodes: the surface form of their longest mention is a substring of this node's
-//					// longest mention
-//					final Set<Triple<LinguisticStructure, AnnotatedWord, Mention>> nodes = maxNominalNodes.stream()
-//							.filter(t2 -> t1 != t2)
-//							.filter(t2 -> m.contains(t2.getRight()))
-//							.collect(Collectors.toSet());
-//
-//					// If a structure contains 2 or more subsumed nodes, and one of them is an ancestor of the others
-//					// and contains them, keep only the top containing node.
-//					Set<Triple<LinguisticStructure, AnnotatedWord, Mention>> nodesToRemove = nodes.stream()
-//							.filter(sn1 -> nodes.stream()
-//									.filter(sn2 -> sn1 != sn2)
-//									.anyMatch(sn2 ->
-//									{
-//										AnnotatedWord n1 = sn1.getMiddle();
-//										LinguisticStructure s1 = sn1.getLeft();
-//										Mention m1 = sn1.getRight();
-//										AnnotatedWord n2 = sn2.getMiddle();
-//										LinguisticStructure s2 = sn2.getLeft();
-//										Mention m2 = sn2.getRight();
-//
-//										return (s1 == s2) && s1.getDescendants(s1, n2).contains(n1) && m1.contains(m2);
-//									}))
-//							.collect(Collectors.toSet());
-//
-//					nodes.removeAll(nodesToRemove);
-//
-//					return nodes;
-//				})
-//				.flatMap(Set::stream)
-//				.collect(Collectors.toSet());
-//
-//		// For each subsumed node, if there are multiple nodes containing it, choose the longest one and assign its
-//		// candidates to the subsumed node.
-//		subsumedNodes
-//				.forEach(t1 ->
-//				{
-//					AnnotatedWord n1 = t1.getMiddle();
-//					Mention m1 = t1.getRight();
-//					List<Triple<LinguisticStructure, AnnotatedWord, Mention>> subsuming = maxNominalNodes.stream()
-//							.filter(t2 -> t2.getRight().contains(m1)).collect(Collectors.toList());
-//
-//					subsuming.stream()
-//							.max(Comparator.comparing(t2 -> t2.getRight().getTokens().size()))
-//							.ifPresent(t2 -> t2.getMiddle().getCandidates().forEach(c -> n1.addCandidate(c.getEntity(), c.getMention())));
-//				});
-//
-//		log.info("Assigned senses to " + subsumedNodes.size() + " coreferent nodes ( " + maxNominalNodes.size() + " maximal nominal nodes)");
-//		reportStats(structures, false);
-//	}
-
 	/**
 	 * Chooses highest ranked candidate and collapses the word-nodes spanned by the corresponding mention into a single node.
 	 * @param structures input structures where nodes are assigned with mentions and sets of ranked candidate senses
 	 */
 	@Override
-	public void disambiguate(Set<LinguisticStructure> structures)
+	public void disambiguate(Collection<LinguisticStructure> structures)
 	{
 		// todo check if collapsing node still makes sense (it probably does)
 		structures.forEach(s -> {
 			// Find out highest ranked candidates and collect the nodes that make up their mentions
-			Map<AnnotatedWord, List<AnnotatedWord>> merges = s.vertexSet().stream().collect(Collectors.toMap(n -> n, n ->
+			Map<AnnotatedWord, List<AnnotatedWord>> merges = s.vertexSet().stream().collect(toMap(n -> n, n ->
 			{
 				Set<Candidate> candidates = n.getCandidates();
 				Optional<Candidate> best = candidates.stream().max(Comparator.comparing(Candidate::getValue));
@@ -298,7 +238,7 @@ public class BabelNetAnnotator implements EntityDisambiguator
 			.findAny();
 	}
 
-	private Set<Entity> getEntities(String s)
+	private List<BabelSynset> getSynsets(String s)
 	{
 		// Use surface form of mention as label
 		String form = s.substring(0, s.lastIndexOf('_'));
@@ -308,15 +248,12 @@ public class BabelNetAnnotator implements EntityDisambiguator
 		// Get candidate entities using strict matching
 		try
 		{
-			List<BabelSynset> synsets = bn.getSynsets(form, Language.EN, bnPOS);
-
-			return synsets.stream()
-					.map(syn -> createEntity(syn, s))
-					.collect(Collectors.toSet());
+			return bn.getSynsets(form, Language.EN, bnPOS);
 		}
 		catch (IOException e)
 		{
-			throw new RuntimeException(e);
+			log.error("Cannot get synsets for form " + s + ": " + e);
+			return Collections.emptyList();
 		}
 	}
 
@@ -325,10 +262,9 @@ public class BabelNetAnnotator implements EntityDisambiguator
 	 * The latter can be either person, location, organization or other for sysnets with links to DBPedia.
 	 * For synsets without link to DBPedia the type is always "other".
 	 * @param s a BabelNet sysnet
-	 * @param surface  the surface string denoting s
 	 * @return an isntance of the Entity class
 	 */
-	private Entity createEntity(BabelSynset s, String surface)
+	private Type getEntityType(BabelSynset s)
 	{
 		List<String> dbPediaURIs = s.getDBPediaURIs(Language.EN);
 		Type type = Type.Other;
@@ -336,21 +272,28 @@ public class BabelNetAnnotator implements EntityDisambiguator
 		{
 			type = dbpedia.getType(dbPediaURIs.get(0));
 		}
-		String reference = s.getId().getID();
-		return new Entity(reference + "_" + surface, reference, type);
+
+		return type;
 	}
 
-	private void reportStats(Set<LinguisticStructure> structures, boolean all)
+	private Entity createEntity(BabelSynset s, Type t, String surface)
+	{
+		String reference = s.getId().getID();
+		return new Entity(reference + "_" + surface, reference, t);
+	}
+
+
+	private void reportStats(Collection<LinguisticStructure> structures, boolean all)
 	{
 		Set<AnnotatedWord> nodes = structures.stream()
 				.map(LinguisticStructure::vertexSet)
 				.flatMap(Set::stream)
-				.collect(Collectors.toSet());
+				.collect(toSet());
 		Set<AnnotatedWord> nominalNodes = structures.stream()
 				.map(LinguisticStructure::vertexSet)
 				.flatMap(Set::stream)
 				.filter(n -> n.getPOS().startsWith("N"))
-				.collect(Collectors.toSet());
+				.collect(toSet());
 
 		long numForms = nodes.stream()
 				.map(AnnotatedWord::getMentions)

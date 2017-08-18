@@ -2,9 +2,9 @@ package edu.upf.taln.textplanning.weighting;
 
 import edu.upf.taln.textplanning.structures.LinguisticStructure;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Linear combination of other weighting functions.
@@ -18,7 +18,7 @@ public final class Linear implements WeightingFunction
 	}
 
 	@Override
-	public void setContents(Set<LinguisticStructure> contents)
+	public void setContents(Collection<LinguisticStructure> contents)
 	{
 		functions.forEach((f, w) -> f.setContents(contents));
 	}

@@ -2,13 +2,13 @@ package edu.upf.taln.textplanning.weighting;
 
 import edu.upf.taln.textplanning.structures.LinguisticStructure;
 
-import java.util.Set;
+import java.util.Collection;
 
 /**
  * Interface for weighting functions
  */
 public interface WeightingFunction
 {
-	void setContents(Set<LinguisticStructure> contents);
+	void setContents(Collection<LinguisticStructure> contents);
 	double weight(String item);
 }

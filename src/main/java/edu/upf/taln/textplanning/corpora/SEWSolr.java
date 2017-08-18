@@ -62,7 +62,8 @@ public final class SEWSolr implements Corpus
 	}
 
 	@Override public long getEntityCount(String entity) { return 0; }
-	@Override public long getFormEntityCount(String entity, String form) {  return 0; }
+	@Override public long getFormEntityCount(String form, String entity) {  return 0; }
+	@Override public long getFormCount(String form) { return 0; }
 
 	public long getCooccurrence(String i1, String i2)
 	{

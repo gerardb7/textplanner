@@ -26,7 +26,7 @@ public class Salience implements Function
 				.map(Candidate::getEntity)
 				.map(Entity::getId)
 				.mapToDouble(relevance::weight)
-				.toArray();
+				.toArray(); // relevance values are a non-smooth probability distribution based on tf-idf
 	}
 
 	@Override

@@ -2,7 +2,7 @@ package edu.upf.taln.textplanning.weighting;
 
 import edu.upf.taln.textplanning.structures.LinguisticStructure;
 
-import java.util.Set;
+import java.util.Collection;
 
 /**
  * Used for testing
@@ -10,7 +10,7 @@ import java.util.Set;
 public final class Random implements WeightingFunction
 {
 	@Override
-	public void setContents(Set<LinguisticStructure> contents) { }
+	public void setContents(Collection<LinguisticStructure> contents) { }
 
 	@Override
 	public double weight(String item)

@@ -12,8 +12,8 @@ import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -31,7 +31,7 @@ public class PowerIterationRankingTest
 		public DummyWeighting(int exp) { this.exp = exp; }
 
 		@Override
-		public void setContents(Set<LinguisticStructure> contents) { }
+		public void setContents(Collection<LinguisticStructure> contents) { }
 
 		@Override
 		public double weight(String item)

@@ -1,10 +1,10 @@
 package edu.upf.taln.textplanning.optimization;
 
 import cc.mallet.optimize.ConjugateGradient;
+import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.similarity.CandidateSimilarity;
 import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.structures.LinguisticStructure;
-import edu.upf.taln.textplanning.weighting.TFIDF;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,9 +21,8 @@ public class MultiObjectiveOptimizationRanking
 {
 	private final static Logger log = LoggerFactory.getLogger(MultiObjectiveOptimizationRanking.class);
 
-	public static void optimize(Set<LinguisticStructure> structures, TFIDF frequency, CandidateSimilarity similarity, WeightingFunction relevance)
+	public static void optimize(Set<LinguisticStructure> structures, Corpus corpus, CandidateSimilarity similarity, WeightingFunction relevance)
 	{
-
 		// Collect candidates: pairs of {mention, candidate entity}
 		List<Candidate> candidates = structures.stream()
 				.flatMap(s -> s.vertexSet().stream()
@@ -37,7 +36,7 @@ public class MultiObjectiveOptimizationRanking
 		SimpleType type = new SimpleType(candidates);
 		Salience salience = new Salience(candidates, relevance);
 		MultiObjectiveFunction multi = new MultiObjectiveFunction(coherence, type, salience);
-		CandidateOptimizable optimizable = new CandidateOptimizable(multi, candidates, frequency);
+		CandidateOptimizable optimizable = new CandidateOptimizable(multi, candidates, corpus);
 
 		// Optimize functions
 		ConjugateGradient gradient = new ConjugateGradient(optimizable);

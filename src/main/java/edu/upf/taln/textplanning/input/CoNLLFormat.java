@@ -375,7 +375,7 @@ public class CoNLLFormat implements DocumentAccess
 		features.put(TYPES, types);
 
 		// Mention reference weights
-		NumberFormat f = NumberFormat.getInstance();
+		NumberFormat f = NumberFormat.getNumberInstance(Locale.GERMAN); // force European locale to use dot as decimal separator
 		f.setRoundingMode(RoundingMode.UP);
 		f.setMaximumFractionDigits(2);
 		f.setMinimumFractionDigits(2);
@@ -476,67 +476,81 @@ public class CoNLLFormat implements DocumentAccess
 			List<AnnotatedWord> anns = structure.getTextualOrder();
 			for (AnnotatedWord word : anns)
 			{
-				Map<String, String> features = Splitter.on("|").withKeyValueSeparator("=").split(word.getFeats());
-
-				if (features.containsKey(OFFSETS) && !features.get(OFFSETS).isEmpty())
+				try
 				{
-					List<Mention> mentions = Arrays.stream(features.get(SPANS).split(","))
-							.map(s -> s.split("-"))
-							.map(as -> Pair.of(Integer.valueOf(as[0]), Integer.valueOf(as[1])))
-							.map(p -> IntStream.range(p.getLeft(), p.getRight())
-									.mapToObj(anns::get)
-									.collect(toList()))
-							//.map(tokens -> new Mention(structure, tokens, tokens.indexOf(word)))
-							.map(word::addMention)
-							.collect(toList());
+					Map<String, String> features = Splitter.on("|").withKeyValueSeparator("=").split(word.getFeats());
 
-					List<Pair<Long, Long>> offsets = Arrays.stream(features.get(OFFSETS).split(","))
-							.map(s -> s.split("-"))
-							.map(as -> Pair.of(Long.valueOf(as[0]), Long.valueOf(as[1])))
-							.collect(toList());
-
-					IntStream.range(0, mentions.size()).forEach(i -> offsets2Mentions.put(offsets.get(i), mentions.get(i)));
-
-					if (features.containsKey(REFERENCES) && !features.get(REFERENCES).isEmpty())
+					if (features.containsKey(OFFSETS) && !features.get(OFFSETS).isEmpty())
 					{
-						// Create Entity and Candidate objects from references
-						List<List<String>> references = Arrays.stream(features.get(REFERENCES).split(","))
-								.map(v -> Arrays.asList(v.split("-")))
-								.collect(toList());
-
-						List<List<Type>> types = Arrays.stream(features.get(TYPES).split(","))
-								.map(v -> Arrays.stream(v.split("-"))
-										.map(Type::valueOf)
+						List<Mention> mentions = Arrays.stream(features.get(SPANS).split(",", -1))
+								.map(s -> s.split("-"))
+								.map(as -> Pair.of(Integer.valueOf(as[0]), Integer.valueOf(as[1])))
+								.map(p -> IntStream.range(p.getLeft(), p.getRight())
+										.mapToObj(anns::get)
 										.collect(toList()))
+								//.map(tokens -> new Mention(structure, tokens, tokens.indexOf(word)))
+								.map(word::addMention)
 								.collect(toList());
 
-						List<List<Double>> weights = Arrays.stream(features.get(WEIGHTS).split(","))
-								.map(v -> Arrays.stream(v.split("-"))
-										.map(Double::valueOf)
-										.collect(toList()))
+						List<Pair<Long, Long>> offsets = Arrays.stream(features.get(OFFSETS).split(",", -1))
+								.map(s -> s.split("-"))
+								.map(as -> Pair.of(Long.valueOf(as[0]), Long.valueOf(as[1])))
 								.collect(toList());
 
-						IntStream.range(0, references.size())
-								.forEach(i -> IntStream.range(0, references.get(i).size())
-										.forEach(j -> {
-											String r = references.get(i).get(j);
-											Type t = types.get(i).get(j);
-											double w = weights.get(i).get(j);
-											Entity e = new Entity(word.getForm() + "_" + r, r, t, w);
-											word.addCandidate(e, mentions.get(i));
-										}));
+						IntStream.range(0, mentions.size()).forEach(i -> offsets2Mentions.put(offsets.get(i), mentions.get(i)));
+
+						if (features.containsKey(REFERENCES) && !features.get(REFERENCES).isEmpty())
+						{
+							// Create Entity and Candidate objects from references
+							List<List<String>> references = Arrays.stream(features.get(REFERENCES).split(",", -1))
+									.map(v -> Arrays.asList(v.split("-")))
+									.collect(toList());
+
+							List<List<Type>> types = Arrays.stream(features.get(TYPES).split(",", -1))
+									.map(v -> Arrays.stream(v.split("-"))
+											.map(s -> s.isEmpty() ? "Other" : s)
+											.map(Type::valueOf)
+											.collect(toList()))
+									.collect(toList());
+
+							List<List<Double>> weights = Arrays.stream(features.get(WEIGHTS).split(",", -1))
+									.map(v -> Arrays.stream(v.split("-"))
+											.map(s -> s.isEmpty() ? "0.00" : s)
+											.map(Double::valueOf)
+											.collect(toList()))
+									.collect(toList());
+
+							IntStream.range(0, references.size())
+									.forEach(i -> IntStream.range(0, references.get(i).size())
+											.forEach(j -> {
+												String r = references.get(i).get(j);
+												Type t = types.get(i).get(j);
+												double w = weights.get(i).get(j);
+												Entity e = new Entity(word.getForm() + "_" + r, r, t, w);
+												word.addCandidate(e, mentions.get(i));
+											}));
+						}
+
+						if (features.containsKey(COREFERENCES) && !features.get(COREFERENCES).isEmpty())
+						{
+							String[] elems = features.get(COREFERENCES).split(",", -1);
+							List<Optional<Pair<Long, Long>>> coreferences = Arrays.stream(elems)
+									.map(v -> v.split("-", -1))
+									.map(a -> a.length == 2 ? Pair.of(Long.valueOf(a[0]), Long.valueOf(a[1])) : null)
+									.map(Optional::ofNullable)
+									.collect(toList());
+
+							IntStream.range(0, coreferences.size())
+									.filter(i -> coreferences.get(i).isPresent())
+									.forEach(i -> mentions2Coref.put(mentions.get(i), coreferences.get(i)));
+						}
 					}
-
-					if (features.containsKey(COREFERENCES) && !features.get(COREFERENCES).isEmpty())
-					{
-						List<Optional<Pair<Long, Long>>> coreferences = Arrays.stream(features.get(COREFERENCES).split(","))
-								.map(v -> v.split("-"))
-								.map(a -> a.length == 2 ? Pair.of(Long.valueOf(a[0]), Long.valueOf(a[1])) : null)
-								.map(Optional::ofNullable)
-								.collect(toList());
-
-						IntStream.range(0, mentions.size()).forEach(i -> mentions2Coref.put(mentions.get(i), coreferences.get(i)));
-					}
+				}
+				catch (Exception e)
+				{
+					log.error("Failed to parse word " + word + ": e");
+					e.printStackTrace();
+					throw(e);
 				}
 			}
 		}

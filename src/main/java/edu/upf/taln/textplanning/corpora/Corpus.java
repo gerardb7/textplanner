@@ -88,5 +88,6 @@ public interface Corpus
 	long getEntityCount(String item);
 	long getEntityDocumentCount(String entity);
 	long getFormEntityCount(String form, String entity);
+	long getFormCount(String form);
 	long getNumDocs();
 }

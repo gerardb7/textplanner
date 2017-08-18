@@ -96,6 +96,15 @@ public class FreqsFile implements Corpus
 	}
 
 	@Override
+	public long getFormCount(String form)
+	{
+		if (!form_sense_counts.containsKey(form))
+			log.warn("No counts for form " + form);
+
+		return form_sense_counts.getOrDefault(form, new HashMap<>()).values().stream().mapToLong(l -> l).sum();
+	}
+
+	@Override
 	public long getNumDocs()
 	{
 		return numDocs;

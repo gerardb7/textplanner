@@ -88,7 +88,7 @@ public class ConLLDriver
 		private boolean debug = false;
 	}
 
-	private static final String input_suffix = "_sem_stanford.conll";
+	private static final String input_suffix = "_sem_babel.conll";
 	private final static Logger log = LoggerFactory.getLogger(ConLLDriver.class);
 
 	/**
@@ -108,7 +108,7 @@ public class ConLLDriver
 		Corpus corpus = new SEWSolr(solrUrl);
 		WeightingFunction corpusMetric = new TFIDF(corpus);
 		EntitySimilarity esim = new SensEmbed(embeddingsFile);
-		return new TextPlanner(corpusMetric, esim, new BabelNetAnnotator());
+		return new TextPlanner(corpus, corpusMetric, esim, new BabelNetAnnotator());
 	}
 
 	/**
@@ -124,7 +124,7 @@ public class ConLLDriver
 		Corpus corpus = new FreqsFile(frequenciesFile);
 		WeightingFunction corpusMetric = new TFIDF(corpus);
 		EntitySimilarity esim = new SensEmbed(embeddingsFile);
-		return new TextPlanner(corpusMetric, esim, new BabelNetAnnotator());
+		return new TextPlanner(corpus, corpusMetric, esim, new BabelNetAnnotator());
 	}
 
 	@SuppressWarnings("WeakerAccess")
@@ -153,7 +153,7 @@ public class ConLLDriver
 		try
 		{
 			CoNLLFormat conll = new CoNLLFormat();
-			List<ContentPattern> plan = p.planAndDisambiguate(graphs, options);
+			List<ContentPattern> plan = p.planAndDisambiguatePageRank(graphs, options);
 			return conll.writePatterns(plan);
 		}
 		catch (Exception e)
@@ -190,11 +190,11 @@ public class ConLLDriver
 
 			String planConll = ConLLDriver.runPlanner(planner, options, files);
 
-			Path outputFile = Paths.get(System.getProperty("user.dir") + File.separator + "plan.conll");
+			Path outputFile = Paths.get(System.getProperty("user.dir") + File.separator + "planPageRank.conll");
 			try (PrintWriter outs = new PrintWriter(outputFile.toString()))
 			{
 				outs.print(planConll);
-				log.info("Created plan file " + outputFile);
+				log.info("Created planPageRank file " + outputFile);
 			}
 
 			if (options.generateStats)
@@ -209,7 +209,7 @@ public class ConLLDriver
 		}
 		catch (Exception e)
 		{
-			log.info("Failed to plan text");
+			log.info("Failed to planPageRank text");
 			e.printStackTrace();
 			throw new RuntimeException(e);
 		}

@@ -2,7 +2,9 @@ package edu.upf.taln.textplanning;
 
 import Jama.Matrix;
 import com.google.common.base.Stopwatch;
+import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.disambiguation.EntityDisambiguator;
+import edu.upf.taln.textplanning.optimization.MultiObjectiveOptimizationRanking;
 import edu.upf.taln.textplanning.pattern.PatternExtraction;
 import edu.upf.taln.textplanning.ranking.PowerIterationRanking;
 import edu.upf.taln.textplanning.ranking.RankingMatrices;
@@ -23,12 +25,13 @@ import java.util.stream.IntStream;
 
 
 /**
- * Text planner class. Given a set of references to entities and a set of documents, generates a text plan
+ * Text planner class. Given a set of references to entities and a set of documents, generates a text planPageRank
  * containing contents in the documents relevant to the references.
  * Immutable class.
  */
 public final class TextPlanner
 {
+	private final Corpus corpus;
 	private final WeightingFunction weighting;
 	private final EntitySimilarity esim;
 	private final EntityDisambiguator disambiguator;
@@ -65,19 +68,20 @@ public final class TextPlanner
 	 * @param s similarity function for entities
 	 * @param d disambiguation for entities
 	 */
-	public TextPlanner(WeightingFunction w, EntitySimilarity s, EntityDisambiguator d)
+	public TextPlanner(Corpus c, WeightingFunction w, EntitySimilarity s, EntityDisambiguator d)
 	{
+		corpus = c;
 		weighting = w;
 		esim = s;
 		disambiguator = d;
 	}
 
 	/**
-	 * Generates a text plan from a list of structures, e.g. relations in a KB or extracted from a text
+	 * Generates a text planPageRank from a list of structures, e.g. relations in a KB or extracted from a text
 	 * @param structures initial set of structures
 	 * @return list of patterns
 	 */
-	public List<ContentPattern> plan(Set<LinguisticStructure> structures, Options o)
+	public List<ContentPattern> planPageRank(Set<LinguisticStructure> structures, Options o)
 	{
 		try
 		{
@@ -146,26 +150,20 @@ public final class TextPlanner
 	}
 
 	/**
-	 * Performs EL/WSD, coreference on a set of documents, and creates a text plan from the resulting disambiguated
+	 * Performs EL/WSD, coreference on a set of documents, and creates a text planPageRank from the resulting disambiguated
 	 * structures.
 	 * @param structures initial set of structures
 	 * @return list of patterns
 	 */
-	public List<ContentPattern> planAndDisambiguate(Set<LinguisticStructure> structures, Options inOptions)
+	public List<ContentPattern> planAndDisambiguatePageRank(Set<LinguisticStructure> structures, Options inOptions)
 	{
 		try
 		{
 			log.info("Planning started");
 
-			// 1- Annotate structures with candidate entities
-			log.info("Annotating candidates");
-			Stopwatch timer = Stopwatch.createStarted();
-			disambiguator.annotateCandidates(structures);
-			log.info("WordAnnotation took " + timer.stop());
-
-			// 2- Create candidate ranking matrix
+			// 1- Create candidate ranking matrix
 			log.info("Creating ranking matrix");
-			timer.reset(); timer.start();
+			Stopwatch timer = Stopwatch.createStarted();
 			List<Candidate> candidates = structures.stream()
 					.flatMap(s -> s.vertexSet().stream()
 							.flatMap(n -> n.getMentions().stream()
@@ -177,7 +175,7 @@ public final class TextPlanner
 					RankingMatrices.createCandidateRankingMatrix(candidates, weighting, sim, inOptions);
 			log.info("Creation of ranking matrix took " + timer.stop());
 
-			// 3- Rank candidates using power iteration method
+			// 2- Rank candidates using power iteration method
 			log.info("Candidate ranking");
 			timer.reset(); timer.start();
 			Matrix finalDistribution = PowerIterationRanking.run(rankingMatrix, inOptions.rankingStopThreshold);
@@ -186,25 +184,25 @@ public final class TextPlanner
 			IntStream.range(0, ranking.length)
 					.forEach(i -> candidates.get(i).setValue(ranking[i])); // assign ranking values to candidates
 
-			// 4- Use ranking to disambiguate candidates in structures and weight nodes
+			// 3- Use ranking to disambiguate candidates in structures and weight nodes
 			log.info("Candidate disambiguation");
 			timer.reset(); timer.start();
 			disambiguator.disambiguate(structures);
 			log.info("Disambiguation took " + timer.stop());
 
-			// 5- Create content graph
+			// 4- Create content graph
 			log.info("Creating content graph");
 			timer.reset(); timer.start();
 			ContentGraph contentGraph = ContentGraphCreator.createContentGraph(structures);
 			log.info("Graph creation took " + timer.stop());
 
-			// 6- Extract patterns from content graph
+			// 5- Extract patterns from content graph
 			log.info("Extracting patterns");
 			timer.reset(); timer.start();
 			List<ContentPattern> patterns = PatternExtraction.extract(contentGraph, inOptions.numPatterns, inOptions.patternLambda);
 			log.info("Pattern extraction took " + timer.stop());
 
-			// 7- Sort the trees into a discourse-optimized list
+			// 6- Sort the trees into a discourse-optimized list
 			log.info("Structuring patterns");
 			timer.reset(); timer.start();
 			//patterns = DiscoursePlanner.structurePatterns(patterns, esim);
@@ -231,7 +229,7 @@ public final class TextPlanner
 
 
 	/**
-	 * Performs EL/WSD, coreference on a set of documents, and creates a text plan from the resulting disambiguated
+	 * Performs EL/WSD, coreference on a set of documents, and creates a text planPageRank from the resulting disambiguated
 	 * structures.
 	 * @param structures initial set of structures
 	 * @return list of patterns
@@ -242,40 +240,34 @@ public final class TextPlanner
 		{
 			log.info("Planning started");
 
-			// 1- Annotate structures with candidate entities
-			log.info("Annotating candidates");
-			Stopwatch timer = Stopwatch.createStarted();
-			disambiguator.annotateCandidates(structures);
-			log.info("WordAnnotation took " + timer.stop());
-
-			// 2- Create candidate ranking matrix
+			// 1- Create candidate ranking matrix
 			log.info("Ranking candidates");
-			timer.reset(); timer.start();
+			Stopwatch timer = Stopwatch.createStarted();
 			weighting.setContents(structures);
 			CandidateSimilarity sim = new CandidateSimilarity(esim);
 			// todo sort out access to TFIDF or corpus class
-			//MultiObjectiveOptimizationRanking.optimize(structures, weighting, sim, weighting);
+			MultiObjectiveOptimizationRanking.optimize(structures, corpus, sim, weighting);
 			log.info("Ranking took " + timer.stop());
 
-			// 3- Use ranking to disambiguate candidates in structures and weight nodes
+			// 2- Use ranking to disambiguate candidates in structures and weight nodes
 			log.info("Candidate disambiguation");
 			timer.reset(); timer.start();
 			disambiguator.disambiguate(structures);
 			log.info("Disambiguation took " + timer.stop());
 
-			// 4- Create content graph
+			// 3- Create content graph
 			log.info("Creating content graph");
 			timer.reset(); timer.start();
 			ContentGraph contentGraph = ContentGraphCreator.createContentGraph(structures);
 			log.info("Graph creation took " + timer.stop());
 
-			// 5- Extract patterns from content graph
+			// 4- Extract patterns from content graph
 			log.info("Extracting patterns");
 			timer.reset(); timer.start();
 			List<ContentPattern> patterns = PatternExtraction.extract(contentGraph, inOptions.numPatterns, inOptions.patternLambda);
 			log.info("Pattern extraction took " + timer.stop());
 
-			// 6- Sort the trees into a discourse-optimized list
+			// 5- Sort the trees into a discourse-optimized list
 			log.info("Structuring patterns");
 			timer.reset(); timer.start();
 			//patterns = DiscoursePlanner.structurePatterns(patterns, esim);

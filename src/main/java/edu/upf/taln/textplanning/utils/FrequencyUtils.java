@@ -6,6 +6,7 @@ import edu.upf.taln.textplanning.corpora.FreqsFile;
 import edu.upf.taln.textplanning.input.CoNLLFormat;
 import edu.upf.taln.textplanning.structures.AnnotatedWord;
 import edu.upf.taln.textplanning.structures.LinguisticStructure;
+import edu.upf.taln.textplanning.structures.Mention;
 import edu.upf.taln.textplanning.utils.CMLCheckers.PathConverter;
 import edu.upf.taln.textplanning.utils.CMLCheckers.PathToExistingFolder;
 import edu.upf.taln.textplanning.utils.CMLCheckers.PathToNewFile;
@@ -75,10 +76,13 @@ public class FrequencyUtils
 				.flatMap(List::stream)
 				.collect(Collectors.toSet());
 
+		// The list of forms should contain all mentions annotated by coref & NER + nominal groups + a mention for each single word
 		List<String> forms = structures.stream()
 				.map(LinguisticStructure::vertexSet)
 				.flatMap(Set::stream)
-				.map(AnnotatedWord::getForm)
+				.map(AnnotatedWord::getMentions)
+				.flatMap(Set::stream)
+				.map(Mention::getSurfaceForm)
 				.distinct()
 				.collect(Collectors.toList());
 

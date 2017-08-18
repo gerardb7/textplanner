@@ -1,10 +1,10 @@
 package edu.upf.taln.textplanning.optimization;
 
 import cc.mallet.optimize.Optimizable;
+import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.structures.Entity;
 import edu.upf.taln.textplanning.structures.Mention;
-import edu.upf.taln.textplanning.weighting.TFIDF;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
@@ -29,16 +29,31 @@ public class CandidateOptimizable implements Optimizable.ByGradientValue
 	private final Map<Mention, List<Candidate>> mentionsToCandidates;
 	private final Map<Entity, List<Candidate>> entitiesToCandidates;
 
-	public CandidateOptimizable(Function function, List<Candidate> candidates, TFIDF frequency)
+	public CandidateOptimizable(Function function, List<Candidate> candidates, Corpus corpus)
 	{
 		this.f = function;
 		this.candidates.addAll(candidates);
 
-		// Initialize parameter vector with frequency priors
+		// Initialize parameter vector with corpus priors
+		// todo consider using a softmax for the prior distribution
 		params = candidates.stream()
-				.map(Candidate::getEntity)
-				.map(Entity::getId)
-				.mapToDouble(frequency::getFrequency).toArray();
+				.mapToDouble(c -> {
+					// mention form to consider is this one unless it has been marked to have a coreferent
+					Mention mention = c.getMention().getCoref().orElse(c.getMention());
+					String form = mention.getSurfaceForm();
+
+					// get number of times form is found in the corpus
+					long total_count = corpus.getFormCount(form);
+					if (total_count == 0)
+						return 0.0;
+
+					// get number of times form is annotated with entity in the corpus
+					long entity_count = corpus.getFormEntityCount(form, c.getEntity().getId());
+
+					// return ratio of annotations with this sense respect to total
+					return (double) entity_count / (double) total_count;
+				})
+				.toArray();
 
 		// Create a dictionary mapping mentions to all its candidates
 		mentionsToCandidates = candidates.stream()
