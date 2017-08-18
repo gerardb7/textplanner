@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning;
 import Jama.Matrix;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.corpora.Corpus;
+import edu.upf.taln.textplanning.disambiguation.BabelNetAnnotator;
 import edu.upf.taln.textplanning.disambiguation.EntityDisambiguator;
 import edu.upf.taln.textplanning.optimization.MultiObjectiveOptimizationRanking;
 import edu.upf.taln.textplanning.pattern.PatternExtraction;
@@ -86,6 +87,8 @@ public final class TextPlanner
 		try
 		{
 			log.info("Planning started");
+			// todo remove after re-processing test inputs
+			BabelNetAnnotator.propagateCandidatesCoreference(structures);
 
 			// 1- Create entity ranking matrix
 			log.info("Creating ranking matrix");
@@ -160,6 +163,8 @@ public final class TextPlanner
 		try
 		{
 			log.info("Planning started");
+			// todo remove after re-processing test inputs
+			BabelNetAnnotator.propagateCandidatesCoreference(structures);
 
 			// 1- Create candidate ranking matrix
 			log.info("Creating ranking matrix");

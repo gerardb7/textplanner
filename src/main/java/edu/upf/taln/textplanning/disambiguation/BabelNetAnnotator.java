@@ -121,7 +121,35 @@ public class BabelNetAnnotator implements EntityDisambiguator
 						label2Mentions.get(l).forEach(m -> // for each mention with label l
 								m.getHead().addCandidate(e, m)))); // assign the pair (m,e) to the head node of m
 
+		// Take into account coreference chains
+		propagateCandidatesCoreference(structures);
+
 		reportStats(structures, true);
+	}
+
+	/**
+	 * For each mention mark as coreferring with an antecedent mention (representative of the chain), replace its
+	 * candidate entities with the candidates of the antecedent.
+	 */
+	public static void propagateCandidatesCoreference(Collection<LinguisticStructure> structures)
+	{
+		structures.forEach(s ->
+				s.vertexSet().forEach(w -> {
+					w.getMentions().stream()
+							.filter(m -> m.getCoref().isPresent())
+							.forEach(m -> {
+								// Remove candidates for mention
+								AnnotatedWord head = m.getHead();
+								head.getCandidates(m).forEach(head::removeCandidate);
+
+								// Replace with candidates of antecedent
+								@SuppressWarnings("ConstantConditions") Mention antecedent = m.getCoref().get();
+								antecedent.getHead().getCandidates(antecedent).stream()
+										.map(Candidate::getEntity)
+										.forEach(e -> head.addCandidate(e, m));
+							});
+				}));
+
 	}
 
 	/**

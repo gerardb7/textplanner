@@ -102,9 +102,11 @@ public final class AnnotatedWord
 
 	public void addCandidate(Entity e, Mention m)
 	{
-		mentions.add(m);
+		mentions.add(m); // does nothing if m already in mentions
 		candidates.add(new Candidate(m, e));
 	}
+
+	public void removeCandidate(Candidate c) { candidates.remove(c); }
 
 	@Override
 	public String toString()
