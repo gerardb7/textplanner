@@ -85,6 +85,10 @@ public interface Corpus
 		}
 	}
 
+	boolean hasEntity(String entity) throws Exception;
+	boolean hasEntityDocument(String entity);
+	boolean hasFormEntity(String form, String entity);
+	boolean hasForm(String form);
 	long getEntityCount(String item);
 	long getEntityDocumentCount(String entity);
 	long getFormEntityCount(String form, String entity);

@@ -5,7 +5,10 @@ import edu.upf.taln.textplanning.structures.AnnotatedWord;
 import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.structures.Entity;
 import edu.upf.taln.textplanning.structures.LinguisticStructure;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.text.NumberFormat;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -19,6 +22,7 @@ public final class TFIDF implements WeightingFunction
 {
 	private final Corpus corpus;
 	private final Map<String, Double> tfidf = new HashMap<>();
+	private final static Logger log = LoggerFactory.getLogger(TFIDF.class);
 
 	public TFIDF(Corpus inCorpus)
 	{
@@ -29,6 +33,8 @@ public final class TFIDF implements WeightingFunction
 	public void setContents(Collection<LinguisticStructure> contents)
 	{
 		tfidf.clear();
+
+
 
 		// Collect frequency of senses of nominal mentions in the contents
 		Map<String, Long> freqs = contents.stream()
@@ -45,14 +51,24 @@ public final class TFIDF implements WeightingFunction
 				.collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
 		// Calculate tf*idf values of the collection relative to the corpus
-		for (String i : freqs.keySet())
+		int num_defined = 0;
+		for (String ref : freqs.keySet())
 		{
-			long f = freqs.containsKey(i) ? freqs.get(i) : 0;
+			long f = freqs.get(ref);
 			double tf = 1 + Math.log(f); // logarithmically scaled
 			//double tf = f; //0.5 + 0.5*(f/maxFreq); // augmented frequency
-			double idf = Math.log(corpus.getNumDocs() / (1 + corpus.getEntityDocumentCount(i)));
-			tfidf.put(i, tf * idf);
+			double idf = Math.log(corpus.getNumDocs() / (1 + corpus.getEntityDocumentCount(ref)));
+			tfidf.put(ref, tf * idf);
+
+			if (corpus.hasEntityDocument(ref))
+				++num_defined;
 		}
+
+		NumberFormat format = NumberFormat.getNumberInstance(Locale.GERMAN);
+		format.setMaximumFractionDigits(2);
+		String ratio = format.format((double) num_defined / (double) freqs.keySet().size());
+		log.info(   "Corpus has frequencies for " + num_defined + " references out of " + freqs.keySet().size() +
+					" (" + ratio + ")");
 
 		// Normalize values to [0..1]
 		double maxTfidf = tfidf.values().stream().mapToDouble(d -> d).max().orElse(1.0);

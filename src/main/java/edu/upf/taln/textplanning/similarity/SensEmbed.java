@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.similarity;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
+import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.structures.Entity;
 import edu.upf.taln.textplanning.utils.EmbeddingUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -11,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalDouble;
 import java.util.stream.Collectors;
 
 /**
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
 public class SensEmbed implements EntitySimilarity
 {
 	private final ImmutableMap<String, double[]> vectors;
+	private final double avg_sim;
 	private final static Logger log = LoggerFactory.getLogger(SensEmbed.class);
 
 	public SensEmbed(Path inEmbeddingsPath) throws Exception
@@ -39,6 +42,8 @@ public class SensEmbed implements EntitySimilarity
 		ImmutableMap.Builder<String, double[]> builder = ImmutableMap.builder();
 		vectors = builder.putAll(avgEmbeddings).build();
 		log.info("Loading took " + timer.stop());
+
+		avg_sim = computeAverageSimilarity();
 	}
 
 	@Override
@@ -54,12 +59,12 @@ public class SensEmbed implements EntitySimilarity
 	}
 
 	@Override
-	public double computeSimilarity(Entity e1, Entity e2)
+	public OptionalDouble computeSimilarity(Entity e1, Entity e2)
 	{
 		if (e1 == e2 || e1.getId().equals(e2.getId()))
-			return 1.0;
+			return OptionalDouble.of(1.0);
 		if (!isDefinedFor(e1, e2))
-			return 0.0;
+			return OptionalDouble.empty(); // todo consider throwing an exception or returning an optional
 
 		double[] v1 = vectors.get(e1.getId());
 		double[] v2 = vectors.get(e2.getId());
@@ -78,8 +83,26 @@ public class SensEmbed implements EntitySimilarity
 		double cosineSimilarity = dotProduct / magnitude; // range (-1,1)
 		// Negative values indicate senses cooccur less than expected by chance
 		// They seem to be unreliable, so replace with 0 (see https://web.stanford.edu/~jurafsky/slp3/15.pdf page 7)
-		return Math.max(0.0, cosineSimilarity);
+		return OptionalDouble.of(Math.max(0.0, cosineSimilarity));
 		//double distanceMetric = Math.acos(cosineSimilarity) / Math.PI; // range (0,1)
 		//return (cosineSimilarity + 1.0) / 2.0;
+	}
+
+	@Override
+	public double getAverageSimiliarity()
+	{
+		return avg_sim;
+	}
+
+	private double computeAverageSimilarity()
+	{
+		return vectors.keySet().stream()
+				.map(r1 -> vectors.keySet().stream()
+						.filter(r2 -> !r1.equals(r2))
+						.map(r2 -> computeSimilarity(new Entity(r1, r1, Candidate.Type.Other), new Entity(r2, r2, Candidate.Type.Other)))
+						.mapToDouble(OptionalDouble::getAsDouble)
+						.average())
+				.mapToDouble(OptionalDouble::getAsDouble)
+				.average().orElse(0.0);
 	}
 }

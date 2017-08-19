@@ -87,8 +87,6 @@ public final class TextPlanner
 		try
 		{
 			log.info("Planning started");
-			// todo remove after re-processing test inputs
-			BabelNetAnnotator.propagateCandidatesCoreference(structures);
 
 			// 1- Create entity ranking matrix
 			log.info("Creating ranking matrix");
@@ -244,6 +242,8 @@ public final class TextPlanner
 		try
 		{
 			log.info("Planning started");
+			// todo remove after re-processing test inputs
+			BabelNetAnnotator.propagateCandidatesCoreference(structures);
 
 			// 1- Create candidate ranking matrix
 			log.info("Ranking candidates");

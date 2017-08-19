@@ -54,6 +54,6 @@ public final class PatternSimilarity
 	 */
 	public double getSimilarity(Entity e1, Entity e2)
 	{
-		return sim.computeSimilarity(e1, e2);
+		return sim.computeSimilarity(e1, e2).orElse(sim.getAverageSimiliarity());
 	}
 }

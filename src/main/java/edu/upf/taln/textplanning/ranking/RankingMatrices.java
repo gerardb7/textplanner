@@ -58,7 +58,7 @@ public class RankingMatrices
 		// Create *non-symmetric non-negative* similarity matrix from sim function and links in content graph
 		Matrix m = new Matrix(entities.stream()
 				.map(e1 -> entities.stream()
-						.mapToDouble(e2 -> similarity.computeSimilarity(e1, e2))
+						.mapToDouble(e2 -> similarity.computeSimilarity(e1, e2).orElse(similarity.getAverageSimiliarity()))
 						.map(v -> v < o.simLowerBound ? 0.0 : v)
 						.toArray())
 				.toArray(double[][]::new));
@@ -95,7 +95,7 @@ public class RankingMatrices
 	                                                  CandidateSimilarity similarity, TextPlanner.Options o)
 	{
 
-		int n = candidates.size();
+		int num_candidates = candidates.size();
 		List<Entity> entities = candidates.stream()
 				.map(Candidate::getEntity)
 				.distinct()
@@ -104,13 +104,13 @@ public class RankingMatrices
 
 		// Create *strictly positive* relevance row vector by applying the weighting function to the set of entities
 		double[] r = entities.stream()
-				.map(Entity::getId)
+				.map(Entity::getReference)
 				.mapToDouble(relevance::weight)
 				.map(w -> w = Math.max(o.minRelevance, (1.0/num_entities)*w)) // Laplace smoothing to avoid non-positive values
 				.toArray();
 
 		double accum_r = Arrays.stream(r).sum();
-		IntStream.range(0, n).forEach(i -> r[i] /= accum_r); // normalize vector with sum of row
+		IntStream.range(0, num_entities).forEach(i -> r[i] /= accum_r); // normalize vector with sum of row
 
 		// Create *strictly positive* relevance row vector by applying the weighting function to the set of entities
 		double[] t = candidates.stream()
@@ -125,7 +125,7 @@ public class RankingMatrices
 				.toArray();
 
 		double accum_t = Arrays.stream(t).sum();
-		IntStream.range(0, n).forEach(i -> t[i] /= accum_t); // normalize vector with sum of rows
+		IntStream.range(0, num_candidates).forEach(i -> t[i] /= accum_t); // normalize vector with sum of rows
 
 		// Create *non-symmetric non-negative* similarity matrix from sim function and links in content graph
 		Matrix m = new Matrix(candidates.stream()

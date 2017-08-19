@@ -25,6 +25,7 @@ public final class LinguisticStructure extends DirectedAcyclicGraph<AnnotatedWor
 	{
 		super(edgeClass);
 		this.d = d;
+		d.addStructure(this);
 	}
 
 	public Document getDocument() { return d; }

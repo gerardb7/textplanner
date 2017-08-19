@@ -61,6 +61,30 @@ public final class SEWSolr implements Corpus
 		}
 	}
 
+	@Override
+	public boolean hasEntity(String entity)
+	{
+		throw new RuntimeException("Method not implemented yet");
+	}
+
+	@Override
+	public boolean hasEntityDocument(String entity)
+	{
+		throw new RuntimeException("Method not implemented yet");
+	}
+
+	@Override
+	public boolean hasFormEntity(String form, String entity)
+	{
+		throw new RuntimeException("Method not implemented yet");
+	}
+
+	@Override
+	public boolean hasForm(String form)
+	{
+		throw new RuntimeException("Method not implemented yet");
+	}
+
 	@Override public long getEntityCount(String entity) { return 0; }
 	@Override public long getFormEntityCount(String form, String entity) {  return 0; }
 	@Override public long getFormCount(String form) { return 0; }

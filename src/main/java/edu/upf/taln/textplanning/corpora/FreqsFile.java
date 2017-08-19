@@ -71,36 +71,50 @@ public class FreqsFile implements Corpus
 	}
 
 	@Override
+	public boolean hasEntity(String entity)
+	{
+		return sense_counts.containsKey(entity);
+	}
+
+	@Override
+	public boolean hasEntityDocument(String entity)
+	{
+		return sense_doc_counts.containsKey(entity);
+	}
+
+	@Override
+	public boolean hasFormEntity(String form, String entity)
+	{
+		return form_sense_counts.containsKey(form) && form_sense_counts.get(form).containsKey(entity);
+	}
+
+	@Override
+	public boolean hasForm(String form)
+	{
+		return form_sense_counts.containsKey(form);
+	}
+
+	@Override
 	public long getEntityCount(String entity)
 	{
-		if (!sense_counts.containsKey(entity))
-			log.warn("No counts for entity " + entity);
 		return sense_counts.getOrDefault(entity, 0L);
 	}
 
 	@Override
 	public long getEntityDocumentCount(String entity)
 	{
-		if (!sense_doc_counts.containsKey(entity))
-			log.warn("No document counts for entity " + entity);
 		return sense_doc_counts.getOrDefault(entity, 0L);
 	}
 
 	@Override
 	public long getFormEntityCount(String form, String entity)
 	{
-		if (!form_sense_counts.containsKey(form) || !form_sense_counts.get(form).containsKey(entity))
-			log.warn("No counts for form " + form + " and entity " + entity);
-
 		return form_sense_counts.getOrDefault(form, new HashMap<>()).getOrDefault(entity, 0L);
 	}
 
 	@Override
 	public long getFormCount(String form)
 	{
-		if (!form_sense_counts.containsKey(form))
-			log.warn("No counts for form " + form);
-
 		return form_sense_counts.getOrDefault(form, new HashMap<>()).values().stream().mapToLong(l -> l).sum();
 	}
 

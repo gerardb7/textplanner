@@ -10,10 +10,7 @@ import org.junit.Test;
 
 import java.math.RoundingMode;
 import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -48,14 +45,20 @@ public class PowerIterationRankingTest
 		@Override public boolean isDefinedFor(Entity item) { return true; }
 		@Override public boolean isDefinedFor(Entity item1, Entity item2) {	return true; }
 
-		@Override public double computeSimilarity(Entity item1, Entity item2)
+		@Override public OptionalDouble computeSimilarity(Entity item1, Entity item2)
 		{
 			int i1 = Integer.parseInt(item1.getId());
 			int i2 = Integer.parseInt(item2.getId());
 
 			double k = counter;
 			double d = (double) Math.abs(i1 - i2);
-			return (k-d)/k ;
+			return OptionalDouble.of((k-d)/k);
+		}
+
+		@Override
+		public double getAverageSimiliarity()
+		{
+			return 0;
 		}
 	}
 
