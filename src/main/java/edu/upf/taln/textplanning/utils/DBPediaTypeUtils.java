@@ -2,7 +2,7 @@ package edu.upf.taln.textplanning.utils;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
-import edu.upf.taln.textplanning.input.CoNLLFormat;
+import edu.upf.taln.textplanning.input.CoNLLReader;
 import edu.upf.taln.textplanning.structures.AnnotatedWord;
 import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.structures.Entity;
@@ -27,7 +27,7 @@ public class DBPediaTypeUtils
 	private static void getTypes(Path structuresPath, String extension, Path o) throws IOException
 	{
 		log.info("Reading structures");
-		CoNLLFormat conll = new CoNLLFormat();
+		CoNLLReader conll = new CoNLLReader();
 		Set<LinguisticStructure> structures = Files.walk(structuresPath.toAbsolutePath())
 				.filter(Files::isRegularFile)
 				.filter(p -> p.toString().endsWith(extension))

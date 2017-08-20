@@ -3,7 +3,7 @@ package edu.upf.taln.textplanning.utils;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import edu.upf.taln.textplanning.corpora.FreqsFile;
-import edu.upf.taln.textplanning.input.CoNLLFormat;
+import edu.upf.taln.textplanning.input.CoNLLReader;
 import edu.upf.taln.textplanning.structures.AnnotatedWord;
 import edu.upf.taln.textplanning.structures.LinguisticStructure;
 import edu.upf.taln.textplanning.structures.Mention;
@@ -57,7 +57,7 @@ public class FrequencyUtils
 	private static void getFrequenciesSubset(Path structuresPath, String extension, Path inputFile, Path outputFile) throws IOException
 	{
 		log.info("Reading structures");
-		CoNLLFormat conll = new CoNLLFormat();
+		CoNLLReader conll = new CoNLLReader();
 		Set<LinguisticStructure> structures = Files.walk(structuresPath.toAbsolutePath())
 				.filter(Files::isRegularFile)
 				.filter(p -> p.toString().endsWith(extension))

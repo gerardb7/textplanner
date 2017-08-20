@@ -35,8 +35,8 @@ public class CandidateSimilarity
 
 		if (d1 == d2)
 		{
-			int p1 = d1.getPosition(s1);
-			int p2 = d1.getPosition(s2);
+			int p1 = s1.getPosition();
+			int p2 = s2.getPosition();
 			int d = Math.abs(p1 - p2);
 
 			// linear relation

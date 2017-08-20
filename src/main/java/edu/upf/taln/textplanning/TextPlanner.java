@@ -91,7 +91,6 @@ public final class TextPlanner
 			// 1- Create entity ranking matrix
 			log.info("Creating ranking matrix");
 			Stopwatch timer = Stopwatch.createStarted();
-			timer.reset(); timer.start();
 			List<Entity> entities = structures.stream()
 					.flatMap(s -> s.vertexSet().stream()
 							.map(AnnotatedWord::getBestCandidate))
@@ -161,16 +160,21 @@ public final class TextPlanner
 		try
 		{
 			log.info("Planning started");
-			// todo remove after re-processing test inputs
+			// todo remove two lines below after re-processing test inputs
+			BabelNetAnnotator.discardSubsumedCandidates(structures);
 			BabelNetAnnotator.propagateCandidatesCoreference(structures);
+			if (BabelNetAnnotator.checkForUnreferencedCandidates(structures))
+				log.error("Unreferenced candidates found");
 
 			// 1- Create candidate ranking matrix
 			log.info("Creating ranking matrix");
 			Stopwatch timer = Stopwatch.createStarted();
 			List<Candidate> candidates = structures.stream()
 					.flatMap(s -> s.vertexSet().stream()
-							.flatMap(n -> n.getMentions().stream()
-									.flatMap(m -> n.getCandidates(m).stream())))
+							.filter(w -> w.getPOS().startsWith("N")) // todo turn nominal filtering this into an option/flag
+							.flatMap(w -> w.getMentions().stream()
+									.flatMap(m -> w.getCandidates(m).stream()
+											.filter(c -> this.corpus.getFormEntityCount(w.getForm(), c.getEntity().getReference()) > 0))))
 					.collect(Collectors.toList());
 			weighting.setContents(structures);
 			CandidateSimilarity sim = new CandidateSimilarity(esim);
@@ -242,8 +246,11 @@ public final class TextPlanner
 		try
 		{
 			log.info("Planning started");
-			// todo remove after re-processing test inputs
+			// todo remove two lines below after re-processing test inputs
+			BabelNetAnnotator.discardSubsumedCandidates(structures);
 			BabelNetAnnotator.propagateCandidatesCoreference(structures);
+			if (BabelNetAnnotator.checkForUnreferencedCandidates(structures))
+				log.error("Unreferenced candidates found");
 
 			// 1- Create candidate ranking matrix
 			log.info("Ranking candidates");

@@ -7,9 +7,12 @@ import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.structures.Entity;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -32,6 +35,8 @@ import java.util.stream.IntStream;
  */
 public class RankingMatrices
 {
+	private final static Logger log = LoggerFactory.getLogger(TextPlanner.class);
+
 	/**
 	 * Creates a stochastic matrix to rank a set of entities
 	 * @param entities entities to be ranked
@@ -94,7 +99,6 @@ public class RankingMatrices
 	public static Matrix createCandidateRankingMatrix(List<Candidate> candidates, WeightingFunction relevance,
 	                                                  CandidateSimilarity similarity, TextPlanner.Options o)
 	{
-
 		int num_candidates = candidates.size();
 		List<Entity> entities = candidates.stream()
 				.map(Candidate::getEntity)
@@ -128,13 +132,30 @@ public class RankingMatrices
 		IntStream.range(0, num_candidates).forEach(i -> t[i] /= accum_t); // normalize vector with sum of rows
 
 		// Create *non-symmetric non-negative* similarity matrix from sim function and links in content graph
-		Matrix m = new Matrix(candidates.stream()
-				.map(c1 -> candidates.stream()
-						.mapToDouble(c2 -> similarity.computeSimilarity(c1, c2))
-						.map(v -> v < o.simLowerBound ? 0.0 : v)
-						.toArray())
-				.toArray(double[][]::new));
+		log.info("Creating similarity matrix for " + num_candidates + " candidates");
+		AtomicLong counter = new AtomicLong(0);
+		long num_calculations = ((((long)num_candidates * (long)num_candidates) - num_candidates)  / 2) + num_candidates;
+		Matrix m = new Matrix(num_candidates, num_candidates);
+		IntStream.range(0, num_candidates).forEach(i ->
+				IntStream.range(i, num_candidates).forEach(j -> {
+					double sim = 1.0;
+					if (i != j)
+					{
+						Candidate c1 = candidates.get(i);
+						Candidate c2 = candidates.get(j);
+						sim = similarity.computeSimilarity(c1, c2);
+						if (sim < o.simLowerBound)
+							sim = 0.0;
+					}
+
+					m.set(i, j, sim);
+					m.set(j, i, sim);
+
+					if (counter.incrementAndGet() % 100000 == 0)
+						log.info(counter.get() + " out of " + num_calculations);
+				}));
 		normalize(m);
+		log.info("Done");
 
 		// Bias each row in m using relevance bias r and type bias t
 		// Prob i->j = a*r(j) + b*t(j) + (1.0-a-b)*m(i,j)

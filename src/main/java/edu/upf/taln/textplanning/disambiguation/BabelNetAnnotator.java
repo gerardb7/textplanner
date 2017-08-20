@@ -7,6 +7,7 @@ import it.uniroma1.lcl.babelnet.BabelNet;
 import it.uniroma1.lcl.babelnet.BabelSynset;
 import it.uniroma1.lcl.babelnet.data.BabelPOS;
 import it.uniroma1.lcl.jlt.util.Language;
+import org.apache.commons.collections4.SetUtils;
 import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.Subgraph;
@@ -25,8 +26,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static edu.upf.taln.textplanning.disambiguation.POSConverter.BN_POS_EN;
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
+import static java.util.Comparator.comparingInt;
+import static java.util.stream.Collectors.*;
 
 /**
  * Annotates semantic graphs with BabelNet synsets.
@@ -68,7 +69,7 @@ public class BabelNetAnnotator implements EntityDisambiguator
 					// Collect tokens in the order in which they appear in the text
 					List<AnnotatedWord> tokens = s.vertexSet().stream()
 							.sorted(Comparator.comparing(AnnotatedWord::getOffsetStart))
-							.collect(Collectors.toList());
+							.collect(toList());
 
 					// Collect sequences of tokens -> mentions
 					List<Mention> mentions = collectNominalMentions(s, tokens);
@@ -121,10 +122,37 @@ public class BabelNetAnnotator implements EntityDisambiguator
 						label2Mentions.get(l).forEach(m -> // for each mention with label l
 								m.getHead().addCandidate(e, m)))); // assign the pair (m,e) to the head node of m
 
+		// For each entity and head word, keep only candidate associated with longest mention
+		discardSubsumedCandidates(structures);
 		// Take into account coreference chains
 		propagateCandidatesCoreference(structures);
+		if (checkForUnreferencedCandidates(structures))
+			log.error("Unreferenced candidates found");
 
 		reportStats(structures, true);
+	}
+
+	// Removes all candidates which are associated to an entity and head word for which a longer subsuming mention exists
+	public static void discardSubsumedCandidates(Collection<LinguisticStructure> structures)
+	{
+		structures.forEach(s ->
+				s.vertexSet().forEach(w -> {
+					// Group canidadates by entity
+					Map<Entity, List<Candidate>> entitites2Candidates = w.getCandidates().stream()
+							.collect(groupingBy(Candidate::getEntity));
+
+					// Find longest candidate for each entity
+					Set<Candidate> subsumingCandidates = entitites2Candidates.values().stream()
+							.map(l -> l.stream()
+									.max(comparingInt(c -> c.getMention().getNumTokens())))
+							.filter(Optional::isPresent)
+							.map(Optional::get)
+							.collect(toSet());
+
+					// Remove subsumed candidates (Note: this is made easier by the fact that all mentions are made up of contiguous tokens)
+					SetUtils.SetView<Candidate> toRemove = SetUtils.difference(w.getCandidates(), subsumingCandidates);
+					toRemove.forEach(w::removeCandidate);
+				}));
 	}
 
 	/**
@@ -150,6 +178,19 @@ public class BabelNetAnnotator implements EntityDisambiguator
 							});
 				}));
 
+	}
+
+	// After annotation all candidates should point to an Entity object with a non-null non-empty reference string
+	public static boolean checkForUnreferencedCandidates(Collection<LinguisticStructure> structures)
+	{
+		return structures.stream()
+				.anyMatch(s -> s.vertexSet().stream()
+						.anyMatch(w ->
+								w.getCandidates().stream()
+										.map(Candidate::getEntity)
+										.map(Entity::getReference)
+										.peek(r -> { if (r.isEmpty()) log.debug("Word " + w + " has unreferenced candidates"); })
+										.anyMatch(String::isEmpty)));
 	}
 
 	/**
@@ -210,7 +251,7 @@ public class BabelNetAnnotator implements EntityDisambiguator
 	}
 
 	/**
-	 * Valid nominal mentions are sequences of up to 7 tokens with a nominal head
+	 * Valid nominal mentions are sequences of up to 7 *contiguous* tokens with a nominal head
 	 * @param s a structure extracted from text
 	 * @param tokens list of nodes in the structure sorted by textual order
 	 * @return a list of potential mentions to entities together with their heads
@@ -224,11 +265,11 @@ public class BabelNetAnnotator implements EntityDisambiguator
 						{
 							// May create a new Mention or return an existing one
 							Optional<AnnotatedWord> h = getNominalRoot(l, s);
-							return h.map(annotatedWord -> annotatedWord.addMention(l)).orElse(null);
+							return h.map(w -> w.addMention(l)).orElse(null);
 						})
 						.filter(Objects::nonNull))
 				.flatMap(Function.identity())
-				.collect(Collectors.toList());
+				.collect(toList());
 	}
 
 	/**
@@ -241,7 +282,7 @@ public class BabelNetAnnotator implements EntityDisambiguator
 		return tokens.stream()
 				.filter(t -> !t.getPOS().startsWith("N"))
 				.map(t -> t.addMention(Collections.singletonList(t)))
-				.collect(Collectors.toList());
+				.collect(toList());
 	}
 
 	private Optional<AnnotatedWord> getNominalRoot(List<AnnotatedWord> s, LinguisticStructure g)
@@ -255,7 +296,7 @@ public class BabelNetAnnotator implements EntityDisambiguator
 		if (!conn.isGraphConnected())
 			return Optional.empty(); // if not connected, no head
 
-		// this finds out if any of the nodes in s is a nominal root to the raemaining nodes
+		// this finds out if any of the nodes in s is a nominal root to the remaining nodes
 		return s.stream()
 			.filter(t -> t.getPOS().startsWith("N"))
 			.filter(t -> {

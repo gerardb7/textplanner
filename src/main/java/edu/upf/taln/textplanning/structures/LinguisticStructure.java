@@ -1,12 +1,9 @@
 package edu.upf.taln.textplanning.structures;
 
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
-import org.jgrapht.traverse.TopologicalOrderIterator;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.PriorityQueue;
 
 import static java.util.stream.Collectors.toList;
 
@@ -18,33 +15,19 @@ import static java.util.stream.Collectors.toList;
  */
 public final class LinguisticStructure extends DirectedAcyclicGraph<AnnotatedWord, Role>
 {
+	private final Document document;
+	private final int position; // position in document document
 
-	private final Document d;
-
-	public LinguisticStructure(Document d, Class<? extends Role> edgeClass)
+	public LinguisticStructure(Document d, int pos, Class<? extends Role> edgeClass)
 	{
 		super(edgeClass);
-		this.d = d;
+		this.document = d;
+		this.position = pos;
 		d.addStructure(this);
 	}
 
-	public Document getDocument() { return d; }
-
-	/**
-	 * @return list of vertices in the structure following a fixed topological order
-	 */
-	public List<AnnotatedWord> getTopologicalOrder()
-	{
-		// Create a total order over the vertex set to guarantee that the returned iterator always iterates over the same sequence
-		PriorityQueue<AnnotatedWord> queue = new PriorityQueue<>(vertexSet().size(), Comparator.comparing(AnnotatedWord::toString));
-		TopologicalOrderIterator<AnnotatedWord, Role> it = new TopologicalOrderIterator<>(this, queue);
-		List<AnnotatedWord> es = new ArrayList<>();
-		while (it.hasNext())
-		{
-			es.add(it.next());
-		}
-		return es;
-	}
+	public Document getDocument() { return document; }
+	public int getPosition() { return position; }
 
 	/**
 	 * @return list of vertices in the structure following their order of appearance in the text fragment it annotates

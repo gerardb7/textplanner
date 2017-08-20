@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -21,7 +22,7 @@ import java.util.stream.Collectors;
 public class SensEmbed implements EntitySimilarity
 {
 	private final ImmutableMap<String, double[]> vectors;
-	private final double avg_sim;
+	private final static double avg_sim = 0.041157715074586806;
 	private final static Logger log = LoggerFactory.getLogger(SensEmbed.class);
 
 	public SensEmbed(Path inEmbeddingsPath) throws Exception
@@ -43,7 +44,7 @@ public class SensEmbed implements EntitySimilarity
 		vectors = builder.putAll(avgEmbeddings).build();
 		log.info("Loading took " + timer.stop());
 
-		avg_sim = computeAverageSimilarity();
+		//avg_sim = computeAverageSimilarity();
 	}
 
 	@Override
@@ -94,15 +95,29 @@ public class SensEmbed implements EntitySimilarity
 		return avg_sim;
 	}
 
+	@SuppressWarnings("unused")
 	private double computeAverageSimilarity()
 	{
-		return vectors.keySet().stream()
+		log.info("Computing average similarity for " + vectors.keySet().size() + " vectors");
+		AtomicInteger counter = new AtomicInteger(0);
+		int num_pairs = vectors.keySet().size() * vectors.keySet().size();
+		Stopwatch timer = Stopwatch.createStarted();
+
+		double average = vectors.keySet().stream()
 				.map(r1 -> vectors.keySet().stream()
 						.filter(r2 -> !r1.equals(r2))
 						.map(r2 -> computeSimilarity(new Entity(r1, r1, Candidate.Type.Other), new Entity(r2, r2, Candidate.Type.Other)))
 						.mapToDouble(OptionalDouble::getAsDouble)
+						.peek(v -> {
+							if (counter.incrementAndGet() % 100000 == 0)
+								log.info(counter.get() + " out of " + num_pairs);
+						})
 						.average())
 				.mapToDouble(OptionalDouble::getAsDouble)
-				.average().orElse(0.0);
+				.average()
+				.orElse(0.0);
+
+		log.info("Average similarity is " + average + ", computed in " + timer.stop());
+		return average;
 	}
 }

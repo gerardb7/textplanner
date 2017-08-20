@@ -8,7 +8,8 @@ import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.corpora.FreqsFile;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
 import edu.upf.taln.textplanning.disambiguation.BabelNetAnnotator;
-import edu.upf.taln.textplanning.input.CoNLLFormat;
+import edu.upf.taln.textplanning.input.CoNLLReader;
+import edu.upf.taln.textplanning.input.CoNLLWriter;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
 import edu.upf.taln.textplanning.similarity.SensEmbed;
 import edu.upf.taln.textplanning.structures.ContentPattern;
@@ -137,7 +138,7 @@ public class ConLLDriver
 				})
 				.collect(Collectors.toList());
 
-		CoNLLFormat conll = new CoNLLFormat();
+		CoNLLReader conll = new CoNLLReader();
 		Set<LinguisticStructure> graphs = conlls.stream()
 				.map(conll::readStructures)
 				.flatMap(List::stream)
@@ -152,8 +153,8 @@ public class ConLLDriver
 	{
 		try
 		{
-			CoNLLFormat conll = new CoNLLFormat();
 			List<ContentPattern> plan = p.planAndDisambiguatePageRank(graphs, options);
+			CoNLLWriter conll = new CoNLLWriter();
 			return conll.writePatterns(plan);
 		}
 		catch (Exception e)

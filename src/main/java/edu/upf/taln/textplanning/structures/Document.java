@@ -19,12 +19,4 @@ public class Document
 	}
 	public List<LinguisticStructure> getStructures() { return new ArrayList<>(structures); }
 	public void addStructure(LinguisticStructure s) { structures.add(s); }
-
-	public int getPosition(LinguisticStructure s)
-	{
-		if (!structures.contains(s))
-			throw new RuntimeException("Document does not contain structure");
-
-		return structures.indexOf(s);
-	}
 }

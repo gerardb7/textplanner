@@ -78,7 +78,7 @@ public class ContentGraphCreator
 //			exporter.exportGraph(graph, new FileWriter(temp));
 //
 //			File conllTemp = File.createTempFile("semgraph", ".conll");
-//			CoNLLFormat conll = new CoNLLFormat();
+//			CoNLLReader conll = new CoNLLReader();
 //			String graphConll = conll.writeGraphs(Collections.singleton(graph));
 //			FileUtils.writeStringToFile(conllTemp, graphConll, Charset.forName("UTF-16"));
 //		}

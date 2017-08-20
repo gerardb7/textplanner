@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * Base class for classes implementing read/writeGraphs access to documents containing semantic structures.
  */
-public interface DocumentAccess
+public interface DocumentReader
 {
 	List<LinguisticStructure> readStructures(String inDocumentContents) throws IOException;
 }

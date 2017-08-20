@@ -3,7 +3,7 @@ package edu.upf.taln.textplanning.utils;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import edu.upf.taln.textplanning.ConLLDriver.EmbeddingsTypeConverter;
-import edu.upf.taln.textplanning.input.CoNLLFormat;
+import edu.upf.taln.textplanning.input.CoNLLReader;
 import edu.upf.taln.textplanning.structures.LinguisticStructure;
 import edu.upf.taln.textplanning.utils.CMLCheckers.PathConverter;
 import edu.upf.taln.textplanning.utils.CMLCheckers.PathToExistingFile;
@@ -53,7 +53,7 @@ public class SemanticTextualSimilarityOutput
 		//EntitySimilarity sim = new SensEmbed(cmlArgs.embeddings);
 		//PatternSimilarity msgSim = new PatternSimilarity(sim);
 		String conll = new String(Files.readAllBytes(cmlArgs.input.get(0)), Charset.forName("UTF-8"));
-		CoNLLFormat reader = new CoNLLFormat();
+		CoNLLReader reader = new CoNLLReader();
 		List<LinguisticStructure> trees = reader.readStructures(conll);
 		StringWriter writer = new StringWriter();
 		NumberFormat format = NumberFormat.getInstance();
