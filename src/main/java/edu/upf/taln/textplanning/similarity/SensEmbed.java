@@ -106,7 +106,7 @@ public class SensEmbed implements EntitySimilarity
 		double average = vectors.keySet().stream()
 				.map(r1 -> vectors.keySet().stream()
 						.filter(r2 -> !r1.equals(r2))
-						.map(r2 -> computeSimilarity(new Entity(r1, r1, Candidate.Type.Other), new Entity(r2, r2, Candidate.Type.Other)))
+						.map(r2 -> computeSimilarity(Entity.get(r1, r1, Candidate.Type.Other), Entity.get(r2, r2, Candidate.Type.Other)))
 						.mapToDouble(OptionalDouble::getAsDouble)
 						.peek(v -> {
 							if (counter.incrementAndGet() % 100000 == 0)

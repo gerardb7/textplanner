@@ -56,7 +56,8 @@ public class ContentGraphCreator
 					}
 					catch (Exception ex)
 					{
-						throw new RuntimeException("Failed to add edge between " + govNode.getLeft().getId() + " and " + depNode.getLeft().getId() + ": " + ex);
+						// This can happen sometimes due to malformed stuctures -> ignore edge
+						log.warn("Failed to add edge between " + govNode.getLeft().getId() + " and " + depNode.getLeft().getId() + ": " + ex);
 					}
 				}
 			}
@@ -92,11 +93,10 @@ public class ContentGraphCreator
 
 	/**
 	 * Creates an Entity object which will act as a node in the content graph
-	 * A single node is created for all mentions to non-predicative entities.
+	 * A single node is created for all mentions of non-predicative entities.
 	 * A node is created for each predicative word, even if they share the same sense.
 	 * @param g a structure
 	 * @param n a node in g
-	 *
 	 * @return a graph node
 	 */
 	private static Pair<Entity, Mention> createGraphNode(LinguisticStructure g, AnnotatedWord n)
@@ -104,12 +104,35 @@ public class ContentGraphCreator
 		Optional<Candidate> candidate = n.getBestCandidate();
 		Optional<Entity> entity = candidate.map(Candidate::getEntity);
 		Mention mention = candidate.map(Candidate::getMention).orElse(n.addMention(Collections.singletonList(n)));
-		String ref = entity.map(Entity::getReference).orElse(n.getForm());
-		String id = g.isPredicate(n) ? getIdForPredicate(g,n) : ref;
-		Type type = entity.map(Entity::getType).orElse(Type.Other);
-		double value = entity.map(Entity::getWeight).orElse(0.0);
 
-		return Pair.of(new Entity(id, ref, type, value), mention);
+		if (entity.isPresent() && !g.isPredicate(n))
+		{
+			// For non-predicates with an Entity, reuse Entity object -> single node for all mentions of this entity
+			return Pair.of(entity.get(), mention);
+		}
+		else
+		{
+			if (g.isPredicate(n))
+			{
+				// For predicates, create new Entity object -> one separate node per mention
+				String id = getIdForPredicate(g, n);
+				String ref = entity.map(Entity::getReference).orElse(n.getForm());
+				Type type = entity.map(Entity::getType).orElse(Type.Other);
+				double value = entity.map(Entity::getWeight).orElse(0.0);
+
+				return Pair.of(Entity.get(id, ref, type, value), mention);
+			}
+			else
+			{
+				// For non-predicative words without an Entity, create a new one if necessary to be shared by all
+				// occurrences of the word
+				// For predicates, create new Entity object -> one separate node per mention
+				String id = n.getForm();
+				String ref = n.getForm();
+				Type type = n.getType(); // use NE type of word
+				return Pair.of(Entity.get(id, ref, type), mention);
+			}
+		}
 	}
 
 	// use a counter to guarantee that ids for predicates are unique

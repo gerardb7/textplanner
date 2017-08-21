@@ -12,9 +12,12 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static java.util.stream.Collectors.toMap;
 
 /**
  * Creates stochastic matrices for addressing text planning task with PageRank algorithms.
@@ -100,14 +103,15 @@ public class RankingMatrices
 	                                                  CandidateSimilarity similarity, TextPlanner.Options o)
 	{
 		int num_candidates = candidates.size();
-		List<Entity> entities = candidates.stream()
+		AtomicInteger index = new AtomicInteger(0);
+		Map<Entity, Integer> entities = candidates.stream()
 				.map(Candidate::getEntity)
 				.distinct()
-				.collect(Collectors.toList());
+				.collect(toMap(e -> e, e -> index.getAndIncrement()));
 		int num_entities = entities.size();
 
 		// Create *strictly positive* relevance row vector by applying the weighting function to the set of entities
-		double[] r = entities.stream()
+		double[] r = entities.keySet().stream()
 				.map(Entity::getReference)
 				.mapToDouble(relevance::weight)
 				.map(w -> w = Math.max(o.minRelevance, (1.0/num_entities)*w)) // Laplace smoothing to avoid non-positive values
@@ -116,7 +120,7 @@ public class RankingMatrices
 		double accum_r = Arrays.stream(r).sum();
 		IntStream.range(0, num_entities).forEach(i -> r[i] /= accum_r); // normalize vector with sum of row
 
-		// Create *strictly positive* relevance row vector by applying the weighting function to the set of entities
+		// Create *strictly positive* type row vector for the candidate set
 		double[] t = candidates.stream()
 				.mapToDouble(c -> {
 						Candidate.Type mtype = c.getMention().getType();
@@ -134,7 +138,7 @@ public class RankingMatrices
 		// Create *non-symmetric non-negative* similarity matrix from sim function and links in content graph
 		log.info("Creating similarity matrix for " + num_candidates + " candidates");
 		AtomicLong counter = new AtomicLong(0);
-		long num_calculations = ((((long)num_candidates * (long)num_candidates) - num_candidates)  / 2) + num_candidates;
+		long num_calculations1 = ((((long)num_candidates * (long)num_candidates) - num_candidates)  / 2) + num_candidates;
 		Matrix m = new Matrix(num_candidates, num_candidates);
 		IntStream.range(0, num_candidates).forEach(i ->
 				IntStream.range(i, num_candidates).forEach(j -> {
@@ -151,8 +155,8 @@ public class RankingMatrices
 					m.set(i, j, sim);
 					m.set(j, i, sim);
 
-					if (counter.incrementAndGet() % 100000 == 0)
-						log.info(counter.get() + " out of " + num_calculations);
+					if (counter.incrementAndGet() % 10000000 == 0)
+						log.info(counter.get() + " out of " + num_calculations1);
 				}));
 		normalize(m);
 		log.info("Done");
@@ -160,23 +164,32 @@ public class RankingMatrices
 		// Bias each row in m using relevance bias r and type bias t
 		// Prob i->j = a*r(j) + b*t(j) + (1.0-a-b)*m(i,j)
 		// The resulting matrix is row-normalized because both r and m are normalized
+		log.info("Creating ranking matrix for " + num_candidates + " candidates");
 		double a = o.dampingRelevance;
 		double b = o.dampingType;
-		return new Matrix(candidates.stream()
-				.map(c1 -> candidates.stream()
-						.mapToDouble(c2 -> {
-							int i = candidates.indexOf(c1);
-							int j = candidates.indexOf(c2);
-							int ej = entities.indexOf(c2.getEntity());
+		counter.set(0);
+		long num_calculations2 = num_candidates * num_candidates;
 
-							double rj = r[ej]; // bias towards relevance of j
-							double tj = t[ej]; // bias towards type matching of j
-							double sij = m.get(i, j); // sim of i and j
-							return a * rj + b * tj + (1.0 - a - b)*sij; // brj is positive, so pij also provided d > 0.0
-						})
-						.toArray())
-				.toArray(double[][]::new));
+		Matrix ranking = new Matrix(num_candidates, num_candidates);
+		IntStream.range(0, num_candidates).forEach(i ->
+				IntStream.range(0, num_candidates).forEach(j -> {
+					Candidate c2 = candidates.get(j);
+					int ej = entities.get(c2.getEntity());
+
+					double rj = r[ej]; // bias towards relevance of j
+					double tj = t[j]; // bias towards type matching of j
+					double sij = m.get(i, j); // sim of i and j
+					double vij = a * rj + b * tj + (1.0 - a - b)*sij; // brj is positive, so pij also provided d > 0.0
+
+					ranking.set(i, j, vij);
+					if (counter.incrementAndGet() % 10000000 == 0)
+						log.info(counter.get() + " out of " + num_calculations2);
+
+				}));
+		log.info("Done");
+
 		// No need to normalize again
+		return ranking;
 	}
 
 	/**

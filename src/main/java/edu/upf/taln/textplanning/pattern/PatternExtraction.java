@@ -3,6 +3,8 @@ package edu.upf.taln.textplanning.pattern;
 import edu.upf.taln.textplanning.structures.*;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -14,6 +16,8 @@ import java.util.stream.Collectors;
  */
 public class PatternExtraction
 {
+	private final static Logger log = LoggerFactory.getLogger(PatternExtraction.class);
+
 	/**
 	 * Extracts tree-like patterns from a content graph
 	 * @param g a content graph
@@ -136,7 +140,7 @@ public class PatternExtraction
 				{
 					ContentPattern s2 = new ContentPattern(t);
 					s2.addVertex(e.getMiddle());
-					s2.addEdge(e.getLeft(), e.getMiddle(), new Role(e.getRight().getRole(), e.getRight().isCore()));
+					s2.addEdge(e.getLeft(), e.getMiddle(), e.getRight()); //new Role(e.getRight().getRole(), e.getRight().isCore()));
 					return s2;
 				})
 				.collect(Collectors.toSet());
@@ -159,8 +163,15 @@ public class PatternExtraction
 					.collect(Collectors.toList());
 
 			edges.forEach(e -> {
-				t.addVertex(e.getMiddle());
-				t.addEdge(e.getLeft(), e.getMiddle(), new Role(e.getRight().getRole(), e.getRight().isCore()));
+				try
+				{
+					t.addVertex(e.getMiddle());
+					t.addEdge(e.getLeft(), e.getMiddle(), e.getRight()); //new Role(e.getRight().getRole(), e.getRight().isCore()));
+				}
+				catch (Exception ex)
+				{
+					log.error("Cannot add edge " + e + " to pattern subgraph: " + ex);
+				}
 			});
 		}
 		while (!edges.isEmpty());

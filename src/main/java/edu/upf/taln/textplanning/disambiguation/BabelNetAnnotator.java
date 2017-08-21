@@ -113,7 +113,7 @@ public class BabelNetAnnotator implements EntityDisambiguator
 		// Instantiate Entity objects from info gathered so far
 		Map<String, Set<Entity>> labels2Entities = labels2Synsets.keySet().stream()
 				.collect(toMap(l -> l, l -> labels2Synsets.get(l).stream()
-						.map(s -> createEntity(s, synsets2Types.get(s), l))
+						.map(s -> createEntity(s, synsets2Types.get(s)))
 						.collect(toSet())));
 
 		// Assign mentions and candidate entities to nodes in the structures
@@ -214,10 +214,11 @@ public class BabelNetAnnotator implements EntityDisambiguator
 			})); // nodes in semantic structures have unique ids shared with their WordAnnotation objects
 
 			// discard mentions which are a spanned by another mention within the same structure (but keep overlapping mentions)
-			merges.keySet().stream()
+			Set<AnnotatedWord> subsumed = merges.keySet().stream()
 					.filter(n1 -> merges.keySet().stream()
 							.anyMatch(n2 -> merges.get(n2).containsAll(merges.get(n1))))
-					.forEach(merges::remove);
+					.collect(toSet());
+			subsumed.forEach(merges::remove);
 
 			// collapse all nodes in each mention to its head
 			merges.forEach((n, l) -> {
@@ -345,10 +346,10 @@ public class BabelNetAnnotator implements EntityDisambiguator
 		return type;
 	}
 
-	private Entity createEntity(BabelSynset s, Type t, String surface)
+	private Entity createEntity(BabelSynset s, Type t)
 	{
 		String reference = s.getId().getID();
-		return new Entity(reference + "_" + surface, reference, t);
+		return Entity.get(reference, reference, t);
 	}
 
 

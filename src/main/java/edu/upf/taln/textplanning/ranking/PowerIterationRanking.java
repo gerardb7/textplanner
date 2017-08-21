@@ -33,10 +33,9 @@ public class PowerIterationRanking
 	 * Implementation based on first method in http://introcs.cs.princeton.edu/java/95linear/MarkovChain.java.html
 	 *
 	 * @param a a transition stochastic matrix of a Markov chain
-	 * @param e error used as a stopping threshold for the algorithm
 	 * @return the stationary distribution of the chain
 	 */
-	public static Matrix run(Matrix a, double e)
+	public static Matrix run(Matrix a)
 	{
 		// Check that a is a stochastic matrix
 		assert a.getColumnDimension() == a.getRowDimension(); // Is it square?
@@ -48,6 +47,7 @@ public class PowerIterationRanking
 
 		// Create initial state as 1-column vector
 		int n = a.getColumnDimension();
+		double e = 1.0/(n*1000); // set stopping threshold
 		Matrix v = new Matrix(n, 1, 1.0 / n); // v is the distribution vector that will get iteratively updated
 
 		log.debug("Starting power iteration");

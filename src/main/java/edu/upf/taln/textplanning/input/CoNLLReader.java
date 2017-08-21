@@ -128,7 +128,7 @@ public class CoNLLReader implements DocumentReader
 						if (features.containsKey(CoNLLConstants.BN_ID))
 						{
 							String ref = features.get(CoNLLConstants.BN_ID);
-							Entity e = new Entity(ref + "_" + form, ref, t);
+							Entity e = Entity.get(ref, ref, t);
 							Mention m = ann.addMention(singletonList(ann));
 							ann.addCandidate(e, m);
 						}
@@ -158,8 +158,7 @@ public class CoNLLReader implements DocumentReader
 			}
 
 			// Create last position
-			LinguisticStructure s = new LinguisticStructure(d, ++position, Role.class);
-			Set<LinguisticStructure> new_graphs = createGraphs(d, s, anns, governors);
+			Set<LinguisticStructure> new_graphs = createGraphs(d, currentStructure, anns, governors);
 			if (new_graphs.size() > 1)
 				log.warn("Structure " + position + " has " + new_graphs.size() + " components");
 			graphs.addAll(new_graphs);
@@ -268,7 +267,7 @@ public class CoNLLReader implements DocumentReader
 												{
 													Type t = types.get(i).get(j);
 													double w = weights.get(i).get(j);
-													Entity e = new Entity(word.getForm() + "_" + r, r, t, w);
+													Entity e = Entity.get(r, r, t, w);
 													word.addCandidate(e, mentions.get(i));
 												}
 											}));
@@ -317,7 +316,7 @@ public class CoNLLReader implements DocumentReader
 			{
 				AnnotatedWord dep_word = anns.get(dep.getKey());
 				String role = dep.getValue();
-				Role e = new Role(role, isArgument(role));
+				Role e = new Role(role, isCore(role));
 				s.addEdge(gov, dep_word, e);
 			}
 		}
@@ -332,8 +331,8 @@ public class CoNLLReader implements DocumentReader
 			{
 				LinguisticStructure g = new LinguisticStructure(d, s.getPosition(), Role.class);
 				set.forEach(g::addVertex);
-				set.forEach(a -> a.setStructure(s)); // reasign nodes to new structure!
 				set.forEach(v -> s.outgoingEdgesOf(v).forEach(e -> g.addEdge(v, s.getEdgeTarget(e), e)));
+				set.forEach(a -> a.setStructure(g)); // reasign nodes to new structure!
 				structures.add(g);
 			}
 		}
@@ -343,9 +342,8 @@ public class CoNLLReader implements DocumentReader
 		return structures;
 	}
 
-	private static boolean isArgument(String role)
+	private static boolean isCore(String role)
 	{
-		return role.equals("I") || role.equals("II") || role.equals("III") || role.equals("IV") || role.equals("V")
-				|| role.equals("VI") || role.equals("VII") || role.equals("VIII") || role.equals("IX") || role.equals("X");
+		return role.equals("Set") || role.contains("I") || role.equals("V") || role.contains("Argument");
 	}
 }

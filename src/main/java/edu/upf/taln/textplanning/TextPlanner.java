@@ -18,11 +18,11 @@ import org.slf4j.LoggerFactory;
 
 import java.math.RoundingMode;
 import java.text.NumberFormat;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.*;
 import java.util.stream.IntStream;
+
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 
 /**
@@ -43,7 +43,6 @@ public final class TextPlanner
 		public int numPatterns = 25; // Number of patterns to return
 		public double dampingRelevance = 0.2; // controls bias towards entity relevance
 		public double dampingType = 0.1; // controls bias towards type matching in candidates
-		public double rankingStopThreshold = 0.00000001; // stopping threshold for the main ranking algorithm
 		public double minRelevance = 0.0001; // pseudocount α for additive smoothing of relevance values
 		public double simLowerBound = 0.6; // Pairs of entities with similarity below this value have their score set to 0
 		public double patternLambda = 1.0; // Controls balance between weight of nodes and cost of edges during pattern extraction
@@ -58,7 +57,7 @@ public final class TextPlanner
 			//f.setMaximumFractionDigits(10);
 			f.setMinimumFractionDigits(3);
 			return "numPatterns=" + numPatterns + " damping_rel=" + f.format(dampingRelevance) +
-					" ranking_threshold=" + f.format(rankingStopThreshold) + " min_rel=" + f.format(minRelevance) +
+					" min_rel=" + f.format(minRelevance) +
 					" min_sim=" + f.format(simLowerBound) + " pattern_lambda=" + f.format(patternLambda) +
 					"\n\n" + stats;
 		}
@@ -97,7 +96,7 @@ public final class TextPlanner
 					.filter(Optional::isPresent)
 					.map(Optional::get)
 					.map(Candidate::getEntity)
-					.collect(Collectors.toList());
+					.collect(toList());
 			weighting.setContents(structures);
 			Matrix rankingMatrix =
 					RankingMatrices.createEntityRankingMatrix(entities, weighting, esim, o);
@@ -106,7 +105,7 @@ public final class TextPlanner
 			// 4- Rank candidates using power iteration method
 			log.info("Candidate ranking");
 			timer.reset(); timer.start();
-			Matrix finalDistribution = PowerIterationRanking.run(rankingMatrix, o.rankingStopThreshold);
+			Matrix finalDistribution = PowerIterationRanking.run(rankingMatrix);
 			log.info("Ranking took " + timer.stop());
 			double[] ranking = finalDistribution.getColumnPackedCopy();
 			IntStream.range(0, ranking.length)
@@ -157,81 +156,67 @@ public final class TextPlanner
 	 */
 	public List<ContentPattern> planAndDisambiguatePageRank(Set<LinguisticStructure> structures, Options inOptions)
 	{
-		try
+		log.info("Planning started");
+		// todo remove two lines below after re-processing test inputs
+		BabelNetAnnotator.discardSubsumedCandidates(structures);
+		BabelNetAnnotator.propagateCandidatesCoreference(structures);
+		if (BabelNetAnnotator.checkForUnreferencedCandidates(structures))
+			log.error("Unreferenced candidates found");
+
+		// 1- Create candidate ranking matrix
+		log.info("Creating ranking matrix");
+		Stopwatch timer = Stopwatch.createStarted();
+		List<Candidate> candidates = collectCandidates(structures, true, true, true);
+		weighting.setContents(structures);
+		CandidateSimilarity sim = new CandidateSimilarity(esim);
+		Matrix rankingMatrix =
+				RankingMatrices.createCandidateRankingMatrix(candidates, weighting, sim, inOptions);
+		log.info("Creation of ranking matrix took " + timer.stop());
+
+		// 2- Rank candidates using power iteration method
+		log.info("Candidate ranking");
+		timer.reset(); timer.start();
+		Matrix finalDistribution = PowerIterationRanking.run(rankingMatrix);
+		log.info("Ranking took " + timer.stop());
+		double[] ranking = finalDistribution.getColumnPackedCopy();
+		IntStream.range(0, ranking.length)
+				.forEach(i -> candidates.get(i).setValue(ranking[i])); // assign ranking values to candidates
+
+		// 3- Use ranking to disambiguate candidates in structures and weight nodes
+		log.info("Candidate disambiguation");
+		timer.reset(); timer.start();
+		disambiguator.disambiguate(structures);
+		log.info("Disambiguation took " + timer.stop());
+
+		// 4- Create content graph
+		log.info("Creating content graph");
+		timer.reset(); timer.start();
+		ContentGraph contentGraph = ContentGraphCreator.createContentGraph(structures);
+		log.info("Graph creation took " + timer.stop());
+
+		// 5- Extract patterns from content graph
+		log.info("Extracting patterns");
+		timer.reset(); timer.start();
+		List<ContentPattern> patterns = PatternExtraction.extract(contentGraph, inOptions.numPatterns, inOptions.patternLambda);
+		log.info("Pattern extraction took " + timer.stop());
+
+		// 6- Sort the trees into a discourse-optimized list
+		log.info("Structuring patterns");
+		timer.reset(); timer.start();
+		//patterns = DiscoursePlanner.structurePatterns(patterns, esim);
+		log.info("Pattern structuring took " + timer.stop());
+
+		// Generate stats (optional)
+		if (inOptions.generateStats)
 		{
-			log.info("Planning started");
-			// todo remove two lines below after re-processing test inputs
-			BabelNetAnnotator.discardSubsumedCandidates(structures);
-			BabelNetAnnotator.propagateCandidatesCoreference(structures);
-			if (BabelNetAnnotator.checkForUnreferencedCandidates(structures))
-				log.error("Unreferenced candidates found");
-
-			// 1- Create candidate ranking matrix
-			log.info("Creating ranking matrix");
-			Stopwatch timer = Stopwatch.createStarted();
-			List<Candidate> candidates = structures.stream()
-					.flatMap(s -> s.vertexSet().stream()
-							.filter(w -> w.getPOS().startsWith("N")) // todo turn nominal filtering this into an option/flag
-							.flatMap(w -> w.getMentions().stream()
-									.flatMap(m -> w.getCandidates(m).stream()
-											.filter(c -> this.corpus.getFormEntityCount(w.getForm(), c.getEntity().getReference()) > 0))))
-					.collect(Collectors.toList());
-			weighting.setContents(structures);
-			CandidateSimilarity sim = new CandidateSimilarity(esim);
-			Matrix rankingMatrix =
-					RankingMatrices.createCandidateRankingMatrix(candidates, weighting, sim, inOptions);
-			log.info("Creation of ranking matrix took " + timer.stop());
-
-			// 2- Rank candidates using power iteration method
-			log.info("Candidate ranking");
-			timer.reset(); timer.start();
-			Matrix finalDistribution = PowerIterationRanking.run(rankingMatrix, inOptions.rankingStopThreshold);
-			log.info("Ranking took " + timer.stop());
-			double[] ranking = finalDistribution.getColumnPackedCopy();
-			IntStream.range(0, ranking.length)
-					.forEach(i -> candidates.get(i).setValue(ranking[i])); // assign ranking values to candidates
-
-			// 3- Use ranking to disambiguate candidates in structures and weight nodes
-			log.info("Candidate disambiguation");
-			timer.reset(); timer.start();
-			disambiguator.disambiguate(structures);
-			log.info("Disambiguation took " + timer.stop());
-
-			// 4- Create content graph
-			log.info("Creating content graph");
-			timer.reset(); timer.start();
-			ContentGraph contentGraph = ContentGraphCreator.createContentGraph(structures);
-			log.info("Graph creation took " + timer.stop());
-
-			// 5- Extract patterns from content graph
-			log.info("Extracting patterns");
-			timer.reset(); timer.start();
-			List<ContentPattern> patterns = PatternExtraction.extract(contentGraph, inOptions.numPatterns, inOptions.patternLambda);
-			log.info("Pattern extraction took " + timer.stop());
-
-			// 6- Sort the trees into a discourse-optimized list
-			log.info("Structuring patterns");
-			timer.reset(); timer.start();
-			//patterns = DiscoursePlanner.structurePatterns(patterns, esim);
-			log.info("Pattern structuring took " + timer.stop());
-
-			// Generate stats (optional)
-			if (inOptions.generateStats)
-			{
-				log.info("Generating stats");
-				timer.reset();
-				timer.start();
-				//inOptions.stats = StatsReporter.reportStats(structures, weighting, sim, contentGraph, inOptions);
-				log.info("Stats generation took " + timer.stop());
-			}
-
-			return patterns;
+			log.info("Generating stats");
+			timer.reset();
+			timer.start();
+			//inOptions.stats = StatsReporter.reportStats(structures, weighting, sim, contentGraph, inOptions);
+			log.info("Stats generation took " + timer.stop());
 		}
-		catch (Exception e)
-		{
-			log.error("Planning failed");
-			throw new RuntimeException(e);
-		}
+
+		return patterns;
 	}
 
 
@@ -304,5 +289,35 @@ public final class TextPlanner
 		}
 	}
 
+	@SuppressWarnings("SameParameterValue")
+	private List<Candidate> collectCandidates(Collection<LinguisticStructure> structures, boolean nominals_only,
+	                                          boolean embedded_only, boolean in_corpus_only)
+	{
+		Set<Mention> mentions = structures.stream()
+				.flatMap(s -> s.vertexSet().stream()
+						.filter(w -> !nominals_only || w.getPOS().startsWith("N")) // todo turn nominal filtering this into an option/flag
+						.map(w -> {
+							Set<Mention> ms = new HashSet<>();
+							if (embedded_only)
+							{
+								Optional<Mention> longest_mention = w.getMentions().stream().max(Comparator.comparingInt(Mention::getNumTokens));
+								longest_mention.ifPresent(ms::add);
+							}
+							else
+								ms.addAll(w.getMentions());
 
+							return ms;
+						})
+						.flatMap(Set::stream))
+				.collect(toSet());
+
+		return mentions.stream()
+				.flatMap(m -> m.getHead().getCandidates(m).stream()
+						.filter(c ->
+								!in_corpus_only ||
+										m.getHead().getCandidates(m).size() == 1 ||
+										corpus.getFormEntityCount(m.getHead().getForm(), c.getEntity().getReference()) > 0
+								))
+				.collect(toList());
+	}
 }

@@ -35,40 +35,4 @@ public final class Role extends DefaultEdge
 	{
 		return role;
 	}
-
-	@Override
-	public boolean equals(Object o)
-	{
-		if (this == o)
-		{
-			return true;
-		}
-		if (o == null || getClass() != o.getClass())
-		{
-			return false;
-		}
-
-		Role edge = (Role) o;
-		if (core != edge.core || !role.equals(edge.role))
-		{
-			return false;
-		}
-
-		//noinspection SimplifiableIfStatement
-		if ((getSource() == null && edge.getSource() != null) || (getTarget() == null && edge.getTarget() != null))
-		{
-			return false;
-		}
-		return getSource().equals(edge.getSource()) && getTarget().equals(edge.getTarget());
-	}
-
-	@Override
-	public int hashCode()
-	{
-		int result = role.hashCode();
-		result = 31 * result + (core ? 1 : 0);
-		result = 31 * result + (getSource() != null ? getSource().hashCode() : 0);
-		result = 31 * result + (getTarget() != null ? getTarget().hashCode() : 0);
-		return result;
-	}
 }
