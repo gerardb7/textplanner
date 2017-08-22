@@ -98,8 +98,7 @@ public final class TextPlanner
 					.map(Candidate::getEntity)
 					.collect(toList());
 			weighting.setContents(structures);
-			Matrix rankingMatrix =
-					RankingMatrices.createEntityRankingMatrix(entities, weighting, esim, o);
+			Matrix rankingMatrix = new Matrix(RankingMatrices.createEntityRankingMatrix(entities, weighting, esim, o));
 			log.info("Creation of ranking matrix took " + timer.stop());
 
 			// 4- Rank candidates using power iteration method
@@ -154,7 +153,7 @@ public final class TextPlanner
 	 * @param structures initial set of structures
 	 * @return list of patterns
 	 */
-	public List<ContentPattern> planAndDisambiguatePageRank(Set<LinguisticStructure> structures, Options inOptions)
+	public List<ContentPattern> planAndDisambiguatePageRank(Set<LinguisticStructure> structures, Options o)
 	{
 		log.info("Planning started");
 		// todo remove two lines below after re-processing test inputs
@@ -169,8 +168,7 @@ public final class TextPlanner
 		List<Candidate> candidates = collectCandidates(structures, true, true, true);
 		weighting.setContents(structures);
 		CandidateSimilarity sim = new CandidateSimilarity(esim);
-		Matrix rankingMatrix =
-				RankingMatrices.createCandidateRankingMatrix(candidates, weighting, sim, inOptions);
+		Matrix rankingMatrix = new Matrix(RankingMatrices.createCandidateRankingMatrix(candidates, weighting, sim, o));
 		log.info("Creation of ranking matrix took " + timer.stop());
 
 		// 2- Rank candidates using power iteration method
@@ -197,7 +195,7 @@ public final class TextPlanner
 		// 5- Extract patterns from content graph
 		log.info("Extracting patterns");
 		timer.reset(); timer.start();
-		List<ContentPattern> patterns = PatternExtraction.extract(contentGraph, inOptions.numPatterns, inOptions.patternLambda);
+		List<ContentPattern> patterns = PatternExtraction.extract(contentGraph, o.numPatterns, o.patternLambda);
 		log.info("Pattern extraction took " + timer.stop());
 
 		// 6- Sort the trees into a discourse-optimized list
@@ -207,7 +205,7 @@ public final class TextPlanner
 		log.info("Pattern structuring took " + timer.stop());
 
 		// Generate stats (optional)
-		if (inOptions.generateStats)
+		if (o.generateStats)
 		{
 			log.info("Generating stats");
 			timer.reset();
@@ -226,7 +224,7 @@ public final class TextPlanner
 	 * @param structures initial set of structures
 	 * @return list of patterns
 	 */
-	public List<ContentPattern> planAndDisambiguateOptimizer(Set<LinguisticStructure> structures, Options inOptions)
+	public List<ContentPattern> planAndDisambiguateOptimizer(Set<LinguisticStructure> structures, Options o)
 	{
 		try
 		{
@@ -240,10 +238,11 @@ public final class TextPlanner
 			// 1- Create candidate ranking matrix
 			log.info("Ranking candidates");
 			Stopwatch timer = Stopwatch.createStarted();
+			List<Candidate> candidates = collectCandidates(structures, false, false, false);
 			weighting.setContents(structures);
 			CandidateSimilarity sim = new CandidateSimilarity(esim);
 			// todo sort out access to TFIDF or corpus class
-			MultiObjectiveOptimizationRanking.optimize(structures, corpus, sim, weighting);
+			MultiObjectiveOptimizationRanking.optimize(candidates, corpus, sim, weighting, o.simLowerBound, o.minRelevance);
 			log.info("Ranking took " + timer.stop());
 
 			// 2- Use ranking to disambiguate candidates in structures and weight nodes
@@ -261,7 +260,7 @@ public final class TextPlanner
 			// 4- Extract patterns from content graph
 			log.info("Extracting patterns");
 			timer.reset(); timer.start();
-			List<ContentPattern> patterns = PatternExtraction.extract(contentGraph, inOptions.numPatterns, inOptions.patternLambda);
+			List<ContentPattern> patterns = PatternExtraction.extract(contentGraph, o.numPatterns, o.patternLambda);
 			log.info("Pattern extraction took " + timer.stop());
 
 			// 5- Sort the trees into a discourse-optimized list
@@ -271,12 +270,12 @@ public final class TextPlanner
 			log.info("Pattern structuring took " + timer.stop());
 
 			// Generate stats (optional)
-			if (inOptions.generateStats)
+			if (o.generateStats)
 			{
 				log.info("Generating stats");
 				timer.reset();
 				timer.start();
-				//inOptions.stats = StatsReporter.reportStats(structures, weighting, sim, contentGraph, inOptions);
+				//o.stats = StatsReporter.reportStats(structures, weighting, sim, contentGraph, o);
 				log.info("Stats generation took " + timer.stop());
 			}
 

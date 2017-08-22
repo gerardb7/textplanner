@@ -1,8 +1,8 @@
 package edu.upf.taln.textplanning.optimization;
 
 
+import edu.upf.taln.textplanning.ranking.RankingMatrices;
 import edu.upf.taln.textplanning.structures.Candidate;
-import edu.upf.taln.textplanning.structures.Candidate.Type;
 
 import java.util.List;
 import java.util.Objects;
@@ -15,20 +15,21 @@ import java.util.stream.IntStream;
 public class SimpleType implements Function
 {
 	private final List<Candidate> candidates;
+	private final double[] type_vector;
 
 	public SimpleType(List<Candidate> candidates)
 	{
 		this.candidates = candidates;
+		// Don't normalize vector, normalization is part of the optimizable softmax function
+		type_vector = RankingMatrices.createTypeVector(candidates, false, false);
 	}
-
-
 
 	@Override
 	public double getValue(double[] dist)
 	{
 		// todo normalize goal for NE mentions
 		return IntStream.range(0, candidates.size())
-				.mapToDouble(i -> typeMatch(i) * dist[i])
+				.mapToDouble(i -> type_vector[i] * dist[i])
 				.sum();
 	}
 
@@ -43,17 +44,8 @@ public class SimpleType implements Function
 		{
 			for (int i = 0; i < dist.length; ++i)
 			{
-				gradient[k] += typeMatch(i) * dist[i] * (d.apply(i,k) - dist[k]);
+				gradient[k] += type_vector[i] * dist[i] * (d.apply(i,k) - dist[k]);
 			}
 		}
-	}
-
-	private double typeMatch(int i)
-	{
-			Candidate c = candidates.get(i);
-			Type mtype = c.getMention().getType();
-			Type etype = c.getEntity().getType();
-			boolean indicator = mtype != Type.Other && mtype == etype;
-			return indicator ? 1.0 : 0.0;
 	}
 }

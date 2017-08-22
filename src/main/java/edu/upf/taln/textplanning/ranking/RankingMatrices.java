@@ -1,6 +1,5 @@
 package edu.upf.taln.textplanning.ranking;
 
-import Jama.Matrix;
 import edu.upf.taln.textplanning.TextPlanner;
 import edu.upf.taln.textplanning.similarity.CandidateSimilarity;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
@@ -17,6 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.IntStream;
 
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
 /**
@@ -48,47 +48,38 @@ public class RankingMatrices
 	 * @param o algorithm options
 	 * @return a stochastic matrix
 	 */
-	public static Matrix createEntityRankingMatrix(List<Entity> entities, WeightingFunction relevance,
+	public static double[][] createEntityRankingMatrix(List<Entity> entities, WeightingFunction relevance,
 	                                               EntitySimilarity similarity, TextPlanner.Options o)
 	{
 		int n = entities.size();
 
 		// Create *strictly positive* relevance row vector by applying the weighting function to the set of entities
-		double[] r = entities.stream()
-				.map(Entity::getId)
-				.mapToDouble(relevance::weight)
-				.map(w -> w = Math.max(o.minRelevance, (1.0/n)*w)) // Laplace smoothing to avoid non-positive values
-				.toArray();
-
-		double accum = Arrays.stream(r).sum();
-		IntStream.range(0, n).forEach(i -> r[i] /= accum); // normalize vector with sum of row
+		double[] r = createRelevanceVector(entities, relevance, o.minRelevance, true);
 
 		// Create *non-symmetric non-negative* similarity matrix from sim function and links in content graph
-		Matrix m = new Matrix(entities.stream()
-				.map(e1 -> entities.stream()
-						.mapToDouble(e2 -> similarity.computeSimilarity(e1, e2).orElse(similarity.getAverageSimiliarity()))
-						.map(v -> v < o.simLowerBound ? 0.0 : v)
-						.toArray())
-				.toArray(double[][]::new));
-		normalize(m);
+		double[][] m = createEntitySimilarityMatrix(entities, similarity, o.simLowerBound, true);
 
 		// Bias each row in m using relevance bias r and damping factor d
 		// Prob i->j = d*r(j) + (1.0-d)*m(i,j)
 		// The resulting matrix is row-normalized because both r and m are normalized
 		double d = o.dampingRelevance;
-		return new Matrix(entities.stream()
-				.map(e1 -> entities.stream()
-						.mapToDouble(e2 -> {
-							int i = entities.indexOf(e1);
-							int j = entities.indexOf(e2);
+		double[][] ranking = new double[n][n];
+		AtomicLong counter = new AtomicLong(0);
+		long num_calculations2 = n * n;
 
-							double brj = r[j]; // bias towards relevance of j
-							double sij = m.get(i, j); // sim of i and j
-							return d * brj + (1.0 - d)*sij; // brj is positive, so pij also provided d > 0.0
-						})
-						.toArray())
-				.toArray(double[][]::new));
+		IntStream.range(0, n).forEach(i ->
+				IntStream.range(0, n).forEach(j -> {
+					double rj = r[j]; // bias towards relevance of j
+					double sij = m[i][j]; // sim of i and j
+					double vij = d * rj + (1.0 - d)*sij; // brj is positive, so pij also provided d > 0.0
+
+					ranking[i][j] = vij;
+					if (counter.incrementAndGet() % 10000000 == 0)
+						log.info(counter.get() + " out of " + num_calculations2);
+				}));
+
 		// No need to normalize again
+		return ranking;
 	}
 
 	/**
@@ -99,47 +90,148 @@ public class RankingMatrices
 	 * @param o algorithm options
 	 * @return a stochastic matrix
 	 */
-	public static Matrix createCandidateRankingMatrix(List<Candidate> candidates, WeightingFunction relevance,
+	public static double[][] createCandidateRankingMatrix(List<Candidate> candidates, WeightingFunction relevance,
 	                                                  CandidateSimilarity similarity, TextPlanner.Options o)
 	{
 		int num_candidates = candidates.size();
 		AtomicInteger index = new AtomicInteger(0);
-		Map<Entity, Integer> entities = candidates.stream()
+		List<Entity> entities = candidates.stream()
 				.map(Candidate::getEntity)
 				.distinct()
+				.collect(toList());
+		Map<Entity, Integer> entities2Indexes = entities.stream()
 				.collect(toMap(e -> e, e -> index.getAndIncrement()));
-		int num_entities = entities.size();
 
-		// Create *strictly positive* relevance row vector by applying the weighting function to the set of entities
-		double[] r = entities.keySet().stream()
+		// Get normalized *strictly positive* relevance row vector by applying the weighting function to the set of entities
+		double[] r = createRelevanceVector(entities, relevance, o.minRelevance, true);
+
+		// Get normalized *strictly positive* type row vector for the candidate set
+		double[] t = createTypeVector(candidates, true, true);
+
+		// Get normalized symmetric non-negative similarity matrix from sim function
+		double[][] m = createCandidateSimilarityMatrix(candidates, similarity, o.simLowerBound, true);
+
+		// Bias each row in m using relevance bias r and type bias t
+		// Prob i->j = a*r(j) + b*t(j) + (1.0-a-b)*m(i,j)
+		// The resulting matrix is row-normalized because both r and m are normalized
+		log.info("Creating ranking matrix for " + num_candidates + " candidates");
+		double a = o.dampingRelevance;
+		double b = o.dampingType;
+		AtomicLong counter = new AtomicLong(0);
+		long num_calculations2 = num_candidates * num_candidates;
+
+		double[][] ranking = new double[num_candidates][num_candidates];
+		IntStream.range(0, num_candidates).forEach(i ->
+				IntStream.range(0, num_candidates).forEach(j -> {
+					Candidate c2 = candidates.get(j);
+					int ej = entities2Indexes.get(c2.getEntity());
+
+					double rj = r[ej]; // bias towards relevance of j
+					double tj = t[j]; // bias towards type matching of j
+					double sij = m[i][j]; // sim of i and j
+					double vij = a * rj + b * tj + (1.0 - a - b)*sij; // brj is positive, so pij also provided d > 0.0
+
+					ranking[i][j] = vij;
+					if (counter.incrementAndGet() % 10000000 == 0)
+						log.info(counter.get() + " out of " + num_calculations2);
+				}));
+		log.info("Done");
+
+		// No need to normalize again
+		return ranking;
+	}
+
+	// Creates normalized *strictly positive* relevance row vector by applying the weighting function to the set of entities
+	public static double[] createRelevanceVector(List<Entity> entities, WeightingFunction relevance, double lower_bound, boolean normalize)
+	{
+		int num_entities = entities.size();
+		double[] v = entities.stream()
 				.map(Entity::getReference)
 				.mapToDouble(relevance::weight)
-				.map(w -> w = Math.max(o.minRelevance, (1.0/num_entities)*w)) // Laplace smoothing to avoid non-positive values
+				.map(w -> w = Math.max(lower_bound, (1.0/num_entities)*w)) // Laplace smoothing to avoid non-positive values
 				.toArray();
 
-		double accum_r = Arrays.stream(r).sum();
-		IntStream.range(0, num_entities).forEach(i -> r[i] /= accum_r); // normalize vector with sum of row
+		if (normalize)
+		{
+			double accum_r = Arrays.stream(v).sum();
+			IntStream.range(0, num_entities).forEach(i -> v[i] /= accum_r); // normalize vector with sum of row
+		}
 
-		// Create *strictly positive* type row vector for the candidate set
-		double[] t = candidates.stream()
+		return v;
+	}
+
+	// Creates normalized *strictly positive* type row vector for the candidate set
+	public static double[] createTypeVector(List<Candidate> candidates, boolean smooth, boolean normalize)
+	{
+		double[] v = candidates.stream()
 				.mapToDouble(c -> {
-						Candidate.Type mtype = c.getMention().getType();
-						Candidate.Type etype = c.getEntity().getType();
+					Candidate.Type mtype = c.getMention().getType();
+					Candidate.Type etype = c.getEntity().getType();
 
-						// Mention and candidate type match and are different to
-						boolean indicator = mtype != Candidate.Type.Other && mtype == etype;
+					// Mention and candidate type match and are different to
+					boolean indicator = mtype != Candidate.Type.Other && mtype == etype;
+					if (smooth)
 						return indicator ? 0.99 : 0.01; // avoid zeros
+					else
+						return indicator ? 1.0 : 0.0;
 				})
 				.toArray();
 
-		double accum_t = Arrays.stream(t).sum();
-		IntStream.range(0, num_candidates).forEach(i -> t[i] /= accum_t); // normalize vector with sum of rows
+		if (normalize)
+		{
+			double accum_t = Arrays.stream(v).sum();
+			IntStream.range(0, candidates.size()).forEach(i -> v[i] /= accum_t); // normalize vector with sum of rows
+		}
 
-		// Create *non-symmetric non-negative* similarity matrix from sim function and links in content graph
+		return v;
+	}
+
+	// Creates normalized symmetric non-negative similarity matrix from sim function
+	private static double[][] createEntitySimilarityMatrix(List<Entity> entities, EntitySimilarity similarity, double lower_bound, boolean normalize)
+	{
+		int num_entities = entities.size();
+
+		// Create symmetric non-negative similarity matrix from sim function
+		log.info("Creating similarity matrix for " + num_entities + " entities");
+		AtomicLong counter = new AtomicLong(0);
+		long num_calculations1 = ((((long)num_entities * (long)num_entities) - num_entities)  / 2) + num_entities;
+		double[][] m = new double[num_entities][num_entities];
+		IntStream.range(0, num_entities).forEach(i ->
+				IntStream.range(i, num_entities).forEach(j -> {
+					double sim = 1.0;
+					if (i != j)
+					{
+						Entity e1 = entities.get(i);
+						Entity e2 = entities.get(j);
+						sim = similarity.computeSimilarity(e1, e2).orElse(similarity.getAverageSimiliarity());
+						if (sim < lower_bound)
+							sim = 0.0;
+					}
+
+					m[i][j] = sim;
+					m[j][i] = sim; // symmetric matrix
+
+					if (counter.incrementAndGet() % 10000000 == 0)
+						log.info(counter.get() + " out of " + num_calculations1);
+				}));
+
+		if (normalize)
+			normalize(m);
+		log.info("Done");
+
+		return m;
+	}
+
+	// Creates normalized symmetric non-negative similarity matrix from sim function
+	public static double[][] createCandidateSimilarityMatrix(List<Candidate> candidates, CandidateSimilarity similarity, double lower_bound, boolean normalize)
+	{
+		int num_candidates = candidates.size();
+
+		// Create symmetric non-negative similarity matrix from sim function
 		log.info("Creating similarity matrix for " + num_candidates + " candidates");
 		AtomicLong counter = new AtomicLong(0);
 		long num_calculations1 = ((((long)num_candidates * (long)num_candidates) - num_candidates)  / 2) + num_candidates;
-		Matrix m = new Matrix(num_candidates, num_candidates);
+		double[][] m = new double[num_candidates][num_candidates];
 		IntStream.range(0, num_candidates).forEach(i ->
 				IntStream.range(i, num_candidates).forEach(j -> {
 					double sim = 1.0;
@@ -148,70 +240,44 @@ public class RankingMatrices
 						Candidate c1 = candidates.get(i);
 						Candidate c2 = candidates.get(j);
 						sim = similarity.computeSimilarity(c1, c2);
-						if (sim < o.simLowerBound)
+						if (sim < lower_bound)
 							sim = 0.0;
 					}
 
-					m.set(i, j, sim);
-					m.set(j, i, sim);
+					m[i][j] = sim;
+					m[j][i] = sim; // symmetric matrix
 
 					if (counter.incrementAndGet() % 10000000 == 0)
 						log.info(counter.get() + " out of " + num_calculations1);
 				}));
-		normalize(m);
+
+		if (normalize)
+			normalize(m);
 		log.info("Done");
 
-		// Bias each row in m using relevance bias r and type bias t
-		// Prob i->j = a*r(j) + b*t(j) + (1.0-a-b)*m(i,j)
-		// The resulting matrix is row-normalized because both r and m are normalized
-		log.info("Creating ranking matrix for " + num_candidates + " candidates");
-		double a = o.dampingRelevance;
-		double b = o.dampingType;
-		counter.set(0);
-		long num_calculations2 = num_candidates * num_candidates;
-
-		Matrix ranking = new Matrix(num_candidates, num_candidates);
-		IntStream.range(0, num_candidates).forEach(i ->
-				IntStream.range(0, num_candidates).forEach(j -> {
-					Candidate c2 = candidates.get(j);
-					int ej = entities.get(c2.getEntity());
-
-					double rj = r[ej]; // bias towards relevance of j
-					double tj = t[j]; // bias towards type matching of j
-					double sij = m.get(i, j); // sim of i and j
-					double vij = a * rj + b * tj + (1.0 - a - b)*sij; // brj is positive, so pij also provided d > 0.0
-
-					ranking.set(i, j, vij);
-					if (counter.incrementAndGet() % 10000000 == 0)
-						log.info(counter.get() + " out of " + num_calculations2);
-
-				}));
-		log.info("Done");
-
-		// No need to normalize again
-		return ranking;
+		return m;
 	}
 
 	/**
 	 * Row-normalizes a matrix
 	 */
-	private static void normalize(Matrix m)
+	private static void normalize(double[][] m)
 	{
 		// Normalize matrix with sum of each row (adjacent lists)
-		int r = m.getRowDimension();
-		int c = m.getColumnDimension();
+		int r = m.length;
+		int c = m[0].length;
 
 		IntStream.range(0, r).forEach(i ->
 		{
-			double accum = Arrays.stream(m.getArray()[i]).sum();
-			IntStream.range(0, c).forEach(j -> m.set(i, j, m.get(i, j) / accum));
+			double accum = Arrays.stream(m[i]).sum();
+			IntStream.range(0, c).forEach(j -> m[i][j] = m[i][j] / accum);
 		});
 
 		// This check accounts for precision of 64-bit doubles, as explained in
 		// http://stackoverflow.com/questions/6837007/comparing-float-double-values-using-operator
 		// http://www.ibm.com/developerworks/java/library/j-jtp0114/#N10255
 		// and http://en.wikipedia.org/wiki/Machine_epsilon#Values_for_standard_hardware_floating_point_arithmetics
-		assert Arrays.stream(m.getArray()).allMatch(row ->
+		assert Arrays.stream(m).allMatch(row ->
 		{
 			double sum = Math.abs(Arrays.stream(row).sum() - 1.0);
 			return sum < 2*2.22e-16; //2*2.22e-16

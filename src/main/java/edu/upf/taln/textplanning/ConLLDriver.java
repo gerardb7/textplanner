@@ -153,7 +153,7 @@ public class ConLLDriver
 	{
 		try
 		{
-			List<ContentPattern> plan = p.planAndDisambiguatePageRank(graphs, options);
+			List<ContentPattern> plan = p.planAndDisambiguateOptimizer(graphs, options);
 			CoNLLWriter conll = new CoNLLWriter();
 			return conll.writePatterns(plan);
 		}
