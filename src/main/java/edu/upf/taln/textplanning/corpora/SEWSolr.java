@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
  */
 public final class SEWSolr implements Corpus
 {
+	private static final String solrUrl = "http://10.55.0.41:443/solr/sewDataAnnSen";
 	private final HttpSolrClient server;
 	private final long numDocs;
 	private final static Logger log = LoggerFactory.getLogger(SEWSolr.class);
@@ -24,11 +25,11 @@ public final class SEWSolr implements Corpus
 	private final static Cache coocurrenceCache = new Cache();
 	private final static DebugAid debug = new DebugAid(SEWSolr.class.getName()); // encapsulates non-immutable behavior used for debugging purposes
 
-	public SEWSolr(String inURL) throws RuntimeException
+	public SEWSolr() throws RuntimeException
 	{
 		try
 		{
-			server = new HttpSolrClient(inURL);
+			server = new HttpSolrClient(solrUrl);
 			SolrQuery q = new SolrQuery("*:*");
 			q.setRows(0);
 			numDocs = server.query(q).getResults().getNumFound();

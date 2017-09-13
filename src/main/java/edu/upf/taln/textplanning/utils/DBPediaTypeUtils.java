@@ -2,11 +2,14 @@ package edu.upf.taln.textplanning.utils;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
+import com.google.gson.Gson;
+import edu.upf.taln.textplanning.disambiguation.DBPediaType;
 import edu.upf.taln.textplanning.input.CoNLLReader;
 import edu.upf.taln.textplanning.structures.AnnotatedWord;
 import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.structures.Entity;
 import edu.upf.taln.textplanning.structures.LinguisticStructure;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,9 +18,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toList;
 import static org.apache.commons.io.FileUtils.readFileToString;
 
 public class DBPediaTypeUtils
@@ -46,6 +53,7 @@ public class DBPediaTypeUtils
 				.flatMap(List::stream)
 				.collect(Collectors.toSet());
 
+		log.info("Collecting references");
 		List<String> references = structures.stream()
 				.map(LinguisticStructure::vertexSet)
 				.flatMap(Set::stream)
@@ -54,7 +62,21 @@ public class DBPediaTypeUtils
 				.map(Candidate::getEntity)
 				.map(Entity::getReference)
 				.distinct()
-				.collect(Collectors.toList());
+				.collect(toList());
+
+		log.info("Querying types for " + references.size() + " references");
+		DBPediaType type = new DBPediaType();
+		AtomicInteger counter = new AtomicInteger();
+		Map<String, String> types = references.stream()
+				.peek(r -> { if (counter.incrementAndGet() % 1000 == 0) log.info(counter.get() + " queries completed"); })
+				.collect(Collectors.toMap(identity(), r -> type.getType(r).toString()));
+
+		log.info("Writing file");
+		Gson gson = new Gson();
+		String jsonNames = gson.toJson(types);
+		FileUtils.writeStringToFile(o.toFile(), jsonNames, StandardCharsets.UTF_8);
+
+		log.info("Done.");
 	}
 
 	@SuppressWarnings("MismatchedQueryAndUpdateOfCollection")

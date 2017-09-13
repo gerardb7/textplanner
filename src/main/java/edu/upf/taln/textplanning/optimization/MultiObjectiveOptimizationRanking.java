@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.optimization;
 
 import cc.mallet.optimize.ConjugateGradient;
+import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.similarity.CandidateSimilarity;
 import edu.upf.taln.textplanning.structures.Candidate;
@@ -21,6 +22,7 @@ public class MultiObjectiveOptimizationRanking
 	                            WeightingFunction relevance, double similarity_lower_bound, double relevance_lower_bound)
 	{
 		// Set up functions to be optimized and parameters
+		log.info("Setting up objectives");
 		Coherence coherence = new Coherence(candidates, similarity, similarity_lower_bound);
 		SimpleType type = new SimpleType(candidates);
 		Salience salience = new Salience(candidates, relevance, relevance_lower_bound);
@@ -32,7 +34,10 @@ public class MultiObjectiveOptimizationRanking
 		boolean converged = false;
 		try
 		{
+			log.info("Optimizing");
+			Stopwatch timer = Stopwatch.createStarted();
 			converged = gradient.optimize();
+			log.info("Optimization completed in " + timer.stop());
 		}
 		catch (IllegalArgumentException e)
 		{

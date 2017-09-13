@@ -98,6 +98,7 @@ public class FrequencyUtils
 				.flatMap(Set::stream)
 				.collect(toMap(e -> e, freqsFile::getEntityCount, (c1, c2) -> c1));
 
+		// @todo rewrite using GJson
 		JSONObject top = new JSONObject();
 		top.put("docs", freqsFile.getNumDocs());
 		top.put("entities", entityCounts);

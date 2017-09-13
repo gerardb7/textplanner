@@ -39,20 +39,16 @@ public class BabelNetAnnotator implements EntityDisambiguator
 	private static final int maxMentionTokens = 7;
 	private final static Logger log = LoggerFactory.getLogger(BabelNetAnnotator.class);
 
-	public BabelNetAnnotator()
+	public BabelNetAnnotator(DBPediaType dbpedia)
 	{
-		log.info("BabelNetAnnotator: Loading BabelNet instance");
+		log.info("Seting up BabelNetAnnotator");
 		Stopwatch timer = Stopwatch.createStarted();
 		PrintStream oldOut = System.err;
 		System.setErr(new PrintStream(new OutputStream() { public void write(int b) {} })); // shut up, BabelNet
 		bn = BabelNet.getInstance();
 		System.setErr(oldOut);
-		log.info("Loading completed in " + timer.stop());
-
-		log.info("BabelNetAnnotator : Setting up DBPedia SPARQL endpoint access");
-		timer.reset(); timer.start();
-		dbpedia = new DBPediaType();
-		log.info("Set up completed in " + timer.stop());
+		this.dbpedia = dbpedia;
+		log.info("BabelNetAnnotator set up completed in " + timer.stop());
 	}
 
 	/**

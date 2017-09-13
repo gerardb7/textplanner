@@ -8,6 +8,7 @@ import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.corpora.FreqsFile;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
 import edu.upf.taln.textplanning.disambiguation.BabelNetAnnotator;
+import edu.upf.taln.textplanning.disambiguation.DBPediaType;
 import edu.upf.taln.textplanning.input.CoNLLReader;
 import edu.upf.taln.textplanning.input.CoNLLWriter;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
@@ -75,16 +76,15 @@ public class ConLLDriver
 		@Parameter(description = "Input folder", arity = 1, converter = PathConverter.class,
 				validateWith = PathToExistingFolder.class, required = true)
 		private List<Path> input;
-		@Parameter(names = "-solr", description = "URL of Solr index")
-		private String solrUrl = "http://10.55.0.41:443/solr/sewDataAnnSen";
 		@Parameter(names = "-e", description = "Path to file containing embeddings",
 				converter = PathConverter.class, validateWith = PathToExistingFile.class, required = true)
 		private Path embeddings = null;
 		@Parameter(names = "-f", description = "Path to file containing pre-computed frequencies",
 				converter = PathConverter.class, validateWith = PathToExistingFile.class)
 		private Path frequencies = null;
-		@Parameter(names = "-t", description = "Type of embeddings", converter = EmbeddingsTypeConverter.class)
-		private EmbeddingsType type = EmbeddingsType.sense;
+		@Parameter(names = "-t", description = "Path to file containing DBPedia types",
+				converter = PathConverter.class, validateWith = PathToExistingFile.class)
+		private Path types = null;
 		@Parameter(names = "-debug", description = "Debug mode")
 		private boolean debug = false;
 	}
@@ -95,37 +95,18 @@ public class ConLLDriver
 	/**
 	 * Instantiates a planner that takes as input DSynt trees encoded using ConLL
 	 * It uses the following resources:
-	 * @param solrUrl url of solr server containing an index of the Semantically Enriched Wikipedia (SEW)
-	 * @param embeddingsFile path to the file containing the word vectors obtained from the Google News Corpus
-	 * @return an instance of the TextPlanner class
-	 */
-	@SuppressWarnings("WeakerAccess")
-	public static TextPlanner createConLLPlanner(String solrUrl, Path embeddingsFile) throws Exception
-	{
-//		final String solrUrl = "http://10.55.0.41:443/solr/sewDataAnnSen";
-//		final Path word2vecPath = Paths.get("/home/gerard/data/GoogleNews-vectors-negative300.bin");
-//		final Path senseEmbedPath = Paths.get("/home/gerard/data/sense/babelfy_vectors_merged_senses_only");
-
-		Corpus corpus = new SEWSolr(solrUrl);
-		WeightingFunction corpusMetric = new TFIDF(corpus);
-		EntitySimilarity esim = new SensEmbed(embeddingsFile);
-		return new TextPlanner(corpus, corpusMetric, esim, new BabelNetAnnotator());
-	}
-
-	/**
-	 * Instantiates a planner that takes as input DSynt trees encoded using ConLL
-	 * It uses the following resources:
 	 * @param frequenciesFile file containing pre-computed frequencies of items
 	 * @param embeddingsFile path to the file containing the word vectors obtained from the Google News Corpus
 	 * @return an instance of the TextPlanner class
 	 */
 	@SuppressWarnings("WeakerAccess")
-	public static TextPlanner createConLLPlanner(Path frequenciesFile, Path embeddingsFile) throws Exception
+	public static TextPlanner createConLLPlanner(Path frequenciesFile, Path embeddingsFile, Path typesFile) throws Exception
 	{
-		Corpus corpus = new FreqsFile(frequenciesFile);
+		Corpus corpus = frequenciesFile == null ? new SEWSolr() : new FreqsFile(frequenciesFile);
 		WeightingFunction corpusMetric = new TFIDF(corpus);
 		EntitySimilarity esim = new SensEmbed(embeddingsFile);
-		return new TextPlanner(corpus, corpusMetric, esim, new BabelNetAnnotator());
+		DBPediaType type = typesFile == null ? new DBPediaType() : new DBPediaType(typesFile);
+		return new TextPlanner(corpus, corpusMetric, esim, new BabelNetAnnotator(type));
 	}
 
 	@SuppressWarnings("WeakerAccess")
@@ -168,11 +149,7 @@ public class ConLLDriver
 	{
 		CMLArgs cmlArgs = new CMLArgs();
 		new JCommander(cmlArgs, args);
-		TextPlanner planner;
-		if (cmlArgs.frequencies != null)
-			planner = ConLLDriver.createConLLPlanner(cmlArgs.frequencies, cmlArgs.embeddings);
-		else
-			planner = ConLLDriver.createConLLPlanner(cmlArgs.solrUrl, cmlArgs.embeddings);
+		TextPlanner planner = ConLLDriver.createConLLPlanner(cmlArgs.frequencies, cmlArgs.embeddings, cmlArgs.types);
 
 		TextPlanner.Options options = new TextPlanner.Options();
 		options.generateStats = true;

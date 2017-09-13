@@ -238,7 +238,7 @@ public final class TextPlanner
 			// 1- Create candidate ranking matrix
 			log.info("Ranking candidates");
 			Stopwatch timer = Stopwatch.createStarted();
-			List<Candidate> candidates = collectCandidates(structures, false, false, false);
+			List<Candidate> candidates = collectCandidates(structures, true, true, true);
 			weighting.setContents(structures);
 			CandidateSimilarity sim = new CandidateSimilarity(esim);
 			// todo sort out access to TFIDF or corpus class

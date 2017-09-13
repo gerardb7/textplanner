@@ -26,8 +26,8 @@ public class CandidateOptimizable implements Optimizable.ByGradientValue
 	private final Function f; // function to optimize
 	private final List<Candidate> candidates = new ArrayList<>(); // vector of candidates/parameters
 	private final double[] params; // vector of parameter values
-	private final Map<Mention, List<Candidate>> mentionsToCandidates;
-	private final Map<Entity, List<Candidate>> entitiesToCandidates;
+	private final Map<Mention, List<Integer>> mentionsToCandidates; // integer values are indexes in this.candidates
+	private final Map<Entity, List<Integer>> entitiesToCandidates;
 
 	public CandidateOptimizable(Function function, List<Candidate> candidates, Corpus corpus)
 	{
@@ -56,22 +56,28 @@ public class CandidateOptimizable implements Optimizable.ByGradientValue
 				.toArray();
 
 		// Create a dictionary mapping mentions to all its candidates
-		mentionsToCandidates = candidates.stream()
+		Map<Mention, List<Candidate>> mention_dict = candidates.stream()
 				.collect(groupingBy(Candidate::getMention, toList()));
+		mentionsToCandidates = mention_dict.keySet().stream()
+				.collect(toMap(m -> m, m -> mention_dict.get(m).stream()
+						.map(candidates::indexOf)
+						.collect(toList())));
+
 
 		// Create a dictionary mapping entities to all the mentions of which they are candidates
-		entitiesToCandidates = candidates.stream()
+		Map<Entity, List<Candidate>> entity_dict = candidates.stream()
 				.collect(groupingBy(Candidate::getEntity, toList()));
+		entitiesToCandidates = entity_dict.keySet().stream()
+				.collect(toMap(m -> m, m -> entity_dict.get(m).stream()
+						.map(candidates::indexOf)
+						.collect(toList())));
 	}
 
 	@Override
 	public double getValue()
 	{
-		Map<Candidate, Double> softMaxDistributions = getSoftMaxDistributions();
-		double[] dist = candidates.stream()
-				.mapToDouble(softMaxDistributions::get)
-				.toArray();
-		return f.getValue(dist);
+		double[] softmax = getSoftMaxParameterValues();
+		return f.getValue(softmax);
 	}
 
 	@Override
@@ -98,6 +104,7 @@ public class CandidateOptimizable implements Optimizable.ByGradientValue
 	{
 		rankCandidates();
 		return this.mentionsToCandidates.get(m).stream()
+				.map(candidates::get)
 				.sorted(comparingDouble(Candidate::getValue).reversed())
 				.collect(toList());
 	}
@@ -108,6 +115,7 @@ public class CandidateOptimizable implements Optimizable.ByGradientValue
 		rankCandidates();
 		return entitiesToCandidates.keySet().stream()
 				.map(e -> Pair.of(e, entitiesToCandidates.get(e).stream()
+						.map(candidates::get)
 						.mapToDouble(Candidate::getValue)
 						.average().orElse(0.0)))
 				.sorted(comparingDouble((ToDoubleFunction<Pair<Entity, Double>>) Pair::getRight).reversed())
@@ -120,6 +128,7 @@ public class CandidateOptimizable implements Optimizable.ByGradientValue
 		rankCandidates();
 		return mentionsToCandidates.keySet().stream()
 				.map(m -> Pair.of(m, mentionsToCandidates.get(m).stream()
+						.map(candidates::get)
 						.mapToDouble(Candidate::getValue)
 						.max().orElse(0.0))) // important, max!
 				.sorted(comparingDouble((ToDoubleFunction<Pair<Mention, Double>>) Pair::getRight).reversed())
@@ -156,21 +165,20 @@ public class CandidateOptimizable implements Optimizable.ByGradientValue
 		params[i] = v;
 	}
 
-	protected Map<Candidate, Double> getSoftMaxDistributions()
+	private double[] getSoftMaxParameterValues()
 	{
-		// Work out softmax probability values for each parameter/pair
-		return mentionsToCandidates.values().stream()
-				.flatMap(candidates ->
-				{
-					double[] params = candidates.stream()
-							.mapToInt(this.candidates::indexOf)
-							.mapToDouble(i -> this.params[i])
-							.toArray();
-					double[] dist = getSoftMaxDistribution(params);
-					return IntStream.range(0, candidates.size())
-							.mapToObj(i -> Pair.of(candidates.get(i), dist[i]));
-				})
-				.collect(toMap(Pair::getLeft, Pair::getRight));
+		double[] softmax_params = new double[params.length];
+		for (List<Integer> indexes : mentionsToCandidates.values())
+		{
+			double[] candidate_values = indexes.stream()
+					.mapToDouble(i -> this.params[i])
+					.toArray();
+			double[] dist = getSoftMaxDistribution(candidate_values);
+			IntStream.range(0 , dist.length)
+					.forEach(i -> softmax_params[indexes.get(i)] = dist[i]);
+		}
+
+		return softmax_params;
 	}
 
 	private static double[] getSoftMaxDistribution(double[] p)
