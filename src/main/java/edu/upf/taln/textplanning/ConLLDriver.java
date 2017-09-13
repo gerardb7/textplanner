@@ -8,7 +8,6 @@ import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.corpora.FreqsFile;
 import edu.upf.taln.textplanning.corpora.SEWSolr;
 import edu.upf.taln.textplanning.disambiguation.BabelNetAnnotator;
-import edu.upf.taln.textplanning.disambiguation.DBPediaType;
 import edu.upf.taln.textplanning.input.CoNLLReader;
 import edu.upf.taln.textplanning.input.CoNLLWriter;
 import edu.upf.taln.textplanning.similarity.EntitySimilarity;
@@ -105,8 +104,8 @@ public class ConLLDriver
 		Corpus corpus = frequenciesFile == null ? new SEWSolr() : new FreqsFile(frequenciesFile);
 		WeightingFunction corpusMetric = new TFIDF(corpus);
 		EntitySimilarity esim = new SensEmbed(embeddingsFile);
-		DBPediaType type = typesFile == null ? new DBPediaType() : new DBPediaType(typesFile);
-		return new TextPlanner(corpus, corpusMetric, esim, new BabelNetAnnotator(type));
+		BabelNetAnnotator babelnet = new BabelNetAnnotator(typesFile);
+		return new TextPlanner(corpus, corpusMetric, esim, babelnet);
 	}
 
 	@SuppressWarnings("WeakerAccess")

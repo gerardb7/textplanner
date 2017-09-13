@@ -9,7 +9,12 @@ import edu.upf.taln.textplanning.structures.AnnotatedWord;
 import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.structures.Entity;
 import edu.upf.taln.textplanning.structures.LinguisticStructure;
+import it.uniroma1.lcl.babelnet.BabelNet;
+import it.uniroma1.lcl.babelnet.BabelSynset;
+import it.uniroma1.lcl.babelnet.BabelSynsetID;
+import it.uniroma1.lcl.jlt.util.Language;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,8 +28,8 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static org.apache.commons.io.FileUtils.readFileToString;
 
 public class DBPediaTypeUtils
@@ -64,18 +69,52 @@ public class DBPediaTypeUtils
 				.distinct()
 				.collect(toList());
 
+		// Get their types
 		log.info("Querying types for " + references.size() + " references");
+		BabelNet bn = BabelNet.getInstance();
 		DBPediaType type = new DBPediaType();
 		AtomicInteger counter = new AtomicInteger();
+
 		Map<String, String> types = references.stream()
-				.peek(r -> { if (counter.incrementAndGet() % 1000 == 0) log.info(counter.get() + " queries completed"); })
-				.collect(Collectors.toMap(identity(), r -> type.getType(r).toString()));
+				.map(r -> {
+					try
+					{
+						BabelSynset synset = bn.getSynset(new BabelSynsetID(r));
+						List<String> dbPediaURIs = synset.getDBPediaURIs(Language.EN);
+						Candidate.Type t = Candidate.Type.Other;
+						if (!dbPediaURIs.isEmpty())
+						{
+							t = type.getType(dbPediaURIs.get(0));
+						}
+
+						if (counter.incrementAndGet() % 1000 == 0)
+							log.info(counter.get() + " types queried");
+
+						return Pair.of(r, t.toString());
+					}
+					catch (Exception e) { throw new RuntimeException(e); }
+				})
+				.collect(toMap(Pair::getLeft, Pair::getRight));
 
 		log.info("Writing file");
 		Gson gson = new Gson();
 		String jsonNames = gson.toJson(types);
 		FileUtils.writeStringToFile(o.toFile(), jsonNames, StandardCharsets.UTF_8);
 
+		long location_count = types.values().stream()
+				.map(Candidate.Type::valueOf)
+				.filter(t -> t == Candidate.Type.Location)
+				.count();
+		long person_count = types.values().stream()
+				.map(Candidate.Type::valueOf)
+				.filter(t -> t == Candidate.Type.Person)
+				.count();
+		long organization_count = types.values().stream()
+				.map(Candidate.Type::valueOf)
+				.filter(t -> t == Candidate.Type.Organization)
+				.count();
+		log.info("Got " + location_count + " locations, " + person_count + " persons, " + organization_count +
+				" organizations and " + (types.size() - location_count - person_count - organization_count) + " other");
 		log.info("Done.");
 	}
 

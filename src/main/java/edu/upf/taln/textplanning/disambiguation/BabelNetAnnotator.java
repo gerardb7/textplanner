@@ -1,13 +1,17 @@
 package edu.upf.taln.textplanning.disambiguation;
 
 import com.google.common.base.Stopwatch;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import edu.upf.taln.textplanning.structures.*;
 import edu.upf.taln.textplanning.structures.Candidate.Type;
 import it.uniroma1.lcl.babelnet.BabelNet;
 import it.uniroma1.lcl.babelnet.BabelSynset;
+import it.uniroma1.lcl.babelnet.BabelSynsetID;
 import it.uniroma1.lcl.babelnet.data.BabelPOS;
 import it.uniroma1.lcl.jlt.util.Language;
 import org.apache.commons.collections4.SetUtils;
+import org.apache.commons.io.FileUtils;
 import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.Subgraph;
@@ -18,15 +22,17 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.math.RoundingMode;
+import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static edu.upf.taln.textplanning.disambiguation.POSConverter.BN_POS_EN;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparingInt;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.*;
 
 /**
@@ -35,20 +41,41 @@ import static java.util.stream.Collectors.*;
 public class BabelNetAnnotator implements EntityDisambiguator
 {
 	private final BabelNet bn;
-	private final DBPediaType dbpedia;
+	private final DBPediaType dbpedia = new DBPediaType();
+	private final Map<String, Type> types = new HashMap<>();
 	private static final int maxMentionTokens = 7;
 	private final static Logger log = LoggerFactory.getLogger(BabelNetAnnotator.class);
 
-	public BabelNetAnnotator(DBPediaType dbpedia)
+	public BabelNetAnnotator(Path types_file) throws IOException
 	{
-		log.info("Seting up BabelNetAnnotator");
+		bn = getBabelNetInstance();
+
+		if (types_file != null)
+		{
+			log.info("Reading DBpedia types from file");
+			Stopwatch timer = Stopwatch.createStarted();
+			String json = FileUtils.readFileToString(types_file.toFile(), UTF_8);
+			Gson gson = new Gson();
+			java.lang.reflect.Type type = new TypeToken<Map<String, String>>()
+			{
+			}.getType();
+			Map<String, String> types_in_file = gson.fromJson(json, type);
+			types_in_file.forEach((key, value) -> types.put(key, Candidate.Type.valueOf(value)));
+			log.info(types.size() + " DBpedia types read from file in " + timer.stop());
+		}
+	}
+
+	private static BabelNet getBabelNetInstance()
+	{
+		log.info("Creating BabelNet instance");
 		Stopwatch timer = Stopwatch.createStarted();
 		PrintStream oldOut = System.err;
 		System.setErr(new PrintStream(new OutputStream() { public void write(int b) {} })); // shut up, BabelNet
-		bn = BabelNet.getInstance();
+		BabelNet instance = BabelNet.getInstance();
 		System.setErr(oldOut);
-		this.dbpedia = dbpedia;
-		log.info("BabelNetAnnotator set up completed in " + timer.stop());
+		log.info("BabelNet instance created in " + timer.stop());
+
+		return instance;
 	}
 
 	/**
@@ -94,22 +121,10 @@ public class BabelNetAnnotator implements EntityDisambiguator
 		counter.set(0);
 		timer.reset(); timer.start();
 
-		Set<BabelSynset> all_synsets = labels2Synsets.values().stream()
-				.flatMap(List::stream)
-				.distinct()
-				.collect(Collectors.toSet());
-		Map<BabelSynset, Type> synsets2Types = all_synsets.stream()
-				.peek(t -> {
-					if (counter.incrementAndGet() % 1000 == 0)
-						log.info("Queried types for " + counter.get() + " synsets forms out of " + all_synsets.size());
-				})
-				.collect(toMap(s -> s, this::getEntityType));
-		log.info("Types queried in " + timer.stop());
-
 		// Instantiate Entity objects from info gathered so far
 		Map<String, Set<Entity>> labels2Entities = labels2Synsets.keySet().stream()
 				.collect(toMap(l -> l, l -> labels2Synsets.get(l).stream()
-						.map(s -> createEntity(s, synsets2Types.get(s)))
+						.map(s -> createEntity(s, Type.Other))
 						.collect(toSet())));
 
 		// Assign mentions and candidate entities to nodes in the structures
@@ -126,6 +141,58 @@ public class BabelNetAnnotator implements EntityDisambiguator
 			log.error("Unreferenced candidates found");
 
 		reportStats(structures, true);
+	}
+
+	@Override
+	public void annotateTypes(Collection<LinguisticStructure> structures)
+	{
+		// Collect distinct references
+		Set<String> refs = structures.stream()
+				.flatMap(s -> s.vertexSet().stream()
+						.flatMap(v -> v.getCandidates().stream()
+								.map(Candidate::getEntity)
+								.map(Entity::getReference)))
+				.distinct()
+				.collect(toSet());
+
+		// Keep types of references in map
+		Map<String, Type> types = refs.stream()
+				.filter(this.types::containsKey)
+				.collect(toMap(identity(), this.types::get));
+
+		// Query types for the rest
+		Set<String> refs2query = refs.stream()
+				.filter(r -> !types.containsKey(r))
+				.collect(toSet());
+
+		AtomicInteger counter = new AtomicInteger();
+		refs2query.forEach(r -> {
+					try
+					{
+						BabelSynset synset = bn.getSynset(new BabelSynsetID(r));
+						List<String> dbPediaURIs = synset.getDBPediaURIs(Language.EN);
+						Candidate.Type t = Candidate.Type.Other;
+						if (!dbPediaURIs.isEmpty())
+						{
+							t = dbpedia.getType(dbPediaURIs.get(0));
+						}
+						types.put(r, t);
+
+						if (counter.incrementAndGet() % 1000 == 0)
+							log.info(counter.get() + " types queried");
+
+					}
+					catch (Exception e) { throw new RuntimeException(e); }
+				});
+
+		// Assign types to entities
+		structures.forEach(s ->
+				s.vertexSet().forEach(v ->
+						v.getCandidates().stream()
+								.map(Candidate::getEntity)
+								.forEach(e -> {
+									e.setType(types.get(e.getReference()));
+								})));
 	}
 
 	// Removes all candidates which are associated to an entity and head word for which a longer subsuming mention exists
@@ -265,7 +332,7 @@ public class BabelNetAnnotator implements EntityDisambiguator
 							return h.map(w -> w.addMention(l)).orElse(null);
 						})
 						.filter(Objects::nonNull))
-				.flatMap(Function.identity())
+				.flatMap(identity())
 				.collect(toList());
 	}
 
@@ -321,25 +388,6 @@ public class BabelNetAnnotator implements EntityDisambiguator
 			log.error("Cannot get synsets for form " + s + ": " + e);
 			return Collections.emptyList();
 		}
-	}
-
-	/**
-	 * Creates an Entity object from a BabelNet synset id and its type.
-	 * The latter can be either person, location, organization or other for sysnets with links to DBPedia.
-	 * For synsets without link to DBPedia the type is always "other".
-	 * @param s a BabelNet sysnet
-	 * @return an isntance of the Entity class
-	 */
-	private Type getEntityType(BabelSynset s)
-	{
-		List<String> dbPediaURIs = s.getDBPediaURIs(Language.EN);
-		Type type = Type.Other;
-		if (!dbPediaURIs.isEmpty())
-		{
-			type = dbpedia.getType(dbPediaURIs.get(0));
-		}
-
-		return type;
 	}
 
 	private Entity createEntity(BabelSynset s, Type t)
