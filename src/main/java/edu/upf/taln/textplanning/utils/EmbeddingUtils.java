@@ -46,7 +46,7 @@ public class EmbeddingUtils
 	 * the vectors for the senses found in the conll file
 	 *
 	 * @param embeddingsPath path to the file containing the embeddings
-	 * @param synsetsPath path to file containing list of BabelNet synset ids
+	 * @param synsetsPath path to file containing list of BabelNetWrapper synset ids
 	 * @param outPath path to the new embeddings file
 	 */
 	private static void subsetEmbeddings(Path embeddingsPath, Path synsetsPath, Path outPath) throws Exception
@@ -80,7 +80,7 @@ public class EmbeddingUtils
 	 *
 	 * @param embeddings path to file containing the embeddings
 	 * @param sensesOnly     if true vectors for words are discarded
-	 * @param useSynsetsAsKeys true -> BabelNet synset ids used as keys, false -> pairs of word and ids used as keys
+	 * @param useSynsetsAsKeys true -> BabelNetWrapper synset ids used as keys, false -> pairs of word and ids used as keys
 	 * @return a map containing all vectors
 	 */
 	public static Map<String, List<double[]>> parseEmbeddingsFile(Path embeddings, @SuppressWarnings("SameParameterValue") boolean sensesOnly,

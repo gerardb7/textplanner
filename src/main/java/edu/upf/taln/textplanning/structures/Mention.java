@@ -1,58 +1,48 @@
 package edu.upf.taln.textplanning.structures;
 
+import edu.upf.taln.textplanning.input.GraphAlignments;
 import edu.upf.taln.textplanning.structures.Candidate.Type;
 import org.apache.commons.lang3.tuple.Pair;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.io.Serializable;
+import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
- * This class encapsulates single or multiword mentions to some entity, and its entity type.
+ * A sequence of consecutive tokens spanned over by an AMR node.
  */
-public final class Mention
+public final class Mention implements Serializable
 {
-	private final LinguisticStructure s;
-	private final List<AnnotatedWord> tokens = new ArrayList<>();
-	private final int head;
-	private final List<String> surfaceForm;
-	private final Pair<Long, Long> offsets;
-	private Mention coref = null; // Coreferring mention (representative mention in a coreference chain)
+	private final GraphAlignments aligned_graph;
+	private final Pair<Integer, Integer> span;
+	private final String surfaceForm;
+	private final String pos;
+	private final Type type;
 
-	public Mention(LinguisticStructure s, List<AnnotatedWord> tokens, int head)
+	public Mention(GraphAlignments graph, Pair<Integer, Integer> tokens_span, String POS, Type type)
 	{
-		this.s = s;
-		this.tokens.addAll(tokens);
-		this.head = head;
-		surfaceForm = tokens.stream()
-				.map(AnnotatedWord::getForm)
-				.collect(Collectors.toList());
-		offsets = Pair.of(tokens.get(0).getOffsetStart(), tokens.get(tokens.size()-1).getOffsetEnd());
+		this.aligned_graph = graph;
+		this.span = tokens_span;
+		surfaceForm = IntStream.range(span.getLeft(), span.getRight())
+				.mapToObj(graph::getToken)
+				.collect(Collectors.joining(" "));
+		this.pos = POS;
+		this.type = type;
 	}
 
-	public LinguisticStructure getStructure() { return s; }
-	public List<AnnotatedWord> getTokens() { return new ArrayList<>(tokens);}
-	public int getNumTokens() { return tokens.size();}
-	public AnnotatedWord getHead() { return this.tokens.get(head); }
-	public String getSurfaceForm() { return surfaceForm.stream().collect(Collectors.joining(" ")); }
-	public Pair<Long, Long> getOffsets() { return offsets; }
-	public Type getType() { return getHead().getType(); } // the NE type of a mention is that of its head
-	public Optional<Mention> getCoref() { return Optional.ofNullable(this.coref); }
-	public void setCoref(Mention m) { coref = m; }
+	public GraphAlignments getAlignedGraph() { return aligned_graph; }
+	public Pair<Integer, Integer> getSpan() { return span; }
+	public String getSurfaceForm() { return surfaceForm; }
+	public String getPOS() { return pos;}
+	public Type getType() { return type; }
+	public boolean isNominal() { return pos.startsWith("N"); }
 
-	// this mention contains another mention o its surface form contains the other mention surface form (and is larger)
+
 	public boolean contains(Mention o)
 	{
-		return  this.getNumTokens() > o.getNumTokens() &&
-				Collections.indexOfSubList(this.surfaceForm, o.surfaceForm) != -1;
-	}
-
-	public boolean corefers(Mention m)
-	{
-		return  (coref != null && coref == m) || // m is the representative mention for this
-				(m.coref != null && (m.coref == this || m.coref == this.coref)); // or they both have the same representative mention
+		return  aligned_graph == o.aligned_graph &&
+				span.getLeft() <= o.span.getLeft() && span.getRight() <= o.span.getRight();
 	}
 
 	@Override
@@ -74,15 +64,12 @@ public final class Mention
 		}
 
 		Mention mention = (Mention) o;
-		return head == mention.head && s.equals(mention.s) && tokens.equals(mention.tokens);
+		return aligned_graph == mention.aligned_graph && span.equals(mention.span);
 	}
 
 	@Override
 	public int hashCode()
 	{
-		int result = s.hashCode();
-		result = 31 * result + tokens.hashCode();
-		result = 31 * result + head;
-		return result;
+		return Objects.hash(aligned_graph, span);
 	}
 }

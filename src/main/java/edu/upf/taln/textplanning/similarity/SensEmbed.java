@@ -2,8 +2,6 @@ package edu.upf.taln.textplanning.similarity;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
-import edu.upf.taln.textplanning.structures.Candidate;
-import edu.upf.taln.textplanning.structures.Entity;
 import edu.upf.taln.textplanning.utils.EmbeddingUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -19,7 +17,7 @@ import java.util.stream.Collectors;
 /**
  * Computes similarity between word senses according to SenseEmbed distributional vectors
  */
-public class SensEmbed implements EntitySimilarity
+public class SensEmbed implements MeaningSimilarity
 {
 	private final ImmutableMap<String, double[]> vectors;
 	private final static double avg_sim = 0.041157715074586806;
@@ -48,27 +46,21 @@ public class SensEmbed implements EntitySimilarity
 	}
 
 	@Override
-	public boolean isDefinedFor(Entity e)
+	public boolean isDefinedFor(String e1, String e2)
 	{
-		return vectors.containsKey(e.getId());
+		return vectors.containsKey(e1) && vectors.containsKey(e2);
 	}
 
 	@Override
-	public boolean isDefinedFor(Entity e1, Entity e2)
+	public OptionalDouble computeSimilarity(String e1, String e2)
 	{
-		return vectors.containsKey(e1.getId()) && vectors.containsKey(e2.getId());
-	}
-
-	@Override
-	public OptionalDouble computeSimilarity(Entity e1, Entity e2)
-	{
-		if (e1 == e2 || e1.getId().equals(e2.getId()))
+		if (e1.equals(e2))
 			return OptionalDouble.of(1.0);
 		if (!isDefinedFor(e1, e2))
 			return OptionalDouble.empty(); // todo consider throwing an exception or returning an optional
 
-		double[] v1 = vectors.get(e1.getId());
-		double[] v2 = vectors.get(e2.getId());
+		double[] v1 = vectors.get(e1);
+		double[] v2 = vectors.get(e2);
 
 		double dotProduct = 0.0;
 		double normA = 0.0;
@@ -106,7 +98,7 @@ public class SensEmbed implements EntitySimilarity
 		double average = vectors.keySet().stream()
 				.map(r1 -> vectors.keySet().stream()
 						.filter(r2 -> !r1.equals(r2))
-						.map(r2 -> computeSimilarity(Entity.get(r1, r1, Candidate.Type.Other), Entity.get(r2, r2, Candidate.Type.Other)))
+						.map(r2 -> computeSimilarity(r1, r2))
 						.mapToDouble(OptionalDouble::getAsDouble)
 						.peek(v -> {
 							if (counter.incrementAndGet() % 100000 == 0)

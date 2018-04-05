@@ -12,7 +12,7 @@ public class MultiObjectiveFunction implements Function
 {
 	private final List<Function> optimizables;
 
-	public MultiObjectiveFunction(Function... ops)
+	MultiObjectiveFunction(Function... ops)
 	{
 		optimizables = Arrays.asList(ops);
 	}

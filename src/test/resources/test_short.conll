@@ -11,7 +11,7 @@
 10	be	be	VB	_	_	id0=31|hasExtArg=no|pred_Value=01|start_string=1450|fn=Performers_and_roles|end_string=1452|pred_Name=be|word=be|dpos=VB|connect_check=OK	_	8	_	Argument2	_	_	_	true
 11	move	move	VB	_	_	vncls=11.2|id0=18|hasExtArg=yes|pred_Value=01|start_string=1371|fn=Cause_change_of_position_on_a_scale|end_string=1375|pred_Name=move|word=move|connect_check=OK|dpos=VB	_	9	_	Elaboration	_	_	_	true
 12	our	our	PRPpossessive	_	_	id0=33|hasExtArg=no|pred_Value=01|start_string=1456|fn=Linguistic_situation|vn=our|end_string=1459|pred_Name=our|word=our|dpos=PRP$|connect_check=OK	_	0	_	ROOT	_	_	_	true
-13	’s	’s	POS	_	_	id0=15|hasExtArg=no|pred_Value=01|start_string=1360|fn=Linguistic_situation|vn=’s|end_string=1362|pred_Name=’s|word=’s|dpos=POS|connect_check=OK	_	0	_	ROOT	_	_	_	true
+13	’graph	’graph	POS	_	_	id0=15|hasExtArg=no|pred_Value=01|start_string=1360|fn=Linguistic_situation|vn=’graph|end_string=1362|pred_Name=’graph|word=’graph|dpos=POS|connect_check=OK	_	0	_	ROOT	_	_	_	true
 14	it	It	PRP	_	_	id0=2|hasExtArg=no|pred_Value=01|start_string=1293|vn=it|end_string=1295|pred_Name=it|word=it|dpos=PRP|connect_check=OK	_	6	_	Argument1	_	_	_	true
 15	emphasis	emphasis	NN	_	_	start_string=1427|fn=Place_weight_on|bnId=s00000639n|end_string=1435|number=SG|id0=27|hasExtArg=yes|pred_Value=01|pred_Name=emphasis|word=emphasis|connect_check=OK|dpos=NN|definiteness=DEF	_	8	_	Argument1	_	_	_	true
 16	on	on	IN	_	_	id0=32|hasExtArg=no|pred_Value=01|start_string=1453|fn=Temporal_collocation|end_string=1455|pred_Name=on|word=on|dpos=IN|connect_check=OK	_	10	_	Argument2	_	_	_	true

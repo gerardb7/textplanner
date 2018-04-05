@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 
 /**
- * Interface for classes implementing access to corpora semantically annotated with entities.
+ * Interface for classes implementing access to corpora semantically annotated with meanings.
  */
 public interface Corpus
 {
@@ -44,12 +44,12 @@ public interface Corpus
 		private final List<Long> times = new ArrayList<>();
 		private final static Logger log = LoggerFactory.getLogger(DebugAid.class);
 
-		public DebugAid(String inId)
+		DebugAid(String inId)
 		{
 			this.id = inId;
 		}
 
-		public void registerQuery(long inTime)
+		void registerQuery(long inTime)
 		{
 			if (++numQueries % 25 == 0)
 			{
@@ -64,14 +64,14 @@ public interface Corpus
 			times.clear();
 		}
 
-		public long getAverageTime()
+		long getAverageTime()
 		{
 			return (long) times.stream()
 					.mapToLong(l -> l)
 					.average().orElse(0.0);
 		}
 
-		public long getMaxTime()
+		long getMaxTime()
 		{
 			return times.stream()
 					.mapToLong(l -> l)
@@ -85,13 +85,13 @@ public interface Corpus
 		}
 	}
 
-	boolean hasEntity(String entity) throws Exception;
-	boolean hasEntityDocument(String entity);
-	boolean hasFormEntity(String form, String entity);
+	boolean hasMeaning(String meaning) throws Exception;
+	boolean hasMeaningDocument(String meaning);
+	boolean hasFormMeaning(String form, String meaning);
 	boolean hasForm(String form);
-	long getEntityCount(String item);
-	long getEntityDocumentCount(String entity);
-	long getFormEntityCount(String form, String entity);
+	long getMeaningCount(String meaning);
+	long getMeaningDocumentCount(String meaning);
+	long getFormMeaningCount(String form, String meaning);
 	long getFormCount(String form);
 	long getNumDocs();
 }

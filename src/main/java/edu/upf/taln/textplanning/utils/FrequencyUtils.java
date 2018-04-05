@@ -3,10 +3,9 @@ package edu.upf.taln.textplanning.utils;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import edu.upf.taln.textplanning.corpora.FreqsFile;
-import edu.upf.taln.textplanning.input.CoNLLReader;
-import edu.upf.taln.textplanning.structures.AnnotatedWord;
-import edu.upf.taln.textplanning.structures.LinguisticStructure;
-import edu.upf.taln.textplanning.structures.Mention;
+import edu.upf.taln.textplanning.input.AMRReader;
+import edu.upf.taln.textplanning.input.GraphListFactory;
+import edu.upf.taln.textplanning.structures.*;
 import edu.upf.taln.textplanning.utils.CMLCheckers.PathConverter;
 import edu.upf.taln.textplanning.utils.CMLCheckers.PathToExistingFolder;
 import edu.upf.taln.textplanning.utils.CMLCheckers.PathToNewFile;
@@ -20,6 +19,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -44,7 +44,7 @@ public class FrequencyUtils
 		private List<Path> structures;
 		@Parameter(names = {"-e", "-extension"}, description = "Extension used to filter files", arity = 1, required = true)
 		private List<String> extension;
-		@Parameter(names = {"-i", "-inputFile"}, description = "Input frequencies file", arity = 1, required = true, converter = PathConverter.class,
+		@Parameter(names = {"-index", "-inputFile"}, description = "Input frequencies file", arity = 1, required = true, converter = PathConverter.class,
 				validateWith = CMLCheckers.PathToExistingFile.class)
 		private List<Path> inputFile;
 		@Parameter(names = {"-o", "-outputFile"}, description = "Output frequencies file", arity = 1, required = true, converter = PathConverter.class,
@@ -54,11 +54,11 @@ public class FrequencyUtils
 
 	/**
 	 */
-	private static void getFrequenciesSubset(Path structuresPath, String extension, Path inputFile, Path outputFile) throws IOException
+	private static void getFrequenciesSubset(Path amrPath, String extension, Path inputFile, Path outputFile) throws IOException
 	{
-		log.info("Reading structures");
-		CoNLLReader conll = new CoNLLReader();
-		Set<LinguisticStructure> structures = Files.walk(structuresPath.toAbsolutePath())
+		log.info("Reading graphs");
+		GraphListFactory factory = new GraphListFactory(new AMRReader(), null);
+		List<GraphList> graphs = Files.walk(amrPath.toAbsolutePath())
 				.filter(Files::isRegularFile)
 				.filter(p -> p.toString().endsWith(extension))
 				.map(p ->
@@ -72,16 +72,13 @@ public class FrequencyUtils
 						throw new RuntimeException(e);
 					}
 				})
-				.map(conll::readStructures)
-				.flatMap(List::stream)
-				.collect(Collectors.toSet());
+				.map(factory::getGraphs) // includes NER+Coref processing with stanford
+				.collect(Collectors.toList());
 
-		// The list of forms should contain all mentions annotated by coref & NER + nominal groups + a mention for each single word
-		List<String> forms = structures.stream()
-				.map(LinguisticStructure::vertexSet)
-				.flatMap(Set::stream)
-				.map(AnnotatedWord::getMentions)
-				.flatMap(Set::stream)
+		List<String> forms = graphs.stream()
+				.map(GraphList::getCandidates)
+				.flatMap(Collection::stream)
+				.map(Candidate::getMention)
 				.map(Mention::getSurfaceForm)
 				.distinct()
 				.collect(Collectors.toList());
@@ -90,18 +87,18 @@ public class FrequencyUtils
 		FreqsFile freqsFile = new FreqsFile(inputFile);
 
 		Map<String, Map<String, Long>> formCounts = forms.stream()
-				.collect(toMap(f -> f, f -> freqsFile.getEntitiesForForm(f).stream()
-						.collect(toMap(e -> e, e -> freqsFile.getFormEntityCount(f, e)))));
+				.collect(toMap(f -> f, f -> freqsFile.getMeaningsForForm(f).stream()
+						.collect(toMap(e -> e, e -> freqsFile.getFormMeaningCount(f, e)))));
 
-		Map<String, Long> entityCounts = formCounts.values().stream()
+		Map<String, Long> meaningCounts = formCounts.values().stream()
 				.map(Map::keySet)
 				.flatMap(Set::stream)
-				.collect(toMap(e -> e, freqsFile::getEntityCount, (c1, c2) -> c1));
+				.collect(toMap(e -> e, freqsFile::getMeaningCount, (c1, c2) -> c1));
 
 		// @todo rewrite using GJson
 		JSONObject top = new JSONObject();
 		top.put("docs", freqsFile.getNumDocs());
-		top.put("entities", entityCounts);
+		top.put("meanings", meaningCounts);
 
 		JSONObject jForms = new JSONObject();
 		for (String form : formCounts.keySet())
@@ -109,11 +106,11 @@ public class FrequencyUtils
 			Map<String, Long> counts = formCounts.get(form);
 			JSONArray jCounts = new JSONArray();
 
-			for (String entity : counts.keySet())
+			for (String meaning : counts.keySet())
 			{
-				Long count = counts.get(entity);
+				Long count = counts.get(meaning);
 				JSONArray jCount = new JSONArray();
-				jCount.put(entity);
+				jCount.put(meaning);
 				jCount.put(count);
 				jCounts.put(jCount);
 			}

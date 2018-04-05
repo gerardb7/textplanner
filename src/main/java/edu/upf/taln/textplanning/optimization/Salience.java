@@ -1,8 +1,8 @@
 package edu.upf.taln.textplanning.optimization;
 
-import edu.upf.taln.textplanning.ranking.RankingMatrices;
+import edu.upf.taln.textplanning.ranking.MatrixFactory;
 import edu.upf.taln.textplanning.structures.Candidate;
-import edu.upf.taln.textplanning.structures.Entity;
+import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 
 import java.util.List;
@@ -24,20 +24,22 @@ public class Salience implements Function
 	private final double[] relevanceValues; // per entity, not candidate
 
 
-	public Salience(List<Candidate> candidates, WeightingFunction relevance, double lower_bound)
+	Salience(List<Candidate> candidates, WeightingFunction weighting, double min_weight)
 	{
 		this.candidates = candidates;
 
-		List<Entity> entities = candidates.stream()
-				.map(Candidate::getEntity)
+		List<String> meanings = candidates.stream()
+				.map(Candidate::getMeaning)
+				.map(Meaning::getReference)
 				.distinct()
 				.collect(toList());
 		candidates2Indexes = candidates.stream()
-				.collect(toMap(c -> c, c -> entities.indexOf(c.getEntity())));
+				.collect(toMap(c -> c, c -> meanings.indexOf(c.getMeaning().getReference())));
 
 		// Don't normalize vector, normalization is part of the optimizable softmax function
 		// Store relevance values for each pair
-		relevanceValues = RankingMatrices.createRelevanceVector(entities, relevance, lower_bound, false);
+
+		relevanceValues = MatrixFactory.createMeaningsBiasVector(meanings, weighting, min_weight, false);
 	}
 
 	@Override

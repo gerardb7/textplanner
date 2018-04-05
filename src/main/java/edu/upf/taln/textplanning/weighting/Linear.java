@@ -1,8 +1,7 @@
 package edu.upf.taln.textplanning.weighting;
 
-import edu.upf.taln.textplanning.structures.LinguisticStructure;
+import edu.upf.taln.textplanning.structures.GraphList;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,7 +17,7 @@ public final class Linear implements WeightingFunction
 	}
 
 	@Override
-	public void setContents(Collection<LinguisticStructure> contents)
+	public void setContents(GraphList contents)
 	{
 		functions.forEach((f, w) -> f.setContents(contents));
 	}
@@ -33,8 +32,6 @@ public final class Linear implements WeightingFunction
 
 	public Map<WeightingFunction, Double> getFunctions()
 	{
-		Map<WeightingFunction, Double> l = new HashMap<>();
-		l.putAll(functions);
-		return l;
+		return new HashMap<>(functions);
 	}
 }

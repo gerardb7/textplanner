@@ -155,7 +155,7 @@ ott
 pedig
 persze
 rá
-s
+graph
 saját
 sem
 semmi

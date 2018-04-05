@@ -42,7 +42,7 @@
 2	energy_policy	energy_policy	VBZ	_	_	id0=18|start_string=3284|fn=Linguistic_situation|vn=energy_policy|bnId=s00624315n|end_string=3299|tense=PRES|word=energy_policy|dpos=VB|connect_check=OK	_	0	_	root	_	_	_	true
 3	government	Government	NNP	_	_	number=SG|id0=14|start_string=3251|vn=government|bnId=s00001426n|end_string=3261|word=government|dpos=NN|connect_check=OK	_	5	_	NAME	_	_	_	true
 4	matter	matter	NN	_	_	number=SG|id0=20|start_string=3305|fn=Linguistic_situation|vn=matter|bnId=s00053867n|end_string=3311|word=matter|dpos=NN|connect_check=OK	_	2	_	Argument2	_	_	_	true
-5	’s	’s	NNPS	_	_	number=PL|id0=15|start_string=3261|fn=Linguistic_situation|vn=’s|end_string=3263|word=’s|dpos=NN|connect_check=OK	_	6	_	Elaboration	_	_	_	true
+5	’graph	’graph	NNPS	_	_	number=PL|id0=15|start_string=3261|fn=Linguistic_situation|vn=’graph|end_string=3263|word=’graph|dpos=NN|connect_check=OK	_	6	_	Elaboration	_	_	_	true
 6	low-carbon_energy	low-carbon_energy	NN	_	_	number=SG|id0=17|start_string=3273|fn=Linguistic_situation|vn=low-carbon_energy|bnId=s00615239n|end_string=3290|word=low-carbon_energy|dpos=NN|connect_check=OK	_	2	_	Argument1	_	_	_	true
 
 0	_	_	_	_	_	_	_	_	_	_	_	_	_	slex=Sentence
@@ -95,7 +95,7 @@
 0	_	_	_	_	_	_	_	_	_	_	_	_	_	slex=Sentence
 1	exist	existing	VBG	_	_	vncls=47.1|id0=16|start_string=3264|fn=Existence|bnId=s00083184v|end_string=3272|word=exist|dpos=VB|connect_check=OK	_	0	_	root	_	_	_	true
 2	government	Government	NNP	_	_	number=SG|id0=14|start_string=3251|vn=government|bnId=s00001426n|end_string=3261|word=government|dpos=NN|connect_check=OK	_	3	_	NAME	_	_	_	true
-3	’s	’s	NNPS	_	_	number=PL|id0=15|start_string=3261|fn=Linguistic_situation|vn=’s|end_string=3263|word=’s|dpos=NN|connect_check=OK	_	4	_	Elaboration	_	_	_	true
+3	’graph	’graph	NNPS	_	_	number=PL|id0=15|start_string=3261|fn=Linguistic_situation|vn=’graph|end_string=3263|word=’graph|dpos=NN|connect_check=OK	_	4	_	Elaboration	_	_	_	true
 4	low-carbon_energy	low-carbon_energy	NN	_	_	number=SG|id0=17|start_string=3273|fn=Linguistic_situation|vn=low-carbon_energy|bnId=s00615239n|end_string=3290|word=low-carbon_energy|dpos=NN|connect_check=OK	_	1	_	Argument1	_	_	_	true
 
 0	_	_	_	_	_	_	_	_	_	_	_	_	_	slex=Sentence

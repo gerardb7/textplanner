@@ -249,7 +249,7 @@ wd247	anthem	anthem
 wd248	electoral_district	electoral_district
 wd249	edition_or_translation_of	edition_or_translation_of
 wd250	organizer	organizer
-wd251	edition(s)	edition(s)
+wd251	edition(graph)	edition(graph)
 wd252	type_of_kinship	type_of_kinship
 wd253	academic_major	academic_major
 wd254	business_division	business_division
@@ -896,7 +896,7 @@ wi383	song	song
 wi384	turbine_manu	turbine_manu
 wi385	arrt	arrt
 wi386	sat_chan	sat_chan
-wi387	s-majority	s-majority
+wi387	graph-majority	graph-majority
 wi388	creative_director	creative_director
 wi389	od_date	od_date
 wi390	sock	sock

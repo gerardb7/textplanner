@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning.optimization;
 
 
-import edu.upf.taln.textplanning.ranking.RankingMatrices;
+import edu.upf.taln.textplanning.ranking.MatrixFactory;
 import edu.upf.taln.textplanning.structures.Candidate;
 
 import java.util.List;
@@ -17,11 +17,11 @@ public class SimpleType implements Function
 	private final List<Candidate> candidates;
 	private final double[] type_vector;
 
-	public SimpleType(List<Candidate> candidates)
+	SimpleType(List<Candidate> candidates)
 	{
 		this.candidates = candidates;
 		// Don't normalize vector, normalization is part of the optimizable softmax function
-		type_vector = RankingMatrices.createTypeVector(candidates, false, false);
+		type_vector = MatrixFactory.createTypeVector(candidates, false, false);
 	}
 
 	@Override

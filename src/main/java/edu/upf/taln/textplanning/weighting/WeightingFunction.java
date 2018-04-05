@@ -1,14 +1,12 @@
 package edu.upf.taln.textplanning.weighting;
 
-import edu.upf.taln.textplanning.structures.LinguisticStructure;
-
-import java.util.Collection;
+import edu.upf.taln.textplanning.structures.GraphList;
 
 /**
  * Interface for weighting functions
  */
 public interface WeightingFunction
 {
-	void setContents(Collection<LinguisticStructure> contents);
+	void setContents(GraphList contents);
 	double weight(String item);
 }

@@ -1,15 +1,18 @@
 package edu.upf.taln.textplanning.optimization;
 
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.ranking.RankingMatrices;
-import edu.upf.taln.textplanning.similarity.CandidateSimilarity;
+import edu.upf.taln.textplanning.ranking.MatrixFactory;
+import edu.upf.taln.textplanning.similarity.MeaningSimilarity;
 import edu.upf.taln.textplanning.structures.Candidate;
+import edu.upf.taln.textplanning.structures.Meaning;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * Coherence function, based on similarity metric between pairs of candidates
@@ -20,11 +23,16 @@ public class Coherence implements Function
 	private final double[][] semantic_similarity;
 	private final static Logger log = LoggerFactory.getLogger(Coherence.class);
 
-	public Coherence(List<Candidate> candidates, CandidateSimilarity semanticSimilarity, double lower_bound)
+	Coherence(List<Candidate> candidates, MeaningSimilarity similarity, double lower_bound)
 	{
 		this.candidates = candidates;
+		List<String> meanings = candidates.stream()
+				.map(Candidate::getMeaning)
+				.map(Meaning::getReference)
+				.collect(toList()); // with duplicates
 		// Don't normalize matrix, normalization is part of the optimizable softmax function
-		semantic_similarity = RankingMatrices.createCandidateSimilarityMatrix(candidates, semanticSimilarity, lower_bound, false);
+		semantic_similarity = MatrixFactory.createMeaningsSimilarityMatrix(meanings, similarity, lower_bound,
+				false);
 	}
 
 	@Override
@@ -43,7 +51,7 @@ public class Coherence implements Function
 	public void getValueGradient(double[] dist, double[] gradient)
 	{
 		// Kronecker delta function
-		//BiFunction<Integer,Integer, Double> d = (i, j) -> (Objects.equals(i, j)) ? 1.0 : 0.0;
+		//BiFunction<Integer,Integer, Double> d = (index, j) -> (Objects.equals(index, j)) ? 1.0 : 0.0;
 
 		log.info("Calculating product of similarity matrix with distribution");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -84,7 +92,7 @@ public class Coherence implements Function
 		{
 			for (int j = 0; j < dist.length; ++j)
 			{
-				// gradient[k] += semantic_similarity[i][j] * dist[i] * dist[j] * (d.apply(i,k) + d.apply(j,k) - 2 * dist[k]);
+				// gradient[k] += semantic_similarity[index][j] * dist[index] * dist[j] * (d.apply(index,k) + d.apply(j,k) - 2 * dist[k]);
 				gradient += m[i][j] * (kronecker_values[i] + kronecker_values[j] + k_value);
 			}
 		}

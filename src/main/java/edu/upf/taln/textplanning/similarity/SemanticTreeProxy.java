@@ -2,8 +2,7 @@ package edu.upf.taln.textplanning.similarity;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import edu.upf.taln.textplanning.structures.ContentPattern;
-import edu.upf.taln.textplanning.structures.Entity;
+import edu.upf.taln.textplanning.structures.SemanticTree;
 
 import java.util.Comparator;
 import java.util.HashMap;
@@ -13,44 +12,40 @@ import java.util.stream.Collectors;
 
 
 /**
- * A proxy class for annotated trees that provides a view of them as the OrderedTree objects manipulated by the
+ * A proxy class for semantic trees that provides a view of them as the OrderedTree objects manipulated by the
  * tree edit distance library.
  * Immutable class.
  */
 public final class SemanticTreeProxy implements unnonouno.treedist.Tree
 {
-	private final ContentPattern tree;
-	private final ImmutableList<Entity> nodes; // list of nodes in preorder
-	private final ImmutableMap<Entity, Integer> index; // indexes for each node
+	private final SemanticTree tree;
+	private final ImmutableList<String> nodes; // list of nodes in preorder
+	private final ImmutableMap<String, Integer> index; // indexes for each node
 
-	public SemanticTreeProxy(ContentPattern inTree)
+	SemanticTreeProxy(SemanticTree t)
 	{
-		tree = inTree;
+		tree = t;
 
 		// Get list of nodes in preorder
-		List<Entity> preOrderNodes = tree.getTopologicalOrder();
+		List<String> preorder_nodes = tree.getPreOrderLabels();
 
-		ImmutableList.Builder<Entity> builder = ImmutableList.builder();
-		nodes = builder.addAll(preOrderNodes).build();
+		ImmutableList.Builder<String> builder = ImmutableList.builder();
+		nodes = builder.addAll(preorder_nodes).build();
 
-		Map<Entity, Integer> mutableIndex = new HashMap<>();
+		Map<String, Integer> mutableIndex = new HashMap<>();
 		nodes.forEach(n -> mutableIndex.put(n, nodes.indexOf(n)));
-		ImmutableMap.Builder<Entity, Integer> mapBuilder = ImmutableMap.builder();
+		ImmutableMap.Builder<String, Integer> mapBuilder = ImmutableMap.builder();
 		index = mapBuilder.putAll(mutableIndex).build();
 	}
 
-	public Entity getEntity(int i)
+	public String getMeaning(int i)
 	{
-		if (nodes.isEmpty())
-		{
-			return null;
-		}
-		if (i < 0 || i >= nodes.size())
-		{
-			return null;
-		}
+		return tree.getMeaning(nodes.get(i)).getReference();
+	}
 
-		return nodes.get(i);
+	String getParentRole(int i)
+	{
+		return tree.getParentRole(nodes.get(i));
 	}
 
 	@Override
@@ -76,9 +71,9 @@ public final class SemanticTreeProxy implements unnonouno.treedist.Tree
 			return NOT_FOUND;
 		}
 
-		Entity e = nodes.get(i);
+		String m = nodes.get(i);
 
-		if (tree.outDegreeOf(e) == 0)
+		if (tree.outDegreeOf(m) == 0)
 		{
 			return NOT_FOUND;
 		}
@@ -96,20 +91,19 @@ public final class SemanticTreeProxy implements unnonouno.treedist.Tree
 		if (i == 0)
 			return NOT_FOUND; // root has no siblings
 
-		Entity node = nodes.get(i);
-		Entity parent = tree.getEdgeSource(tree.incomingEdgesOf(node).iterator().next());
-		List<Entity> siblings = tree.outgoingEdgesOf(parent).stream()
+		String v = nodes.get(i);
+		String p = tree.getEdgeSource(tree.incomingEdgesOf(v).iterator().next());
+		List<String> siblings = tree.outgoingEdgesOf(p).stream()
 				.map(tree::getEdgeTarget)
+				.sorted(Comparator.naturalOrder())
 				.collect(Collectors.toList());
 
-		siblings.sort(Comparator.comparing(Entity::toString)); // lexicographic compare
-		int nextSibling = siblings.indexOf(node) + 1;
-
-		if (nextSibling >= siblings.size())
+		int next_sibling = siblings.indexOf(v) + 1;
+		if (next_sibling >= siblings.size())
 			return NOT_FOUND;
 		else
 		{
-			return index.get(siblings.get(nextSibling));
+			return index.get(siblings.get(next_sibling));
 		}
 	}
 
@@ -129,12 +123,12 @@ public final class SemanticTreeProxy implements unnonouno.treedist.Tree
 			return NOT_FOUND; // root has no parent
 		}
 
-		Entity node = nodes.get(i);
-		if (tree.inDegreeOf(node) == 0)
+		String v = nodes.get(i);
+		if (tree.inDegreeOf(v) == 0)
 			return NOT_FOUND;
 
-		Entity parent = tree.getEdgeSource(tree.incomingEdgesOf(node).iterator().next());
-		return index.get(parent);
+		String p = tree.getEdgeSource(tree.incomingEdgesOf(v).iterator().next());
+		return index.get(p);
 	}
 
 	@Override

@@ -1,54 +1,65 @@
 package edu.upf.taln.textplanning.discourse;
 
-import edu.upf.taln.textplanning.similarity.EntitySimilarity;
-import edu.upf.taln.textplanning.similarity.PatternSimilarity;
-import edu.upf.taln.textplanning.structures.ContentPattern;
-import edu.upf.taln.textplanning.structures.Entity;
-import org.apache.commons.lang3.tuple.Pair;
+import com.google.common.base.Stopwatch;
+import edu.upf.taln.textplanning.similarity.SemanticTreeSimilarity;
+import edu.upf.taln.textplanning.structures.SemanticSubgraph;
+import edu.upf.taln.textplanning.structures.SemanticTree;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.PriorityQueue;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Discourse planner class. In its current version orders a set of patterns according to their relevance and
- * similarity using a greedy algorithm.
+ * Discourse planner: sorts a set of graphs according to their average variable rank and pairwise similarity.
  */
 public class DiscoursePlanner
 {
-	private static SimpleWeightedGraph<Integer, DefaultWeightedEdge> g;
+	private class DiscourseGraph extends SimpleWeightedGraph<Integer, DefaultWeightedEdge>
+	{
+		DiscourseGraph() { super(DefaultWeightedEdge.class); }
+	}
+
+	private final SemanticTreeSimilarity sim;
+	private final static Logger log = LoggerFactory.getLogger(DiscoursePlanner.class);
+
+
+	public DiscoursePlanner(SemanticTreeSimilarity sim)
+	{
+		this.sim = sim;
+	}
 
 	/**
-	 * Orders a set of patterns by taking into account both their pair-wise similarity and their average relevance
+	 * Orders a set of graphs by taking into account both their pair-wise similarity and their average relevance
 	 * scores.
-	 *
-	 * @param patterns list of patterns to structure
-	 * @param sim similarity function between pairs of entities in the patterns
-	 * @return list of patterns
 	 */
-	public static List<ContentPattern> structurePatterns(List<ContentPattern> patterns, EntitySimilarity sim)
+	public List<SemanticSubgraph> structurePatterns(Collection<SemanticSubgraph> graphs)
 	{
-		// Weight patterns by averaging their node weights
-		//noinspection RedundantTypeArguments
-		List<Pair<ContentPattern, Double>> rankedPatterns = patterns.stream()
-				.map(p -> Pair.of(p, p.vertexSet().stream()
-						.mapToDouble(Entity::getWeight)
-						.average().orElse(0.0)))
-				.sorted(Comparator.comparing(Pair<ContentPattern, Double>::getRight).reversed())
-				.collect(Collectors.toList());
+		Stopwatch timer = Stopwatch.createStarted();
 
-		// Create graph with patterns as vertices
-		g = new SimpleWeightedGraph<>(DefaultWeightedEdge.class);
-		int n = patterns.size();
+		// Convert graphs to lists
+		SemanticTree[] trees = graphs.stream()
+				.map(SemanticTree::new)
+				.toArray(t -> new SemanticTree[0]);
+
+		// Weight graphs by averaging their node weights
+		double[] rank = Arrays.stream(trees)
+				.map(SemanticTree::getGraph)
+				.map(g -> g.vertexSet().stream()
+						.collect(Collectors.averagingDouble(v -> g.getBase().getWeight(v))))
+				.sorted(Comparator.reverseOrder())
+				.mapToDouble(d -> d) // unboxing
+				.toArray();
+
+		// Create graph with indexes to trees as vertices
+		DiscourseGraph g = new DiscourseGraph();
+		int n = trees.length;
 		IntStream.range(0, n).forEach(g::addVertex);
 
 		// Weight edges according to similarity function
-		PatternSimilarity psim = new PatternSimilarity(sim);
 		IntStream.range(0, n).forEach(i ->
 				IntStream.range(0, n).forEach(j ->
 				{
@@ -57,18 +68,18 @@ public class DiscoursePlanner
 					if (g.containsEdge(i, j))
 						return;
 					DefaultWeightedEdge e = g.addEdge(i, j);
-					double s = psim.getSimilarity(rankedPatterns.get(i).getKey(), rankedPatterns.get(j).getKey());
+					double s = sim.getSimilarity(trees[i], trees[j]);
 					g.setEdgeWeight(e, s);
 				}));
 
 		// Create auto-sorted list of open edges based on similarity of edges and relevance of the pattern-nodes they
 		// point to
 		Comparator<DefaultWeightedEdge> comparator = (e1, e2) -> {
-			double s1 = g.getEdgeWeight(e1); // similarity between patterns
-			double r1 = rankedPatterns.get(g.getEdgeTarget(e1)).getRight(); // relevance of target pattern
+			double s1 = g.getEdgeWeight(e1); // similarity between graphs
+			double r1 = rank[g.getEdgeTarget(e1)]; // relevance of target pattern
 			double w1 = (s1 + r1)/2.0; // final weight
 			double s2 = g.getEdgeWeight(e2);
-			double r2 = rankedPatterns.get(g.getEdgeTarget(e2)).getRight();
+			double r2 = rank[g.getEdgeTarget(e2)];
 			double w2 = (s2 + r2)/2.0;
 
 			return Double.compare(w2, w1); // Descending order
@@ -95,7 +106,6 @@ public class DiscoursePlanner
 				currentNode = g.getEdgeTarget(maxEdge);
 				// Mark node as visited
 				visitedNodes.add(currentNode);
-//				log.info("\tPattern selected with score " + inGraph.getEdgeWeight(maxEdge) + ": " + inPatterns.indexOf(node));
 			}
 			else
 			{
@@ -108,9 +118,12 @@ public class DiscoursePlanner
 			throw new RuntimeException("Exploration failed to visit all nodes in structuring graph");
 		}
 
-		return visitedNodes.stream()
-				.map(rankedPatterns::get)
-				.map(Pair::getLeft)
+		List<SemanticSubgraph> sorted_graphs = visitedNodes.stream()
+				.map(i -> trees[i])
+				.map(SemanticTree::getGraph)
 				.collect(Collectors.toList());
+		log.info("Discourse planning took " + timer.stop());
+
+		return sorted_graphs;
 	}
 }

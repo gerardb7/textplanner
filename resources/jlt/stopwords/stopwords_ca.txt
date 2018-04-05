@@ -159,8 +159,8 @@ quin
 quina
 quines
 quins
-s'ha
-s'han
+graph'ha
+graph'han
 sa
 semblant
 semblants

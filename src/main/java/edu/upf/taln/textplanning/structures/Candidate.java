@@ -1,31 +1,50 @@
 package edu.upf.taln.textplanning.structures;
 
+import java.io.Serializable;
+import java.util.Objects;
+
 /**
- * Wrapper for a pair of a mention and a candidate entity
+ * Wrapper for a pair of a mention and a candidate meaning
  */
-public class Candidate
+public class Candidate implements Serializable
 {
 	public enum Type {Location, Organization, Person, Other}
 
-	private final Mention m;
-	private final Entity e;
-	private double value = 0.0;
+	private final String vertex;
+	private final Meaning meaning;
+	private final Mention mention;
 
-	public Candidate(Mention m, Entity e)
+	public Candidate(String v, Meaning e, Mention m)
 	{
-		this.m = m;
-		this.e = e;
+		this.vertex = v;
+		this.meaning = e;
+		this.mention = m;
 	}
 
-	public Mention getMention() { return m; }
-	public Entity getEntity() { return e; }
-	public AnnotatedWord getNode() { return m.getHead(); }
-	public double getValue() { return value; }
-	public void setValue(double v) { value = v; }
+	String getVertex() { return vertex; }
+	public Meaning getMeaning() { return meaning; }
+	public Mention getMention() { return mention; }
 
 	@Override
 	public String toString()
 	{
-		return m.getSurfaceForm() + "-" + e.getId();
+		return vertex + "-" + meaning;
+	}
+
+	// Two candidates are the same if they have same vertex and meaning. Mentions are ignored!
+	@Override
+	public boolean equals(Object o)
+	{
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		Candidate candidate = (Candidate) o;
+		return Objects.equals(vertex, candidate.vertex) &&
+				Objects.equals(meaning, candidate.meaning);
+	}
+
+	@Override
+	public int hashCode()
+	{
+		return Objects.hash(vertex, meaning);
 	}
 }

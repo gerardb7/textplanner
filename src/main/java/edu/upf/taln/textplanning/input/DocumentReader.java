@@ -1,8 +1,7 @@
 package edu.upf.taln.textplanning.input;
 
-import edu.upf.taln.textplanning.structures.LinguisticStructure;
+import edu.upf.taln.textplanning.structures.SemanticGraph;
 
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -10,5 +9,5 @@ import java.util.List;
  */
 public interface DocumentReader
 {
-	List<LinguisticStructure> readStructures(String inDocumentContents) throws IOException;
+	List<SemanticGraph> read(String inDocumentContents);
 }

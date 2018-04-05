@@ -29,7 +29,6 @@ public class FreqsFile implements Corpus
 
 	public FreqsFile(Path file) throws IOException
 	{
-		log.info("Loading frequencies file " + file);
 		Stopwatch timer = Stopwatch.createStarted();
 
 		String json = FileUtils.readFileToString(file.toFile(), StandardCharsets.UTF_8);
@@ -37,11 +36,8 @@ public class FreqsFile implements Corpus
 		numDocs = obj.getLong("docs");
 		JSONObject form_counts = obj.getJSONObject("mentions");
 
-		int c = 0;
 		for (String form : form_counts.keySet())
 		{
-			if (++c % 100000 == 0)
-				log.info(c + " mentions loaded");
 			JSONArray arr = form_counts.getJSONArray(form);
 			Map<String, Long> counts = new HashMap<>();
 
@@ -56,36 +52,33 @@ public class FreqsFile implements Corpus
 			form_sense_counts.put(form, counts);
 		}
 
-		JSONObject entity_counts = obj.getJSONObject("entities");
-		c = 0;
-
-		for (String id : entity_counts.keySet())
+		JSONObject meaning_counts = obj.getJSONObject("meanings");
+		for (String id : meaning_counts.keySet())
 		{
-			if (++c % 100000 == 0)
-				log.info(c + " entities loaded");
-			long count = entity_counts.getLong(id);
+			long count = meaning_counts.getLong(id);
 			sense_doc_counts.put(id, count);
 		}
 
-		log.info("Loaded " + sense_counts.size() + " entities and " + form_sense_counts.size() + " forms in " + timer.stop());
+		log.info(   "Loaded " + sense_counts.size() + " meanings and " + form_sense_counts.size() +
+					" forms from frequencies file in " + timer.stop());
 	}
 
 	@Override
-	public boolean hasEntity(String entity)
+	public boolean hasMeaning(String meaning)
 	{
-		return sense_counts.containsKey(entity);
+		return sense_counts.containsKey(meaning);
 	}
 
 	@Override
-	public boolean hasEntityDocument(String entity)
+	public boolean hasMeaningDocument(String meaning)
 	{
-		return sense_doc_counts.containsKey(entity);
+		return sense_doc_counts.containsKey(meaning);
 	}
 
 	@Override
-	public boolean hasFormEntity(String form, String entity)
+	public boolean hasFormMeaning(String form, String meaning)
 	{
-		return form_sense_counts.containsKey(form) && form_sense_counts.get(form).containsKey(entity);
+		return form_sense_counts.containsKey(form) && form_sense_counts.get(form).containsKey(meaning);
 	}
 
 	@Override
@@ -95,21 +88,21 @@ public class FreqsFile implements Corpus
 	}
 
 	@Override
-	public long getEntityCount(String entity)
+	public long getMeaningCount(String meaning)
 	{
-		return sense_counts.getOrDefault(entity, 0L);
+		return sense_counts.getOrDefault(meaning, 0L);
 	}
 
 	@Override
-	public long getEntityDocumentCount(String entity)
+	public long getMeaningDocumentCount(String meaning)
 	{
-		return sense_doc_counts.getOrDefault(entity, 0L);
+		return sense_doc_counts.getOrDefault(meaning, 0L);
 	}
 
 	@Override
-	public long getFormEntityCount(String form, String entity)
+	public long getFormMeaningCount(String form, String meaning)
 	{
-		return form_sense_counts.getOrDefault(form, new HashMap<>()).getOrDefault(entity, 0L);
+		return form_sense_counts.getOrDefault(form, new HashMap<>()).getOrDefault(meaning, 0L);
 	}
 
 	@Override
@@ -124,7 +117,7 @@ public class FreqsFile implements Corpus
 		return numDocs;
 	}
 
-	public Set<String> getEntitiesForForm(String form)
+	public Set<String> getMeaningsForForm(String form)
 	{
 		if (form_sense_counts.containsKey(form))
 			return form_sense_counts.get(form).keySet();
@@ -135,6 +128,6 @@ public class FreqsFile implements Corpus
 	// for testing
 	public static void main(String[] args) throws IOException
 	{
-		FreqsFile f = new FreqsFile(Paths.get(args[0]));
+		new FreqsFile(Paths.get(args[0]));
 	}
 }

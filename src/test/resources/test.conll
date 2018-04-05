@@ -9,7 +9,7 @@
 3	future	future	NN	_	_	number=SG|id0=13|start_string=1481|fn=Possibilities|bnId=s00036941n|end_string=1487|word=future|dpos=NN|connect_check=OK	_	1	_	Argument2	_	_	_	true
 4	long-term	long-term	JJ	_	_	id0=9|start_string=1456|fn=Linguistic_situation|vn=long-term|bnId=s00106151a|end_string=1465|word=long-term|dpos=JJ|connect_check=OK	_	0	_	ROOT	_	_	_	true
 5	system	system	NN	_	_	number=SG|id0=19|start_string=1507|fn=Set_of_interrelated_entities|bnId=s00075759n|end_string=1513|word=system|dpos=NN|connect_check=OK	_	3	_	Argument1	_	_	_	true
-6	’s	’s	POS	_	_	id0=17|start_string=1497|fn=Linguistic_situation|vn=’s|end_string=1499|word=’s|dpos=POS|connect_check=OK	_	0	_	ROOT	_	_	_	true
+6	’graph	’graph	POS	_	_	id0=17|start_string=1497|fn=Linguistic_situation|vn=’graph|end_string=1499|word=’graph|dpos=POS|connect_check=OK	_	0	_	ROOT	_	_	_	true
 7	credible	credible	JJ	_	_	id0=7|start_string=1446|fn=Linguistic_situation|vn=credible|bnId=s00100626a|end_string=1454|word=credible|dpos=JJ|connect_check=OK	_	0	_	ROOT	_	_	_	true
 8	government	Government	NNP	_	_	number=SG|id0=2|start_string=1420|fn=Organization|bnId=s00001426n|end_string=1430|word=government|dpos=NN|connect_check=OK	_	2	_	Argument0	_	_	_	true
 9	out	out	RP	_	_	id0=5|start_string=1440|vn=out|end_string=1443|word=out|dpos=RP|connect_check=OK	_	2	_	NAME	_	_	_	true
@@ -426,7 +426,7 @@
 8	energy_policy	energy_policy	VBZ	_	_	id0=18|start_string=3284|fn=Linguistic_situation|vn=energy_policy|bnId=s00624315n|end_string=3299|tense=PRES|word=energy_policy|dpos=VB|connect_check=OK	_	6	_	Argument2	_	_	_	true
 9	and	and	CC	_	_	id0=8|start_string=3222|fn=Linguistic_situation|vn=and|end_string=3225|word=and|dpos=CC|connect_check=OK	_	5	_	Argument1	_	_	_	true
 10	low-carbon_energy	low-carbon_energy	NN	_	_	number=SG|id0=17|start_string=3273|fn=Linguistic_situation|vn=low-carbon_energy|bnId=s00615239n|end_string=3290|word=low-carbon_energy|dpos=NN|connect_check=OK	_	1,8	_	Argument1,Argument1	_	_	_	true
-11	’s	’s	NNPS	_	_	number=PL|id0=15|start_string=3261|fn=Linguistic_situation|vn=’s|end_string=3263|word=’s|dpos=NN|connect_check=OK	_	10	_	Elaboration	_	_	_	true
+11	’graph	’graph	NNPS	_	_	number=PL|id0=15|start_string=3261|fn=Linguistic_situation|vn=’graph|end_string=3263|word=’graph|dpos=NN|connect_check=OK	_	10	_	Elaboration	_	_	_	true
 12	transparency	transparency	NN	_	_	number=SG|id0=7|start_string=3209|member=A1|vn=transparency|bnId=s00078037n|end_string=3221|word=transparency|dpos=NN|connect_check=OK	_	9,4	_	Set,Argument1	_	_	_	true
 13	matter	matter	NN	_	_	number=SG|id0=20|start_string=3305|fn=Linguistic_situation|vn=matter|bnId=s00053867n|end_string=3311|word=matter|dpos=NN|connect_check=OK	_	8	_	Argument2	_	_	_	true
 14	government	Government	NNP	_	_	number=SG|id0=14|start_string=3251|vn=government|bnId=s00001426n|end_string=3261|word=government|dpos=NN|connect_check=OK	_	11	_	NAME	_	_	_	true

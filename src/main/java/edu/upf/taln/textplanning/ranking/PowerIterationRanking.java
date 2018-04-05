@@ -20,7 +20,7 @@ import java.util.stream.DoubleStream;
  * such that πA=π. When all entries of A are positive, the Perron-Frobenius theorem guarantees that these
  * equilibrium probabilities are unique. If A is also symmetric, its column sums are equal to row sums, and hence
  * all equal to 1. Therefore, π=(1/N)(1,1,...,1) is the unique probability vector that satisfies
- * πA=π, i.e. all page ranks must be equal to each other"
+ * πA=π, index.e. all page ranks must be equal to each other"
  * Taken from https://math.stackexchange.com/questions/55863/when-will-pagerank-fail
  *
  */
@@ -37,15 +37,16 @@ public class PowerIterationRanking
 	 */
 	public static Matrix run(Matrix a)
 	{
-		// Check that a is a stochastic matrix
+		// Check that a is a row-stochastic matrix
 		assert a.getColumnDimension() == a.getRowDimension(); // Is it square?
 		assert Arrays.stream(a.getArray()).allMatch(r -> Arrays.stream(r).allMatch(i -> i >= 0.0)); // Is it positive?
 		assert Arrays.stream(a.getArray()).allMatch(r -> Math.abs(Arrays.stream(r).sum() - 1.0) < 2*2.22e-16); // Is it row-normalized?
 
-		// Turn the rows into columns so that multiplication with column vector produces probs of reaching states
+		// Change matrix from row-normalized to column normalized
+		// Turns rows into columns so that multiplication with column vector produces probs of reaching states
 		a = a.transpose(); // See http://en.wikipedia.org/wiki/Matrix_multiplication#Square_matrix_and_column_vector
 
-		// Create initial state as 1-column vector
+		// Create initial state as a column vector
 		int n = a.getColumnDimension();
 		double e = 1.0/(n*1000); // set stopping threshold
 		Matrix v = new Matrix(n, 1, 1.0 / n); // v is the distribution vector that will get iteratively updated
@@ -56,7 +57,7 @@ public class PowerIterationRanking
 		do
 		{
 			// Core operation: transform distribution according to stochastic matrix
-			Matrix tmp = a.times(v); // product of square matrix and column vector produces column vector
+			Matrix tmp = a.times(v); // right-multiply column-stochastic square matrix and column vector, produces column vector
 			// Normalize distribution to obtain eigenvalue
 			tmp = tmp.times(1.0/tmp.norm1());
 

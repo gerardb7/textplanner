@@ -42,16 +42,16 @@ public final class SEWSolr implements Corpus
 	}
 
 	@Override
-	public long getEntityDocumentCount(String entity)
+	public long getMeaningDocumentCount(String meaning)
 	{
 		try
 		{
-			if (freqCache.containsKey(entity))
-				return freqCache.get(entity);
+			if (freqCache.containsKey(meaning))
+				return freqCache.get(meaning);
 			else
 			{
-				long freq = queryFrequency(entity);
-				freqCache.put(entity, freq);
+				long freq = queryFrequency(meaning);
+				freqCache.put(meaning, freq);
 				return freq;
 			}
 		}
@@ -63,19 +63,19 @@ public final class SEWSolr implements Corpus
 	}
 
 	@Override
-	public boolean hasEntity(String entity)
+	public boolean hasMeaning(String meaning)
 	{
 		throw new RuntimeException("Method not implemented yet");
 	}
 
 	@Override
-	public boolean hasEntityDocument(String entity)
+	public boolean hasMeaningDocument(String meaning)
 	{
 		throw new RuntimeException("Method not implemented yet");
 	}
 
 	@Override
-	public boolean hasFormEntity(String form, String entity)
+	public boolean hasFormMeaning(String form, String meaning)
 	{
 		throw new RuntimeException("Method not implemented yet");
 	}
@@ -86,8 +86,8 @@ public final class SEWSolr implements Corpus
 		throw new RuntimeException("Method not implemented yet");
 	}
 
-	@Override public long getEntityCount(String entity) { return 0; }
-	@Override public long getFormEntityCount(String form, String entity) {  return 0; }
+	@Override public long getMeaningCount(String meaning) { return 0; }
+	@Override public long getFormMeaningCount(String form, String meaning) {  return 0; }
 	@Override public long getFormCount(String form) { return 0; }
 
 	public long getCooccurrence(String i1, String i2)
