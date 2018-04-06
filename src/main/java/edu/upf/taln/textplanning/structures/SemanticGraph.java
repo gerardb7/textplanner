@@ -5,14 +5,16 @@ import org.jgrapht.graph.DirectedAcyclicGraph;
 
 import java.util.Collection;
 
-public class SemanticGraph extends DirectedAcyclicGraph<String, String>
+public class SemanticGraph extends DirectedAcyclicGraph<String, Role>
 {
+
+
 	private GraphAlignments alignments = null;
 	private final String id;
 
 	public SemanticGraph(String id)
 	{
-		super(String.class);
+		super(Role.class);
 		this.id = id;
 	}
 

@@ -7,7 +7,7 @@ import java.util.Set;
 /**
  * A rooted induced subgraph of a graph
  */
-public class SemanticSubgraph extends AsSubgraph<String, String>
+public class SemanticSubgraph extends AsSubgraph<String, Role>
 {
 	public SemanticSubgraph(GlobalSemanticGraph base, Set<String> vertexSubset)
 	{

@@ -8,7 +8,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-public class GlobalSemanticGraph extends SimpleDirectedGraph<String, String>
+public class GlobalSemanticGraph extends SimpleDirectedGraph<String, Role>
 {
 	private final GraphList graphs;
 	private final Map<String, Meaning> meanings = new HashMap<>();
@@ -17,7 +17,7 @@ public class GlobalSemanticGraph extends SimpleDirectedGraph<String, String>
 
 	public GlobalSemanticGraph(GraphList graphs)
 	{
-		super(String.class);
+		super(Role.class);
 		this.graphs = graphs;
 
 		graphs.forEach(g -> g.edgeSet().forEach(e ->

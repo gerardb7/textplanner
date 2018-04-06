@@ -9,7 +9,7 @@ import java.util.*;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
-public class SemanticTree extends SimpleDirectedGraph<String, String>
+public class SemanticTree extends SimpleDirectedGraph<String, Role>
 {
 	private static final String root_label = "root";
 	private final String root;
@@ -19,7 +19,7 @@ public class SemanticTree extends SimpleDirectedGraph<String, String>
 
 	public SemanticTree(SemanticSubgraph subgraph)
 	{
-		super(String.class);
+		super(Role.class);
 
 		// Duplicate subgraph
 		this.subgraph = subgraph;
@@ -31,7 +31,7 @@ public class SemanticTree extends SimpleDirectedGraph<String, String>
 				.filter(v -> inDegreeOf(v) > 1)
 				.collect(toSet());
 
-		Set<String> E = M.stream()
+		Set<Role> E = M.stream()
 				.map(this::incomingEdgesOf)
 				.flatMap(Set::stream)
 				.collect(toSet());
@@ -49,7 +49,7 @@ public class SemanticTree extends SimpleDirectedGraph<String, String>
 		{
 			root = root_label;
 			addVertex(root_label);
-			roots.forEach(r -> addEdge(root_label, r, root_label));
+			roots.forEach(r -> addEdge(root_label, r, Role.create(root_label)));
 		}
 	}
 
@@ -88,7 +88,7 @@ public class SemanticTree extends SimpleDirectedGraph<String, String>
 		else if (this.root.equals(v))
 			return "";
 		else
-			return incomingEdgesOf(v).iterator().next();
+			return incomingEdgesOf(v).iterator().next().toString();
 	}
 
 	public Meaning getMeaning(String v)
@@ -101,7 +101,7 @@ public class SemanticTree extends SimpleDirectedGraph<String, String>
 			return null;
 	}
 
-	private void edgeShift(String x, String y, String e)
+	private void edgeShift(String x, String y, Role e)
 	{
 		counters.add(y);
 		int count = counters.count(y);

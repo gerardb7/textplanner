@@ -40,7 +40,8 @@ class StanfordWrapper
 
 		Stopwatch timer = Stopwatch.createStarted();
 		RedwoodConfiguration.current().clear().apply(); // shut up, CoreNLP
-		pipeline = new StanfordCoreNLP(props);
+		pipeline = null;
+		//pipeline = new StanfordCoreNLP(props);
 		log.info("CoreNLP pipeline created in " + timer.stop());
 	}
 
@@ -105,8 +106,8 @@ class StanfordWrapper
 					CoreferenceChain chain = new CoreferenceChain();
 					c.getMentionsInTextualOrder().forEach(m ->
 					{
-						SemanticGraph g = graphs.get(m.sentNum);
-						Pair<Integer, Integer> span = Pair.of(m.startIndex, m.endIndex);
+						SemanticGraph g = graphs.get(m.sentNum-1);
+						Pair<Integer, Integer> span = Pair.of(m.startIndex-1, m.endIndex-1);
 						g.getAlignments().getTopSpanVertex(span).ifPresent(v ->
 						{
 							String pos_v = g.getAlignments().getPOS(span).orElse("N"); // assume nominal

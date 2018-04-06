@@ -3,13 +3,10 @@ package edu.upf.taln.textplanning.input;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.input.amr.AMR;
 import edu.upf.taln.textplanning.structures.SemanticGraph;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -20,7 +17,17 @@ import static java.util.stream.Collectors.toList;
 
 public class AMRReader implements DocumentReader
 {
+	private final boolean keep_inverse_relations; // If false -> convert ':*-of' relations to their non-inverted counterparts
+	private final boolean keep_relation_alignments; // If true -> move relation alignments to their target variables
     private final static Logger log = LoggerFactory.getLogger(AMRReader.class);
+
+    public AMRReader() { keep_inverse_relations = true; keep_relation_alignments = false; }
+	@SuppressWarnings("unused")
+	public AMRReader(boolean keep_inverse_relations, boolean keep_relation_alignments)
+	{
+		this.keep_inverse_relations = keep_inverse_relations;
+		this.keep_relation_alignments = keep_relation_alignments;
+	}
 
     public List<SemanticGraph> read(String amrBank)
     {
@@ -40,7 +47,7 @@ public class AMRReader implements DocumentReader
 			        String amr_text = Arrays.stream(lines, 3, lines.length)
 					        .collect(joining("\n"));
 
-			        AMRActions actions = new AMRActions(id);
+			        AMRActions actions = new AMRActions(id, this.keep_inverse_relations, this.keep_relation_alignments);
 			        AMR.parse(amr_text, actions);
 			        SemanticGraph graph = actions.getGraph();
 			        GraphAlignments alignments = new GraphAlignments(graph, i,

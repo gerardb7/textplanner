@@ -31,7 +31,7 @@ public class Driver
 //		TFIDF weighting = new TFIDF(corpus);
 //		Word2VecSimilarity similarity = new Word2VecSimilarity(embeddings);
 		TextPlanner planner = new TextPlanner(reader, null, null, null);
-		log.info("Set up completed in " + timer.stop());
+		log.info("Set up took " + timer.stop());
 
 		String amr_bank = FileUtils.readFileToString(amr.toFile(), StandardCharsets.UTF_8);
 		TextPlanner.Options options = new TextPlanner.Options();

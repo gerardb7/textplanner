@@ -49,7 +49,7 @@ public class PowerIterationRanking
 		// Create initial state as a column vector
 		int n = a.getColumnDimension();
 		double e = 1.0/(n*1000); // set stopping threshold
-		Matrix v = new Matrix(n, 1, 1.0 / n); // v is the distribution vector that will get iteratively updated
+		Matrix v = new Matrix(n, 1, 1.0 / n); // v is the distribution vector that will create iteratively updated
 
 		log.debug("Starting power iteration");
 		int numIterations = 0;

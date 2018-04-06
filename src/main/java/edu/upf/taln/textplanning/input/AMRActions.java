@@ -1,13 +1,14 @@
 package edu.upf.taln.textplanning.input;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import edu.upf.taln.textplanning.input.amr.Actions;
 import edu.upf.taln.textplanning.input.amr.Label;
 import edu.upf.taln.textplanning.input.amr.TreeNode;
+import edu.upf.taln.textplanning.structures.Role;
 import edu.upf.taln.textplanning.structures.SemanticGraph;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -48,16 +49,20 @@ public class AMRActions implements Actions
         }
     }
 
-	private final BiMap<String, Integer> alignments = HashBiMap.create();
+	private final boolean keep_inverse_relations; // AMR inverse (':*-of') relations to their non-inverted counterparts?
+	private final boolean keep_relation_alignments;
+	private final Map<String, Integer> alignments = new HashMap<>();
 	private SemanticGraph graph;
 
-	AMRActions(String graph_id)
+	AMRActions(String graph_id, boolean keep_inverse_relations, boolean keep_relation_alignments)
 	{
 		graph = new SemanticGraph(graph_id);
+		this.keep_inverse_relations = keep_inverse_relations;
+		this.keep_relation_alignments = keep_relation_alignments;
 	}
 
     public SemanticGraph getGraph() { return graph; }
-	BiMap<String, Integer> getAlignments() { return alignments; }
+	Map<String, Integer> getAlignments() { return alignments; }
 
     @Override
     public LabelNode make_ancestor(String input, int start, int end, List<TreeNode> elements)
@@ -69,7 +74,7 @@ public class AMRActions implements Actions
 
         // Add "instance" edge from var to concept
         ConceptNode concept = (ConceptNode)elements.get(6);
-        try { graph.addEdge(var.label, concept.label, AMRConstants.instance); }
+        try { graph.addEdge(var.label, concept.label, Role.create(AMRConstants.instance)); }
         catch (Exception e)
         {
             throw new RuntimeException(e);
@@ -86,10 +91,10 @@ public class AMRActions implements Actions
             DescendentNode descendent = (DescendentNode)descendent_node.get(Label.desc);
             try
             {
-                if (descendent.is_inverse)
-                    graph.addEdge(descendent.range, var.label, descendent.label);
+                if (descendent.is_inverse && !keep_inverse_relations)
+                    graph.addEdge(descendent.range, var.label, Role.create(descendent.label));
                 else
-                    graph.addEdge(var.label, descendent.range, descendent.label);
+                    graph.addEdge(var.label, descendent.range, Role.create(descendent.label));
             }
             catch (Exception e)
             {
@@ -110,22 +115,28 @@ public class AMRActions implements Actions
 		    // Replace inverse relations by their counterparts
 		    boolean is_inverse = relation_node.text.endsWith(AMRConstants.inverse_suffix);
 		    String relation = relation_node.text;
-		    if (is_inverse)
+		    if (is_inverse && !keep_inverse_relations)
 			    relation = relation.substring(0, relation.indexOf(AMRConstants.inverse_suffix));
 
 		    if (relation.equals(AMRConstants.mod))
 		    {
 			    is_inverse = true;
-			    relation = AMRConstants.domain;
+			    if (!keep_inverse_relations)
+			        relation = AMRConstants.domain;
 		    }
 
 		    TreeNode alignment = elements.get(1);
+		    LabelNode var = (LabelNode) elements.get(3);
+
 		    if (alignment instanceof AlignmentNode)
 		    {
-			    alignments.put(relation, ((AlignmentNode) alignment).index);
+			    AlignmentNode a = (AlignmentNode) alignment;
+			    if (keep_relation_alignments)
+			        alignments.put(relation, a.index);
+		    	else if (!alignments.containsKey(var.label))
+		    		alignments.put(var.label, a.index);
 		    }
 
-		    LabelNode var = (LabelNode) elements.get(3);
 		    return new DescendentNode(relation, var.label, is_inverse);
 	    }
 	    catch (Exception e)
@@ -144,7 +155,7 @@ public class AMRActions implements Actions
 
 		    int index = GraphAlignments.unaligned;
 		    TreeNode alignment = elements.get(1);
-		    if (!alignment.text.isEmpty())
+		    if (alignment instanceof AlignmentNode)
 		    {
 			    index = ((AlignmentNode) alignment).index;
 		    }

@@ -1,20 +1,14 @@
 package edu.upf.taln.textplanning.input;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.structures.Candidate.Type;
 import edu.upf.taln.textplanning.structures.SemanticGraph;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-
-import static java.util.stream.Collectors.toList;
+import java.util.*;
 
 public class GraphAlignments implements Serializable
 {
@@ -25,29 +19,39 @@ public class GraphAlignments implements Serializable
 	private final List<String> tokens = new ArrayList<>();
 	private final List<String> pos = new ArrayList<>();
 	private final List<Type> ner = new ArrayList<>();
-	private final BiMap<String, Integer> alignments = HashBiMap.create();
+	private final Map<String, Integer> alignments = new HashMap<>();
 	private final Multimap<Pair<Integer, Integer>, String> spans2nodes = HashMultimap.create();
 
-	GraphAlignments(SemanticGraph graph, int sentence_number, BiMap<String, Integer> alignments, List<String> tokens)
+	GraphAlignments(SemanticGraph graph, int sentence_number, Map<String, Integer> alignments, List<String> tokens)
 	{
 		this.graph = graph;
 		this.sentence_number = sentence_number;
 		graph.iterator().forEachRemaining(topo_order::add);
 		this.tokens.addAll(tokens);
-		this.tokens.forEach(t -> this.pos.add(""));
+		this.tokens.forEach(t ->
+		{
+			this.pos.add("");
+			this.ner.add(Type.Other);
+		});
 		this.alignments.putAll(alignments);
 
 		// Calculate spans
-		graph.vertexSet().stream()
-				.map(v -> {
-					List<Integer> token_idx = graph.getDescendants(v).stream()
+		graph.vertexSet()
+				.forEach(v -> {
+					List<Integer> indexes = isAligned(v) ? Lists.newArrayList(getAlignment(v)) : Lists.newArrayList();
+					graph.getDescendants(v).stream()
 							.map(this::getAlignment)
-							.collect(toList());
-					int min = token_idx.stream().mapToInt(i -> i).min().orElse(0);
-					int max = token_idx.stream().mapToInt(i -> i).max().orElse(0);
-					return Pair.of(v, Pair.of(min, max + 1));
-				})
-				.forEach(p -> spans2nodes.put(p.getRight(), p.getLeft()));
+							.filter(i -> i != unaligned)
+							.forEach(indexes::add);
+
+					if (!indexes.isEmpty())
+					{
+						int min = indexes.stream().mapToInt(i -> i).min().orElse(0);
+						int max = indexes.stream().mapToInt(i -> i).max().orElse(0);
+						Pair<Integer, Integer> span = Pair.of(min, max + 1);
+						spans2nodes.put(span, v);
+					}
+				});
 	}
 
 	public SemanticGraph getGraph() { return graph; }

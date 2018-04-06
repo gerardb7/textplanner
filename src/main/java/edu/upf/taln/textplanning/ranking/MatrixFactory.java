@@ -86,7 +86,7 @@ public class MatrixFactory
 
 					R[u][v] = Ruv;
 //					if (counter.incrementAndGet() % 10000000 == 0)
-//						log.info(counter.get() + " out of " + num_calculations2);
+//						log.info(counter.create() + " out of " + num_calculations2);
 				}));
 
 		// R is row-normalized because both T and Y are normalized
@@ -154,7 +154,7 @@ public class MatrixFactory
 					m[j][i] = simij; // symmetric matrix
 
 //					if (counter.incrementAndGet() % 10000000 == 0)
-//						log.info(counter.get() + " out of " + num_calculations1);
+//						log.info(counter.create() + " out of " + num_calculations1);
 				}));
 
 		if (normalize)
@@ -183,7 +183,7 @@ public class MatrixFactory
 					m[j][i] = sim; // symmetric matrix
 
 //					if (counter.incrementAndGet() % 10000000 == 0)
-//						log.info(counter.get() + " out of " + num_calculations1);
+//						log.info(counter.create() + " out of " + num_calculations1);
 				}));
 
 		normalize(m);

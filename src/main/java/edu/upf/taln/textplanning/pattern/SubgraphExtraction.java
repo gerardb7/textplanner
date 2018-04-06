@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.pattern;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.ranking.GraphRanking;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
+import edu.upf.taln.textplanning.structures.Role;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import org.jgrapht.alg.util.NeighborCache;
 import org.jgrapht.graph.AsSubgraph;
@@ -38,7 +39,7 @@ public class SubgraphExtraction
 
 		Stopwatch timer = Stopwatch.createStarted();
 		List<SemanticSubgraph> subgraphs = new ArrayList<>();
-		NeighborCache<String, String> neighbours = new NeighborCache<>(g);
+		NeighborCache<String, Role> neighbours = new NeighborCache<>(g);
 
 		// Work out average variable rank to be used as cost value
 		double avg_rank = g.getWeights().values().stream()
@@ -60,7 +61,7 @@ public class SubgraphExtraction
 		return subgraphs;
 	}
 
-	private SemanticSubgraph extract(GlobalSemanticGraph g, NeighborCache<String, String> neighbours, double cost)
+	private SemanticSubgraph extract(GlobalSemanticGraph g, NeighborCache<String, Role> neighbours, double cost)
 	{
 		// Sample vertex
 		Map<String, Double> w = g.getWeights();
