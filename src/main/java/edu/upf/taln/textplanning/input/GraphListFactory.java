@@ -36,7 +36,7 @@ public class GraphListFactory
 				{
 					StringBuilder sb = new StringBuilder().append(g.getId()).append("_");
 					List<String> nodes_to_rename = g.vertexSet().stream()
-							.filter(v -> g.outgoingEdgesOf(v).stream().anyMatch(e -> e.equals(AMRConstants.instance)))
+							.filter(v -> g.outgoingEdgesOf(v).stream().anyMatch(e -> e.toString().equals(AMRConstants.instance)))
 							.collect(toList());
 					nodes_to_rename.forEach(v -> g.renameVertex(v, sb.append(v).toString()));
 				});

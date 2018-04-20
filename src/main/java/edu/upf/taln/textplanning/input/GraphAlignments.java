@@ -21,6 +21,7 @@ public class GraphAlignments implements Serializable
 	private final List<Type> ner = new ArrayList<>();
 	private final Map<String, Integer> alignments = new HashMap<>();
 	private final Multimap<Pair<Integer, Integer>, String> spans2nodes = HashMultimap.create();
+	private final static long serialVersionUID = 1L;
 
 	GraphAlignments(SemanticGraph graph, int sentence_number, Map<String, Integer> alignments, List<String> tokens)
 	{
@@ -36,6 +37,14 @@ public class GraphAlignments implements Serializable
 		this.alignments.putAll(alignments);
 
 		// Calculate spans
+		graph.vertexSet()
+				.stream()
+				.filter(this::isAligned)
+				.forEach(v -> {
+					Pair<Integer, Integer> span = Pair.of(getAlignment(v), getAlignment(v) + 1);
+					spans2nodes.put(span, v);
+				});
+
 		graph.vertexSet()
 				.forEach(v -> {
 					List<Integer> indexes = isAligned(v) ? Lists.newArrayList(getAlignment(v)) : Lists.newArrayList();
@@ -90,5 +99,10 @@ public class GraphAlignments implements Serializable
 	boolean isNominal(String vertex)
 	{
 		return getAlignment(vertex) != unaligned && getPOS(getAlignment(vertex)).startsWith("N");
+	}
+
+	boolean isConjunction(String vertex)
+	{
+		return getAlignment(vertex) != unaligned && getPOS(getAlignment(vertex)).equals("CC");
 	}
 }

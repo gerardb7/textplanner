@@ -3,30 +3,26 @@ package edu.upf.taln.textplanning.utils;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import edu.upf.taln.textplanning.corpora.FreqsFile;
-import edu.upf.taln.textplanning.input.AMRReader;
-import edu.upf.taln.textplanning.input.GraphListFactory;
-import edu.upf.taln.textplanning.structures.*;
+import edu.upf.taln.textplanning.structures.Candidate;
+import edu.upf.taln.textplanning.structures.GraphList;
+import edu.upf.taln.textplanning.structures.Mention;
 import edu.upf.taln.textplanning.utils.CMLCheckers.PathConverter;
-import edu.upf.taln.textplanning.utils.CMLCheckers.PathToExistingFolder;
 import edu.upf.taln.textplanning.utils.CMLCheckers.PathToNewFile;
 import org.apache.commons.io.FileUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toMap;
-import static org.apache.commons.io.FileUtils.readFileToString;
 
 /**
  * Utils class for running tests with resources related to frequencies, such as the Solr index of SEW or freq files.
@@ -34,17 +30,15 @@ import static org.apache.commons.io.FileUtils.readFileToString;
 public class FrequencyUtils
 {
 //	private static final String solrUrl = "http://10.55.0.41:443/solr/sewDataAnnSen";
-	private final static Logger log = LoggerFactory.getLogger(FrequencyUtils.class);
+	private final static Logger log = LogManager.getLogger(FrequencyUtils.class);
 
 	@SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
 	private static class CMLArgs
 	{
-		@Parameter(description = "Structures folder", arity = 1, required = true, converter = PathConverter.class,
-				validateWith = PathToExistingFolder.class)
-		private List<Path> structures;
-		@Parameter(names = {"-e", "-extension"}, description = "Extension used to filter files", arity = 1, required = true)
-		private List<String> extension;
-		@Parameter(names = {"-index", "-inputFile"}, description = "Input frequencies file", arity = 1, required = true, converter = PathConverter.class,
+		@Parameter(description = "Graphs file", arity = 1, required = true, converter = PathConverter.class,
+				validateWith = CMLCheckers.PathToExistingFile.class)
+		private List<Path> graphs;
+		@Parameter(names = {"-i", "-inputFile"}, description = "Input frequencies file", arity = 1, required = true, converter = PathConverter.class,
 				validateWith = CMLCheckers.PathToExistingFile.class)
 		private List<Path> inputFile;
 		@Parameter(names = {"-o", "-outputFile"}, description = "Output frequencies file", arity = 1, required = true, converter = PathConverter.class,
@@ -54,30 +48,12 @@ public class FrequencyUtils
 
 	/**
 	 */
-	private static void getFrequenciesSubset(Path amrPath, String extension, Path inputFile, Path outputFile) throws IOException
+	private static void getFrequenciesSubset(Path graphs_file, Path inputFile, Path outputFile) throws IOException, ClassNotFoundException
 	{
 		log.info("Reading graphs");
-		GraphListFactory factory = new GraphListFactory(new AMRReader(), null);
-		List<GraphList> graphs = Files.walk(amrPath.toAbsolutePath())
-				.filter(Files::isRegularFile)
-				.filter(p -> p.toString().endsWith(extension))
-				.map(p ->
-				{
-					try
-					{
-						return readFileToString(p.toFile(), StandardCharsets.UTF_8);
-					}
-					catch (Exception e)
-					{
-						throw new RuntimeException(e);
-					}
-				})
-				.map(factory::getGraphs) // includes NER+Coref processing with stanford
-				.collect(Collectors.toList());
+		GraphList graphs = (GraphList) Serializer.deserialize(graphs_file);
 
-		List<String> forms = graphs.stream()
-				.map(GraphList::getCandidates)
-				.flatMap(Collection::stream)
+		List<String> forms = graphs.getCandidates().stream()
 				.map(Candidate::getMention)
 				.map(Mention::getSurfaceForm)
 				.distinct()
@@ -126,12 +102,12 @@ public class FrequencyUtils
 	}
 
 
-	public static void main(String[] args) throws IOException
+	public static void main(String[] args) throws IOException, ClassNotFoundException
 	{
 		CMLArgs cmlArgs = new CMLArgs();
 		new JCommander(cmlArgs, args);
 
-		FrequencyUtils.getFrequenciesSubset(cmlArgs.structures.get(0), cmlArgs.extension.get(0), cmlArgs.inputFile.get(0),
+		FrequencyUtils.getFrequenciesSubset(cmlArgs.graphs.get(0), cmlArgs.inputFile.get(0),
 				cmlArgs.outputFile.get(0));
 	}
 }

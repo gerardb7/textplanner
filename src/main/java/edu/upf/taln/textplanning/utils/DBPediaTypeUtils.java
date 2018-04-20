@@ -15,8 +15,8 @@ import it.uniroma1.lcl.babelnet.BabelSynsetID;
 import it.uniroma1.lcl.jlt.util.Language;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -34,7 +34,7 @@ import static org.apache.commons.io.FileUtils.readFileToString;
 
 public class DBPediaTypeUtils
 {
-	private final static Logger log = LoggerFactory.getLogger(DBPediaTypeUtils.class);
+	private final static Logger log = LogManager.getLogger(DBPediaTypeUtils.class);
 
 	private static void getTypes(Path amrPath, String extension, Path o) throws IOException
 	{

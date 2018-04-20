@@ -7,10 +7,9 @@ import java.util.Collection;
 
 public class SemanticGraph extends DirectedAcyclicGraph<String, Role>
 {
-
-
 	private GraphAlignments alignments = null;
 	private final String id;
+	private final static long serialVersionUID = 1L;
 
 	public SemanticGraph(String id)
 	{

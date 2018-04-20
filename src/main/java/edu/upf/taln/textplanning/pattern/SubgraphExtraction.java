@@ -7,8 +7,8 @@ import edu.upf.taln.textplanning.structures.Role;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import org.jgrapht.alg.util.NeighborCache;
 import org.jgrapht.graph.AsSubgraph;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -23,7 +23,7 @@ public class SubgraphExtraction
 	private final GraphRanking ranker;
 	private final double lambda;
 	private static final int max_num_extractions = 1000;
-	private final static Logger log = LoggerFactory.getLogger(SubgraphExtraction.class);
+	private final static Logger log = LogManager.getLogger(SubgraphExtraction.class);
 
 	public SubgraphExtraction(GraphRanking ranker, double lambda)
 	{

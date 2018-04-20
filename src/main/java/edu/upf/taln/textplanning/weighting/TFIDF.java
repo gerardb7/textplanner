@@ -4,8 +4,8 @@ import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.structures.GraphList;
 import edu.upf.taln.textplanning.structures.Meaning;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.text.NumberFormat;
 import java.util.HashMap;
@@ -23,7 +23,7 @@ public final class TFIDF implements WeightingFunction
 {
 	private final Corpus corpus;
 	private final Map<String, Double> tfidf = new HashMap<>();
-	private final static Logger log = LoggerFactory.getLogger(TFIDF.class);
+	private final static Logger log = LogManager.getLogger(TFIDF.class);
 
 	public TFIDF(Corpus inCorpus)
 	{

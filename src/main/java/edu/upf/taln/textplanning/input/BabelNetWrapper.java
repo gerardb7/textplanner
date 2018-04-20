@@ -5,8 +5,8 @@ import it.uniroma1.lcl.babelnet.BabelSynset;
 import it.uniroma1.lcl.babelnet.BabelSynsetID;
 import it.uniroma1.lcl.babelnet.data.BabelPOS;
 import it.uniroma1.lcl.jlt.util.Language;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -19,7 +19,7 @@ import static edu.upf.taln.textplanning.input.POSConverter.BN_POS_EN;
 public class BabelNetWrapper
 {
 	private final it.uniroma1.lcl.babelnet.BabelNet bn;
-	private final static Logger log = LoggerFactory.getLogger(BabelNetWrapper.class);
+	private final static Logger log = LogManager.getLogger(BabelNetWrapper.class);
 
 	public BabelNetWrapper()
 	{
@@ -62,7 +62,7 @@ public class BabelNetWrapper
 		{
 			return bn.getSynsets(form, Language.EN, bnPOS);
 		}
-		catch (IOException e)
+		catch (Exception e)
 		{
 			log.error("Error while getting synsets for " + form + ": " + e);
 			return Collections.emptyList();

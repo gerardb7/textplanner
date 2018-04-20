@@ -14,6 +14,7 @@ public class GlobalSemanticGraph extends SimpleDirectedGraph<String, Role>
 	private final Map<String, Meaning> meanings = new HashMap<>();
 	private final Multimap<String, Mention> mentions = HashMultimap.create();
 	private final Map<String, Double> weights = new HashMap<>();
+	private final static long serialVersionUID = 1L;
 
 	public GlobalSemanticGraph(GraphList graphs)
 	{

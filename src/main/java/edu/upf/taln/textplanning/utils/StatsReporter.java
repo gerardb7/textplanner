@@ -3,8 +3,8 @@ package edu.upf.taln.textplanning.utils;
 import edu.upf.taln.textplanning.input.GraphAlignments;
 import edu.upf.taln.textplanning.input.GraphListFactory;
 import edu.upf.taln.textplanning.structures.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.math.RoundingMode;
 import java.text.NumberFormat;
@@ -16,7 +16,7 @@ import static java.util.stream.Collectors.toSet;
 
 public class StatsReporter
 {
-	private final static Logger log = LoggerFactory.getLogger(GraphListFactory.class);
+	private final static Logger log = LogManager.getLogger(GraphListFactory.class);
 
 	public static void reportStats(GraphList graphs, Map<String, List<Candidate>> candidates)
 	{

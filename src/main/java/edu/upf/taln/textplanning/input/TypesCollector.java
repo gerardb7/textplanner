@@ -9,8 +9,8 @@ import it.uniroma1.lcl.babelnet.BabelSynset;
 import it.uniroma1.lcl.babelnet.BabelSynsetID;
 import it.uniroma1.lcl.jlt.util.Language;
 import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -27,7 +27,7 @@ class TypesCollector
 	private final DBPediaType dbpedia = new DBPediaType();
 	private final BabelNetWrapper babelnet;
 	private final Map<String, Candidate.Type> types = new HashMap<>();
-	private final static Logger log = LoggerFactory.getLogger(TypesCollector.class);
+	private final static Logger log = LogManager.getLogger(TypesCollector.class);
 
 	TypesCollector(Path types_file, BabelNetWrapper babelnet) throws IOException
 	{

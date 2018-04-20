@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning.corpora;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.util.*;
 
@@ -15,7 +15,7 @@ public interface Corpus
 		private final static int maxSize = 10000;
 		private boolean maxSizeReached = false;
 		private final Map<String, Long> cache = new HashMap<>();
-		private final static Logger log = LoggerFactory.getLogger(Cache.class);
+		private final static Logger log = LogManager.getLogger(Cache.class);
 
 		public boolean containsKey(String inKey) { return cache.containsKey(inKey); }
 		public long get(String inKey) { return cache.get(inKey); }
@@ -42,7 +42,7 @@ public interface Corpus
 		private final String id;
 		private int numQueries = 0;
 		private final List<Long> times = new ArrayList<>();
-		private final static Logger log = LoggerFactory.getLogger(DebugAid.class);
+		private final static Logger log = LogManager.getLogger(DebugAid.class);
 
 		DebugAid(String inId)
 		{
@@ -95,3 +95,6 @@ public interface Corpus
 	long getFormCount(String form);
 	long getNumDocs();
 }
+
+// Map<String_id, <int_total_count, int_num_docs>>
+//

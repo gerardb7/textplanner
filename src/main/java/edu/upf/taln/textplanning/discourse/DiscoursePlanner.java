@@ -6,8 +6,8 @@ import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.structures.SemanticTree;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -24,7 +24,7 @@ public class DiscoursePlanner
 	}
 
 	private final SemanticTreeSimilarity sim;
-	private final static Logger log = LoggerFactory.getLogger(DiscoursePlanner.class);
+	private final static Logger log = LogManager.getLogger(DiscoursePlanner.class);
 
 
 	public DiscoursePlanner(SemanticTreeSimilarity sim)

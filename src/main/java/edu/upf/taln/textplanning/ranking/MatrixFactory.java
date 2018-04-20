@@ -5,8 +5,8 @@ import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.util.Arrays;
 import java.util.List;
@@ -15,7 +15,7 @@ import java.util.stream.IntStream;
 
 public class MatrixFactory
 {
-	private final static Logger log = LoggerFactory.getLogger(MatrixFactory.class);
+	private final static Logger log = LogManager.getLogger(MatrixFactory.class);
 
 	/**
 	 * Creates a row-stochastic matrix to rank a set of meanings

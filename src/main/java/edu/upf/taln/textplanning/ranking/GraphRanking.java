@@ -9,8 +9,8 @@ import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.GraphList;
 import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.util.Comparator;
 import java.util.List;
@@ -43,7 +43,7 @@ public class GraphRanking
 	private final double damping_factor_meanings;
 	private final double minimum_meaning_ranking;
 	private final double damping_factor_variables;
-	private final static Logger log = LoggerFactory.getLogger(TextPlanner.class);
+	private final static Logger log = LogManager.getLogger(TextPlanner.class);
 
 	public GraphRanking(WeightingFunction weighting, MeaningSimilarity similarity, double min_meaning_weight,
 	                    double meaning_similarity_threshold, double damping_factor_meanings,

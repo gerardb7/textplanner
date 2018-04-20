@@ -5,8 +5,8 @@ import edu.upf.taln.textplanning.similarity.SemanticTreeSimilarity;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.structures.SemanticTree;
 import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.util.*;
 import java.util.stream.IntStream;
@@ -17,7 +17,7 @@ import static java.util.stream.Collectors.toSet;
 public class RedundancyRemover
 {
 	private final SemanticTreeSimilarity sim;
-	private final static Logger log = LoggerFactory.getLogger(RedundancyRemover.class);
+	private final static Logger log = LogManager.getLogger(RedundancyRemover.class);
 
 	public RedundancyRemover(SemanticTreeSimilarity sim)
 	{

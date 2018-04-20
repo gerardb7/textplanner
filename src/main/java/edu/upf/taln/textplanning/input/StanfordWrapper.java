@@ -11,11 +11,10 @@ import edu.upf.taln.textplanning.structures.CoreferenceChain;
 import edu.upf.taln.textplanning.structures.Mention;
 import edu.upf.taln.textplanning.structures.SemanticGraph;
 import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.io.OutputStream;
-import java.io.PrintStream;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -27,7 +26,7 @@ import static java.util.stream.Collectors.toList;
 class StanfordWrapper
 {
 	private final StanfordCoreNLP pipeline;
-	private final static Logger log = LoggerFactory.getLogger(StanfordWrapper.class);
+	private final static Logger log = LogManager.getLogger(StanfordWrapper.class);
 
 	StanfordWrapper()
 	{
@@ -40,13 +39,16 @@ class StanfordWrapper
 
 		Stopwatch timer = Stopwatch.createStarted();
 		RedwoodConfiguration.current().clear().apply(); // shut up, CoreNLP
-		pipeline = null;
-		//pipeline = new StanfordCoreNLP(props);
+//		pipeline = null;
+		pipeline = new StanfordCoreNLP(props);
 		log.info("CoreNLP pipeline created in " + timer.stop());
 	}
 
 	List<CoreferenceChain> process(List<SemanticGraph> graphs)
 	{
+		if (pipeline == null)
+			return Collections.emptyList();
+
 		Stopwatch timer = Stopwatch.createStarted();
 
 		List<List<String>> tokens = graphs.stream()
@@ -89,14 +91,17 @@ class StanfordWrapper
 
 		// Assign POS & NER
 		IntStream.range(0, graphs.size()).forEach(i ->
-				IntStream.range(0, pos.size()).forEach(j ->
-				{
-					GraphAlignments align = graphs.get(i).getAlignments();
-					List<String> pos_i = pos.get(i);
-					List<Type> ner_i = ner.get(i);
-					align.setPOS(j, pos_i.get(j));
-					align.setNER(j, ner_i.get(j));
-				}));
+		{
+			List<String> pos_i = pos.get(i);
+			List<Type> ner_i = ner.get(i);
+			IntStream.range(0, pos_i.size()).forEach(j ->
+			{
+				GraphAlignments align = graphs.get(i).getAlignments();
+
+				align.setPOS(j, pos_i.get(j));
+				align.setNER(j, ner_i.get(j));
+			});
+		});
 
 		// Collect chains
 		Map<Integer, CorefChain> corenlp_chains = document.corefChains();

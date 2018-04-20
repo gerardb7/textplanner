@@ -14,6 +14,8 @@ public class GraphList extends ArrayList<SemanticGraph>
 {
 	private final Multimap<String, Candidate> candidate_meanings = HashMultimap.create();
 	private final List<CoreferenceChain> chains = new ArrayList<>();
+	private final static long serialVersionUID = 1L;
+
 
 	public GraphList(java.util.Collection<SemanticGraph> graphs,
 	                 List<Candidate> candidates,

@@ -6,8 +6,8 @@ import edu.upf.taln.textplanning.corpora.Corpus;
 import edu.upf.taln.textplanning.similarity.MeaningSimilarity;
 import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.util.List;
 import java.util.Map;
@@ -22,7 +22,7 @@ public class MultiObjectiveOptimizationRanking
 	private final double min_meaning_weight;
 	private final double meaning_similarity_threshold;
 	private final Corpus corpus;
-	private final static Logger log = LoggerFactory.getLogger(MultiObjectiveOptimizationRanking.class);
+	private final static Logger log = LogManager.getLogger(MultiObjectiveOptimizationRanking.class);
 
 	public MultiObjectiveOptimizationRanking(WeightingFunction weighting, MeaningSimilarity similarity, Corpus corpus,
 	                                         double min_meaning_weight, double meaning_similarity_threshold)

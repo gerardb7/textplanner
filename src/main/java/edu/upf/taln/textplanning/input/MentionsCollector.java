@@ -5,22 +5,24 @@ import edu.upf.taln.textplanning.structures.Mention;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.IntStream;
 
 import static java.lang.Integer.min;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
-public class MentionsCollector
+class MentionsCollector
 {
 	private static final int max_tokens = 7;
 
-	public static List<Mention> collectMentions(GraphAlignments graph)
+	static Set<Mention> collectMentions(GraphAlignments graph)
 	{
-		List<Mention> mentions = collectNominalMentions(graph);
-		mentions.addAll(collectOtherMentions(graph));
+		Set<Mention> nominal = collectNominalMentions(graph);
+		Set<Mention> non_nominal = collectOtherMentions(graph);
+		nominal.addAll(non_nominal);
 
-		// If you think about it there is no need to check for duplicates anywhere
-		return mentions;
+		return nominal;
 	}
 
 	/**
@@ -28,7 +30,7 @@ public class MentionsCollector
 	 * in the graph spanning over it.
 	 */
 	@SuppressWarnings("ConstantConditions")
-	private static List<Mention> collectNominalMentions(GraphAlignments g)
+	private static Set<Mention> collectNominalMentions(GraphAlignments g)
 	{
 		List<String> tokens = g.getTokens();
 
@@ -36,23 +38,26 @@ public class MentionsCollector
 				.mapToObj(i -> IntStream.range(i + 1, min(i + max_tokens + 1, tokens.size()))
 						.mapToObj(j -> Pair.of(i, j))
 						.filter(g::covers)
-						.filter(p -> g.isNominal(g.getTopSpanVertex(p).get()))
-						.map(p -> new Mention(g, p, "N", g.getNER(p).orElse(Type.Other)))
+						.filter(p -> {
+							String top_v = g.getTopSpanVertex(p).get();
+							return g.isNominal(top_v) || g.isConjunction(top_v);
+						})
+						.map(p -> new Mention(g, p, g.getPOS(p).orElse("NN"), g.getNER(p).orElse(Type.Other)))
 						.collect(toList()))
 				.flatMap(List::stream)
-				.collect(toList());
+				.collect(toSet());
 	}
 
 	/**
 	 * Returns a mention for every individual token
 	 */
-	private static List<Mention> collectOtherMentions(GraphAlignments alignments)
+	private static Set<Mention> collectOtherMentions(GraphAlignments alignments)
 	{
 		return  alignments.getGraph().vertexSet().stream()
 				.filter(alignments::isAligned)
+				.filter(v -> !alignments.isNominal(v))
 				.mapToInt(alignments::getAlignment)
 				.mapToObj(i -> new Mention(alignments, Pair.of(i, i+1), alignments.getPOS(i), alignments.getNER(i)))
-				.collect(toList());
-
+				.collect(toSet());
 	}
 }

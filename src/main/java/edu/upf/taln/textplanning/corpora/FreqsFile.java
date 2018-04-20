@@ -4,8 +4,8 @@ import com.google.common.base.Stopwatch;
 import org.apache.commons.io.FileUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -25,7 +25,7 @@ public class FreqsFile implements Corpus
 	private final Map<String, Long> sense_counts = new HashMap<>();
 	private final Map<String, Long> sense_doc_counts = new HashMap<>();
 	private final Map<String, Map<String, Long>> form_sense_counts = new HashMap<>();
-	private final static Logger log = LoggerFactory.getLogger(FreqsFile.class);
+	private final static Logger log = LogManager.getLogger(FreqsFile.class);
 
 	public FreqsFile(Path file) throws IOException
 	{

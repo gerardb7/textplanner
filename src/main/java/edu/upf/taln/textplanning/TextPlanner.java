@@ -14,8 +14,8 @@ import edu.upf.taln.textplanning.structures.GraphList;
 import edu.upf.taln.textplanning.input.GraphListFactory;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.io.IOException;
 import java.math.RoundingMode;
@@ -35,7 +35,7 @@ public final class TextPlanner
 	private final GraphListFactory graphs_factory;
 	private final WeightingFunction weighting;
 	private final MeaningSimilarity similarity;
-	private final static Logger log = LoggerFactory.getLogger(TextPlanner.class);
+	private final static Logger log = LogManager.getLogger(TextPlanner.class);
 
 	public static class Options
 	{
@@ -84,7 +84,7 @@ public final class TextPlanner
 	/**
 	 * Generates a text plan from a list of structures, e.g. relations in a KB or extracted from a text
 	 */
-	public List<SemanticSubgraph> plan(String contents, int num_graphs, Options o)
+	List<SemanticSubgraph> plan(GraphList graphs, int num_graphs, Options o)
 	{
 		try
 		{
@@ -92,7 +92,7 @@ public final class TextPlanner
 			Stopwatch timer = Stopwatch.createStarted();
 
 			// 1- Create global graph (involves disambiguation of meanings via ranking)
-			GraphList graphs = graphs_factory.getGraphs(contents);
+			// GraphList graphs = graphs_factory.getGraphs(contents);
 			GraphRanking ranker = new GraphRanking(weighting, similarity, o.min_weight, o.sim_threshold, o.damping_meanings,
 					o.min_meaning_rank, o.damping_variables);
 			GlobalSemanticGraph graph = GlobalGraphFactory.create(graphs, ranker);

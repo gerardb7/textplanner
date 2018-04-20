@@ -19,6 +19,7 @@ public final class Mention implements Serializable
 	private final String surfaceForm;
 	private final String pos;
 	private final Type type;
+	private final static long serialVersionUID = 1L;
 
 	public Mention(GraphAlignments graph, Pair<Integer, Integer> tokens_span, String POS, Type type)
 	{
@@ -37,6 +38,7 @@ public final class Mention implements Serializable
 	public String getPOS() { return pos;}
 	public Type getType() { return type; }
 	public boolean isNominal() { return pos.startsWith("N"); }
+	public boolean isMultiWord() { return span.getRight() - span.getLeft() > 1; }
 
 
 	public boolean contains(Mention o)

@@ -1,8 +1,8 @@
 package edu.upf.taln.textplanning.ranking;
 
 import Jama.Matrix;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.util.Arrays;
 import java.util.stream.DoubleStream;
@@ -26,7 +26,7 @@ import java.util.stream.DoubleStream;
  */
 public class PowerIterationRanking
 {
-	private final static Logger log = LoggerFactory.getLogger(PowerIterationRanking.class);
+	private final static Logger log = LogManager.getLogger(PowerIterationRanking.class);
 
 	/**
 	 * Power iteration method to obtain a final stationary distribution of a Markov chain

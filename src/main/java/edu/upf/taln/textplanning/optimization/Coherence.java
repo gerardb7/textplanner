@@ -5,8 +5,8 @@ import edu.upf.taln.textplanning.ranking.MatrixFactory;
 import edu.upf.taln.textplanning.similarity.MeaningSimilarity;
 import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.structures.Meaning;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -21,7 +21,7 @@ public class Coherence implements Function
 {
 	private final List<Candidate> candidates;
 	private final double[][] semantic_similarity;
-	private final static Logger log = LoggerFactory.getLogger(Coherence.class);
+	private final static Logger log = LogManager.getLogger(Coherence.class);
 
 	Coherence(List<Candidate> candidates, MeaningSimilarity similarity, double lower_bound)
 	{

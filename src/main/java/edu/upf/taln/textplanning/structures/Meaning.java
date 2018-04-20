@@ -17,6 +17,8 @@ public final class Meaning implements Serializable
 	private Type type = Type.Other;
 	private double weight = 0.0;
 	private static final Map<String, Meaning> references = new HashMap<>(); // to ensure unique Meaning objects per id
+	private final static long serialVersionUID = 1L;
+
 
 	// Factory method
 	public static Meaning get(String reference, boolean is_NE)

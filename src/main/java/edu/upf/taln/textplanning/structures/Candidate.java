@@ -13,6 +13,7 @@ public class Candidate implements Serializable
 	private final String vertex;
 	private final Meaning meaning;
 	private final Mention mention;
+	private final static long serialVersionUID = 1L;
 
 	public Candidate(String v, Meaning e, Mention m)
 	{

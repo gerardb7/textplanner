@@ -5,8 +5,8 @@ import edu.upf.taln.textplanning.structures.Candidate;
 import org.eclipse.rdf4j.query.BooleanQuery;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.sparql.SPARQLRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 /**
  *
@@ -18,7 +18,7 @@ public class DBPediaType
 	private final static String isPlace = "ASK{ <$r> a <http://dbpedia.org/ontology/Place> }";
 	private final static String isOrganization = "ASK{ <$r> a <http://dbpedia.org/ontology/Organisation> }";
 	private final RepositoryConnection conn;
-	private final static Logger log = LoggerFactory.getLogger(DBPediaType.class);
+	private final static Logger log = LogManager.getLogger(DBPediaType.class);
 
 	public DBPediaType()
 	{

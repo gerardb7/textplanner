@@ -41,27 +41,29 @@ public class GlobalGraphFactory
 	private static void collapse_multiwords(GraphList graphs)
 	{
 		graphs.forEach(g ->
-				g.vertexSet().forEach(v -> {
+				g.vertexSet().stream()
+						.filter(v -> !graphs.getCandidates(v).isEmpty())
+						.forEach(v ->
+						{
+							Candidate c = graphs.getCandidates().iterator().next(); // there should be just one...
+							if (c.getMention().isMultiWord())
+							{
+								// v_value = value of highest scored meaning of v
+								double v_value = c.getMeaning().getWeight();
 
-					// v_max = value of highest scored meaning of v
-					double v_max = graphs.getCandidates(v).stream()
-							.map(Candidate::getMeaning)
-							.mapToDouble(Meaning::getWeight)
-							.max().orElse(0.0);
+								// d_max = value of highest scored meaning of any descendant of v
+								Set<String> descendants = g.getDescendants(v);
+								double d_max = descendants.stream()
+										.map(graphs::getCandidates)
+										.flatMap(Collection::stream)
+										.map(Candidate::getMeaning)
+										.mapToDouble(Meaning::getWeight)
+										.max().orElse(0.0);
 
-					// d_max = value of highest scored meaning of any descendent of v
-					Set<String> descendants = g.getDescendants(v);
-					double d_max = descendants.stream()
-							.map(graphs::getCandidates)
-							.flatMap(Collection::stream)
-							.map(Candidate::getMeaning)
-							.mapToDouble(Meaning::getWeight)
-							.max().orElse(0.0);
-
-					if (v_max >= d_max)
-						graphs.vertexContraction(g, v, descendants); // this also updates meanings and coreference
-
-		}));
+								if (v_value >= d_max)
+									graphs.vertexContraction(g, v, descendants); // this also updates meanings and coreference
+							}
+						}));
 	}
 
 	private static GlobalSemanticGraph merge(GraphList graphs)

@@ -7,8 +7,8 @@ import edu.upf.taln.textplanning.structures.Mention;
 import edu.upf.taln.textplanning.structures.SemanticGraph;
 import it.uniroma1.lcl.babelnet.BabelSynset;
 import it.uniroma1.lcl.babelnet.BabelSynsetType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 import java.util.Map;
@@ -24,7 +24,7 @@ import static java.util.stream.Collectors.*;
 class CandidatesCollector
 {
 	private final BabelNetWrapper bn;
-	private final static Logger log = LoggerFactory.getLogger(CandidatesCollector.class);
+	private final static Logger log = LogManager.getLogger(CandidatesCollector.class);
 
 	CandidatesCollector(BabelNetWrapper babelnet)
 	{
@@ -43,7 +43,7 @@ class CandidatesCollector
 		Map<String, List<Mention>> label2Mentions = graphs.stream()
 				.map(SemanticGraph::getAlignments)
 				.map(MentionsCollector::collectMentions)
-				.flatMap(List::stream)
+				.flatMap(Set::stream)
 				// Label formed with the surface form and head POS of mention's head
 				.collect(Collectors.groupingBy(m -> m.getSurfaceForm() + "_" + m.getPOS()));
 

@@ -4,8 +4,8 @@ import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.input.amr.AMR;
 import edu.upf.taln.textplanning.structures.SemanticGraph;
 import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -19,7 +19,7 @@ public class AMRReader implements DocumentReader
 {
 	private final boolean keep_inverse_relations; // If false -> convert ':*-of' relations to their non-inverted counterparts
 	private final boolean keep_relation_alignments; // If true -> move relation alignments to their target variables
-    private final static Logger log = LoggerFactory.getLogger(AMRReader.class);
+    private final static Logger log = LogManager.getLogger(AMRReader.class);
 
     public AMRReader() { keep_inverse_relations = true; keep_relation_alignments = false; }
 	@SuppressWarnings("unused")

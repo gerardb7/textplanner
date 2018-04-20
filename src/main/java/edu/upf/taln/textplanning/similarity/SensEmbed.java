@@ -4,8 +4,8 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import edu.upf.taln.textplanning.utils.EmbeddingUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -21,16 +21,16 @@ public class SensEmbed implements MeaningSimilarity
 {
 	private final ImmutableMap<String, double[]> vectors;
 	private final static double avg_sim = 0.041157715074586806;
-	private final static Logger log = LoggerFactory.getLogger(SensEmbed.class);
+	private final static Logger log = LogManager.getLogger(SensEmbed.class);
 
-	public SensEmbed(Path inEmbeddingsPath) throws Exception
+	public SensEmbed(Path embeddings_path, int num_dimensions) throws Exception
 	{
 		log.info("Loading SenseEmbed vectors");
 		Stopwatch timer = Stopwatch.createStarted();
 
 		// If file contains merged sense vectors, ignore vectors for words, if any.
 		// If file contains word-sense pairs, do not ignore words.
-		Map<String, List<double[]>> embeddings = EmbeddingUtils.parseEmbeddingsFile(inEmbeddingsPath, true, true);
+		Map<String, List<double[]>> embeddings = EmbeddingUtils.parseEmbeddingsFile(embeddings_path, num_dimensions, true, true);
 		embeddings.entrySet().stream()
 				.filter(e -> e.getValue().size() != 1)
 				.forEach(e -> log.error("Sense " + e.getKey() + " has " + e.getValue() + " vectors"));
