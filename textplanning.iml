@@ -44,6 +44,7 @@
     <orderEntry type="library" name="Maven: org.antlr:antlr4-runtime:4.6" level="project" />
     <orderEntry type="library" name="Maven: org.tinyjee.jgraphx:jgraphx:2.0.0.1" level="project" />
     <orderEntry type="library" name="Maven: jgraph:jgraph:5.13.0.0" level="project" />
+    <orderEntry type="library" name="Maven: net.sf.trove4j:trove4j:3.0.3" level="project" />
     <orderEntry type="library" name="Maven: it.uniroma1.lcl.babelnet:babelnet-api:3.7" level="project" />
     <orderEntry type="library" name="Maven: commons-beanutils:commons-beanutils:1.7.0" level="project" />
     <orderEntry type="library" name="Maven: commons-beanutils:commons-beanutils-core:1.7.0" level="project" />
@@ -62,7 +63,6 @@
     <orderEntry type="library" name="Maven: org.beanshell:bsh:2.0b4" level="project" />
     <orderEntry type="library" name="Maven: jgrapht:jgrapht:0.6.0" level="project" />
     <orderEntry type="library" name="Maven: net.sf.jwordnet:jwnl:1.4_rc3" level="project" />
-    <orderEntry type="library" name="Maven: net.sf.trove4j:trove4j:2.0.2" level="project" />
     <orderEntry type="library" name="Maven: com.googlecode.matrix-toolkits-java:mtj:0.9.14" level="project" />
     <orderEntry type="library" name="Maven: com.googlecode.netlib-java:netlib-java:0.9.3" level="project" />
     <orderEntry type="library" name="Maven: net.sourceforge.f2j:arpack_combined_all:0.1" level="project" />

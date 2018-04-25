@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.corpora;
 
 import com.google.common.base.Stopwatch;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.apache.logging.log4j.Logger;
@@ -10,7 +11,6 @@ import org.apache.logging.log4j.LogManager;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -125,9 +125,4 @@ public class FreqsFile implements Corpus
 			return Collections.emptySet();
 	}
 
-	// for testing
-	public static void main(String[] args) throws IOException
-	{
-		new FreqsFile(Paths.get(args[0]));
-	}
 }

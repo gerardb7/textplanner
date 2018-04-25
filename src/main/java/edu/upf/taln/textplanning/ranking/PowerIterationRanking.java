@@ -24,7 +24,7 @@ import java.util.stream.DoubleStream;
  * Taken from https://math.stackexchange.com/questions/55863/when-will-pagerank-fail
  *
  */
-public class PowerIterationRanking
+class PowerIterationRanking
 {
 	private final static Logger log = LogManager.getLogger(PowerIterationRanking.class);
 
@@ -35,7 +35,7 @@ public class PowerIterationRanking
 	 * @param a a transition stochastic matrix of a Markov chain
 	 * @return the stationary distribution of the chain
 	 */
-	public static Matrix run(Matrix a)
+	static Matrix run(Matrix a)
 	{
 		// Check that a is a row-stochastic matrix
 		assert a.getColumnDimension() == a.getRowDimension(); // Is it square?

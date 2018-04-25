@@ -2,6 +2,8 @@ package edu.upf.taln.textplanning.utils;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
+import com.google.common.base.Stopwatch;
+import edu.upf.taln.textplanning.corpora.CompactFrequencies;
 import edu.upf.taln.textplanning.corpora.FreqsFile;
 import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.structures.GraphList;
@@ -9,14 +11,16 @@ import edu.upf.taln.textplanning.structures.Mention;
 import edu.upf.taln.textplanning.utils.CMLCheckers.PathConverter;
 import edu.upf.taln.textplanning.utils.CMLCheckers.PathToNewFile;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -101,6 +105,50 @@ public class FrequencyUtils
 		log.info("Json written to file" + outputFile);
 	}
 
+	private static void compactJSONFreqs(Path json_file, Path binary_file) throws IOException
+	{
+		Stopwatch timer = Stopwatch.createStarted();
+
+		String json = FileUtils.readFileToString(json_file.toFile(), StandardCharsets.UTF_8);
+		JSONObject obj = new JSONObject(json);
+		long numDocs = obj.getLong("docs");
+
+		Map<String, Pair<Long, Long>> sense_counts = new HashMap<>();
+		JSONObject meaning_counts = obj.getJSONObject("meanings");
+		for (String id : meaning_counts.keySet())
+		{
+			long count = meaning_counts.getLong(id);
+			sense_counts.put(id, Pair.of(0L, count));
+		}
+
+		JSONObject form_counts = obj.getJSONObject("mentions");
+
+		Map<String, Map<String, Long>> form_sense_counts = new HashMap<>();
+		for (String form : form_counts.keySet())
+		{
+			JSONArray arr = form_counts.getJSONArray(form);
+			Map<String, Long> counts = new HashMap<>();
+
+			for (int i = 0; i < arr.length(); ++i)
+			{
+				JSONArray form_count = arr.getJSONArray(i);
+				String key = form_count.getString(0);
+				long value = form_count.getLong(1);
+				counts.put(key, value);
+				Pair<Long, Long> ci = sense_counts.get(key);
+				sense_counts.put(key, Pair.of(ci.getLeft() + 1, ci.getRight()));
+			}
+			form_sense_counts.put(form, counts);
+		}
+
+		log.info(   "Loaded " + sense_counts.size() + " meanings and " + form_sense_counts.size() +
+				" forms from frequencies file in " + timer.stop());
+
+		CompactFrequencies freqs = new CompactFrequencies(sense_counts);
+		Serializer.serialize(freqs, binary_file);
+
+		log.info("Done");
+	}
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException
 	{
