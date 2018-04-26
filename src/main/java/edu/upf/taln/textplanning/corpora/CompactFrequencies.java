@@ -16,10 +16,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  *  Class optimized to efficiently store frequencies in memory using a ByteBuffer to store counts and Trove collections
@@ -27,12 +24,13 @@ import java.util.Map;
  *
  * Inspired by code in http://java-performance.info/use-case-optimizing-memory-footprint-of-read-only-csv-file-trove-unsafe-bytebuffer-data-compression/
  */
-public class CompactFrequencies implements Serializable
+public class CompactFrequencies implements Corpus, Serializable
 {
+	private final int num_docs;
 	private static final int BUFFER_SIZE_STEP = 10 * 1024 * 1024;
-	private TObjectIntMap<String> sense_index = new TObjectIntHashMap<>( 1000 );
-	private TIntIntMap sense_hash_index = new TIntIntHashMap( 1000, 0.75f, -1, -1 );
-	transient private ByteBuffer sense_counts = ByteBuffer.allocate(BUFFER_SIZE_STEP);
+	private TObjectIntMap<String> meaning_index = new TObjectIntHashMap<>( 1000 );
+	private TIntIntMap meaning_hash_index = new TIntIntHashMap( 1000, 0.75f, -1, -1 );
+	transient private ByteBuffer meaning_counts = ByteBuffer.allocate(BUFFER_SIZE_STEP);
 
 	private TObjectIntMap<String> form_index = new TObjectIntHashMap<>( 1000 );
 	private TIntIntMap form_hash_index = new TIntIntHashMap( 1000, 0.75f, -1, -1 );
@@ -40,94 +38,49 @@ public class CompactFrequencies implements Serializable
 
 	private final static long serialVersionUID = 1L;
 
-	public CompactFrequencies(Map<String, Pair<Integer, Integer>> sense_counts, Map<String, Map<String, Integer>> form_counts)
+	public CompactFrequencies(int num_docs, Map<String, Pair<Integer, Integer>> meaning_counts, Map<String, Map<String, Integer>> form_counts)
 	{
-		addCounts(sense_counts, form_counts);
+		this.num_docs = num_docs;
+		addCounts(meaning_counts, form_counts);
 		pack();
-	}
-
-	public Pair<Integer, Integer> getSenseCounts(final String sense)
-	{
-		int pos = sense_hash_index.get(sense.hashCode());
-		if (pos == -1)
-		{
-			pos = sense_index.get(sense);
-			if (pos == -1)
-				return null;
-		}
-
-		sense_counts.position(pos);
-
-		final int count = sense_counts.getInt();
-		final int docs_count = sense_counts.getInt();
-
-		return Pair.of(count, docs_count);
-	}
-
-	public Map<String, Integer> getFormCounts(final String form)
-	{
-		int pos = form_hash_index.get(form.hashCode());
-		if (pos == -1)
-		{
-			pos = form_index.get(form);
-			if (pos == -1)
-				return null;
-		}
-
-		form_counts.position(pos);
-		int num_senses = form_counts.getInt();
-		final Map<String, Integer> sense_counts = new HashMap<>(num_senses);
-
-		for (int i=0; i < num_senses; ++i)
-		{
-			final int len = form_counts.get() & 0xFF; // standard way of read unsigned byte
-			final int num_bytes_sense_string = len - Integer.BYTES;
-			//reading straight from ByteBuffer array in order not to allocate a temp copy
-			final String sense = new String(form_counts.array(), form_counts.position(), num_bytes_sense_string, Charsets.UTF_8);
-			form_counts.position(form_counts.position() + num_bytes_sense_string);
-			int count = form_counts.getInt();
-			sense_counts.put(sense, count);
-		}
-
-		return sense_counts;
 	}
 
 	private void addCounts(Map<String, Pair<Integer, Integer>> s_counts, Map<String, Map<String, Integer>> f_counts)
 	{
-		s_counts.keySet().forEach(sense ->
+		s_counts.keySet().forEach(meaning ->
 		{
 			//increase buffer size if necessary
-			if (sense_counts.remaining() < Integer.BYTES * 2)
+			if (meaning_counts.remaining() < Integer.BYTES * 2)
 			{
-				final ByteBuffer newBuf = ByteBuffer.allocate(sense_counts.capacity() + BUFFER_SIZE_STEP);
-				sense_counts.flip();
-				newBuf.put(sense_counts);
-				sense_counts = newBuf;
+				final ByteBuffer newBuf = ByteBuffer.allocate(meaning_counts.capacity() + BUFFER_SIZE_STEP);
+				meaning_counts.flip();
+				newBuf.put(meaning_counts);
+				meaning_counts = newBuf;
 			}
 
 			// save offset of the first byte in this record
-			sense_index.put(sense, sense_counts.position());
+			meaning_index.put(meaning, meaning_counts.position());
 
 			// add bytes to main buffer
-			final int total_count = s_counts.get(sense).getLeft();
-			final int docs_count = s_counts.get(sense).getRight();
-			sense_counts.putInt(total_count).putInt(docs_count);
+			final int total_count = s_counts.get(meaning).getLeft();
+			final int docs_count = s_counts.get(meaning).getRight();
+			meaning_counts.putInt(total_count).putInt(docs_count);
 		});
 
 		f_counts.keySet().forEach(form ->
 		{
-			Map<String, Integer> senses = f_counts.get(form);
-			final List<byte[]> bytes_list = new ArrayList<>(senses.size() - 1);
-			int bytes_length = Integer.BYTES; // to store number of sense counts
+			Map<String, Integer> meanings = f_counts.get(form);
+			final List<byte[]> bytes_list = new ArrayList<>(meanings.size() - 1);
+			int bytes_length = Short.BYTES; // to store number of meaning counts
 
-			//generate byte representations for all (sense, count) pairs
-			for (Map.Entry<String, Integer> e : senses.entrySet())
+			//generate byte representations for all (meaning, count) pairs
+			for (Map.Entry<String, Integer> e : meanings.entrySet())
 			{
-				final byte[] bytes_sense_string = e.getKey().getBytes(Charsets.UTF_8);
+				final byte[] bytes_meaning_string = e.getKey().getBytes(Charsets.UTF_8);
 				final byte[] bytes_count = Ints.toByteArray(e.getValue());
-				byte[] bytes = ArrayUtils.addAll(bytes_sense_string, bytes_count);
+				byte[] bytes = ArrayUtils.addAll(bytes_meaning_string, bytes_count);
 
-				bytes_length += Integer.BYTES + bytes.length; // to store length of bytes + bytes
+				bytes_length += Byte.BYTES + bytes.length; // to store length of bytes + bytes
 				bytes_list.add(bytes);
 			}
 
@@ -142,14 +95,14 @@ public class CompactFrequencies implements Serializable
 
 			form_index.put(form, form_counts.position());
 
-			// add an integer indicating number of sense counts
-			form_counts.putInt(senses.size());
+			// add an integer indicating number of meaning counts
+			form_counts.putShort((short)meanings.size()); // a short with max value 32767 should suffice
 
-			// and now add the bytes for each (sense, count) pair
+			// and now add the bytes for each (meaning, count) pair
 			for (final byte[] bytes : bytes_list)
 			{
 				form_counts.put((byte) bytes.length); // using a single byte to store length unsigned int (max value 127)
-				form_counts.put(bytes); // bytes has both the sense string and the count int
+				form_counts.put(bytes); // bytes has both the meaning string and the count int
 			}
 		});
 	}
@@ -158,10 +111,10 @@ public class CompactFrequencies implements Serializable
 	{
 		{
 			// find all hash codes in the key set, calculate their frequency
-			final TIntIntMap freq = new TIntIntHashMap(sense_index.size());
-			sense_index.forEachKey(sense ->
+			final TIntIntMap freq = new TIntIntHashMap(meaning_index.size());
+			meaning_index.forEachKey(meaning ->
 			{
-				final int hashCode = sense.hashCode();
+				final int hashCode = meaning.hashCode();
 				freq.adjustOrPutValue(hashCode, 1, 1);
 				return true;
 			});
@@ -177,28 +130,28 @@ public class CompactFrequencies implements Serializable
 
 			// now generate 2 actual maps
 			final TObjectIntMap<String> newMap = new TObjectIntHashMap<>(100);
-			sense_index.forEachEntry((k, v) ->
+			meaning_index.forEachEntry((k, v) ->
 			{
 				final int hash = k.hashCode();
 				if (duplicates.contains(hash))
 					newMap.put(k, v);
 				else
-					sense_hash_index.put(hash, v);
+					meaning_hash_index.put(hash, v);
 				return true;
 			});
-			sense_index = newMap;
+			meaning_index = newMap;
 
-			System.out.println("Sense hash map size = " + sense_hash_index.size());
-			System.out.println("Sense String map size = " + sense_index.size());
-			System.out.println("Sense binary data size = " + sense_counts.limit());
+			System.out.println("meaning hash map size = " + meaning_hash_index.size());
+			System.out.println("meaning String map size = " + meaning_index.size());
+			System.out.println("meaning binary data size = " + meaning_counts.limit());
 		}
 
 		{
 			// find all hash codes in the key set, calculate their frequency
 			final TIntIntMap freq = new TIntIntHashMap(form_index.size());
-			form_index.forEachKey(sense ->
+			form_index.forEachKey(meaning ->
 			{
-				final int hashCode = sense.hashCode();
+				final int hashCode = meaning.hashCode();
 				freq.adjustOrPutValue(hashCode, 1, 1);
 				return true;
 			});
@@ -231,6 +184,119 @@ public class CompactFrequencies implements Serializable
 		}
 	}
 
+	@Override
+	public OptionalInt getMeaningCount(String meaning)
+	{
+		return getMeaningCounts(meaning).getLeft();
+	}
+
+	@Override
+	public OptionalInt getMeaningDocumentCount(String meaning)
+	{
+		return getMeaningCounts(meaning).getRight();
+	}
+
+	private OptionalInt getMeaningPos(String meaning)
+	{
+		int pos = form_hash_index.get(meaning.hashCode());
+		if (pos == -1)
+		{
+			pos = form_index.get(meaning);
+		}
+
+		if (pos == -1)
+			return OptionalInt.empty();
+		else
+			return OptionalInt.of(pos);
+	}
+
+	private Pair<OptionalInt, OptionalInt> getMeaningCounts(String meaning)
+	{
+		int pos = getMeaningPos(meaning).orElse(-1);
+		if (pos == -1)
+			return Pair.of(OptionalInt.empty(), OptionalInt.empty());
+
+		meaning_counts.position(pos);
+
+		final int count = meaning_counts.getInt();
+		final int docs_count = meaning_counts.getInt();
+
+		return Pair.of(OptionalInt.of(count), OptionalInt.of(docs_count));
+	}
+
+	@Override
+	public OptionalInt getFormMeaningCount(String form, String meaning)
+	{
+		Map<String, Integer> counts = getFormCounts(form);
+		if (counts.isEmpty())
+			return OptionalInt.empty();
+
+		return counts.entrySet().stream()
+				.filter(e -> e.getKey().equals(meaning))
+				.findFirst()
+				.map(Map.Entry::getValue)
+				.map(OptionalInt::of)
+				.orElseGet(OptionalInt::empty);
+	}
+
+	@Override
+	public OptionalInt getFormCount(String form)
+	{
+		Map<String, Integer> counts = getFormCounts(form);
+		if (counts.isEmpty())
+			return OptionalInt.empty();
+
+		int count = counts.values().stream()
+				.mapToInt(c -> c)
+				.sum();
+		return OptionalInt.of(count);
+	}
+
+	private OptionalInt getFormPos(String form)
+	{
+		int pos = form_hash_index.get(form.hashCode());
+		if (pos == -1)
+		{
+			pos = form_index.get(form);
+		}
+
+		if (pos == -1)
+			return OptionalInt.empty();
+		else
+			return OptionalInt.of(pos);
+	}
+
+	private Map<String, Integer> getFormCounts(final String form)
+	{
+		int pos = getFormPos(form).orElse(-1);
+		if (pos == -1)
+			return new HashMap<>();
+
+		form_counts.position(pos);
+		int num_meanings = form_counts.getInt();
+		final Map<String, Integer> meaning_counts = new HashMap<>(num_meanings);
+
+		for (int i=0; i < num_meanings; ++i)
+		{
+			final int len = form_counts.get() & 0xFF; // standard way of read unsigned byte
+			final int num_bytes_meaning_string = len - Integer.BYTES;
+			//reading straight from ByteBuffer array in order not to allocate a temp copy
+			final String meaning = new String(form_counts.array(), form_counts.position(), num_bytes_meaning_string, Charsets.UTF_8);
+			form_counts.position(form_counts.position() + num_bytes_meaning_string);
+			int count = form_counts.getInt();
+			meaning_counts.put(meaning, count);
+		}
+
+		return meaning_counts;
+	}
+
+	@Override
+	public int getNumDocs()
+	{
+		return num_docs;
+	}
+
+
 	// Serializes byte arrays wrapped with ByteBuffer objects.
 	// See https://stackoverflow.com/questions/3982704/how-to-serialize-bytebuffer
 	private void writeObject(ObjectOutputStream out) throws IOException
@@ -238,8 +304,8 @@ public class CompactFrequencies implements Serializable
 		// write default properties
 		out.defaultWriteObject();
 		// write buffer capacity and data
-		out.writeInt(sense_counts.capacity());
-		out.write(sense_counts.array());
+		out.writeInt(meaning_counts.capacity());
+		out.write(meaning_counts.array());
 		out.writeInt(form_counts.capacity());
 		out.write(form_counts.array());
 	}
@@ -255,7 +321,7 @@ public class CompactFrequencies implements Serializable
 		byte[] buffer = new byte[bufferSize];
 		//noinspection ResultOfMethodCallIgnored
 		in.read(buffer, 0, bufferSize);
-		sense_counts = ByteBuffer.wrap(buffer, 0, bufferSize);
+		meaning_counts = ByteBuffer.wrap(buffer, 0, bufferSize);
 
 		bufferSize = in.readInt();
 		buffer = new byte[bufferSize];

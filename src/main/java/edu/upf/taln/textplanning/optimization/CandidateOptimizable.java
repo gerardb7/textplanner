@@ -35,16 +35,18 @@ public class CandidateOptimizable implements Optimizable.ByGradientValue
 					// mention form to consider is this one unless it has been marked to have a coreferent
 					String form = c.getMention().getSurfaceForm();
 
-					// create number of times form is found in the corpus
-					long total_count = corpus.getFormCount(form);
-					if (total_count == 0)
+					// get number of times form is found in the corpus
+					OptionalInt total_count = corpus.getFormCount(form);
+					if (!total_count.isPresent())
 						return 0.0;
 
-					// create number of times form is annotated with entity in the corpus
-					long entity_count = corpus.getFormMeaningCount(form, c.getMeaning().getReference());
+					// get number of times form is annotated with meaning in the corpus
+					OptionalInt meaning_count = corpus.getFormMeaningCount(form, c.getMeaning().getReference());
+					if (!meaning_count.isPresent())
+						return 0.0;
 
 					// return ratio of annotations with this sense respect to total
-					return (double) entity_count / (double) total_count;
+					return (double) meaning_count.getAsInt() / (double) total_count.getAsInt();
 				})
 				.toArray();
 

@@ -11,6 +11,7 @@ import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -49,10 +50,12 @@ public final class TFIDF implements WeightingFunction
 			long f = freqs.get(ref);
 			double tf = 1 + Math.log(f); // logarithmically scaled
 			//double tf = f; //0.5 + 0.5*(f/maxFreq); // augmented frequency
-			double idf = Math.log(corpus.getNumDocs() / (1 + corpus.getMeaningDocumentCount(ref)));
+			OptionalInt df = corpus.getMeaningDocumentCount(ref);
+			int N = corpus.getNumDocs();
+			double idf = Math.log(N / df.orElse(0) + 1); // smooth all df values by adding 1
 			tfidf.put(ref, tf * idf);
 
-			if (corpus.hasMeaningDocument(ref))
+			if (df.isPresent())
 				++num_defined;
 		}
 
