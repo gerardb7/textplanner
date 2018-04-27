@@ -3,9 +3,9 @@ package edu.upf.taln.textplanning.similarity;
 import java.util.OptionalDouble;
 
 /**
- * Base class for similarity functions comparing pairs of meanings
+ * Base class for similarity functions comparing pairs of items
  */
-public interface MeaningSimilarity
+public interface SimilarityFunction
 {
 	boolean isDefinedFor(String e1, String e2);
 	OptionalDouble computeSimilarity(String e1, String e2);

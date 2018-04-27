@@ -118,6 +118,16 @@
             <version>3.9.1</version>
             <classifier>models</classifier>
         </dependency>
+        <dependency>
+            <groupId>de.jungblut.glove</groupId>
+            <artifactId>glove</artifactId>
+            <version>0.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.ojalgo</groupId>
+            <artifactId>ojalgo</artifactId>
+            <version>45.1.0</version>
+        </dependency>
         <!--<dependency>-->
             <!--<groupId>org.nd4j</groupId>-->
             <!--<artifactId>nd4j</artifactId>-->

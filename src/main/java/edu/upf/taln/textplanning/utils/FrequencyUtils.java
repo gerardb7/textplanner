@@ -31,33 +31,7 @@ import static java.util.stream.Collectors.toMap;
  */
 public class FrequencyUtils
 {
-//	private static final String solrUrl = "http://10.55.0.41:443/solr/sewDataAnnSen";
 	private final static Logger log = LogManager.getLogger(FrequencyUtils.class);
-
-	@Parameters(commandDescription = "Create a subset of a JSON frequencies file based on a file containing graphs")
-	private static class SubsetCommand
-	{
-		@Parameter(description = "Graphs file", arity = 1, required = true, converter = PathConverter.class,
-				validateWith = CMLCheckers.PathToExistingFile.class)
-		private List<Path> graphs;
-		@Parameter(names = {"-i", "-inputFile"}, description = "Input frequencies file", arity = 1, required = true, converter = PathConverter.class,
-				validateWith = CMLCheckers.PathToExistingFile.class)
-		private List<Path> inputFile;
-		@Parameter(names = {"-o", "-outputFile"}, description = "Output frequencies file", arity = 1, required = true, converter = PathConverter.class,
-				validateWith = PathToNewFile.class)
-		private List<Path> outputFile;
-	}
-
-	@Parameters(commandDescription = "Convert a JSON frequencies file to a compact binary file")
-	private static class ConvertCommand
-	{
-		@Parameter(names = {"-i", "-inputFile"}, description = "Input JSON file", arity = 1, required = true, converter = PathConverter.class,
-				validateWith = CMLCheckers.PathToExistingFile.class)
-		private List<Path> inputFile;
-		@Parameter(names = {"-o", "-outputFile"}, description = "Output binary file", arity = 1, required = true, converter = PathConverter.class,
-				validateWith = PathToNewFile.class)
-		private List<Path> outputFile;
-	}
 
 	/**
 	 */
@@ -165,6 +139,31 @@ public class FrequencyUtils
 		Serializer.serialize(freqs, binary_file);
 
 		log.info("Done");
+	}
+
+	@Parameters(commandDescription = "Create a subset of a JSON frequencies file based on a file containing graphs")
+	private static class SubsetCommand
+	{
+		@Parameter(description = "Graphs file", arity = 1, required = true, converter = PathConverter.class,
+				validateWith = CMLCheckers.PathToExistingFile.class)
+		private List<Path> graphs;
+		@Parameter(names = {"-i", "-inputFile"}, description = "Input frequencies file", arity = 1, required = true, converter = PathConverter.class,
+				validateWith = CMLCheckers.PathToExistingFile.class)
+		private List<Path> inputFile;
+		@Parameter(names = {"-o", "-outputFile"}, description = "Output frequencies file", arity = 1, required = true, converter = PathConverter.class,
+				validateWith = PathToNewFile.class)
+		private List<Path> outputFile;
+	}
+
+	@Parameters(commandDescription = "Convert a JSON frequencies file to a compact binary file")
+	private static class ConvertCommand
+	{
+		@Parameter(names = {"-i", "-inputFile"}, description = "Input JSON file", arity = 1, required = true, converter = PathConverter.class,
+				validateWith = CMLCheckers.PathToExistingFile.class)
+		private List<Path> inputFile;
+		@Parameter(names = {"-o", "-outputFile"}, description = "Output binary file", arity = 1, required = true, converter = PathConverter.class,
+				validateWith = PathToNewFile.class)
+		private List<Path> outputFile;
 	}
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException

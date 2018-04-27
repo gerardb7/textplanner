@@ -10,10 +10,10 @@ import unnonouno.treedist.TreeEditDistance;
  */
 public final class SemanticTreeSimilarity
 {
-	private final MeaningSimilarity sim;
+	private final SimilarityFunction sim;
 	private final double delta;
 
-	public SemanticTreeSimilarity(MeaningSimilarity s, double delta)
+	public SemanticTreeSimilarity(SimilarityFunction s, double delta)
 	{
 		sim = s;
 		this.delta = delta;

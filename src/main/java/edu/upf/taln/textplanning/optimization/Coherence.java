@@ -2,7 +2,7 @@ package edu.upf.taln.textplanning.optimization;
 
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.ranking.MatrixFactory;
-import edu.upf.taln.textplanning.similarity.MeaningSimilarity;
+import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.structures.Meaning;
 import org.apache.logging.log4j.Logger;
@@ -23,7 +23,7 @@ public class Coherence implements Function
 	private final double[][] semantic_similarity;
 	private final static Logger log = LogManager.getLogger(Coherence.class);
 
-	Coherence(List<Candidate> candidates, MeaningSimilarity similarity, double lower_bound)
+	Coherence(List<Candidate> candidates, SimilarityFunction similarity, double lower_bound)
 	{
 		this.candidates = candidates;
 		List<String> meanings = candidates.stream()

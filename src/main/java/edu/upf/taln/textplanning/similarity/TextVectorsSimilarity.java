@@ -1,45 +1,32 @@
 package edu.upf.taln.textplanning.similarity;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableMap;
-import edu.upf.taln.textplanning.utils.EmbeddingUtils;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.logging.log4j.Logger;
+import edu.upf.taln.textplanning.utils.VectorsTextFileUtils;
+import edu.upf.taln.textplanning.utils.VectorsTextFileUtils.Format;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
- * Computes similarity between word senses according to SenseEmbed distributional vectors
+ * Computes similarity between items according to precomputed distributional vectors (embeddings) stored in a text
+ * file and loaded as whole into memory.
  */
-public class SensEmbed implements MeaningSimilarity
+public class TextVectorsSimilarity implements SimilarityFunction
 {
-	private final ImmutableMap<String, double[]> vectors;
-	private final static double avg_sim = 0.041157715074586806;
-	private final static Logger log = LogManager.getLogger(SensEmbed.class);
 
-	public SensEmbed(Path embeddings_path, int num_dimensions) throws Exception
+	private final Map<String, double[]> vectors;
+	//private final static double avg_sim = 0.041157715074586806;
+	private final static Logger log = LogManager.getLogger(TextVectorsSimilarity.class);
+
+	public TextVectorsSimilarity(Path vectors_path, Format format) throws Exception
 	{
-		log.info("Loading SenseEmbed vectors");
+		log.info("Loading vectors from text file");
 		Stopwatch timer = Stopwatch.createStarted();
-
-		// If file contains merged sense vectors, ignore vectors for words, if any.
-		// If file contains word-sense pairs, do not ignore words.
-		Map<String, List<double[]>> embeddings = EmbeddingUtils.parseEmbeddingsFile(embeddings_path, num_dimensions, true, true);
-		embeddings.entrySet().stream()
-				.filter(e -> e.getValue().size() != 1)
-				.forEach(e -> log.error("Sense " + e.getKey() + " has " + e.getValue() + " vectors"));
-		Map<String, double[]> avgEmbeddings = embeddings.entrySet().stream()
-				.map(e -> Pair.of(e.getKey(), e.getValue().get(0)))
-				.collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
-
-		ImmutableMap.Builder<String, double[]> builder = ImmutableMap.builder();
-		vectors = builder.putAll(avgEmbeddings).build();
+		vectors = VectorsTextFileUtils.readVectorsFromFile(vectors_path, format);
 		log.info("Loading took " + timer.stop());
 
 		//avg_sim = computeAverageSimilarity();
@@ -84,7 +71,7 @@ public class SensEmbed implements MeaningSimilarity
 	@Override
 	public double getAverageSimiliarity()
 	{
-		return avg_sim;
+		return 0.0;
 	}
 
 	@SuppressWarnings("unused")

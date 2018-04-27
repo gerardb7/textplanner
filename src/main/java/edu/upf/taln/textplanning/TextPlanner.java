@@ -7,7 +7,7 @@ import edu.upf.taln.textplanning.input.GlobalGraphFactory;
 import edu.upf.taln.textplanning.pattern.SubgraphExtraction;
 import edu.upf.taln.textplanning.ranking.GraphRanking;
 import edu.upf.taln.textplanning.redundancy.RedundancyRemover;
-import edu.upf.taln.textplanning.similarity.MeaningSimilarity;
+import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.similarity.SemanticTreeSimilarity;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.GraphList;
@@ -34,7 +34,7 @@ public final class TextPlanner
 {
 	private final GraphListFactory graphs_factory;
 	private final WeightingFunction weighting;
-	private final MeaningSimilarity similarity;
+	private final SimilarityFunction similarity;
 	private final static Logger log = LogManager.getLogger(TextPlanner.class);
 
 	public static class Options
@@ -73,7 +73,7 @@ public final class TextPlanner
 	 * @param w functions used to weight contents
 	 * @param s similarity function for entities
 	 */
-	TextPlanner(DocumentReader d, Path types_file, WeightingFunction w, MeaningSimilarity s) throws IOException
+	TextPlanner(DocumentReader d, Path types_file, WeightingFunction w, SimilarityFunction s) throws IOException
 	{
 		graphs_factory = new GraphListFactory(d, types_file);
 		weighting = w;

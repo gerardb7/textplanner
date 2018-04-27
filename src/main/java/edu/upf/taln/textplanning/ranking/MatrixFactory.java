@@ -1,6 +1,6 @@
 package edu.upf.taln.textplanning.ranking;
 
-import edu.upf.taln.textplanning.similarity.MeaningSimilarity;
+import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
@@ -21,7 +21,7 @@ public class MatrixFactory
 	 * Creates a row-stochastic matrix to rank a set of meanings
 	 */
 	static double[][] createMeaningRankingMatrix(List<String> meanings, WeightingFunction weighting,
-	                                             double min_weight, MeaningSimilarity sim, double sim_threshold,
+	                                             double min_weight, SimilarityFunction sim, double sim_threshold,
 	                                             double d)
 	{
 		int n = meanings.size();
@@ -129,7 +129,7 @@ public class MatrixFactory
 	}
 
 	// Creates row-normalized symmetric non-negative similarity matrix
-	public static double[][] createMeaningsSimilarityMatrix(List<String> meaning, MeaningSimilarity sim,
+	public static double[][] createMeaningsSimilarityMatrix(List<String> meaning, SimilarityFunction sim,
 	                                                        double sim_threshold, boolean normalize)
 	{
 		int n = meaning.size();

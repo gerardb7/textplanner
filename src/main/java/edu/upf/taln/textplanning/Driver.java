@@ -1,10 +1,10 @@
 package edu.upf.taln.textplanning;
 
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.corpora.FreqsFile;
+import edu.upf.taln.textplanning.corpora.CompactFrequencies;
 import edu.upf.taln.textplanning.input.AMRReader;
 import edu.upf.taln.textplanning.input.GraphListFactory;
-import edu.upf.taln.textplanning.similarity.SensEmbed;
+import edu.upf.taln.textplanning.similarity.TextVectorsSimilarity;
 import edu.upf.taln.textplanning.structures.GraphList;
 import edu.upf.taln.textplanning.utils.Serializer;
 import edu.upf.taln.textplanning.weighting.TFIDF;
@@ -20,11 +20,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import static edu.upf.taln.textplanning.utils.VectorsTextFileUtils.Format;
+
 public class Driver
 {
 	private final static Logger log = LogManager.getLogger(TextPlanner.class);
 
-	private void create_graphs(Path amr, Path types, Path output) throws IOException, ClassNotFoundException
+	private void create_graphs(Path amr, Path types, Path output) throws IOException
 	{
 		Stopwatch timer = Stopwatch.createStarted();
 		String amr_bank = FileUtils.readFileToString(amr.toFile(), StandardCharsets.UTF_8);
@@ -35,13 +37,15 @@ public class Driver
 		log.info("Graphs serialized to " + output);
 	}
 
-	private void plan(Path amr, Path freqs, Path embeddings, int num_dimensions, Path types) throws Exception
+	private void plan(Path amr, Path freqs, Path embeddings, Format format, Path types) throws Exception
 	{
 		Stopwatch timer = Stopwatch.createStarted();
 		AMRReader reader = new AMRReader();
-		FreqsFile corpus = new FreqsFile(freqs);
+		//FreqsFile corpus = new FreqsFile(freqs);
+		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
+
 		TFIDF weighting = new TFIDF(corpus);
-		SensEmbed similarity = new SensEmbed (embeddings, num_dimensions);
+		TextVectorsSimilarity similarity = new TextVectorsSimilarity(embeddings, format);
 		TextPlanner planner = new TextPlanner(reader, null, weighting, similarity);
 		log.info("Set up took " + timer.stop());
 
@@ -67,7 +71,7 @@ public class Driver
 		Path freqs = Paths.get(driver.getClass().getResource("/freqs_subset-json").toURI());
 		Path embeddings = Paths.get("//media/gerard/data_cluster/sense_embeddings/nasari-vectors/NASARIembed+UMBC_w2v.txt");
 		Path graphs_in = Paths.get(driver.getClass().getResource("/graphs.bin").toURI());
-		driver.plan(graphs_in, freqs, embeddings, 300, types);
+		driver.plan(graphs_in, freqs, embeddings, Format.Glove, types);
 	}
 }
 

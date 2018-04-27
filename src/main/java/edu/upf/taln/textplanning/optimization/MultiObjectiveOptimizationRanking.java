@@ -3,7 +3,7 @@ package edu.upf.taln.textplanning.optimization;
 import cc.mallet.optimize.ConjugateGradient;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.corpora.Corpus;
-import edu.upf.taln.textplanning.similarity.MeaningSimilarity;
+import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.apache.logging.log4j.Logger;
@@ -18,13 +18,13 @@ import java.util.Map;
 public class MultiObjectiveOptimizationRanking
 {
 	private final WeightingFunction weighting;
-	private final MeaningSimilarity similarity;
+	private final SimilarityFunction similarity;
 	private final double min_meaning_weight;
 	private final double meaning_similarity_threshold;
 	private final Corpus corpus;
 	private final static Logger log = LogManager.getLogger(MultiObjectiveOptimizationRanking.class);
 
-	public MultiObjectiveOptimizationRanking(WeightingFunction weighting, MeaningSimilarity similarity, Corpus corpus,
+	public MultiObjectiveOptimizationRanking(WeightingFunction weighting, SimilarityFunction similarity, Corpus corpus,
 	                                         double min_meaning_weight, double meaning_similarity_threshold)
 	{
 		this.weighting = weighting;

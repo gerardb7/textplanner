@@ -3,7 +3,7 @@ package edu.upf.taln.textplanning.ranking;
 import Jama.Matrix;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.TextPlanner;
-import edu.upf.taln.textplanning.similarity.MeaningSimilarity;
+import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.Candidate;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.GraphList;
@@ -37,15 +37,16 @@ import static java.util.stream.Collectors.toList;
 public class GraphRanking
 {
 	private final WeightingFunction weighting;
-	private final MeaningSimilarity similarity;
+	private final SimilarityFunction similarity;
 	private final double min_meaning_weight;
 	private final double meaning_similarity_threshold;
 	private final double damping_factor_meanings;
 	private final double minimum_meaning_ranking;
 	private final double damping_factor_variables;
+	private final PowerIterationRanking alg;
 	private final static Logger log = LogManager.getLogger(TextPlanner.class);
 
-	public GraphRanking(WeightingFunction weighting, MeaningSimilarity similarity, double min_meaning_weight,
+	public GraphRanking(WeightingFunction weighting, SimilarityFunction similarity, double min_meaning_weight,
 	                    double meaning_similarity_threshold, double damping_factor_meanings,
 	                    double minimum_meaning_ranking, double damping_factor_variables)
 	{
@@ -56,6 +57,7 @@ public class GraphRanking
 		this.damping_factor_meanings = damping_factor_meanings;
 		this.minimum_meaning_ranking = minimum_meaning_ranking;
 		this.damping_factor_variables = damping_factor_variables;
+		this.alg = new JamaPowerIteration();
 	}
 
 	public void rankMeanings(GraphList graphs)
@@ -71,7 +73,7 @@ public class GraphRanking
 				meaning_similarity_threshold, damping_factor_meanings);
 		Matrix rankingMatrix = new Matrix(rankingArrays);
 
-		Matrix finalDistribution = PowerIterationRanking.run(rankingMatrix);
+		Matrix finalDistribution = alg.run(rankingMatrix);
 		double[] ranking = finalDistribution.getColumnPackedCopy();
 
 		// Assign ranking values to meanings
@@ -98,7 +100,7 @@ public class GraphRanking
 		Matrix rankingMatrix = new Matrix(rankingArrays);
 
 		timer.reset(); timer.start();
-		Matrix finalDistribution = PowerIterationRanking.run(rankingMatrix);
+		Matrix finalDistribution = alg.run(rankingMatrix);
 		double[] ranking = finalDistribution.getColumnPackedCopy();
 
 		IntStream.range(0, variables.size()).boxed()
