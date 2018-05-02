@@ -30,19 +30,20 @@ class MentionsCollector
 	 * in the graph spanning over it.
 	 */
 	@SuppressWarnings("ConstantConditions")
-	private static Set<Mention> collectNominalMentions(GraphAlignments g)
+	private static Set<Mention> collectNominalMentions(GraphAlignments a)
 	{
-		List<String> tokens = g.getTokens();
+		List<String> tokens = a.getTokens();
 
 		return IntStream.range(0, tokens.size())
 				.mapToObj(i -> IntStream.range(i + 1, min(i + max_tokens + 1, tokens.size()))
 						.mapToObj(j -> Pair.of(i, j))
-						.filter(g::covers)
+						.filter(a::covers)
 						.filter(p -> {
-							String top_v = g.getTopSpanVertex(p).get();
-							return g.isNominal(top_v) || g.isConjunction(top_v);
+							String top_v = a.getTopSpanVertex(p).get();
+							return a.isNominal(top_v) || a.isConjunction(top_v);
 						})
-						.map(p -> new Mention(g, p, g.getPOS(p).orElse("NN"), g.getNER(p).orElse(Type.Other)))
+						.map(p -> new Mention(a, p, a.getLemma(p).orElse(""), a.getPOS(p).orElse("NN"),
+								a.getNER(p).orElse(Type.Other)))
 						.collect(toList()))
 				.flatMap(List::stream)
 				.collect(toSet());
@@ -51,13 +52,13 @@ class MentionsCollector
 	/**
 	 * Returns a mention for every individual token
 	 */
-	private static Set<Mention> collectOtherMentions(GraphAlignments alignments)
+	private static Set<Mention> collectOtherMentions(GraphAlignments a)
 	{
-		return  alignments.getGraph().vertexSet().stream()
-				.filter(alignments::isAligned)
-				.filter(v -> !alignments.isNominal(v))
-				.mapToInt(alignments::getAlignment)
-				.mapToObj(i -> new Mention(alignments, Pair.of(i, i+1), alignments.getPOS(i), alignments.getNER(i)))
+		return  a.getGraph().vertexSet().stream()
+				.filter(a::isAligned)
+				.filter(v -> !a.isNominal(v))
+				.mapToInt(a::getAlignment)
+				.mapToObj(i -> new Mention(a, Pair.of(i, i+1), a.getLemma(i), a.getPOS(i), a.getNER(i)))
 				.collect(toSet());
 	}
 }

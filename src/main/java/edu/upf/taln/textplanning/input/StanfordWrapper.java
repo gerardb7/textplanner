@@ -2,9 +2,13 @@ package edu.upf.taln.textplanning.input;
 
 import com.google.common.base.Stopwatch;
 import edu.stanford.nlp.coref.data.CorefChain;
+import edu.stanford.nlp.ling.CoreAnnotations.LemmaAnnotation;
+import edu.stanford.nlp.ling.CoreAnnotations.SentencesAnnotation;
+import edu.stanford.nlp.ling.CoreAnnotations.TokensAnnotation;
 import edu.stanford.nlp.pipeline.CoreDocument;
 import edu.stanford.nlp.pipeline.CoreSentence;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
+import edu.stanford.nlp.util.CoreMap;
 import edu.stanford.nlp.util.logging.RedwoodConfiguration;
 import edu.upf.taln.textplanning.structures.Candidate.Type;
 import edu.upf.taln.textplanning.structures.CoreferenceChain;
@@ -64,9 +68,19 @@ class StanfordWrapper
 		CoreDocument document = new CoreDocument(text);
 		pipeline.annotate(document);
 
+
+
 		// Collect POS
 		List<List<String>> pos = document.sentences().stream()
 				.map(CoreSentence::posTags)
+				.collect(toList());
+
+		// Collect lemmas
+		List<CoreMap> sentences = document.annotation().get(SentencesAnnotation.class);
+		List<List<String>> lemma = sentences.stream()
+				.map(s -> s.get(TokensAnnotation.class).stream()
+						.map(t -> t.get(LemmaAnnotation.class))
+						.collect(toList()))
 				.collect(toList());
 
 		// Collect NE types
@@ -92,12 +106,14 @@ class StanfordWrapper
 		// Assign POS & NER
 		IntStream.range(0, graphs.size()).forEach(i ->
 		{
+			List<String> lemma_i = lemma.get(i);
 			List<String> pos_i = pos.get(i);
 			List<Type> ner_i = ner.get(i);
 			IntStream.range(0, pos_i.size()).forEach(j ->
 			{
 				GraphAlignments align = graphs.get(i).getAlignments();
 
+				align.setLemma(j, lemma_i.get(j));
 				align.setPOS(j, pos_i.get(j));
 				align.setNER(j, ner_i.get(j));
 			});
@@ -115,9 +131,10 @@ class StanfordWrapper
 						Pair<Integer, Integer> span = Pair.of(m.startIndex-1, m.endIndex-1);
 						g.getAlignments().getTopSpanVertex(span).ifPresent(v ->
 						{
+							String lemma_v = g.getAlignments().getLemma(span).orElse("");
 							String pos_v = g.getAlignments().getPOS(span).orElse("N"); // assume nominal
 							Type ner_v = g.getAlignments().getNER(span).orElse(Type.Other);
-							Mention mention = new Mention(g.getAlignments(), span, pos_v, ner_v);
+							Mention mention = new Mention(g.getAlignments(), span, lemma_v, pos_v, ner_v);
 							chain.put(v, mention);
 						});
 					});

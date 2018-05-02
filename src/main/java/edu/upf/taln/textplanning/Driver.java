@@ -19,9 +19,7 @@ import org.apache.logging.log4j.status.StatusLogger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import static edu.upf.taln.textplanning.utils.VectorsTextFileUtils.Format;
 
@@ -89,7 +87,7 @@ public class Driver
 				validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path typesFile;
 		@Parameter(names = {"-o", "-output"}, description = "Output binary graphs file", arity = 1, required = true, converter = CMLCheckers.PathConverter.class,
-				validateWith = CMLCheckers.PathToNewFile.class)
+				validateWith = CMLCheckers.ValidPathToFile.class)
 		private Path outputFile;
 	}
 
@@ -112,15 +110,15 @@ public class Driver
 				validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path typesFile;
 		@Parameter(names = {"-o", "-output"}, description = "Output binary file", arity = 1, required = true, converter = CMLCheckers.PathConverter.class,
-				validateWith = CMLCheckers.PathToNewFile.class)
+				validateWith = CMLCheckers.ValidPathToFile.class)
 		private Path outputFile;
 	}
 
 	public static void main(String[] args) throws Exception
 	{
 		// configure logging
-		Configurator.setRootLevel(Level.DEBUG);
-		StatusLogger.getLogger().setLevel(Level.FATAL);
+		//Configurator.setRootLevel(Level.DEBUG);
+		//StatusLogger.getLogger().setLevel(Level.FATAL);
 
 		Driver.CreateGraphsCommand create = new Driver.CreateGraphsCommand();
 		Driver.PlanCommand plan = new Driver.PlanCommand();

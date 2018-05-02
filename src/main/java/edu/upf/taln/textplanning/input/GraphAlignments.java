@@ -9,6 +9,8 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class GraphAlignments implements Serializable
 {
@@ -17,6 +19,7 @@ public class GraphAlignments implements Serializable
 	private final int sentence_number;
 	private final List<String> topo_order = new ArrayList<>();
 	private final List<String> tokens = new ArrayList<>();
+	private final List<String> lemma = new ArrayList<>();
 	private final List<String> pos = new ArrayList<>();
 	private final List<Type> ner = new ArrayList<>();
 	private final Map<String, Integer> alignments = new HashMap<>();
@@ -31,6 +34,7 @@ public class GraphAlignments implements Serializable
 		this.tokens.addAll(tokens);
 		this.tokens.forEach(t ->
 		{
+			this.lemma.add("");
 			this.pos.add("");
 			this.ner.add(Type.Other);
 		});
@@ -67,6 +71,8 @@ public class GraphAlignments implements Serializable
 	public int getSentenceNumber() { return sentence_number; }
 	List<String> getTokens() { return new ArrayList<>(tokens); }
 	public String getToken(int index)	{ return tokens.get(index); }
+	String getLemma(int index)	{ return lemma.get(index); }
+	void setLemma(int index, String lemma) { this.lemma.set(index, lemma); }
 	public String getPOS(int index)	{ return pos.get(index); }
 	void setPOS(int index, String pos) { this.pos.set(index, pos); }
 	Type getNER(int index)	{ return ner.get(index); }
@@ -80,6 +86,28 @@ public class GraphAlignments implements Serializable
 	Optional<String>  getTopSpanVertex(Pair<Integer, Integer> span)
 	{
 		return spans2nodes.get(span).stream().max(Comparator.comparingInt(topo_order::indexOf));
+	}
+
+	// The lemma of a multi-word span correpsonds to a whitespace-separated sequence of tokens where the head token
+	// has been replaced with its lemma, e.g. [cyber,attacks]" -> "cyber attack"
+	Optional<String> getLemma(Pair<Integer, Integer> span)
+	{
+		if (span.getRight() - span.getLeft() == 1)
+			return Optional.of(getLemma(span.getLeft()));
+		else
+		{
+			Optional<Integer> head = getTopSpanVertex(span).filter(this::isAligned).map(this::getAlignment);
+			String lemma = IntStream.range(span.getLeft(), span.getRight())
+					.mapToObj(i ->
+					{
+						if (head.isPresent() && i == head.get())
+							return getLemma(i);
+						else
+							return getToken(i);
+					})
+					.collect(Collectors.joining(" "));
+			return Optional.of(lemma);
+		}
 	}
 
 	// The POS of a span of tokens is the POS of the token aligned with its head vertex.

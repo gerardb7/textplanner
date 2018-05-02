@@ -7,9 +7,11 @@ import edu.upf.taln.textplanning.structures.Mention;
 import edu.upf.taln.textplanning.structures.SemanticGraph;
 import it.uniroma1.lcl.babelnet.BabelSynset;
 import it.uniroma1.lcl.babelnet.BabelSynsetType;
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,39 +40,39 @@ class CandidatesCollector
 	@SuppressWarnings("ConstantConditions")
 	List<Candidate> getCandidateMeanings(List<SemanticGraph> graphs)
 	{
-		// Collect mentions and classify them into a map by label ("surface form + POS") to reduce lookups
+		// Collect mentions and group them by anchor (triple of surface form, lemma and POS) -> to reduce lookups
 		Stopwatch timer = Stopwatch.createStarted();
-		Map<String, List<Mention>> label2Mentions = graphs.stream()
+		Map<Triple<String, String, String>, List<Mention>> anchors2Mentions = graphs.stream()
 				.map(SemanticGraph::getAlignments)
 				.map(MentionsCollector::collectMentions)
 				.flatMap(Set::stream)
 				// Label formed with the surface form and head POS of mention's head
-				.collect(Collectors.groupingBy(m -> m.getSurfaceForm() + "_" + m.getPOS()));
+				.collect(Collectors.groupingBy(m -> Triple.of(m.getSurfaceForm(), m.getLemma(), m.getPOS())));
 
-		// Create a map of labels and associated candidate synsets
+		// Create a map of anchors and associated candidate synsets
 		AtomicInteger counter = new AtomicInteger(0);
 
-		Map<String, List<BabelSynset>> labels2Synsets = label2Mentions.keySet().stream()
+		Map<Triple<String, String, String>, Set<BabelSynset>> labels2Synsets = anchors2Mentions.keySet().stream()
 				.peek(l -> {
 					if (counter.incrementAndGet() % 1000 == 0)
-						log.info("Queried synsets for " + counter.get() + " labels out of " + label2Mentions.keySet().size());
+						log.info("Queried synsets for " + counter.get() + " labels out of " + anchors2Mentions.keySet().size());
 				})
-				.collect(toMap(l -> l, this::getSynsets));
+				.collect(toMap(a -> a, this::getSynsets));
 
-		// Create new mapping from labels to Meaning objects
-		Map<String, Set<Meaning>> labels2Meanings = labels2Synsets.keySet().stream()
+		// Create new mapping from anchors to Meaning objects
+		Map<Triple<String, String, String>, Set<Meaning>> labels2Meanings = labels2Synsets.keySet().stream()
 				.collect(toMap(l -> l, l -> labels2Synsets.get(l).stream()
 						.map(this::createMeaning)
 						.collect(toSet())));
 
-		Map<Mention, String> mentions2vertices = label2Mentions.values().stream()
+		Map<Mention, String> mentions2vertices = anchors2Mentions.values().stream()
 				.flatMap(List::stream)
 				.collect(toMap(m -> m, m -> m.getAlignedGraph().getTopSpanVertex(m.getSpan()).get()));
 
 		// Create candidates
 		List<Candidate> candidates = labels2Meanings.keySet().stream()
 				.flatMap(l -> labels2Meanings.get(l).stream() // given a label l
-						.flatMap(meaning -> label2Mentions.get(l).stream() // for each mention with label l
+						.flatMap(meaning -> anchors2Mentions.get(l).stream() // for each mention with label l
 								.map(mention -> new Candidate(mentions2vertices.get(mention), meaning, mention))))
 				.collect(toList());
 
@@ -78,12 +80,20 @@ class CandidatesCollector
 		return candidates;
 	}
 
-	private List<BabelSynset> getSynsets(String s)
+	private Set<BabelSynset> getSynsets(Triple<String, String, String> s)
 	{
 		// Use surface form of mention as label
-		String form = s.substring(0, s.lastIndexOf('_'));
-		String pos = s.substring(s.lastIndexOf('_') + 1);
-		return bn.getSynsets(form, pos);
+		String form = s.getLeft();
+		String lemma = s.getMiddle();
+		String pos = s.getRight();
+		Set<BabelSynset> synsets = new HashSet<>(bn.getSynsets(form, pos));
+		if (!lemma.equalsIgnoreCase(form))
+		{
+			List<BabelSynset> lemma_synsets = bn.getSynsets(lemma, pos);
+			synsets.addAll(lemma_synsets);
+		}
+
+		return synsets;
 	}
 
 	private Meaning createMeaning(BabelSynset s)

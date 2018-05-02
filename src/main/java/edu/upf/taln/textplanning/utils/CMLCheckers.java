@@ -19,6 +19,19 @@ public class CMLCheckers
 		}
 	}
 
+	public static class ValidPathToFile implements IParameterValidator
+	{
+		@Override
+		public void validate(String name, String value) throws ParameterException
+		{
+			Path path = Paths.get(value);
+			if ((Files.exists(path) && Files.isDirectory(path)) || !Files.exists(path.getParent()))
+			{
+				throw new ParameterException("Cannot write to file " + name + " = " + value);
+			}
+		}
+	}
+
 	public static class PathToNewFile implements IParameterValidator
 	{
 		@Override

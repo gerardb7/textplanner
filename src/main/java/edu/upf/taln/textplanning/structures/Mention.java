@@ -17,17 +17,19 @@ public final class Mention implements Serializable
 	private final GraphAlignments aligned_graph;
 	private final Pair<Integer, Integer> span;
 	private final String surfaceForm;
+	private final String lemma;
 	private final String pos;
 	private final Type type;
 	private final static long serialVersionUID = 1L;
 
-	public Mention(GraphAlignments graph, Pair<Integer, Integer> tokens_span, String POS, Type type)
+	public Mention(GraphAlignments graph, Pair<Integer, Integer> tokens_span, String lemma, String POS, Type type)
 	{
 		this.aligned_graph = graph;
 		this.span = tokens_span;
 		surfaceForm = IntStream.range(span.getLeft(), span.getRight())
 				.mapToObj(graph::getToken)
 				.collect(Collectors.joining(" "));
+		this.lemma = lemma;
 		this.pos = POS;
 		this.type = type;
 	}
@@ -35,6 +37,7 @@ public final class Mention implements Serializable
 	public GraphAlignments getAlignedGraph() { return aligned_graph; }
 	public Pair<Integer, Integer> getSpan() { return span; }
 	public String getSurfaceForm() { return surfaceForm; }
+	public String getLemma() { return lemma; }
 	public String getPOS() { return pos;}
 	public Type getType() { return type; }
 	public boolean isNominal() { return pos.startsWith("N"); }
