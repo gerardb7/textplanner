@@ -414,7 +414,7 @@ public class POSConverter
 	dp0000	Possessive	sus, mi
 	dt0000	Interrogative	cuántos, qué, cuál
 	Punctuation
-	f0	Other	&, @
+	f0	Binary	&, @
 	faa	Inverted exclamation mark	¡
 	fat	Exclamation mark	!
 	fc	Comma	,

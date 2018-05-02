@@ -51,7 +51,7 @@ public class DBPediaType
 		}
 		catch (Exception e)
 		{
-			log.error("SPARQL queries for resource " + r + " failed, defaulting to type 'Other': " + e);
+			log.error("SPARQL queries for resource " + r + " failed, defaulting to type 'Binary': " + e);
 			return Candidate.Type.Other;
 		}
 	}

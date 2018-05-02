@@ -28,7 +28,7 @@ import static java.util.stream.Collectors.*;
  */
 public class VectorsTextFileUtils
 {
-	public enum Format {Glove, Word2vec, Other};
+	public enum Format {Glove, Word2vec, Binary};
 	private final static Logger log = LogManager.getLogger(VectorsTextFileUtils.class);
 
 	/**
