@@ -12,24 +12,21 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+// Maps vertices in semantic graphs to tokens and their linguistic annotations
 public class GraphAlignments implements Serializable
 {
 	public static final int unaligned = -1;
-	private final SemanticGraph graph;
-	private final int sentence_number;
-	private final List<String> topo_order = new ArrayList<>();
+	private final List<String> topo_order = new ArrayList<>(); // vertices
 	private final List<String> tokens = new ArrayList<>();
 	private final List<String> lemma = new ArrayList<>();
 	private final List<String> pos = new ArrayList<>();
 	private final List<Type> ner = new ArrayList<>();
-	private final Map<String, Integer> alignments = new HashMap<>();
-	private final Multimap<Pair<Integer, Integer>, String> spans2nodes = HashMultimap.create();
+	private final Map<String, Integer> alignments = new HashMap<>(); // vertices to token offsets
+	private final Multimap<Pair<Integer, Integer>, String> spans2nodes = HashMultimap.create(); // spans to vertices
 	private final static long serialVersionUID = 1L;
 
-	GraphAlignments(SemanticGraph graph, int sentence_number, Map<String, Integer> alignments, List<String> tokens)
+	GraphAlignments(SemanticGraph graph, Map<String, Integer> alignments, List<String> tokens)
 	{
-		this.graph = graph;
-		this.sentence_number = sentence_number;
 		graph.iterator().forEachRemaining(topo_order::add);
 		this.tokens.addAll(tokens);
 		this.tokens.forEach(t ->
@@ -67,10 +64,8 @@ public class GraphAlignments implements Serializable
 				});
 	}
 
-	public SemanticGraph getGraph() { return graph; }
-	public int getSentenceNumber() { return sentence_number; }
 	List<String> getTokens() { return new ArrayList<>(tokens); }
-	public String getToken(int index)	{ return tokens.get(index); }
+	private String getToken(int index)	{ return tokens.get(index); }
 	String getLemma(int index)	{ return lemma.get(index); }
 	void setLemma(int index, String lemma) { this.lemma.set(index, lemma); }
 	public String getPOS(int index)	{ return pos.get(index); }
@@ -80,6 +75,14 @@ public class GraphAlignments implements Serializable
 	boolean isAligned(String vertex) { return alignments.containsKey(vertex); }
 	public int getAlignment(String vertex) { return alignments.getOrDefault(vertex, unaligned); }
 	boolean covers(Pair<Integer, Integer> span) { return spans2nodes.containsKey(span); }
+
+	String getSurfaceForm(Pair<Integer, Integer> span)
+	{
+		return IntStream.range(span.getLeft(), span.getRight())
+				.mapToObj(this::getToken)
+				.collect(Collectors.joining(" "));
+	}
+
 
 	// Given a span of tokens and the set of vertices with exactly this span, return the first vertex appearing in a
 	// topological sort (closest to the root of the graph)
@@ -132,5 +135,32 @@ public class GraphAlignments implements Serializable
 	boolean isConjunction(String vertex)
 	{
 		return getAlignment(vertex) != unaligned && getPOS(getAlignment(vertex)).equals("CC");
+	}
+
+	public void renameVertex(String old_label, String new_label)
+	{
+		// Update all fields containing vertices
+		topo_order.replaceAll(v -> v.equals(old_label) ? new_label : v);
+		Integer a = alignments.remove(old_label);
+		alignments.put(new_label, a);
+		Set<Pair<Integer, Integer>> spans = spans2nodes.keySet().stream()
+				.filter(span -> spans2nodes.get(span).contains(old_label))
+				.collect(Collectors.toSet());
+
+		spans.forEach(span ->
+		{
+			spans2nodes.get(span).remove(old_label);
+			spans2nodes.get(span).add(new_label);
+		});
+	}
+
+	public void removeVertex(String v)
+	{
+		// Update all fields containing vertices
+		topo_order.remove(v);
+		alignments.remove(v);
+		spans2nodes.keySet().stream()
+				.map(spans2nodes::get)
+				.forEach(l -> l.remove(v));
 	}
 }

@@ -20,15 +20,15 @@ public class StatsReporter
 
 	public static void reportStats(GraphList graphs, Map<String, List<Candidate>> candidates)
 	{
-		int numVertices = graphs.stream()
+		int numVertices = graphs.getGraphs().stream()
 				.map(SemanticGraph::vertexSet)
 				.mapToInt(Set::size)
 				.sum();
-		Set<String> alignedVertices = graphs.stream()
+		Set<String> alignedVertices = graphs.getGraphs().stream()
 				.flatMap(g -> g.vertexSet().stream()
 						.filter(v -> g.getAlignments().getAlignment(v) != GraphAlignments.unaligned))
 				.collect(toSet());
-		Set<String> nominalVertices = graphs.stream()
+		Set<String> nominalVertices = graphs.getGraphs().stream()
 				.flatMap(g -> g.vertexSet().stream()
 						.filter(v -> g.getAlignments().getAlignment(v) != GraphAlignments.unaligned)
 						.filter(v -> g.getAlignments().getPOS(g.getAlignments().getAlignment(v)).startsWith("N")))
@@ -38,14 +38,14 @@ public class StatsReporter
 				.map(candidates::get)
 				.flatMap(List::stream)
 				.map(Candidate::getMention)
-				.map(Mention::getSurfaceForm)
+				.map(Mention::getSurface_form)
 				.distinct()
 				.count();
 		long numNominalForms = nominalVertices.stream()
 				.map(candidates::get)
 				.flatMap(List::stream)
 				.map(Candidate::getMention)
-				.map(Mention::getSurfaceForm)
+				.map(Mention::getSurface_form)
 				.distinct()
 				.count();
 		long numMentions = candidates.values().stream()

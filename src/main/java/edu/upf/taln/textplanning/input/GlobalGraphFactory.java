@@ -13,6 +13,7 @@ import java.util.*;
 
 import static java.util.Comparator.comparingDouble;
 
+// Creates a global graph from a list of AMR-like semantic graphs
 public class GlobalGraphFactory
 {
 	public static GlobalSemanticGraph create(GraphList graphs, GraphRanking ranker)
@@ -31,16 +32,16 @@ public class GlobalGraphFactory
 		ranker.rankMeanings(graphs);
 
 		// Use rankings to choose best candidate for each vertex
-		graphs.forEach(g ->
+		graphs.getGraphs().forEach(g ->
 				g.vertexSet().forEach(v ->
 						graphs.getCandidates(v).stream()
 								.max(comparingDouble(c -> c.getMeaning().getWeight()))
-								.ifPresent(c -> graphs.chooseCandidate(v, c))));
+								.ifPresent(graphs::chooseCandidate)));
 	}
 
 	private static void collapse_multiwords(GraphList graphs)
 	{
-		graphs.forEach(g ->
+		graphs.getGraphs().forEach(g ->
 				g.vertexSet().stream()
 						.filter(v -> !graphs.getCandidates(v).isEmpty())
 						.forEach(v ->
@@ -87,8 +88,8 @@ public class GlobalGraphFactory
 		// Merge all vertices referring to the same NE
 		Multimap<String, String> vertices_to_NEs = HashMultimap.create();
 		merged.vertexSet().stream()
-				.flatMap(v -> merged.getGraphs().getCandidates(v).stream()
-						.map(Candidate::getMeaning)
+				.flatMap(v -> merged.vertexSet().stream()
+						.map(merged::getMeaning)
 						.filter(Meaning::isNE)
 						.map(Meaning::getReference)
 						.map(r -> Pair.of(r, v)))

@@ -40,6 +40,8 @@ public class Driver
 	private void plan(Path amr, Path freqs, Path embeddings, Format format, Path types) throws Exception
 	{
 		Stopwatch timer = Stopwatch.createStarted();
+		GraphList graphs = (GraphList) Serializer.deserialize(amr);
+
 		AMRReader reader = new AMRReader();
 		FreqsFile corpus = new FreqsFile(freqs);
 		//CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
@@ -50,7 +52,6 @@ public class Driver
 		log.info("Set up took " + timer.stop());
 
 		TextPlanner.Options options = new TextPlanner.Options();
-		GraphList graphs = (GraphList) Serializer.deserialize(amr);
 		planner.plan(graphs, 10, options);
 	}
 

@@ -33,7 +33,7 @@ public class CandidateOptimizable implements Optimizable.ByGradientValue
 		params = candidates.stream()
 				.mapToDouble(c -> {
 					// mention form to consider is this one unless it has been marked to have a coreferent
-					String form = c.getMention().getSurfaceForm();
+					String form = c.getMention().getSurface_form();
 
 					// get number of times form is found in the corpus
 					OptionalInt total_count = corpus.getFormCount(form);

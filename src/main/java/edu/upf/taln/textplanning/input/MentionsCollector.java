@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.input;
 
 import edu.upf.taln.textplanning.structures.Candidate.Type;
 import edu.upf.taln.textplanning.structures.Mention;
+import edu.upf.taln.textplanning.structures.SemanticGraph;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.List;
@@ -16,7 +17,7 @@ class MentionsCollector
 {
 	private static final int max_tokens = 7;
 
-	static Set<Mention> collectMentions(GraphAlignments graph)
+	static Set<Mention> collectMentions(SemanticGraph graph)
 	{
 		Set<Mention> nominal = collectNominalMentions(graph);
 		Set<Mention> non_nominal = collectOtherMentions(graph);
@@ -30,8 +31,9 @@ class MentionsCollector
 	 * in the graph spanning over it.
 	 */
 	@SuppressWarnings("ConstantConditions")
-	private static Set<Mention> collectNominalMentions(GraphAlignments a)
+	private static Set<Mention> collectNominalMentions(SemanticGraph graph)
 	{
+		GraphAlignments a = graph.getAlignments();
 		List<String> tokens = a.getTokens();
 
 		return IntStream.range(0, tokens.size())
@@ -42,8 +44,13 @@ class MentionsCollector
 							String top_v = a.getTopSpanVertex(p).get();
 							return a.isNominal(top_v) || a.isConjunction(top_v);
 						})
-						.map(p -> new Mention(a, p, a.getLemma(p).orElse(""), a.getPOS(p).orElse("NN"),
-								a.getNER(p).orElse(Type.Other)))
+						.map(span -> new Mention(
+								graph.getId(),
+								span,
+								a.getSurfaceForm(span),
+								a.getLemma(span).orElse(""),
+								a.getPOS(span).orElse("NN"),
+								a.getNER(span).orElse(Type.Other)))
 						.collect(toList()))
 				.flatMap(List::stream)
 				.collect(toSet());
@@ -52,13 +59,19 @@ class MentionsCollector
 	/**
 	 * Returns a mention for every individual token
 	 */
-	private static Set<Mention> collectOtherMentions(GraphAlignments a)
+	private static Set<Mention> collectOtherMentions(SemanticGraph g)
 	{
-		return  a.getGraph().vertexSet().stream()
+		GraphAlignments a = g.getAlignments();
+
+		return  g.vertexSet().stream()
 				.filter(a::isAligned)
 				.filter(v -> !a.isNominal(v))
 				.mapToInt(a::getAlignment)
-				.mapToObj(i -> new Mention(a, Pair.of(i, i+1), a.getLemma(i), a.getPOS(i), a.getNER(i)))
+				.mapToObj(i ->
+				{
+					Pair<Integer, Integer> span = Pair.of(i, i + 1);
+					return new Mention(g.getId(), span, a.getSurfaceForm(span), a.getLemma(i), a.getPOS(i), a.getNER(i));
+				})
 				.collect(toSet());
 	}
 }

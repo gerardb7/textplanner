@@ -13,9 +13,9 @@ import java.util.Objects;
 public final class Meaning implements Serializable
 {
 	private final String reference; // should be unique
-	private final boolean is_NE;
-	private Type type = Type.Other;
-	private double weight = 0.0;
+	private final boolean is_NE; // refers to the meaning itself (e.g. synset for Chicago is a NE)
+	private Type type = Type.Other; // specific NE type
+	private double weight = 0.0; // used when ranking meaning for disambiguation
 	private static final Map<String, Meaning> references = new HashMap<>(); // to ensure unique Meaning objects per id
 	private final static long serialVersionUID = 1L;
 

@@ -128,13 +128,14 @@ class StanfordWrapper
 					c.getMentionsInTextualOrder().forEach(m ->
 					{
 						SemanticGraph g = graphs.get(m.sentNum-1);
+						GraphAlignments a = g.getAlignments();
 						Pair<Integer, Integer> span = Pair.of(m.startIndex-1, m.endIndex-1);
-						g.getAlignments().getTopSpanVertex(span).ifPresent(v ->
+						a.getTopSpanVertex(span).ifPresent(v ->
 						{
-							String lemma_v = g.getAlignments().getLemma(span).orElse("");
-							String pos_v = g.getAlignments().getPOS(span).orElse("N"); // assume nominal
-							Type ner_v = g.getAlignments().getNER(span).orElse(Type.Other);
-							Mention mention = new Mention(g.getAlignments(), span, lemma_v, pos_v, ner_v);
+							String lemma_v = a.getLemma(span).orElse("");
+							String pos_v = a.getPOS(span).orElse("N"); // assume nominal
+							Type ner_v = a.getNER(span).orElse(Type.Other);
+							Mention mention = new Mention(g.getId(), span, a.getSurfaceForm(span), lemma_v, pos_v, ner_v);
 							chain.put(v, mention);
 						});
 					});

@@ -3,9 +3,10 @@ package edu.upf.taln.textplanning.structures;
 import edu.upf.taln.textplanning.input.GraphAlignments;
 import org.jgrapht.graph.DirectedAcyclicGraph;
 
+import java.io.Serializable;
 import java.util.Collection;
 
-public class SemanticGraph extends DirectedAcyclicGraph<String, Role>
+public class SemanticGraph extends DirectedAcyclicGraph<String, Role> implements Serializable
 {
 	private GraphAlignments alignments = null;
 	private final String id;
@@ -38,6 +39,7 @@ public class SemanticGraph extends DirectedAcyclicGraph<String, Role>
 			incomingEdgesOf(old_label).forEach(e -> addEdge(getEdgeSource(e), new_label, e));
 			outgoingEdgesOf(old_label).forEach(e -> addEdge(new_label, getEdgeTarget(e), e));
 			removeVertex(old_label);
+			alignments.renameVertex(old_label, new_label);
 		}
 	}
 
@@ -53,5 +55,6 @@ public class SemanticGraph extends DirectedAcyclicGraph<String, Role>
 				.forEach(e -> this.addEdge(v, this.getEdgeTarget(e), e));
 
 		removeAllVertices(C);
+		C.forEach(c -> alignments.removeVertex(c));
 	}
 }

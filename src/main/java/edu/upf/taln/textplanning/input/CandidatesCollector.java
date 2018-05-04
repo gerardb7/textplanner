@@ -7,6 +7,7 @@ import edu.upf.taln.textplanning.structures.Mention;
 import edu.upf.taln.textplanning.structures.SemanticGraph;
 import it.uniroma1.lcl.babelnet.BabelSynset;
 import it.uniroma1.lcl.babelnet.BabelSynsetType;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.*;
@@ -40,14 +42,16 @@ class CandidatesCollector
 	@SuppressWarnings("ConstantConditions")
 	List<Candidate> getCandidateMeanings(List<SemanticGraph> graphs)
 	{
+		Map<String, SemanticGraph> graph_ids =
+				graphs.stream().collect(Collectors.toMap(SemanticGraph::getId, Function.identity()));
+
 		// Collect mentions and group them by anchor (triple of surface form, lemma and POS) -> to reduce lookups
 		Stopwatch timer = Stopwatch.createStarted();
 		Map<Triple<String, String, String>, List<Mention>> anchors2Mentions = graphs.stream()
-				.map(SemanticGraph::getAlignments)
 				.map(MentionsCollector::collectMentions)
 				.flatMap(Set::stream)
 				// Label formed with the surface form and head POS of mention's head
-				.collect(Collectors.groupingBy(m -> Triple.of(m.getSurfaceForm(), m.getLemma(), m.getPOS())));
+				.collect(Collectors.groupingBy(m -> Triple.of(m.getSurface_form(), m.getLemma(), m.getPOS())));
 
 		// Create a map of anchors and associated candidate synsets
 		AtomicInteger counter = new AtomicInteger(0);
@@ -65,9 +69,17 @@ class CandidatesCollector
 						.map(this::createMeaning)
 						.collect(toSet())));
 
+		// Get vertex governing each mention
+		Function<Mention, String> getVertex =
+				m ->
+				{
+					Pair<Integer, Integer> span = m.getSpan();
+					SemanticGraph graph = graph_ids.get(m.getSentenceId());
+					return graph.getAlignments().getTopSpanVertex(span).get();
+				};
 		Map<Mention, String> mentions2vertices = anchors2Mentions.values().stream()
 				.flatMap(List::stream)
-				.collect(toMap(m -> m, m -> m.getAlignedGraph().getTopSpanVertex(m.getSpan()).get()));
+				.collect(toMap(m -> m, getVertex));
 
 		// Create candidates
 		List<Candidate> candidates = labels2Meanings.keySet().stream()

@@ -3,29 +3,49 @@ package edu.upf.taln.textplanning.structures;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 // Assumes unique vertex labels across graphs
-public class GraphList extends ArrayList<SemanticGraph>
+public class GraphList implements Serializable
 {
+	private final List<SemanticGraph> graphs = new ArrayList<>();
+	private final Set<String> vertices; // use to performs consistency checks
 	private final Multimap<String, Candidate> candidate_meanings = HashMultimap.create();
 	private final List<CoreferenceChain> chains = new ArrayList<>();
 	private final static long serialVersionUID = 1L;
 
 
-	public GraphList(java.util.Collection<SemanticGraph> graphs,
+	public GraphList(List<SemanticGraph> graphs,
 	                 List<Candidate> candidates,
 	                 List<CoreferenceChain> chains)
 	{
 		super();
-		addAll(graphs);
+		this.graphs.addAll(graphs);
+		vertices = graphs.stream().map(SemanticGraph::vertexSet).flatMap(Set::stream).collect(toSet());
 		candidates.forEach(c -> candidate_meanings.put(c.getVertex(), c));
 		this.chains.addAll(chains);
+
+		// Sanity checks
+		if (candidates.stream()
+				.map(Candidate::getVertex)
+				.anyMatch(v -> !vertices.contains(v)))
+			throw new RuntimeException("Invalid candidate vertex");
+		if (chains.stream()
+				.map(CoreferenceChain::getVertices)
+				.flatMap(Collection::stream)
+				.anyMatch(v -> !vertices.contains(v)))
+			throw new RuntimeException("Invalid coreference vertex");
+
 	}
+
+	public List<SemanticGraph> getGraphs() { return graphs; }
 
 	public Collection<Candidate> getCandidates()
 	{
@@ -37,14 +57,20 @@ public class GraphList extends ArrayList<SemanticGraph>
 		return candidate_meanings.get(v);
 	}
 
-	public void chooseCandidate(String v, Candidate c)
+	// assigns candidate c as node v only candidate
+	public void chooseCandidate(Candidate c)
 	{
-		candidate_meanings.get(v).clear();
-		candidate_meanings.put(v, c);
+		if (!vertices.contains(c.getVertex()))
+			throw new RuntimeException("Invalid candidate vertex");
+		candidate_meanings.get(c.getVertex()).clear();
+		candidate_meanings.put(c.getVertex(), c);
 	}
 
 	public void vertexContraction(SemanticGraph g, String v, Collection<String> C)
 	{
+		if (!vertices.contains(v) || !vertices.containsAll(C))
+			throw new RuntimeException("Invalid contraction vertices");
+
 		// Perform contraction on graph
 		g.vertexContraction(v, C);
 

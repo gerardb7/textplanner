@@ -42,7 +42,7 @@ public class FrequencyUtils
 
 		List<String> forms = graphs.getCandidates().stream()
 				.map(Candidate::getMention)
-				.map(Mention::getSurfaceForm)
+				.map(Mention::getSurface_form)
 				.distinct()
 				.collect(Collectors.toList());
 

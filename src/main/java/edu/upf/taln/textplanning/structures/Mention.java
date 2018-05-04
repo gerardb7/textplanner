@@ -1,59 +1,48 @@
 package edu.upf.taln.textplanning.structures;
 
-import edu.upf.taln.textplanning.input.GraphAlignments;
 import edu.upf.taln.textplanning.structures.Candidate.Type;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.Serializable;
 import java.util.Objects;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * A sequence of consecutive tokens spanned over by an AMR node.
  */
 public final class Mention implements Serializable
 {
-	private final GraphAlignments aligned_graph;
-	private final Pair<Integer, Integer> span;
-	private final String surfaceForm;
+	private final String sentence_id; // Identifies sentence and, if necessary, document
+	private final Pair<Integer, Integer> span; // Token-based offsets
+	private final String surface_form;
 	private final String lemma;
-	private final String pos;
-	private final Type type;
+	private final String pos; // POS tag
+	private final Type type; // NE type
 	private final static long serialVersionUID = 1L;
 
-	public Mention(GraphAlignments graph, Pair<Integer, Integer> tokens_span, String lemma, String POS, Type type)
+	public Mention(String sentence_id, Pair<Integer, Integer> tokens_span, String surface_form, String lemma,
+	               String POS, Type type)
 	{
-		this.aligned_graph = graph;
+		this.sentence_id = sentence_id;
 		this.span = tokens_span;
-		surfaceForm = IntStream.range(span.getLeft(), span.getRight())
-				.mapToObj(graph::getToken)
-				.collect(Collectors.joining(" "));
+		this.surface_form = surface_form;
 		this.lemma = lemma;
 		this.pos = POS;
 		this.type = type;
 	}
 
-	public GraphAlignments getAlignedGraph() { return aligned_graph; }
+	public String getSentenceId() { return sentence_id; }
 	public Pair<Integer, Integer> getSpan() { return span; }
-	public String getSurfaceForm() { return surfaceForm; }
+	public String getSurface_form() { return surface_form; }
 	public String getLemma() { return lemma; }
 	public String getPOS() { return pos;}
 	public Type getType() { return type; }
 	public boolean isNominal() { return pos.startsWith("N"); }
 	public boolean isMultiWord() { return span.getRight() - span.getLeft() > 1; }
 
-
-	public boolean contains(Mention o)
-	{
-		return  aligned_graph == o.aligned_graph &&
-				span.getLeft() <= o.span.getLeft() && span.getRight() <= o.span.getRight();
-	}
-
 	@Override
 	public String toString()
 	{
-		return getSurfaceForm();
+		return getSurface_form();
 	}
 
 	@Override
@@ -69,12 +58,12 @@ public final class Mention implements Serializable
 		}
 
 		Mention mention = (Mention) o;
-		return aligned_graph == mention.aligned_graph && span.equals(mention.span);
+		return sentence_id.equals(mention.sentence_id) && span.equals(mention.span);
 	}
 
 	@Override
 	public int hashCode()
 	{
-		return Objects.hash(aligned_graph, span);
+		return Objects.hash(sentence_id, span);
 	}
 }

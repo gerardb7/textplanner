@@ -50,8 +50,7 @@ public class AMRReader implements DocumentReader
 			        AMRActions actions = new AMRActions(id, this.keep_inverse_relations, this.keep_relation_alignments);
 			        AMR.parse(amr_text, actions);
 			        SemanticGraph graph = actions.getGraph();
-			        GraphAlignments alignments = new GraphAlignments(graph, i,
-					        actions.getAlignments(), tokens);
+			        GraphAlignments alignments = new GraphAlignments(graph, actions.getAlignments(), tokens);
 			        graph.setAlignments(alignments);
 			        graphs.add(graph);
 		        }
