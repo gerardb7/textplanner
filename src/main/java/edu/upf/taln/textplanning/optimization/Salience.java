@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning.optimization;
 
 import edu.upf.taln.textplanning.ranking.MatrixFactory;
-import edu.upf.taln.textplanning.structures.Candidate;
+import edu.upf.taln.textplanning.structures.amr.Candidate;
 import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 

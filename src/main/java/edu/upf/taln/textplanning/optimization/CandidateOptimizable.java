@@ -2,7 +2,7 @@ package edu.upf.taln.textplanning.optimization;
 
 import cc.mallet.optimize.Optimizable;
 import edu.upf.taln.textplanning.corpora.Corpus;
-import edu.upf.taln.textplanning.structures.Candidate;
+import edu.upf.taln.textplanning.structures.amr.Candidate;
 import edu.upf.taln.textplanning.structures.Mention;
 import org.apache.commons.lang3.tuple.Pair;
 

@@ -3,8 +3,8 @@ package edu.upf.taln.textplanning.input;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.structures.Candidate.Type;
-import edu.upf.taln.textplanning.structures.SemanticGraph;
+import edu.upf.taln.textplanning.structures.amr.Candidate.Type;
+import edu.upf.taln.textplanning.structures.amr.SemanticGraph;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.Serializable;

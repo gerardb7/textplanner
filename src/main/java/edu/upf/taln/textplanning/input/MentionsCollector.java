@@ -1,8 +1,8 @@
 package edu.upf.taln.textplanning.input;
 
-import edu.upf.taln.textplanning.structures.Candidate.Type;
+import edu.upf.taln.textplanning.structures.amr.Candidate.Type;
 import edu.upf.taln.textplanning.structures.Mention;
-import edu.upf.taln.textplanning.structures.SemanticGraph;
+import edu.upf.taln.textplanning.structures.amr.SemanticGraph;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.List;

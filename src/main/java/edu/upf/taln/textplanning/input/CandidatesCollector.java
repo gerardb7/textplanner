@@ -1,10 +1,10 @@
 package edu.upf.taln.textplanning.input;
 
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.structures.Candidate;
+import edu.upf.taln.textplanning.structures.amr.Candidate;
 import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.structures.Mention;
-import edu.upf.taln.textplanning.structures.SemanticGraph;
+import edu.upf.taln.textplanning.structures.amr.SemanticGraph;
 import it.uniroma1.lcl.babelnet.BabelSynset;
 import it.uniroma1.lcl.babelnet.BabelSynsetType;
 import org.apache.commons.lang3.tuple.Pair;

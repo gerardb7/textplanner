@@ -1,9 +1,9 @@
 package edu.upf.taln.textplanning.input;
 
-import edu.upf.taln.textplanning.structures.Candidate;
-import edu.upf.taln.textplanning.structures.CoreferenceChain;
-import edu.upf.taln.textplanning.structures.GraphList;
-import edu.upf.taln.textplanning.structures.SemanticGraph;
+import edu.upf.taln.textplanning.structures.amr.Candidate;
+import edu.upf.taln.textplanning.structures.amr.CoreferenceChain;
+import edu.upf.taln.textplanning.structures.amr.GraphList;
+import edu.upf.taln.textplanning.structures.amr.SemanticGraph;
 
 import java.io.IOException;
 import java.nio.file.Path;

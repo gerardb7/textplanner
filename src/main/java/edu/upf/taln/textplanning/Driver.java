@@ -6,16 +6,13 @@ import edu.upf.taln.textplanning.corpora.FreqsFile;
 import edu.upf.taln.textplanning.input.AMRReader;
 import edu.upf.taln.textplanning.input.GraphListFactory;
 import edu.upf.taln.textplanning.similarity.TextVectorsSimilarity;
-import edu.upf.taln.textplanning.structures.GraphList;
+import edu.upf.taln.textplanning.structures.amr.GraphList;
 import edu.upf.taln.textplanning.utils.CMLCheckers;
 import edu.upf.taln.textplanning.utils.Serializer;
 import edu.upf.taln.textplanning.weighting.TFIDF;
 import org.apache.commons.io.FileUtils;
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.config.Configurator;
-import org.apache.logging.log4j.status.StatusLogger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

@@ -1,6 +1,6 @@
 package edu.upf.taln.textplanning.weighting;
 
-import edu.upf.taln.textplanning.structures.GraphList;
+import edu.upf.taln.textplanning.structures.amr.GraphList;
 
 import java.util.HashMap;
 import java.util.Map;

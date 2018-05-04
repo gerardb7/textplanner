@@ -1,13 +1,12 @@
 package edu.upf.taln.textplanning.ranking;
 
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
-import edu.upf.taln.textplanning.structures.Candidate;
+import edu.upf.taln.textplanning.structures.amr.Candidate;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
-import org.ojalgo.array.Array2D;
 
 import java.util.Arrays;
 import java.util.List;

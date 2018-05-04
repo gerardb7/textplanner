@@ -1,6 +1,6 @@
 package edu.upf.taln.textplanning.structures;
 
-import edu.upf.taln.textplanning.structures.Candidate.Type;
+import edu.upf.taln.textplanning.structures.amr.Candidate.Type;
 
 import java.io.Serializable;
 import java.util.HashMap;

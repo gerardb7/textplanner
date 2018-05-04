@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.structures;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import edu.upf.taln.textplanning.structures.amr.GraphList;
 import org.jgrapht.graph.SimpleDirectedGraph;
 
 import java.io.Serializable;
@@ -19,25 +20,10 @@ public class GlobalSemanticGraph extends SimpleDirectedGraph<String, Role> imple
 	private final Map<String, Double> weights = new HashMap<>();
 	private final static long serialVersionUID = 1L;
 
-	// Build from AMR-like graphs
-	public GlobalSemanticGraph(GraphList graphs)
+	// Default constructor
+	public GlobalSemanticGraph()
 	{
 		super(Role.class);
-
-		graphs.getGraphs().forEach(g -> g.edgeSet().forEach(e ->
-		{
-			String v1 = g.getEdgeSource(e);
-			addVertex(v1);
-			String v2 = g.getEdgeTarget(e);
-			addVertex(v2);
-			addEdge(v1, v2, e);
-		}));
-
-		graphs.getCandidates().forEach(c ->
-		{
-			meanings.put(c.getVertex(), c.getMeaning());
-			mentions.put(c.getVertex(), c.getMention());
-		});
 	}
 
 	/*  Build a graph G=(V,E) where V=set of instances, and E is determined by an adjacency_function and a
@@ -94,5 +80,7 @@ public class GlobalSemanticGraph extends SimpleDirectedGraph<String, Role> imple
 	}
 
 	public Meaning getMeaning(String v) { return meanings.get(v); }
+	public Meaning setMeaning(String v, Meaning m) { return meanings.put(v, m); }
 	public Collection<Mention> getMentions(String v) { return mentions.get(v); }
+	public void addMention(String v, Mention m) { mentions.put(v, m); }
 }

@@ -3,9 +3,9 @@ package edu.upf.taln.textplanning.input;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.ranking.GraphRanking;
-import edu.upf.taln.textplanning.structures.Candidate;
+import edu.upf.taln.textplanning.structures.amr.Candidate;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
-import edu.upf.taln.textplanning.structures.GraphList;
+import edu.upf.taln.textplanning.structures.amr.GraphList;
 import edu.upf.taln.textplanning.structures.Meaning;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -13,7 +13,7 @@ import java.util.*;
 
 import static java.util.Comparator.comparingDouble;
 
-// Creates a global graph from a list of AMR-like semantic graphs
+// Creates global semantic graphs from a lists of AMR-like semantic graphs
 public class GlobalGraphFactory
 {
 	public static GlobalSemanticGraph create(GraphList graphs, GraphRanking ranker)
@@ -70,7 +70,21 @@ public class GlobalGraphFactory
 	private static GlobalSemanticGraph merge(GraphList graphs)
 	{
 		// Create merged (disconnected) graph
-		GlobalSemanticGraph merged = new GlobalSemanticGraph(graphs);
+		GlobalSemanticGraph merged = new GlobalSemanticGraph();
+		graphs.getGraphs().forEach(g -> g.edgeSet().forEach(e ->
+		{
+			String v1 = g.getEdgeSource(e);
+			merged.addVertex(v1);
+			String v2 = g.getEdgeTarget(e);
+			merged.addVertex(v2);
+			merged.addEdge(v1, v2, e);
+		}));
+
+		graphs.getCandidates().forEach(c ->
+		{
+			merged.setMeaning(c.getVertex(), c.getMeaning());
+			merged.addMention(c.getVertex(), c.getMention());
+		});
 
 		// Merge all coreferent vertices
 		graphs.getChains().stream()

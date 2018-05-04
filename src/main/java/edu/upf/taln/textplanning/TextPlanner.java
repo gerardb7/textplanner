@@ -10,7 +10,7 @@ import edu.upf.taln.textplanning.redundancy.RedundancyRemover;
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.similarity.SemanticTreeSimilarity;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
-import edu.upf.taln.textplanning.structures.GraphList;
+import edu.upf.taln.textplanning.structures.amr.GraphList;
 import edu.upf.taln.textplanning.input.GraphListFactory;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
