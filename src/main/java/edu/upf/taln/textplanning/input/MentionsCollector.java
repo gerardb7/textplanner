@@ -6,6 +6,7 @@ import edu.upf.taln.textplanning.structures.amr.SemanticGraph;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.IntStream;
 
@@ -40,9 +41,9 @@ class MentionsCollector
 				.mapToObj(i -> IntStream.range(i + 1, min(i + max_tokens + 1, tokens.size()))
 						.mapToObj(j -> Pair.of(i, j))
 						.filter(a::covers)
-						.filter(p -> {
-							String top_v = a.getTopSpanVertex(p).get();
-							return a.isNominal(top_v) || a.isConjunction(top_v);
+						.filter(span -> {
+							Optional<String> top_v = a.getTopSpanVertex(span);
+							return top_v.filter(s -> a.isNominal(s) || a.isConjunction(s)).isPresent();
 						})
 						.map(span -> new Mention(
 								graph.getId(),

@@ -2,13 +2,13 @@ package edu.upf.taln.textplanning.structures;
 
 import org.jgrapht.graph.DefaultEdge;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Role extends DefaultEdge
 {
-	private static AtomicLong counter = new AtomicLong(0);
+	private static AtomicInteger counter = new AtomicInteger(0);
 	private String label;
-	private long id; // the purpose of this id is to keep all Role objects distinct
+	private int id; // the purpose of this id is to keep all Role objects distinct
 
 	public static Role create(String label) { return new Role(label); }
 
@@ -36,7 +36,7 @@ public class Role extends DefaultEdge
 	public int hashCode()
 	{
 		int result = label.hashCode();
-		result = 31 * result + (int) (id ^ (id >>> 32));
+		result = 31 * result + id;
 		return result;
 	}
 }

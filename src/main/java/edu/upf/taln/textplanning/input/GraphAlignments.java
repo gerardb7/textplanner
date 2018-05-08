@@ -141,8 +141,11 @@ public class GraphAlignments implements Serializable
 	{
 		// Update all fields containing vertices
 		topo_order.replaceAll(v -> v.equals(old_label) ? new_label : v);
-		Integer a = alignments.remove(old_label);
-		alignments.put(new_label, a);
+		if (isAligned(old_label))
+		{
+			int a = alignments.remove(old_label);
+			alignments.put(new_label, a);
+		}
 		Set<Pair<Integer, Integer>> spans = spans2nodes.keySet().stream()
 				.filter(span -> spans2nodes.get(span).contains(old_label))
 				.collect(Collectors.toSet());

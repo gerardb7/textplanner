@@ -11,6 +11,7 @@ import java.util.List;
 
 import static java.util.stream.Collectors.toList;
 
+// Reads an AMR Bank into a set of graph objects, which are then decorated with NER, Coreference and BabelNet annotations.
 public class GraphListFactory
 {
 	private final DocumentReader reader;

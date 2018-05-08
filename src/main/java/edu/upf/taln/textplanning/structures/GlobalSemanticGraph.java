@@ -2,7 +2,6 @@ package edu.upf.taln.textplanning.structures;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.structures.amr.GraphList;
 import org.jgrapht.graph.SimpleDirectedGraph;
 
 import java.io.Serializable;
@@ -80,7 +79,7 @@ public class GlobalSemanticGraph extends SimpleDirectedGraph<String, Role> imple
 	}
 
 	public Meaning getMeaning(String v) { return meanings.get(v); }
-	public Meaning setMeaning(String v, Meaning m) { return meanings.put(v, m); }
+	public void setMeaning(String v, Meaning m) { meanings.put(v, m); }
 	public Collection<Mention> getMentions(String v) { return mentions.get(v); }
 	public void addMention(String v, Mention m) { mentions.put(v, m); }
 }

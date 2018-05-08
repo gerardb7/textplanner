@@ -68,8 +68,6 @@ class StanfordWrapper
 		CoreDocument document = new CoreDocument(text);
 		pipeline.annotate(document);
 
-
-
 		// Collect POS
 		List<List<String>> pos = document.sentences().stream()
 				.map(CoreSentence::posTags)

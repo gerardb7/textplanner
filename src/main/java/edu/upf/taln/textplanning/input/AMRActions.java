@@ -26,7 +26,7 @@ public class AMRActions implements Actions
     private class ConceptNode extends TreeNode
     {
         final String label;
-        int index;
+        final int index;
         ConceptNode(String label, int index) { this.label = label; this.index = index; }
     }
 

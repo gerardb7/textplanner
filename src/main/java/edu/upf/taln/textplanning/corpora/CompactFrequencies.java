@@ -10,6 +10,8 @@ import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -37,17 +39,18 @@ public class CompactFrequencies implements Corpus, Serializable
 	transient private ByteBuffer form_counts = ByteBuffer.allocate(BUFFER_SIZE_STEP);
 
 	private final static long serialVersionUID = 1L;
+	private final static Logger log = LogManager.getLogger(CompactFrequencies.class);
 
-	public CompactFrequencies(int num_docs, Map<String, Pair<Integer, Integer>> meaning_counts, Map<String, Map<String, Integer>> form_counts)
+	public CompactFrequencies(int num_docs, Map<String, Integer> total_counts, Map<String, Integer> doc_counts, Map<String, Map<String, Integer>> form_counts)
 	{
 		this.num_docs = num_docs;
-		addCounts(meaning_counts, form_counts);
+		addCounts(total_counts, doc_counts, form_counts);
 		pack();
 	}
 
-	private void addCounts(Map<String, Pair<Integer, Integer>> s_counts, Map<String, Map<String, Integer>> f_counts)
+	private void addCounts(Map<String, Integer> total_counts, Map<String, Integer> doc_counts, Map<String, Map<String, Integer>> f_counts)
 	{
-		s_counts.keySet().forEach(meaning ->
+		total_counts.keySet().forEach(meaning ->
 		{
 			//increase buffer size if necessary
 			if (meaning_counts.remaining() < Integer.BYTES * 2)
@@ -62,8 +65,8 @@ public class CompactFrequencies implements Corpus, Serializable
 			meaning_index.put(meaning, meaning_counts.position());
 
 			// add bytes to main buffer
-			final int total_count = s_counts.get(meaning).getLeft();
-			final int docs_count = s_counts.get(meaning).getRight();
+			final int total_count = total_counts.get(meaning);
+			final int docs_count = doc_counts.get(meaning);
 			meaning_counts.putInt(total_count).putInt(docs_count);
 		});
 
@@ -85,24 +88,24 @@ public class CompactFrequencies implements Corpus, Serializable
 			}
 
 			//increase buffer size if necessary
-			if (form_counts.remaining() < bytes_length)
+			if (this.form_counts.remaining() < bytes_length)
 			{
-				final ByteBuffer newBuf = ByteBuffer.allocate(form_counts.capacity() + BUFFER_SIZE_STEP);
-				form_counts.flip();
-				newBuf.put(form_counts);
-				form_counts = newBuf;
+				final ByteBuffer newBuf = ByteBuffer.allocate(this.form_counts.capacity() + BUFFER_SIZE_STEP);
+				this.form_counts.flip();
+				newBuf.put(this.form_counts);
+				this.form_counts = newBuf;
 			}
 
 			form_index.put(form, form_counts.position());
 
 			// add an integer indicating number of meaning counts
-			form_counts.putShort((short)meanings.size()); // a short with max value 32767 should suffice
+			this.form_counts.putShort((short)meanings.size()); // a short with max value 32767 should suffice
 
 			// and now add the bytes for each (meaning, count) pair
 			for (final byte[] bytes : bytes_list)
 			{
-				form_counts.put((byte) bytes.length); // using a single byte to store length unsigned int (max value 127)
-				form_counts.put(bytes); // bytes has both the meaning string and the count int
+				this.form_counts.put((byte) bytes.length); // using a single byte to store length unsigned int (max value 127)
+				this.form_counts.put(bytes); // bytes has both the meaning string and the count int
 			}
 		});
 	}
@@ -141,9 +144,9 @@ public class CompactFrequencies implements Corpus, Serializable
 			});
 			meaning_index = newMap;
 
-			System.out.println("meaning hash map size = " + meaning_hash_index.size());
-			System.out.println("meaning String map size = " + meaning_index.size());
-			System.out.println("meaning binary data size = " + meaning_counts.limit());
+			log.info("meaning hash map size = " + meaning_hash_index.size());
+			log.info("meaning String map size = " + meaning_index.size());
+			log.info("meaning binary data size = " + meaning_counts.limit());
 		}
 
 		{
@@ -178,9 +181,9 @@ public class CompactFrequencies implements Corpus, Serializable
 			});
 			form_index = newMap;
 
-			System.out.println("Form hash map size = " + form_hash_index.size());
-			System.out.println("Form String map size = " + form_index.size());
-			System.out.println("Form binary data size = " + form_counts.limit());
+			log.info("Form hash map size = " + form_hash_index.size());
+			log.info("Form String map size = " + form_index.size());
+			log.info("Form binary data size = " + form_counts.limit());
 		}
 	}
 
@@ -196,20 +199,6 @@ public class CompactFrequencies implements Corpus, Serializable
 		return getMeaningCounts(meaning).getRight();
 	}
 
-	private OptionalInt getMeaningPos(String meaning)
-	{
-		int pos = form_hash_index.get(meaning.hashCode());
-		if (pos == -1)
-		{
-			pos = form_index.get(meaning);
-		}
-
-		if (pos == -1)
-			return OptionalInt.empty();
-		else
-			return OptionalInt.of(pos);
-	}
-
 	private Pair<OptionalInt, OptionalInt> getMeaningCounts(String meaning)
 	{
 		int pos = getMeaningPos(meaning).orElse(-1);
@@ -222,6 +211,20 @@ public class CompactFrequencies implements Corpus, Serializable
 		final int docs_count = meaning_counts.getInt();
 
 		return Pair.of(OptionalInt.of(count), OptionalInt.of(docs_count));
+	}
+
+	private OptionalInt getMeaningPos(String meaning)
+	{
+		int pos = meaning_hash_index.get(meaning.hashCode());
+		if (pos == -1)
+		{
+			pos = meaning_index.get(meaning);
+		}
+
+		if (pos == -1)
+			return OptionalInt.empty();
+		else
+			return OptionalInt.of(pos);
 	}
 
 	@Override
@@ -252,20 +255,6 @@ public class CompactFrequencies implements Corpus, Serializable
 		return OptionalInt.of(count);
 	}
 
-	private OptionalInt getFormPos(String form)
-	{
-		int pos = form_hash_index.get(form.hashCode());
-		if (pos == -1)
-		{
-			pos = form_index.get(form);
-		}
-
-		if (pos == -1)
-			return OptionalInt.empty();
-		else
-			return OptionalInt.of(pos);
-	}
-
 	private Map<String, Integer> getFormCounts(final String form)
 	{
 		int pos = getFormPos(form).orElse(-1);
@@ -273,7 +262,7 @@ public class CompactFrequencies implements Corpus, Serializable
 			return new HashMap<>();
 
 		form_counts.position(pos);
-		int num_meanings = form_counts.getInt();
+		int num_meanings = form_counts.getShort();
 		final Map<String, Integer> meaning_counts = new HashMap<>(num_meanings);
 
 		for (int i=0; i < num_meanings; ++i)
@@ -288,6 +277,20 @@ public class CompactFrequencies implements Corpus, Serializable
 		}
 
 		return meaning_counts;
+	}
+
+	private OptionalInt getFormPos(String form)
+	{
+		int pos = form_hash_index.get(form.hashCode());
+		if (pos == -1)
+		{
+			pos = form_index.get(form);
+		}
+
+		if (pos == -1)
+			return OptionalInt.empty();
+		else
+			return OptionalInt.of(pos);
 	}
 
 	@Override
@@ -320,13 +323,13 @@ public class CompactFrequencies implements Corpus, Serializable
 		int bufferSize = in.readInt();
 		byte[] buffer = new byte[bufferSize];
 		//noinspection ResultOfMethodCallIgnored
-		in.read(buffer, 0, bufferSize);
+		in.readFully(buffer, 0, bufferSize);
 		meaning_counts = ByteBuffer.wrap(buffer, 0, bufferSize);
 
 		bufferSize = in.readInt();
 		buffer = new byte[bufferSize];
 		//noinspection ResultOfMethodCallIgnored
-		in.read(buffer, 0, bufferSize);
+		in.readFully(buffer, 0, bufferSize);
 		form_counts = ByteBuffer.wrap(buffer, 0, bufferSize);
 	}
 }
