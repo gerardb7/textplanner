@@ -65,10 +65,11 @@ class MentionsCollector
 		GraphAlignments a = g.getAlignments();
 
 		return  g.vertexSet().stream()
-				.filter(a::isAligned)
 				.filter(v -> !a.isNominal(v))
-				.mapToInt(a::getAlignment)
-				.mapToObj(i ->
+				.map(a::getAlignment)
+				.filter(Optional::isPresent)
+				.map(Optional::get)
+				.map(i ->
 				{
 					Pair<Integer, Integer> span = Pair.of(i, i + 1);
 					return new Mention(g.getId(), span, a.getSurfaceForm(span), a.getLemma(i), a.getPOS(i), a.getNER(i));

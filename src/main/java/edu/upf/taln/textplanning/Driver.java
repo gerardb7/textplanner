@@ -43,7 +43,7 @@ public class Driver
 		FreqsFile corpus = new FreqsFile(freqs);
 		//CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
 
-		TFIDF weighting = new TFIDF(corpus);
+		TFIDF weighting = new TFIDF(corpus, true);
 		TextVectorsSimilarity similarity = new TextVectorsSimilarity(embeddings, format);
 		TextPlanner planner = new TextPlanner(reader, null, weighting, similarity);
 		log.info("Set up took " + timer.stop());

@@ -43,8 +43,8 @@ class StanfordWrapper
 
 		Stopwatch timer = Stopwatch.createStarted();
 		RedwoodConfiguration.current().clear().apply(); // shut up, CoreNLP
-//		pipeline = null;
-		pipeline = new StanfordCoreNLP(props);
+		pipeline = null;
+//		pipeline = new StanfordCoreNLP(props);
 		log.info("CoreNLP pipeline created in " + timer.stop());
 	}
 

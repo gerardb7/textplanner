@@ -7,8 +7,14 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.corpora.CompactFrequencies;
 import edu.upf.taln.textplanning.corpora.FreqsFile;
+import edu.upf.taln.textplanning.input.AMRReader;
+import edu.upf.taln.textplanning.input.GraphAlignments;
+import edu.upf.taln.textplanning.input.GraphListFactory;
+import edu.upf.taln.textplanning.structures.Meaning;
+import edu.upf.taln.textplanning.structures.amr.Candidate;
 import edu.upf.taln.textplanning.structures.amr.GraphList;
 import edu.upf.taln.textplanning.utils.CMLCheckers.PathConverter;
+import edu.upf.taln.textplanning.weighting.TFIDF;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.SuffixFileFilter;
@@ -25,6 +31,8 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.*;
 
@@ -144,8 +152,6 @@ public class FrequencyUtils
 		{
 			log.error("Deserialization failed: " + e);
 		}
-
-
 	}
 
 	/**
@@ -268,46 +274,93 @@ public class FrequencyUtils
 		log.info("Done");
 	}
 
-//	private static void getStats(Path text_file)
-//	{
-//		Properties props = new Properties();
-//		props.setProperty("annotators", "tokenize,ssplit,pos,lemma");
-//		RedwoodConfiguration.current().clear().apply(); // shut up, CoreNLP
-//		StanfordCoreNLP stanford = new StanfordCoreNLP(props);
-//
-//		String text = "";
-//		CoreDocument document = new CoreDocument(text);
-//		stanford.annotate(document);
-//
-//		// Collect tokens by sentence
-//		List<List<String>> tokens = document.sentences().stream()
-//				.map(CoreSentence::tokens)
-//				.map(l -> l.stream().map(t -> t.get(CoreAnnotations.TextAnnotation.class)).collect(toList()))
-//				.collect(toList());
-//
-//		// Collect POS
-//		List<List<String>> pos = document.sentences().stream()
-//				.map(CoreSentence::posTags)
-//				.collect(toList());
-//
-//		// Collect lemmas
-//		List<CoreMap> sentences = document.annotation().get(CoreAnnotations.SentencesAnnotation.class);
-//		List<List<String>> lemma = sentences.stream()
-//				.map(s -> s.get(CoreAnnotations.TokensAnnotation.class).stream()
-//						.map(t -> t.get(CoreAnnotations.LemmaAnnotation.class))
-//						.collect(toList()))
-//				.collect(toList());
-//
-//		for (CoreSentence sent: document.sentences())
-//		{
-//			IntStream.range()
-//		}
-//
-//		BabelNetWrapper babelnet = new BabelNetWrapper();
-//
-//
-//
-//	}
+	private static void getStats(Path amr_bank, Path freqs_file, Path vectors_file) throws IOException, ClassNotFoundException
+	{
+		AMRReader reader = new AMRReader();
+		GraphListFactory factory = new GraphListFactory(reader, null);
+		String contents = FileUtils.readFileToString(amr_bank.toFile(), Charsets.UTF_8);
+		GraphList graphs = factory.getGraphs(contents);
+
+		long num_tokens = graphs.getGraphs().stream()
+				.mapToLong(g ->
+				{
+					GraphAlignments a = g.getAlignments();
+					List<String> tokens = a.getTokens();
+					return tokens.size();
+				})
+				.sum();
+
+		long num_aligned_tokens = graphs.getGraphs().stream()
+				.mapToLong(g ->
+				{
+					GraphAlignments a = g.getAlignments();
+					List<String> tokens = a.getTokens();
+					return IntStream.range(0, tokens.size())
+							.mapToObj(a::getVertices)
+							.filter(l -> !l.isEmpty())
+							.count();
+				})
+				.sum();
+
+		long num_tokens_with_meaning = graphs.getGraphs().stream()
+				.mapToLong(g ->
+				{
+					GraphAlignments a = g.getAlignments();
+					List<String> tokens = a.getTokens();
+					return IntStream.range(0, tokens.size())
+							.mapToObj(a::getVertices)
+							.filter(l -> !l.isEmpty())
+							.flatMap(Set::stream)
+							.map(graphs::getCandidates)
+							.filter(l -> !l.isEmpty())
+							.count();
+				})
+				.sum();
+
+
+		Map<Meaning, Long> sense_freqs = graphs.getCandidates().stream()
+				.collect(groupingBy(Candidate::getMeaning, counting()));
+		Map<String, Long> form_freqs = graphs.getGraphs().stream()
+				.map(g -> g.getAlignments().getTokens())
+				.flatMap(List::stream)
+				.collect(groupingBy(s -> s, counting()));
+		Map<String, Long> lemma_freqs = graphs.getGraphs().stream()
+				.map(g ->
+				{
+					GraphAlignments a = g.getAlignments();
+					List<String> tokens = a.getTokens();
+					return IntStream.range(0, tokens.size())
+							.mapToObj(a::getLemma)
+							.collect(toList());
+				})
+				.flatMap(List::stream)
+				.collect(groupingBy(s -> s, counting()));
+
+		Set<String> senses = graphs.getCandidates().stream()
+				.map(Candidate::getMeaning)
+				.map(Meaning::getReference)
+				.collect(Collectors.toSet());
+
+
+		CompactFrequencies corpus = (CompactFrequencies) Serializer.deserialize(freqs_file);
+		Map<String, OptionalInt> sense_idfs = senses.stream()
+				.collect(toMap(s -> s, corpus::getMeaningDocumentCount));
+		long num_sense_in_corpus = sense_idfs.keySet().stream()
+				.filter(s -> sense_idfs.get(s).isPresent())
+				.count();
+		List<String> sorted_senses_idf = sense_idfs.keySet().stream()
+				.sorted(Comparator.comparingInt(s -> sense_idfs.get(s).orElse(-1)))
+				.collect(Collectors.toList());
+
+		final TFIDF tfidf = new TFIDF(corpus, false);
+		tfidf.setContents(graphs);
+		Map<String, Double> sense_tf_idfs = senses.stream()
+				.collect(toMap(s -> s, tfidf::weight));
+		List<String> sorted_senses_tf_idf = sense_tf_idfs.keySet().stream()
+				.sorted(Comparator.comparingDouble(sense_tf_idfs::get))
+				.collect(Collectors.toList());
+
+	}
 
 	@Parameters(commandDescription = "Obtain frequencies from SEW")
 	private static class GetFrequenciesCommand

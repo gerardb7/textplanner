@@ -6,10 +6,7 @@ import edu.upf.taln.textplanning.input.amr.TreeNode;
 import edu.upf.taln.textplanning.structures.Role;
 import edu.upf.taln.textplanning.structures.amr.SemanticGraph;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -20,14 +17,24 @@ public class AMRActions implements Actions
     private class  LabelNode extends TreeNode
     {
         final String label;
-        LabelNode(String label) { this.label = label; }
+	    final boolean is_reentrant;
+	    LabelNode(String label, boolean is_reentrant)
+	    {
+	    	this.label = label;
+		    this.is_reentrant = is_reentrant;
+	    }
     }
 
     private class ConceptNode extends TreeNode
     {
         final String label;
         final int index;
-        ConceptNode(String label, int index) { this.label = label; this.index = index; }
+
+        ConceptNode(String label, int index)
+        {
+        	this.label = label;
+        	this.index = index;
+        }
     }
 
     private class AlignmentNode extends TreeNode
@@ -41,47 +48,56 @@ public class AMRActions implements Actions
         final String label;
         final String range;
         final boolean is_inverse;
-        DescendentNode(String label, String range, boolean is_inverse)
+        final boolean is_reentrant;
+        DescendentNode(String label, String range, boolean is_inverse, boolean is_reentrant)
         {
             this.label = label;
             this.range = range;
             this.is_inverse = is_inverse;
+	        this.is_reentrant = is_reentrant;
         }
     }
 
+	public static final int unaligned = -1;
+	private final SemanticGraph graph;
 	private final boolean keep_inverse_relations; // AMR inverse (':*-of') relations to their non-inverted counterparts?
 	private final boolean keep_relation_alignments;
 	private final Map<String, Integer> alignments = new HashMap<>();
-	private SemanticGraph graph;
+	private final Set<Role> reentrant_edges = new HashSet();
+	private List<String> vertex_order = new ArrayList<>();
 
-	AMRActions(String graph_id, boolean keep_inverse_relations, boolean keep_relation_alignments)
+	AMRActions(SemanticGraph graph, boolean keep_inverse_relations, boolean keep_relation_alignments)
 	{
-		graph = new SemanticGraph(graph_id);
+		this.graph = graph;
 		this.keep_inverse_relations = keep_inverse_relations;
 		this.keep_relation_alignments = keep_relation_alignments;
 	}
 
-    public SemanticGraph getGraph() { return graph; }
+	public List<String> getVertexOrder() { return this.vertex_order; }
 	Map<String, Integer> getAlignments() { return alignments; }
+	Set<Role> getReentrantEdges() { return reentrant_edges; }
 
     @Override
     public LabelNode make_ancestor(String input, int start, int end, List<TreeNode> elements)
     {
         // Create node for var
         TreeNode var_node = elements.get(2);
-        LabelNode var = new LabelNode(var_node.text);
-        graph.addVertex(var.label);
+        String label = var_node.text;
+        boolean reentrant = graph.containsVertex(label);
+        LabelNode var = new LabelNode(label, reentrant);
+        graph.addVertex(label);
+	    vertex_order.add(label);
 
         // Add "instance" edge from var to concept
         ConceptNode concept = (ConceptNode)elements.get(6);
         try { graph.addEdge(var.label, concept.label, Role.create(AMRConstants.instance)); }
         catch (Exception e)
         {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Cannot create edge: " + e);
         }
 
         // Store alignment of var
-        if (concept.index != GraphAlignments.unaligned)
+        if (concept.index != unaligned)
             alignments.put(var.label, concept.index);
 
         // Add edge indicated by rel
@@ -91,10 +107,13 @@ public class AMRActions implements Actions
             DescendentNode descendent = (DescendentNode)descendent_node.get(Label.desc);
             try
             {
-                if (descendent.is_inverse && !keep_inverse_relations)
-                    graph.addEdge(descendent.range, var.label, Role.create(descendent.label));
+	            Role role = Role.create(descendent.label);
+	            if (descendent.is_inverse && !keep_inverse_relations)
+                    graph.addEdge(descendent.range, var.label, role);
                 else
-                    graph.addEdge(var.label, descendent.range, Role.create(descendent.label));
+                    graph.addEdge(var.label, descendent.range, role);
+                if (descendent.is_reentrant)
+                	reentrant_edges.add(role);
             }
             catch (Exception e)
             {
@@ -137,7 +156,7 @@ public class AMRActions implements Actions
 		    		alignments.put(var.label, a.index);
 		    }
 
-		    return new DescendentNode(relation, var.label, is_inverse);
+		    return new DescendentNode(relation, var.label, is_inverse, var.is_reentrant);
 	    }
 	    catch (Exception e)
 	    {
@@ -152,8 +171,9 @@ public class AMRActions implements Actions
 	    {
 		    TreeNode node = elements.get(0);
 		    graph.addVertex(node.text);
+		    vertex_order.add(node.text);
 
-		    int index = GraphAlignments.unaligned;
+		    int index = unaligned;
 		    TreeNode alignment = elements.get(1);
 		    if (alignment instanceof AlignmentNode)
 		    {
@@ -175,7 +195,7 @@ public class AMRActions implements Actions
         String label = input.substring(start, end);
         try
         {
-            int index = getMatch(pattern, label).map(Integer::parseInt).orElse(GraphAlignments.unaligned);
+            int index = getMatch(pattern, label).map(Integer::parseInt).orElse(unaligned);
             return new AlignmentNode(index);
         }
         catch (Exception e)
@@ -187,33 +207,35 @@ public class AMRActions implements Actions
     @Override
     public TreeNode make_constant(String input, int start, int end, List<TreeNode> elements)
     {
-        return make_node(elements);
+        return make_node(elements, false);
     }
 
     @Override
     public TreeNode make_num(String input, int start, int end, List<TreeNode> elements)
     {
-        return make_node(elements);
+        return make_node(elements, false);
     }
 
     @Override
     public TreeNode make_str(String input, int start, int end, List<TreeNode> elements)
     {
-        return make_node(elements);
+        return make_node(elements, false);
     }
 
     @Override
     public TreeNode make_var(String input, int start, int end, List<TreeNode> elements)
     {
-        return make_node(elements);
+        return make_node(elements, true);
     }
 
-    private LabelNode make_node(List<TreeNode> elements)
+    private LabelNode make_node(List<TreeNode> elements, boolean is_var)
     {
     	try
 	    {
 		    TreeNode node = elements.get(0);
+		    boolean reentrant = is_var && graph.containsVertex(node.text);
 		    graph.addVertex(node.text);
+		    vertex_order.add(node.text);
 
 		    TreeNode alignment = elements.get(1);
 		    if (alignment instanceof AlignmentNode)
@@ -221,7 +243,7 @@ public class AMRActions implements Actions
 			    alignments.put(node.text, ((AlignmentNode) alignment).index);
 		    }
 
-		    return new LabelNode(node.text);
+		    return new LabelNode(node.text, reentrant);
 	    }
 	    catch (Exception e)
 	    {

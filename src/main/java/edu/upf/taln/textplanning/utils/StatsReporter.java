@@ -1,13 +1,13 @@
 package edu.upf.taln.textplanning.utils;
 
-import edu.upf.taln.textplanning.input.GraphAlignments;
 import edu.upf.taln.textplanning.input.GraphListFactory;
-import edu.upf.taln.textplanning.structures.*;
+import edu.upf.taln.textplanning.structures.Meaning;
+import edu.upf.taln.textplanning.structures.Mention;
 import edu.upf.taln.textplanning.structures.amr.Candidate;
 import edu.upf.taln.textplanning.structures.amr.GraphList;
 import edu.upf.taln.textplanning.structures.amr.SemanticGraph;
-import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.math.RoundingMode;
 import java.text.NumberFormat;
@@ -29,12 +29,12 @@ public class StatsReporter
 				.sum();
 		Set<String> alignedVertices = graphs.getGraphs().stream()
 				.flatMap(g -> g.vertexSet().stream()
-						.filter(v -> g.getAlignments().getAlignment(v) != GraphAlignments.unaligned))
+						.filter(v -> g.getAlignments().getAlignment(v).isPresent()))
 				.collect(toSet());
 		Set<String> nominalVertices = graphs.getGraphs().stream()
 				.flatMap(g -> g.vertexSet().stream()
-						.filter(v -> g.getAlignments().getAlignment(v) != GraphAlignments.unaligned)
-						.filter(v -> g.getAlignments().getPOS(g.getAlignments().getAlignment(v)).startsWith("N")))
+						.filter(v -> g.getAlignments().getAlignment(v).isPresent())
+						.filter(v -> g.getAlignments().getPOS(g.getAlignments().getAlignment(v).get()).startsWith("N")))
 				.collect(toSet());
 
 		long numForms = alignedVertices.stream()

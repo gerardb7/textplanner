@@ -1,8 +1,6 @@
 package edu.upf.taln.textplanning.input;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.*;
 import edu.upf.taln.textplanning.structures.amr.Candidate.Type;
 import edu.upf.taln.textplanning.structures.amr.SemanticGraph;
 import org.apache.commons.lang3.tuple.Pair;
@@ -15,7 +13,6 @@ import java.util.stream.IntStream;
 // Maps vertices in semantic graphs to tokens and their linguistic annotations
 public class GraphAlignments implements Serializable
 {
-	public static final int unaligned = -1;
 	private final List<String> topo_order = new ArrayList<>(); // vertices
 	private final List<String> tokens = new ArrayList<>();
 	private final List<String> lemma = new ArrayList<>();
@@ -39,19 +36,21 @@ public class GraphAlignments implements Serializable
 
 		// Calculate spans
 		graph.vertexSet()
-				.stream()
-				.filter(this::isAligned)
 				.forEach(v -> {
-					Pair<Integer, Integer> span = Pair.of(getAlignment(v), getAlignment(v) + 1);
-					spans2nodes.put(span, v);
+					if (alignments.containsKey(v))
+					{
+						int i = alignments.get(v);
+						Pair<Integer, Integer> span = Pair.of(i, i + 1);
+						spans2nodes.put(span, v);
+					}
 				});
 
 		graph.vertexSet()
 				.forEach(v -> {
-					List<Integer> indexes = isAligned(v) ? Lists.newArrayList(getAlignment(v)) : Lists.newArrayList();
+					List<Integer> indexes = alignments.containsKey(v) ? Lists.newArrayList(alignments.get(v)) : Lists.newArrayList();
 					graph.getDescendants(v).stream()
-							.map(this::getAlignment)
-							.filter(i -> i != unaligned)
+							.filter(alignments::containsKey)
+							.map(alignments::get)
 							.forEach(indexes::add);
 
 					if (!indexes.isEmpty())
@@ -64,16 +63,27 @@ public class GraphAlignments implements Serializable
 				});
 	}
 
-	List<String> getTokens() { return new ArrayList<>(tokens); }
-	private String getToken(int index)	{ return tokens.get(index); }
-	String getLemma(int index)	{ return lemma.get(index); }
-	void setLemma(int index, String lemma) { this.lemma.set(index, lemma); }
-	public String getPOS(int index)	{ return pos.get(index); }
-	void setPOS(int index, String pos) { this.pos.set(index, pos); }
-	Type getNER(int index)	{ return ner.get(index); }
-	void setNER(int index, Type ner) { this.ner.set(index, ner); }
-	boolean isAligned(String vertex) { return alignments.containsKey(vertex); }
-	public int getAlignment(String vertex) { return alignments.getOrDefault(vertex, unaligned); }
+	public List<String> getTokens() { return new ArrayList<>(tokens); }
+	private String getToken(int token_index)	{ return tokens.get(token_index); }
+	public String getLemma(int token_index)	{ return lemma.get(token_index); }
+	public void setLemma(int token_index, String lemma) { this.lemma.set(token_index, lemma); }
+	public String getPOS(int token_index)	{ return pos.get(token_index); }
+	public void setPOS(int token_index, String pos) { this.pos.set(token_index, pos); }
+	public Type getNER(int token_index)	{ return ner.get(token_index); }
+	public void setNER(int token_index, Type ner) { this.ner.set(token_index, ner); }
+
+	public Optional<Integer> getAlignment(String vertex)
+	{
+		return Optional.ofNullable(alignments.get(vertex));
+	}
+
+	public Set<String> getVertices(int token_index)
+	{
+		return alignments.keySet().stream()
+				.filter(v -> alignments.get(v) == token_index)
+				.collect(Collectors.toSet());
+	}
+
 	boolean covers(Pair<Integer, Integer> span) { return spans2nodes.containsKey(span); }
 
 	String getSurfaceForm(Pair<Integer, Integer> span)
@@ -99,7 +109,7 @@ public class GraphAlignments implements Serializable
 			return Optional.of(getLemma(span.getLeft()));
 		else
 		{
-			Optional<Integer> head = getTopSpanVertex(span).filter(this::isAligned).map(this::getAlignment);
+			Optional<Integer> head = getTopSpanVertex(span).flatMap(this::getAlignment);
 			String lemma = IntStream.range(span.getLeft(), span.getRight())
 					.mapToObj(i ->
 					{
@@ -117,31 +127,31 @@ public class GraphAlignments implements Serializable
 	// If there is no top vertex or it is unaligned, then there is no POS
 	Optional<String> getPOS(Pair<Integer, Integer> span)
 	{
-		return getTopSpanVertex(span).filter(this::isAligned).map(this::getAlignment).map(this::getPOS);
+		return getTopSpanVertex(span).flatMap(v -> getAlignment(v).map(this::getPOS));
 	}
 
 	// The NER of a span of tokens is the NER of the token aligned with its head vertex.
 	// If there is no top vertex or it is unaligned, then there is no NER
 	Optional<Type> getNER(Pair<Integer, Integer> span)
 	{
-		return getTopSpanVertex(span).filter(this::isAligned).map(this::getAlignment).map(this::getNER);
+		return getTopSpanVertex(span).flatMap(v -> getAlignment(v).map(this::getNER));
 	}
 
 	boolean isNominal(String vertex)
 	{
-		return getAlignment(vertex) != unaligned && getPOS(getAlignment(vertex)).startsWith("N");
+		return getAlignment(vertex).isPresent() && getPOS(getAlignment(vertex).get()).startsWith("N");
 	}
 
 	boolean isConjunction(String vertex)
 	{
-		return getAlignment(vertex) != unaligned && getPOS(getAlignment(vertex)).equals("CC");
+		return getAlignment(vertex).isPresent() && getPOS(getAlignment(vertex).get()).equals("CC");
 	}
 
 	public void renameVertex(String old_label, String new_label)
 	{
 		// Update all fields containing vertices
 		topo_order.replaceAll(v -> v.equals(old_label) ? new_label : v);
-		if (isAligned(old_label))
+		if (getAlignment(old_label).isPresent())
 		{
 			int a = alignments.remove(old_label);
 			alignments.put(new_label, a);

@@ -23,12 +23,14 @@ import java.util.stream.Collectors;
 public final class TFIDF implements WeightingFunction
 {
 	private final Corpus corpus;
+	private final boolean nominal_only;
 	private final Map<String, Double> tfidf = new HashMap<>();
 	private final static Logger log = LogManager.getLogger(TFIDF.class);
 
-	public TFIDF(Corpus inCorpus)
+	public TFIDF(Corpus inCorpus, boolean nominal_only)
 	{
 		corpus = inCorpus;
+		this.nominal_only = nominal_only;
 	}
 
 	@Override
@@ -38,7 +40,7 @@ public final class TFIDF implements WeightingFunction
 
 		// Collect frequencies for nominal meanings
 		Map<String, Long> freqs = graphs.getCandidates().stream()
-				.filter(c -> c.getMention().isNominal())
+				.filter(c -> !nominal_only || c.getMention().isNominal())
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
 				.collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
