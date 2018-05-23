@@ -21,13 +21,13 @@ public class MatrixFactory
 	 * Creates a row-stochastic matrix to rank a set of meanings
 	 */
 	static double[][] createMeaningRankingMatrix(List<String> meanings, WeightingFunction weighting,
-	                                             double min_weight, SimilarityFunction sim, double sim_threshold,
+	                                             SimilarityFunction sim, double sim_threshold,
 	                                             double d)
 	{
 		int n = meanings.size();
 
 		// Create *strictly positive* bias row vector for the set of meanings
-		double[] L = createMeaningsBiasVector(meanings, weighting, min_weight,true);
+		double[] L = createMeaningsBiasVector(meanings, weighting, true);
 
 		// Create *non-symmetric non-negative* similarity matrix
 		double[][] X = createMeaningsSimilarityMatrix(meanings, sim, sim_threshold, true);
@@ -95,13 +95,13 @@ public class MatrixFactory
 
 	// Creates normalized *strictly positive* bias row vector by applying the weighting function to a set of meanings
 	public static double[] createMeaningsBiasVector(List<String> meanings, WeightingFunction weighting,
-	                                                 double min_weight, boolean normalize)
+	                                                boolean normalize)
 	{
 		int num_entities = meanings.size();
 		double[] v = meanings.stream()
 				.mapToDouble(weighting::weight)
-				.map(w -> w = Math.max(min_weight, (1.0/num_entities)*w)) // Laplace smoothing to avoid non-positive values
 				.toArray();
+
 
 		if (normalize)
 		{

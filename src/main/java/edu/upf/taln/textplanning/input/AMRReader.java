@@ -44,7 +44,6 @@ public class AMRReader implements DocumentReader
         String[] graphs_text = amrBank.split("\n\n");
         for(int i=0; i < graphs_text.length; ++i)
         {
-        	log.info("Reading graph " + i);
 	        try
 	        {
 		        String[] lines = graphs_text[i].split("\n");

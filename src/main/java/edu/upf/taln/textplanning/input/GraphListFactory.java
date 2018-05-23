@@ -19,10 +19,10 @@ public class GraphListFactory
 	private final CandidatesCollector candidate_collector;
 	private final TypesCollector types_collector;
 
-	public GraphListFactory(DocumentReader reader, Path types_file) throws IOException
+	public GraphListFactory(DocumentReader reader, Path types_file, Path bn_config_folder) throws IOException
 	{
 		this.reader = reader;
-		BabelNetWrapper babelnet = new BabelNetWrapper();
+		BabelNetWrapper babelnet = new BabelNetWrapper(bn_config_folder);
 		this.candidate_collector = new CandidatesCollector(babelnet);
 		this.types_collector = (types_file != null) ? new TypesCollector(types_file, babelnet) : null;
 	}

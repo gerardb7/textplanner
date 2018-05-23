@@ -24,7 +24,7 @@ public class Salience implements Function
 	private final double[] relevanceValues; // per entity, not candidate
 
 
-	Salience(List<Candidate> candidates, WeightingFunction weighting, double min_weight)
+	Salience(List<Candidate> candidates, WeightingFunction weighting)
 	{
 		this.candidates = candidates;
 
@@ -39,7 +39,7 @@ public class Salience implements Function
 		// Don't normalize vector, normalization is part of the optimizable softmax function
 		// Store relevance values for each pair
 
-		relevanceValues = MatrixFactory.createMeaningsBiasVector(meanings, weighting, min_weight, false);
+		relevanceValues = MatrixFactory.createMeaningsBiasVector(meanings, weighting, false);
 	}
 
 	@Override

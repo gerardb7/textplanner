@@ -38,7 +38,6 @@ public class GraphRanking
 {
 	private final WeightingFunction weighting;
 	private final SimilarityFunction similarity;
-	private final double min_meaning_weight;
 	private final double meaning_similarity_threshold;
 	private final double damping_factor_meanings;
 	private final double minimum_meaning_ranking;
@@ -46,13 +45,12 @@ public class GraphRanking
 	private final PowerIterationRanking alg;
 	private final static Logger log = LogManager.getLogger(TextPlanner.class);
 
-	public GraphRanking(WeightingFunction weighting, SimilarityFunction similarity, double min_meaning_weight,
+	public GraphRanking(WeightingFunction weighting, SimilarityFunction similarity,
 	                    double meaning_similarity_threshold, double damping_factor_meanings,
 	                    double minimum_meaning_ranking, double damping_factor_variables)
 	{
 		this.weighting = weighting;
 		this.similarity = similarity;
-		this.min_meaning_weight = min_meaning_weight;
 		this.meaning_similarity_threshold = meaning_similarity_threshold;
 		this.damping_factor_meanings = damping_factor_meanings;
 		this.minimum_meaning_ranking = minimum_meaning_ranking;
@@ -69,7 +67,7 @@ public class GraphRanking
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
 				.collect(toList());
-		double[][] rankingArrays = MatrixFactory.createMeaningRankingMatrix(meanings, weighting, min_meaning_weight, similarity,
+		double[][] rankingArrays = MatrixFactory.createMeaningRankingMatrix(meanings, weighting, similarity,
 				meaning_similarity_threshold, damping_factor_meanings);
 		Matrix rankingMatrix = new Matrix(rankingArrays);
 

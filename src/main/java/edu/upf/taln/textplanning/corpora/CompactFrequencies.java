@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.corpora;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Stopwatch;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TObjectIntMap;
@@ -316,6 +317,8 @@ public class CompactFrequencies implements Corpus, Serializable
 	// Deserializes byte arrays and wraps them with ByteBuffer objects.
 	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException
 	{
+		log.info("Loading frequencies from serialized binary file");
+		Stopwatch timer = Stopwatch.createStarted();
 		//read default properties
 		in.defaultReadObject();
 
@@ -331,5 +334,6 @@ public class CompactFrequencies implements Corpus, Serializable
 		//noinspection ResultOfMethodCallIgnored
 		in.readFully(buffer, 0, bufferSize);
 		form_counts = ByteBuffer.wrap(buffer, 0, bufferSize);
+		log.info("Loading took " + timer.stop());
 	}
 }

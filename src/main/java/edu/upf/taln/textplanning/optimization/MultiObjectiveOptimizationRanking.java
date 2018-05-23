@@ -19,18 +19,16 @@ public class MultiObjectiveOptimizationRanking
 {
 	private final WeightingFunction weighting;
 	private final SimilarityFunction similarity;
-	private final double min_meaning_weight;
 	private final double meaning_similarity_threshold;
 	private final Corpus corpus;
 	private final static Logger log = LogManager.getLogger(MultiObjectiveOptimizationRanking.class);
 
 	public MultiObjectiveOptimizationRanking(WeightingFunction weighting, SimilarityFunction similarity, Corpus corpus,
-	                                         double min_meaning_weight, double meaning_similarity_threshold)
+	                                         double meaning_similarity_threshold)
 	{
 		this.weighting = weighting;
 		this.similarity = similarity;
 		this.corpus = corpus;
-		this.min_meaning_weight = min_meaning_weight;
 		this.meaning_similarity_threshold = meaning_similarity_threshold;
 	}
 
@@ -40,7 +38,7 @@ public class MultiObjectiveOptimizationRanking
 		log.info("Setting up objectives");
 		Coherence coherence = new Coherence(candidates, similarity, meaning_similarity_threshold);
 		SimpleType type = new SimpleType(candidates);
-		Salience salience = new Salience(candidates, weighting, min_meaning_weight);
+		Salience salience = new Salience(candidates, weighting);
 		MultiObjectiveFunction multi = new MultiObjectiveFunction(coherence, type, salience);
 		CandidateOptimizable optimizable = new CandidateOptimizable(multi, candidates, corpus);
 

@@ -22,11 +22,11 @@ public class BinaryVectorsSimilarity implements SimilarityFunction
 	private final static Logger log = LogManager.getLogger(TextVectorsSimilarity.class);
 	private final static double avg_sim = 0.0;
 
-	public BinaryVectorsSimilarity(Path vectors_file) throws IOException
+	public BinaryVectorsSimilarity(Path vectors_path) throws IOException
 	{
-		log.info("Loading vectors from binary file");
+		log.info("Loading vectors from binary files " + vectors_path.getFileName().toString());
 		Stopwatch timer = Stopwatch.createStarted();
-		db = new GloveBinaryRandomAccessReader(vectors_file);
+		db = new GloveBinaryRandomAccessReader(vectors_path);
 		log.info("Loading took " + timer.stop());
 	}
 

@@ -2,24 +2,20 @@ package edu.upf.taln.textplanning;
 
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.discourse.DiscoursePlanner;
-import edu.upf.taln.textplanning.input.DocumentReader;
 import edu.upf.taln.textplanning.input.GlobalGraphFactory;
 import edu.upf.taln.textplanning.pattern.SubgraphExtraction;
 import edu.upf.taln.textplanning.ranking.GraphRanking;
 import edu.upf.taln.textplanning.redundancy.RedundancyRemover;
-import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.similarity.SemanticTreeSimilarity;
+import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
-import edu.upf.taln.textplanning.structures.amr.GraphList;
-import edu.upf.taln.textplanning.input.GraphListFactory;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
+import edu.upf.taln.textplanning.structures.amr.GraphList;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
-import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
 import java.math.RoundingMode;
-import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.util.Collection;
 import java.util.List;
@@ -32,7 +28,6 @@ import java.util.List;
  */
 public final class TextPlanner
 {
-	private final GraphListFactory graphs_factory;
 	private final WeightingFunction weighting;
 	private final SimilarityFunction similarity;
 	private final static Logger log = LogManager.getLogger(TextPlanner.class);
@@ -40,7 +35,6 @@ public final class TextPlanner
 	public static class Options
 	{
 		int numSubgraphs = 1000; // Number of subgraphs to extract
-		double min_weight = 0.0001; // pseudocount α for additive smoothing of meaning weight values
 		double sim_threshold = 0.1; // Pairs of meanings with sim below this value have their score set to 0
 		double damping_meanings = 0.2; // controls bias towards weighting function when ranking meanings
 		double min_meaning_rank = 0.1; // pseudocount α for additive smoothing of meaning rank values @todo this may be unnecessary
@@ -58,7 +52,6 @@ public final class TextPlanner
 			//f.setMaximumFractionDigits(10);
 			f.setMinimumFractionDigits(3);
 			return "numSubgraphs=" + numSubgraphs +
-					" min_weight=" + f.format(min_weight) +
 					" sim_threshold=" + f.format(sim_threshold) +
 					" damping_meanings=" + f.format(damping_meanings) +
 					" min_rank=" + f.format(min_meaning_rank) +
@@ -73,12 +66,10 @@ public final class TextPlanner
 	 * @param w functions used to weight contents
 	 * @param s similarity function for entities
 	 */
-	TextPlanner(DocumentReader d, Path types_file, WeightingFunction w, SimilarityFunction s) throws IOException
+	TextPlanner(WeightingFunction w, SimilarityFunction s)
 	{
-		graphs_factory = new GraphListFactory(d, types_file);
 		weighting = w;
 		similarity = s;
-		log.info("Set up completed");
 	}
 
 	/**
@@ -93,7 +84,7 @@ public final class TextPlanner
 
 			// 1- Create global graph (involves disambiguation of meanings via ranking)
 			// GraphList graphs = graphs_factory.getGraphs(contents);
-			GraphRanking ranker = new GraphRanking(weighting, similarity, o.min_weight, o.sim_threshold, o.damping_meanings,
+			GraphRanking ranker = new GraphRanking(weighting, similarity, o.sim_threshold, o.damping_meanings,
 					o.min_meaning_rank, o.damping_variables);
 			GlobalSemanticGraph graph = GlobalGraphFactory.create(graphs, ranker);
 			log.info("Graph representation created in " + timer.stop());

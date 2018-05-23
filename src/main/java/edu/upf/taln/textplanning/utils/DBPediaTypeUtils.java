@@ -36,10 +36,10 @@ public class DBPediaTypeUtils
 {
 	private final static Logger log = LogManager.getLogger(DBPediaTypeUtils.class);
 
-	private static void getTypes(Path amrPath, String extension, Path o) throws IOException
+	private static void getTypes(Path amrPath, String extension, Path o, Path babel_config) throws IOException
 	{
 		log.info("Reading structures");
-		GraphListFactory factory = new GraphListFactory(new AMRReader(), null);
+		GraphListFactory factory = new GraphListFactory(new AMRReader(), null, babel_config);
 		List<GraphList> graphs = Files.walk(amrPath.toAbsolutePath())
 				.filter(Files::isRegularFile)
 				.filter(p -> p.toString().endsWith(extension))
@@ -126,6 +126,9 @@ public class DBPediaTypeUtils
 		@Parameter(names = {"-o", "-outputFile"}, description = "Output types file", arity = 1, required = true, converter = CMLCheckers.PathConverter.class,
 				validateWith = CMLCheckers.PathToNewFile.class)
 		private Path outputFile;
+		@Parameter(names = {"-b", "-babelconfig"}, description = "BabelNet configuration folder", arity = 1, required = true, converter = CMLCheckers.PathConverter.class,
+				validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path bnFolder;
 	}
 
 	public static void main(String[] args) throws IOException
@@ -133,6 +136,6 @@ public class DBPediaTypeUtils
 		CMLArgs cmlArgs = new CMLArgs();
 		new JCommander(cmlArgs, args);
 
-		getTypes(cmlArgs.structures.get(0), cmlArgs.extension.get(0), cmlArgs.outputFile);
+		getTypes(cmlArgs.structures.get(0), cmlArgs.extension.get(0), cmlArgs.outputFile, cmlArgs.bnFolder);
 	}
 }

@@ -53,10 +53,19 @@ class CandidatesCollector
 				// Label formed with the surface form and head POS of mention's head
 				.collect(Collectors.groupingBy(m -> Triple.of(m.getSurface_form(), m.getLemma(), m.getPOS())));
 
+		long num_mentions = anchors2Mentions.values().stream()
+				.mapToLong(List::size)
+				.sum();
+		long num_nominal_mentions = anchors2Mentions.values().stream()
+				.flatMap(List::stream)
+				.filter(Mention::isNominal)
+				.count();
+		log.info("Collected " + num_nominal_mentions + " nominal mentions out of " + num_mentions + " mentions, with " + anchors2Mentions.keySet().size() + " different anchors");
+
 		// Create a map of anchors and associated candidate synsets
 		AtomicInteger counter = new AtomicInteger(0);
 
-		Map<Triple<String, String, String>, Set<BabelSynset>> labels2Synsets = anchors2Mentions.keySet().stream()
+		Map<Triple<String, String, String>, Set<BabelSynset>> anchorsSynsets = anchors2Mentions.keySet().stream()
 				.peek(l -> {
 					if (counter.incrementAndGet() % 1000 == 0)
 						log.info("Queried synsets for " + counter.get() + " labels out of " + anchors2Mentions.keySet().size());
@@ -64,8 +73,8 @@ class CandidatesCollector
 				.collect(toMap(a -> a, this::getSynsets));
 
 		// Create new mapping from anchors to Meaning objects
-		Map<Triple<String, String, String>, Set<Meaning>> labels2Meanings = labels2Synsets.keySet().stream()
-				.collect(toMap(l -> l, l -> labels2Synsets.get(l).stream()
+		Map<Triple<String, String, String>, Set<Meaning>> anchors2Meanings = anchorsSynsets.keySet().stream()
+				.collect(toMap(l -> l, l -> anchorsSynsets.get(l).stream()
 						.map(this::createMeaning)
 						.collect(toSet())));
 
@@ -82,12 +91,13 @@ class CandidatesCollector
 				.collect(toMap(m -> m, getVertex));
 
 		// Create candidates
-		List<Candidate> candidates = labels2Meanings.keySet().stream()
-				.flatMap(l -> labels2Meanings.get(l).stream() // given a label l
+		List<Candidate> candidates = anchors2Meanings.keySet().stream()
+				.flatMap(l -> anchors2Meanings.get(l).stream() // given a label l
 						.flatMap(meaning -> anchors2Mentions.get(l).stream() // for each mention with label l
 								.map(mention -> new Candidate(mentions2vertices.get(mention), meaning, mention))))
 				.collect(toList());
 
+		log.info("Created " + candidates.size() + " candidates using " + BabelNetWrapper.num_queries.get() + " queries");
 		log.info("Candidate meanings collected in " + timer.stop());
 		return candidates;
 	}

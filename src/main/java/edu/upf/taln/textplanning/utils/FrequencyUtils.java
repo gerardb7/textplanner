@@ -43,7 +43,6 @@ public class FrequencyUtils
 {
 	private final static Logger log = LogManager.getLogger(FrequencyUtils.class);
 
-
 	private static void getFrequenciesFromSEW(Path sew_folder, Path freqs_file)
 	{
 		Stopwatch timer = Stopwatch.createStarted();
@@ -229,55 +228,10 @@ public class FrequencyUtils
 		log.info("Json written to file" + outputFile);
 	}
 
-	private static void compactJSONFreqs(Path json_file, Path binary_file) throws IOException
-	{
-		Stopwatch timer = Stopwatch.createStarted();
-
-		String json = FileUtils.readFileToString(json_file.toFile(), StandardCharsets.UTF_8);
-		JSONObject obj = new JSONObject(json);
-		//int numDocs = (int) obj.getLong("docs");
-
-		Map<String, Pair<Integer, Integer>> sense_counts = new HashMap<>();
-		JSONObject meaning_counts = obj.getJSONObject("meanings");
-		for (String id : meaning_counts.keySet())
-		{
-			int count = (int) meaning_counts.getLong(id);
-			sense_counts.put(id, Pair.of(0, count));
-		}
-
-		JSONObject form_counts = obj.getJSONObject("mentions");
-
-		Map<String, Map<String, Integer>> form_sense_counts = new HashMap<>();
-		for (String form : form_counts.keySet())
-		{
-			JSONArray arr = form_counts.getJSONArray(form);
-			Map<String, Integer> counts = new HashMap<>();
-
-			for (int i = 0; i < arr.length(); ++i)
-			{
-				JSONArray form_count = arr.getJSONArray(i);
-				String key = form_count.getString(0);
-				int value = (int) form_count.getLong(1);
-				counts.put(key, value);
-				Pair<Integer, Integer> ci = sense_counts.get(key);
-				sense_counts.put(key, Pair.of(ci.getLeft() + 1, ci.getRight()));
-			}
-			form_sense_counts.put(form, counts);
-		}
-
-		log.info(   "Loaded " + sense_counts.size() + " meanings and " + form_sense_counts.size() +
-				" forms from frequencies file in " + timer.stop());
-
-		//CompactFrequencies freqs = new CompactFrequencies(numDocs, sense_counts, form_sense_counts);
-		//Serializer.serialize(freqs, binary_file);
-
-		log.info("Done");
-	}
-
-	private static void getStats(Path amr_bank, Path freqs_file, Path vectors_file) throws IOException, ClassNotFoundException
+	private static void getStats(Path amr_bank, Path freqs_file, Path babel_config) throws IOException, ClassNotFoundException
 	{
 		AMRReader reader = new AMRReader();
-		GraphListFactory factory = new GraphListFactory(reader, null);
+		GraphListFactory factory = new GraphListFactory(reader, null, babel_config);
 		String contents = FileUtils.readFileToString(amr_bank.toFile(), Charsets.UTF_8);
 		GraphList graphs = factory.getGraphs(contents);
 
@@ -387,27 +341,14 @@ public class FrequencyUtils
 		private Path outputFile;
 	}
 
-	@Parameters(commandDescription = "Convert a JSON frequencies file to a compact binary file")
-	private static class ConvertCommand
-	{
-		@Parameter(names = {"-i", "-inputFile"}, description = "Input JSON file", arity = 1, required = true, converter = PathConverter.class,
-				validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path inputFile;
-		@Parameter(names = {"-o", "-outputFile"}, description = "Output binary file", arity = 1, required = true, converter = PathConverter.class,
-				validateWith = CMLCheckers.ValidPathToFile.class)
-		private Path outputFile;
-	}
-
 	public static void main(String[] args) throws IOException, ClassNotFoundException
 	{
 		GetFrequenciesCommand freqs = new GetFrequenciesCommand();
 		SubsetCommand subset = new SubsetCommand();
-		ConvertCommand convert = new ConvertCommand();
 
 		JCommander jc = new JCommander();
 		jc.addCommand("freqs", freqs);
 		jc.addCommand("subset", subset);
-        jc.addCommand("convert", convert);
 		jc.parse(args);
 
 		switch (jc.getParsedCommand())
@@ -417,9 +358,6 @@ public class FrequencyUtils
 				break;
 			case "subset":
 				FrequencyUtils.getFrequenciesSubset(subset.graphs, subset.inputFile, subset.outputFile);
-				break;
-			case "convert":
-				FrequencyUtils.compactJSONFreqs(convert.inputFile, convert.outputFile);
 				break;
 		}
 	}

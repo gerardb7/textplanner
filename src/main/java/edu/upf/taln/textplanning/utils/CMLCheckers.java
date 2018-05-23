@@ -70,4 +70,17 @@ public class CMLCheckers
 			}
 		}
 	}
+
+	public static class PathToExistingFileOrFolder implements IParameterValidator
+	{
+		@Override
+		public void validate(String name, String value) throws ParameterException
+		{
+			Path path = Paths.get(value);
+			if (!Files.exists(path) || (!Files.isRegularFile(path) && !Files.isDirectory(path)))
+			{
+				throw new ParameterException("Invalid path " + name + " = " + value);
+			}
+		}
+	}
 }
