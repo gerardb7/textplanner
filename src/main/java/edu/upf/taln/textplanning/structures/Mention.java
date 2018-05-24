@@ -1,6 +1,6 @@
 package edu.upf.taln.textplanning.structures;
 
-import edu.upf.taln.textplanning.structures.amr.Candidate.Type;
+import edu.upf.taln.textplanning.input.amr.Candidate.Type;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.Serializable;

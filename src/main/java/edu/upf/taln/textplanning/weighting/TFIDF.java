@@ -1,8 +1,8 @@
 package edu.upf.taln.textplanning.weighting;
 
 import edu.upf.taln.textplanning.corpora.Corpus;
-import edu.upf.taln.textplanning.structures.amr.Candidate;
-import edu.upf.taln.textplanning.structures.amr.GraphList;
+import edu.upf.taln.textplanning.input.amr.Candidate;
+import edu.upf.taln.textplanning.input.amr.GraphList;
 import edu.upf.taln.textplanning.structures.Meaning;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;

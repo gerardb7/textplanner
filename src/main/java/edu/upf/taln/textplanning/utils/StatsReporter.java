@@ -3,9 +3,9 @@ package edu.upf.taln.textplanning.utils;
 import edu.upf.taln.textplanning.input.GraphListFactory;
 import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.structures.Mention;
-import edu.upf.taln.textplanning.structures.amr.Candidate;
-import edu.upf.taln.textplanning.structures.amr.GraphList;
-import edu.upf.taln.textplanning.structures.amr.SemanticGraph;
+import edu.upf.taln.textplanning.input.amr.Candidate;
+import edu.upf.taln.textplanning.input.amr.GraphList;
+import edu.upf.taln.textplanning.input.amr.SemanticGraph;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

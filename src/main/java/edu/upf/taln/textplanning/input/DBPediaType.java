@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning.input;
 
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.structures.amr.Candidate;
+import edu.upf.taln.textplanning.input.amr.Candidate;
 import org.eclipse.rdf4j.query.BooleanQuery;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.sparql.SPARQLRepository;

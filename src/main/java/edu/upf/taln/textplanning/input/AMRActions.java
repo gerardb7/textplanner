@@ -4,7 +4,7 @@ import edu.upf.taln.textplanning.input.amr.Actions;
 import edu.upf.taln.textplanning.input.amr.Label;
 import edu.upf.taln.textplanning.input.amr.TreeNode;
 import edu.upf.taln.textplanning.structures.Role;
-import edu.upf.taln.textplanning.structures.amr.SemanticGraph;
+import edu.upf.taln.textplanning.input.amr.SemanticGraph;
 
 import java.util.*;
 import java.util.regex.Matcher;

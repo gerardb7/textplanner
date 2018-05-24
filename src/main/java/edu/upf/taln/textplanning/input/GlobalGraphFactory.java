@@ -3,9 +3,9 @@ package edu.upf.taln.textplanning.input;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.ranking.GraphRanking;
-import edu.upf.taln.textplanning.structures.amr.Candidate;
+import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
-import edu.upf.taln.textplanning.structures.amr.GraphList;
+import edu.upf.taln.textplanning.input.amr.GraphList;
 import edu.upf.taln.textplanning.structures.Meaning;
 import org.apache.commons.lang3.tuple.Pair;
 

@@ -3,7 +3,7 @@ package edu.upf.taln.textplanning.optimization;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.ranking.MatrixFactory;
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
-import edu.upf.taln.textplanning.structures.amr.Candidate;
+import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.structures.Meaning;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;

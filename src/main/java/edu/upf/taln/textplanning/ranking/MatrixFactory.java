@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning.ranking;
 
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
-import edu.upf.taln.textplanning.structures.amr.Candidate;
+import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
@@ -133,11 +133,11 @@ public class MatrixFactory
 	                                                        double sim_threshold, boolean normalize)
 	{
 		int n = meaning.size();
-
-		// Create symmetric non-negative similarity matrix from sim function
-//		AtomicLong counter = new AtomicLong(0);
-//		long num_calculations1 = ((((long)n * (long)n) - n)  / 2) + n;
 		double[][] m = new double[n][n];
+
+		AtomicLong counter = new AtomicLong(0);
+		long num_calculations1 = ((((long)n * (long)n) - n)  / 2) + n;
+
 		IntStream.range(0, n).forEach(i ->
 				IntStream.range(i, n).forEach(j -> {
 					double simij = 1.0;
@@ -153,8 +153,8 @@ public class MatrixFactory
 					m[i][j] = simij;
 					m[j][i] = simij; // symmetric matrix
 
-//					if (counter.incrementAndGet() % 10000000 == 0)
-//						log.info(counter.create() + " out of " + num_calculations1);
+					if (counter.incrementAndGet() % 100000 == 0)
+						log.info(counter.get() + " out of " + num_calculations1);
 				}));
 
 		if (normalize)

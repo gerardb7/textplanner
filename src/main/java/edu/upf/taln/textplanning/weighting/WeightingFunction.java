@@ -1,6 +1,6 @@
 package edu.upf.taln.textplanning.weighting;
 
-import edu.upf.taln.textplanning.structures.amr.GraphList;
+import edu.upf.taln.textplanning.input.amr.GraphList;
 
 /**
  * Interface for weighting functions

@@ -43,7 +43,7 @@ public class BinaryVectorsSimilarity implements SimilarityFunction
 		{
 			return OptionalDouble.of(cos.measureDistance(db.get(e1), db.get(e2)));
 		}
-		catch (IOException e)
+		catch (Exception e)
 		{
 			return OptionalDouble.empty();
 		}
