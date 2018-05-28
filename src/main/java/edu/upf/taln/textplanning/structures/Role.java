@@ -18,6 +18,8 @@ public class Role extends DefaultEdge
 		this.id = counter.getAndIncrement();
 	}
 
+	public String getLabel() { return this.label; }
+
 	@Override public String toString() { return label; }
 
 	@Override

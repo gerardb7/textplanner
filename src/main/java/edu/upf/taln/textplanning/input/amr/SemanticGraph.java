@@ -40,8 +40,8 @@ public class SemanticGraph extends DirectedAcyclicGraph<String, Role> implements
 		if (this.containsVertex(old_label))
 		{
 			addVertex(new_label);
-			incomingEdgesOf(old_label).forEach(e -> addEdge(getEdgeSource(e), new_label, e));
-			outgoingEdgesOf(old_label).forEach(e -> addEdge(new_label, getEdgeTarget(e), e));
+			incomingEdgesOf(old_label).forEach(e ->	addNewEdge(getEdgeSource(e), new_label, e.getLabel()));
+			outgoingEdgesOf(old_label).forEach(e ->	addNewEdge(new_label, getEdgeTarget(e), e.getLabel()));
 			removeVertex(old_label);
 			alignments.renameVertex(old_label, new_label);
 		}
@@ -52,13 +52,21 @@ public class SemanticGraph extends DirectedAcyclicGraph<String, Role> implements
 		C.stream()
 				.map(this::incomingEdgesOf)
 				.flatMap(Collection::stream)
-				.forEach(e -> this.addEdge(this.getEdgeSource(e), v, e));
+				.filter(e -> !v.equals(getEdgeSource(e)) && !C.contains(getEdgeSource(e)))
+				.forEach(e -> addNewEdge(getEdgeSource(e), v, e.getLabel()));
 		C.stream()
 				.map(this::outgoingEdgesOf)
 				.flatMap(Collection::stream)
-				.forEach(e -> this.addEdge(v, this.getEdgeTarget(e), e));
+				.filter(e -> !v.equals(getEdgeTarget(e)) && !C.contains(getEdgeTarget(e)))
+				.forEach(e -> addNewEdge(v, getEdgeTarget(e), e.getLabel()));
 
 		removeAllVertices(C);
 		C.forEach(c -> alignments.removeVertex(c));
+	}
+
+	private void addNewEdge(String source, String target, String role)
+	{
+		Role new_edge = Role.create(role);
+		addEdge(source, target, new_edge);
 	}
 }

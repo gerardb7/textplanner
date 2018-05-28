@@ -5,10 +5,7 @@ import com.google.common.collect.Multimap;
 import org.jgrapht.graph.SimpleDirectedGraph;
 
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.BinaryOperator;
 
@@ -28,7 +25,7 @@ public class GlobalSemanticGraph extends SimpleDirectedGraph<String, Role> imple
 	/*  Build a graph G=(V,E) where V=set of instances, and E is determined by an adjacency_function and a
 		labelling_function.
 		Each instance is associated with:
-	        - The meaning it isntantiates
+	        - The meaning it instantiates
 	        - One or more mentions (text annotations)
 	        - A weight indicating the importance or relevance of each instance
 	 */
@@ -58,11 +55,13 @@ public class GlobalSemanticGraph extends SimpleDirectedGraph<String, Role> imple
 		C.stream()
 				.map(this::incomingEdgesOf)
 				.flatMap(Collection::stream)
-				.forEach(e -> this.addEdge(this.getEdgeSource(e), v, e));
+				.filter(e -> !v.equals(getEdgeSource(e)) && !C.contains(getEdgeSource(e)))
+				.forEach(e -> addNewEdge(this.getEdgeSource(e), v, e.getLabel()));
 		C.stream()
 				.map(this::outgoingEdgesOf)
 				.flatMap(Collection::stream)
-				.forEach(e -> this.addEdge(v, this.getEdgeTarget(e), e));
+				.filter(e -> !v.equals(getEdgeTarget(e)) && !C.contains(getEdgeTarget(e)))
+				.forEach(e -> addNewEdge(v, this.getEdgeTarget(e), e.getLabel()));
 
 		// Remove meanings of C (v's meaning is kept)
 		C.forEach(meanings::remove);
@@ -78,7 +77,13 @@ public class GlobalSemanticGraph extends SimpleDirectedGraph<String, Role> imple
 		removeAllVertices(C);
 	}
 
-	public Meaning getMeaning(String v) { return meanings.get(v); }
+	private void addNewEdge(String source, String target, String role)
+	{
+		Role new_edge = Role.create(role);
+		addEdge(source, target, new_edge);
+	}
+
+	public Optional<Meaning> getMeaning(String v) { return Optional.ofNullable(meanings.get(v)); }
 	public void setMeaning(String v, Meaning m) { meanings.put(v, m); }
 	public Collection<Mention> getMentions(String v) { return mentions.get(v); }
 	public void addMention(String v, Mention m) { mentions.put(v, m); }

@@ -1,14 +1,13 @@
 package edu.upf.taln.textplanning.pattern;
 
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.ranking.GraphRanking;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Role;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jgrapht.alg.util.NeighborCache;
 import org.jgrapht.graph.AsSubgraph;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -20,23 +19,17 @@ import static java.util.stream.Collectors.toMap;
  */
 public class SubgraphExtraction
 {
-	private final GraphRanking ranker;
 	private final double lambda;
 	private static final int max_num_extractions = 1000;
 	private final static Logger log = LogManager.getLogger(SubgraphExtraction.class);
 
-	public SubgraphExtraction(GraphRanking ranker, double lambda)
+	public SubgraphExtraction(double lambda)
 	{
-		this.ranker = ranker;
 		this.lambda = lambda;
 	}
 
 	public List<SemanticSubgraph> multipleExtraction(GlobalSemanticGraph g, int num_subgraphs)
 	{
-		// Rank variables in the graph
-		ranker.rankVariables(g);
-
-
 		Stopwatch timer = Stopwatch.createStarted();
 		List<SemanticSubgraph> subgraphs = new ArrayList<>();
 		NeighborCache<String, Role> neighbours = new NeighborCache<>(g);

@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.IntStream;
 
@@ -119,6 +120,7 @@ public class MatrixFactory
 		int num_variables = variables.size();
 		double[] v = variables.stream()
 				.map(graph::getMeaning)
+				.filter(Optional::isPresent).map(Optional::get)
 				.mapToDouble(Meaning::getWeight)
 				.map(w -> w = Math.max(min_rank, (1.0/num_variables)*w)) // Laplace smoothing to avoid non-positive values
 				.toArray();

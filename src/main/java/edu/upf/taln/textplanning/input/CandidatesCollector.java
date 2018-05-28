@@ -60,7 +60,8 @@ class CandidatesCollector
 				.flatMap(List::stream)
 				.filter(Mention::isNominal)
 				.count();
-		log.info("Collected " + num_nominal_mentions + " nominal mentions out of " + num_mentions + " mentions, with " + anchors2Mentions.keySet().size() + " different anchors");
+		log.info("Collected " + num_nominal_mentions + " nominal mentions out of " + num_mentions +
+					" mentions, with " + anchors2Mentions.keySet().size() + " different anchors");
 
 		// Create a map of anchors and associated candidate synsets
 		AtomicInteger counter = new AtomicInteger(0);

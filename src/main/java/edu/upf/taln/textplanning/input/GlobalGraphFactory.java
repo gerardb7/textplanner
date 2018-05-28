@@ -2,23 +2,25 @@ package edu.upf.taln.textplanning.input;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.ranking.GraphRanking;
 import edu.upf.taln.textplanning.input.amr.Candidate;
-import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.input.amr.GraphList;
+import edu.upf.taln.textplanning.input.amr.SemanticGraph;
+import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 
 import static java.util.Comparator.comparingDouble;
+import static java.util.stream.Collectors.toCollection;
+import static java.util.stream.Collectors.toList;
 
 // Creates global semantic graphs from a lists of AMR-like semantic graphs
 public class GlobalGraphFactory
 {
-	public static GlobalSemanticGraph create(GraphList graphs, GraphRanking ranker)
+	public static GlobalSemanticGraph create(GraphList graphs)
 	{
-		disambiguate_candidates(graphs, ranker);
+		disambiguate_candidates(graphs);
 		collapse_multiwords(graphs);
 		GlobalSemanticGraph merge = merge(graphs);
 		resolve_arguments();
@@ -26,12 +28,9 @@ public class GlobalGraphFactory
 		return merge;
 	}
 
-	private static void disambiguate_candidates(GraphList graphs, GraphRanking ranker)
+	private static void disambiguate_candidates(GraphList graphs)
 	{
-		// Rank meanings
-		ranker.rankMeanings(graphs);
-
-		// Use rankings to choose best candidate for each vertex
+		// Use vertex weights to choose best candidate for each vertex
 		graphs.getGraphs().forEach(g ->
 				g.vertexSet().forEach(v ->
 						graphs.getCandidates(v).stream()
@@ -41,30 +40,53 @@ public class GlobalGraphFactory
 
 	private static void collapse_multiwords(GraphList graphs)
 	{
-		graphs.getGraphs().forEach(g ->
-				g.vertexSet().stream()
+		LinkedList<Pair<SemanticGraph, String>> multiwords = graphs.getGraphs().stream()
+				.flatMap(g -> g.vertexSet().stream()
 						.filter(v -> !graphs.getCandidates(v).isEmpty())
-						.forEach(v ->
+						.filter(v ->
 						{
-							Candidate c = graphs.getCandidates().iterator().next(); // there should be just one...
-							if (c.getMention().isMultiWord())
-							{
-								// v_value = value of highest scored meaning of v
-								double v_value = c.getMeaning().getWeight();
+							Candidate c = graphs.getCandidates(v).iterator().next(); // there should be just one...
+							return c.getMention().isMultiWord();
+						})
+						.map(v -> Pair.of(g, v)))
+				.collect(toCollection(LinkedList::new));
 
-								// d_max = value of highest scored meaning of any descendant of v
-								Set<String> descendants = g.getDescendants(v);
-								double d_max = descendants.stream()
-										.map(graphs::getCandidates)
-										.flatMap(Collection::stream)
-										.map(Candidate::getMeaning)
-										.mapToDouble(Meaning::getWeight)
-										.max().orElse(0.0);
+		while(!multiwords.isEmpty())
+		{
+			// Pop a multiword from the queue
+			final Pair<SemanticGraph, String> multiword = multiwords.pop();
+			final SemanticGraph g = multiword.getLeft();
+			final String v = multiword.getRight();
 
-								if (v_value >= d_max)
-									graphs.vertexContraction(g, v, descendants); // this also updates meanings and coreference
-							}
-						}));
+			Candidate c = graphs.getCandidates().iterator().next();
+			// v_value = value of highest scored meaning of v
+			double v_value = c.getMeaning().getWeight();
+
+			// d_max -> value of highest scored descendant meaning
+			Set<String> descendants = g.getDescendants(v);
+			double d_max = descendants.stream()
+					.map(graphs::getCandidates)
+					.flatMap(Collection::stream)
+					.map(Candidate::getMeaning)
+					.mapToDouble(Meaning::getWeight)
+					.max().orElse(0.0);
+
+			if (v_value >= d_max)
+			{
+				// this also updates meanings and coreference
+				graphs.vertexContraction(g, v, descendants);
+
+				// Update remaining multiwords affected by this contraction
+				final List<Pair<SemanticGraph, String>> renamed_multiwords = multiwords.stream()
+						.filter(p -> descendants.contains(p.getRight()))
+						.collect(toList());
+				renamed_multiwords.forEach(p ->
+				{
+					multiwords.remove(p);
+					multiwords.add(Pair.of(p.getLeft(), v)); // multiword node has been replaced by v
+				});
+			}
+		}
 	}
 
 	private static GlobalSemanticGraph merge(GraphList graphs)
@@ -94,20 +116,17 @@ public class GlobalGraphFactory
 					Collection<String> C = c.getVertices();
 					// v node, whose meaning is kept, corresponds to that with the highest scored meaning
 					String v = C.stream()
-							.max(comparingDouble(n -> merged.getMeaning(n).getWeight())).orElse(null);
+							.max(comparingDouble(n -> merged.getMeaning(n).map(Meaning::getWeight).orElse(0.0))).orElse(null);
 					C.remove(v);
 					merged.vertexContraction(v, C);
 				});
 
 		// Merge all vertices referring to the same NE
 		Multimap<String, String> vertices_to_NEs = HashMultimap.create();
-		merged.vertexSet().stream()
-				.flatMap(v -> merged.vertexSet().stream()
-						.map(merged::getMeaning)
-						.filter(Meaning::isNE)
-						.map(Meaning::getReference)
-						.map(r -> Pair.of(r, v)))
-				.forEach(p -> vertices_to_NEs.put(p.getKey(), p.getValue()));
+		merged.vertexSet().forEach(v -> merged.getMeaning(v)
+				.filter(Meaning::isNE)
+				.map(Meaning::getReference)
+				.ifPresent(r -> vertices_to_NEs.put(r, v)));
 
 		vertices_to_NEs.keySet().stream()
 				.map(vertices_to_NEs::get)

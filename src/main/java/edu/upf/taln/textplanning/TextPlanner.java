@@ -28,8 +28,6 @@ import java.util.List;
  */
 public final class TextPlanner
 {
-	private final WeightingFunction weighting;
-	private final SimilarityFunction similarity;
 	private final static Logger log = LogManager.getLogger(TextPlanner.class);
 
 	public static class Options
@@ -41,7 +39,6 @@ public final class TextPlanner
 		double damping_variables = 0.2; // controls bias towards meanings rank when ranking variables
 		double patternLambda = 1.0; // Controls balance between weight of nodes and cost of edges during pattern extraction
 		double treeEditLambda = 0.1; // Controls impact of roles when calculating similarity between semantic trees
-		boolean generateStats = false;
 		String stats = "";
 
 		@Override
@@ -63,49 +60,35 @@ public final class TextPlanner
 	}
 
 	/**
-	 * @param w functions used to weight contents
-	 * @param s similarity function for entities
+	 * Generates a text plan from a global semantic graph
 	 */
-	TextPlanner(WeightingFunction w, SimilarityFunction s)
-	{
-		weighting = w;
-		similarity = s;
-	}
-
-	/**
-	 * Generates a text plan from a list of structures, e.g. relations in a KB or extracted from a text
-	 */
-	List<SemanticSubgraph> plan(GraphList graphs, int num_graphs, Options o)
+	static List<SemanticSubgraph> plan(GraphList graphs, SimilarityFunction similarity, WeightingFunction weighting,
+	                                   int num_graphs, Options o)
 	{
 		try
 		{
 			log.info("Planning started");
 			Stopwatch timer = Stopwatch.createStarted();
 
-			// 1- Create global graph (involves disambiguation of meanings via ranking)
-			// GraphList graphs = graphs_factory.getGraphs(contents);
-			GraphRanking ranker = new GraphRanking(weighting, similarity, o.sim_threshold, o.damping_meanings,
-					o.min_meaning_rank, o.damping_variables);
-			GlobalSemanticGraph graph = GlobalGraphFactory.create(graphs, ranker);
-			log.info("Graph representation created in " + timer.stop());
+			// 1- Rank meanings
+			rankMeanings(graphs, weighting, similarity, o);
 
-			// 2- Extract subgraphs from graph (involves ranking variables)
-			SubgraphExtraction extractor = new SubgraphExtraction(ranker, Math.min(num_graphs, o.patternLambda));
-			Collection<SemanticSubgraph> subgraphs = extractor.multipleExtraction(graph, o.numSubgraphs);
+			// 2- Create global graph
+			final GlobalSemanticGraph global_graph = createGlobalGraph(graphs);
 
-			// 3- Remove redundant subgraphs
-			SemanticTreeSimilarity tsim = new SemanticTreeSimilarity(similarity, o.treeEditLambda);
-			RedundancyRemover remover = new RedundancyRemover(tsim);
-			subgraphs = remover.filter(subgraphs, num_graphs);
+			// 3- Rank variables
+			rankVariables(global_graph, o);
 
-			// 4- Sort the trees into a discourse-optimized list
-			DiscoursePlanner discourse = new DiscoursePlanner(tsim);
-			List<SemanticSubgraph> text_plan = discourse.structurePatterns(subgraphs);
+			// 4- Extract subgraphs from graph
+			Collection<SemanticSubgraph> subgraphs = extractSubgraphs(global_graph, num_graphs, o);
+
+			// 5- Remove redundant subgraphs
+			subgraphs = removeRedundantSubgraphs(subgraphs, num_graphs, similarity, o);
+
+			// 6- Sort the trees into a discourse-optimized list
+			final List<SemanticSubgraph> text_plan = sortSubgraphs(subgraphs, similarity, o);
+
 			log.info("Planning took " + timer.stop());
-
-//			if (o.generateStats)
-				//o.stats = StatsReporter.reportStats(structures, weighting, sim, contentGraph, o);
-
 			return text_plan;
 		}
 		catch (Exception e)
@@ -113,5 +96,89 @@ public final class TextPlanner
 			log.error("Planning failed");
 			throw new RuntimeException(e);
 		}
+	}
+
+	/**
+	 * Ranks set of candidate meanings associated with a collection of semantic graphs, and stores the resulting ranks as
+	 * candidate weights.
+	 */
+	static void rankMeanings(GraphList graphs, WeightingFunction weighting, SimilarityFunction similarity,
+	                         Options o)
+	{
+		log.info("Ranking meanings");
+		Stopwatch timer = Stopwatch.createStarted();
+
+		GraphRanking.rankMeanings(graphs, weighting, similarity, o.sim_threshold, o.damping_meanings);
+		log.info("Ranking completed in " + timer.stop());
+	}
+
+	/**
+	 * 	Creates a global planning graph from a collection of semantic graphs
+ 	 */
+	static GlobalSemanticGraph createGlobalGraph(GraphList graphs)
+	{
+		log.info("Creating global semantic graph");
+		Stopwatch timer = Stopwatch.createStarted();
+		GlobalSemanticGraph graph = GlobalGraphFactory.create(graphs);
+		log.info("Global semantic graph created in " + timer.stop());
+
+		return graph;
+	}
+
+	/**
+	 * 	Ranks variables in a global planning graph
+	 */
+	static void rankVariables(GlobalSemanticGraph graph, Options o)
+	{
+		log.info("Ranking variables of a global semantic graph");
+		Stopwatch timer = Stopwatch.createStarted();
+		GraphRanking.rankVariables(graph, o.min_meaning_rank, o.damping_variables);
+		log.info("Ranking done in " + timer.stop());
+	}
+
+	/**
+	 * 	Extract subgraphs from a global planning graph
+	 */
+	static Collection<SemanticSubgraph> extractSubgraphs(GlobalSemanticGraph graph, int num_graphs, Options o)
+	{
+		log.info("Extracting subgraphs from a global semantic graph");
+		Stopwatch timer = Stopwatch.createStarted();
+		SubgraphExtraction extractor = new SubgraphExtraction(Math.min(num_graphs, o.patternLambda));
+		Collection<SemanticSubgraph> subgraphs = extractor.multipleExtraction(graph, o.numSubgraphs);
+		log.info("Extraction done in " + timer.stop());
+
+		return subgraphs;
+	}
+
+	/**
+	 * 	Remove redundant subgraphs
+	 */
+	static Collection<SemanticSubgraph> removeRedundantSubgraphs(Collection<SemanticSubgraph> subgraphs, int num_graphs,
+	                                                     SimilarityFunction similarity, Options o)
+	{
+		log.info("Removing redundant subgraphs");
+		Stopwatch timer = Stopwatch.createStarted();
+		SemanticTreeSimilarity tsim = new SemanticTreeSimilarity(similarity, o.treeEditLambda);
+		RedundancyRemover remover = new RedundancyRemover(tsim);
+		Collection<SemanticSubgraph> out_subgraphs = remover.filter(subgraphs, num_graphs);
+		log.info("Redundancy removal done in " + timer.stop());
+
+		return out_subgraphs;
+	}
+
+	/**
+	 * 	Sort subgraphs
+	 */
+	static List<SemanticSubgraph> sortSubgraphs(Collection<SemanticSubgraph> subgraphs, SimilarityFunction similarity,
+	                                            Options o)
+	{
+		log.info("Sorting subgraphs");
+		Stopwatch timer = Stopwatch.createStarted();
+		SemanticTreeSimilarity tsim = new SemanticTreeSimilarity(similarity, o.treeEditLambda);
+		DiscoursePlanner discourse = new DiscoursePlanner(tsim);
+		List<SemanticSubgraph> text_plan = discourse.structurePatterns(subgraphs);
+		log.info("Sorting done in " + timer.stop());
+
+		return text_plan;
 	}
 }

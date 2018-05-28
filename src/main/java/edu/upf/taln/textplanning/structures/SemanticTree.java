@@ -91,14 +91,14 @@ public class SemanticTree extends SimpleDirectedGraph<String, Role>
 			return incomingEdgesOf(v).iterator().next().toString();
 	}
 
-	public Meaning getMeaning(String v)
+	public Optional<Meaning> getMeaning(String v)
 	{
 		if (containsVertex(v))
 			return subgraph.getBase().getMeaning(v);
 		else if (correspondences.containsKey(v))
 			return subgraph.getBase().getMeaning(correspondences.get(v));
 		else
-			return null;
+			return Optional.empty();
 	}
 
 	private void edgeShift(String x, String y, Role e)

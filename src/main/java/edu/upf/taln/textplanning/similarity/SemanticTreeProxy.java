@@ -2,12 +2,10 @@ package edu.upf.taln.textplanning.similarity;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.structures.SemanticTree;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -38,9 +36,9 @@ public final class SemanticTreeProxy implements unnonouno.treedist.Tree
 		index = mapBuilder.putAll(mutableIndex).build();
 	}
 
-	public String getMeaning(int i)
+	public Optional<String> getMeaning(int i)
 	{
-		return tree.getMeaning(nodes.get(i)).getReference();
+		return tree.getMeaning(nodes.get(i)).map(Meaning::getReference);
 	}
 
 	String getParentRole(int i)

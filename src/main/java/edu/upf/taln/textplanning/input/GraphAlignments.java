@@ -10,6 +10,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static java.util.stream.Collectors.toList;
+
 // Maps vertices in semantic graphs to tokens and their linguistic annotations
 public class GraphAlignments implements Serializable
 {
@@ -172,8 +174,12 @@ public class GraphAlignments implements Serializable
 		// Update all fields containing vertices
 		topo_order.remove(v);
 		alignments.remove(v);
-		spans2nodes.keySet().stream()
-				.map(spans2nodes::get)
-				.forEach(l -> l.remove(v));
+		List<Pair<Integer, Integer>> spans = spans2nodes.keySet().stream()
+				.filter(span -> spans2nodes.containsEntry(span, v))
+				.collect(toList());
+		for (Pair<Integer, Integer> span : spans)
+		{
+			spans2nodes.remove(span, v);
+		}
 	}
 }

@@ -36,32 +36,14 @@ import static java.util.stream.Collectors.toList;
  */
 public class GraphRanking
 {
-	private final WeightingFunction weighting;
-	private final SimilarityFunction similarity;
-	private final double meaning_similarity_threshold;
-	private final double damping_factor_meanings;
-	private final double minimum_meaning_ranking;
-	private final double damping_factor_variables;
-	private final PowerIterationRanking alg;
 	private final static Logger log = LogManager.getLogger(TextPlanner.class);
 
-	public GraphRanking(WeightingFunction weighting, SimilarityFunction similarity,
-	                    double meaning_similarity_threshold, double damping_factor_meanings,
-	                    double minimum_meaning_ranking, double damping_factor_variables)
-	{
-		this.weighting = weighting;
-		this.similarity = similarity;
-		this.meaning_similarity_threshold = meaning_similarity_threshold;
-		this.damping_factor_meanings = damping_factor_meanings;
-		this.minimum_meaning_ranking = minimum_meaning_ranking;
-		this.damping_factor_variables = damping_factor_variables;
-		this.alg = new JamaPowerIteration();
-	}
 
-	public void rankMeanings(GraphList graphs)
+	public static void rankMeanings(GraphList graphs, WeightingFunction weighting, SimilarityFunction similarity,
+	                         double meaning_similarity_threshold, double damping_factor_meanings)
 	{
 		Stopwatch timer = Stopwatch.createStarted();
-		this.weighting.setContents(graphs);
+		weighting.setContents(graphs);
 
 		List<String> meanings = graphs.getCandidates().stream()
 				.map(Candidate::getMeaning)
@@ -71,6 +53,7 @@ public class GraphRanking
 				meaning_similarity_threshold, damping_factor_meanings);
 		Matrix rankingMatrix = new Matrix(rankingArrays);
 
+		JamaPowerIteration alg = new JamaPowerIteration();
 		Matrix finalDistribution = alg.run(rankingMatrix);
 		double[] ranking = finalDistribution.getColumnPackedCopy();
 
@@ -87,7 +70,8 @@ public class GraphRanking
 		log.info("Meanings ranked in " + timer.stop());
 	}
 
-	public void rankVariables(GlobalSemanticGraph graph)
+	public static void rankVariables(   GlobalSemanticGraph graph, double minimum_meaning_ranking,
+	                                    double damping_factor_variables)
 	{
 		Stopwatch timer = Stopwatch.createStarted();
 		List<String> variables = graph.vertexSet().stream()
@@ -98,6 +82,7 @@ public class GraphRanking
 		Matrix rankingMatrix = new Matrix(rankingArrays);
 
 		timer.reset(); timer.start();
+		JamaPowerIteration alg = new JamaPowerIteration();
 		Matrix finalDistribution = alg.run(rankingMatrix);
 		double[] ranking = finalDistribution.getColumnPackedCopy();
 
@@ -106,6 +91,4 @@ public class GraphRanking
 
 		log.info("Variables ranked in " + timer.stop());
 	}
-
-
 }

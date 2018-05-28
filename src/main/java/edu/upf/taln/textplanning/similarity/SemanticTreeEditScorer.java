@@ -2,6 +2,8 @@ package edu.upf.taln.textplanning.similarity;
 
 import unnonouno.treedist.EditScore;
 
+import java.util.Optional;
+
 
 /**
  * Implementation of EditScore interface for tree edit library.
@@ -26,12 +28,16 @@ public final class SemanticTreeEditScorer implements EditScore
 	@Override
 	public double replace(int i1, int i2)
 	{
-		String m1 = tree1.getMeaning(i1);
-		String m2 = tree2.getMeaning(i2);
+		Optional<String> m1 = tree1.getMeaning(i1);
+		Optional<String> m2 = tree2.getMeaning(i2);
 		String r1 = tree1.getParentRole(i1);
 		String r2 = tree2.getParentRole(i2);
 
-		return 1.0 - delta*(r1.equals(r2) ? 1.0 : 0.0) - (1.0 - delta)*sim.getSimilarity(m1, m2);
+		double similarity = 0.0;
+		if (m1.isPresent() && m2.isPresent())
+			similarity = sim.getSimilarity(m1.get(), m2.get());
+
+		return 1.0 - delta*(r1.equals(r2) ? 1.0 : 0.0) - (1.0 - delta)*similarity;
 	}
 
 	@Override

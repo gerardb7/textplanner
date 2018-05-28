@@ -19,6 +19,12 @@ public class CMLCheckers
 		}
 	}
 
+	public static class IntegerConverter implements IStringConverter<Integer>
+	{
+		@Override
+		public Integer convert(String value) { return Integer.parseInt(value); }
+	}
+
 	public static class ValidPathToFile implements IParameterValidator
 	{
 		@Override
@@ -83,4 +89,17 @@ public class CMLCheckers
 			}
 		}
 	}
+
+	public static class GreaterThanZero implements IParameterValidator
+	{
+
+		@Override
+		public void validate(String name, String value) throws ParameterException
+		{
+			int n = Integer.parseInt(value);
+			if (n < 1)
+				throw new ParameterException("Invalid number of subgraphs " + value);
+		}
+	}
+
 }
