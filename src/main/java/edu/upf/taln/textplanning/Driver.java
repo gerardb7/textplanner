@@ -5,10 +5,12 @@ import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.corpora.CompactFrequencies;
 import edu.upf.taln.textplanning.input.AMRReader;
 import edu.upf.taln.textplanning.input.GraphListFactory;
+import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.input.amr.GraphList;
 import edu.upf.taln.textplanning.similarity.BinaryVectorsSimilarity;
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
+import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.utils.CMLCheckers;
 import edu.upf.taln.textplanning.utils.Serializer;
@@ -22,8 +24,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import static edu.upf.taln.textplanning.utils.VectorsTextFileUtils.Format;
+import static java.util.stream.Collectors.toSet;
 
 @SuppressWarnings("ALL")
 public class Driver
@@ -45,12 +49,15 @@ public class Driver
 		Stopwatch timer = Stopwatch.createStarted();
 		GraphList graphs = (GraphList) Serializer.deserialize(graphs_file);
 		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
-		TFIDF weighting = new TFIDF(corpus, true);
+		TFIDF weighting = new TFIDF(corpus, (r) -> r.endsWith("n"));
 		SimilarityFunction similarity = new BinaryVectorsSimilarity(vectors);
 		log.info("Loading resources took " + timer.stop());
 
+		final Set<Meaning> meanings = graphs.getCandidates().stream()
+				.map(Candidate::getMeaning)
+				.collect(toSet());
 		TextPlanner.Options options = new TextPlanner.Options();
-		TextPlanner.rankMeanings(graphs, weighting, similarity, options);
+		TextPlanner.rankMeanings(meanings, weighting, similarity, options);
 		Serializer.serialize(graphs, output);
 		log.info("Ranked graphs serialized to " + output);
 	}
@@ -122,7 +129,7 @@ public class Driver
 		GraphList graphs = (GraphList) Serializer.deserialize(graphs_file);
 		SimilarityFunction similarity = new BinaryVectorsSimilarity(vectors);
 		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
-		TFIDF weighting = new TFIDF(corpus, true);
+		TFIDF weighting = new TFIDF(corpus, (n) -> n.endsWith("n"));
 		log.info("Loading resources took " + timer.stop());
 
 		TextPlanner.Options options = new TextPlanner.Options();

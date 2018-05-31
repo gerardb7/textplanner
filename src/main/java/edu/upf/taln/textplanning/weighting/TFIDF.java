@@ -1,61 +1,52 @@
 package edu.upf.taln.textplanning.weighting;
 
 import edu.upf.taln.textplanning.corpora.Corpus;
-import edu.upf.taln.textplanning.input.amr.Candidate;
-import edu.upf.taln.textplanning.input.amr.GraphList;
-import edu.upf.taln.textplanning.structures.Meaning;
-import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.text.NumberFormat;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.OptionalInt;
+import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
- * A weighting function for senses based on tf.idf score.
- * Augmented tf is obtained from a collection of structures with annotated senses.
- * IDF is obtained from a sense-annotated corpus.
+ * A weighting function for items based on tf.idf score.
+ * Based on corpus with annotations of the items to weight.
  */
 public final class TFIDF implements WeightingFunction
 {
 	private final Corpus corpus;
-	private final boolean nominal_only;
+	private final Predicate<String> filter;
 	private final Map<String, Double> tfidf = new HashMap<>();
 	private final static Logger log = LogManager.getLogger(TFIDF.class);
 
-	public TFIDF(Corpus inCorpus, boolean nominal_only)
+	public TFIDF(Corpus inCorpus, Predicate<String> filter)
 	{
 		corpus = inCorpus;
-		this.nominal_only = nominal_only;
+		this.filter = filter;
 	}
 
-	@Override
-	public void setContents(GraphList graphs)
+	public void setContents(Collection<String> contents)
 	{
 		tfidf.clear();
 
-		// Collect frequencies for nominal meanings
-		Map<String, Long> freqs = graphs.getCandidates().stream()
-				.filter(c -> !nominal_only || c.getMention().isNominal())
-				.map(Candidate::getMeaning)
-				.map(Meaning::getReference)
+		// Collect frequencies for selected items
+		Map<String, Long> freqs = contents.stream()
+				.filter(filter)
 				.collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
 		// Calculate tf*idf values of the collection relative to the corpus
 		int num_defined = 0;
-		for (String ref : freqs.keySet())
+		for (String item : freqs.keySet())
 		{
-			long f = freqs.get(ref);
+			long f = freqs.get(item);
 			double tf = 1 + Math.log(f); // logarithmically scaled
 			//double tf = f; //0.5 + 0.5*(f/maxFreq); // augmented frequency
-			OptionalInt df = corpus.getMeaningDocumentCount(ref);
+			OptionalInt df = corpus.getMeaningDocumentCount(item);
 			int N = corpus.getNumDocs();
 			double idf = Math.log(N / df.orElse(0) + 1); // smooth all df values by adding 1
-			tfidf.put(ref, tf * idf);
+			tfidf.put(item, tf * idf);
 
 			if (df.isPresent())
 				++num_defined;
@@ -71,14 +62,11 @@ public final class TFIDF implements WeightingFunction
 		double maxTfidf = tfidf.values().stream().mapToDouble(d -> d).max().orElse(1.0);
 		tfidf.keySet().forEach(e -> tfidf.replace(e, tfidf.get(e) / maxTfidf));
 
-		// Set the tf*idf score of non-nominal items to the avg of nominal items
-		// todo check if setting tf*idf for non-nominal senses to avg of nominal senses produces expected results
+		// Set the tf*idf score of excluded items to the avg of selected items
 		double avgTfidf = tfidf.values().stream().mapToDouble(d -> d).average().orElse(0.0);
-		graphs.getCandidates().stream()
-				.filter(c -> !c.getMention().isNominal())
-				.map(Candidate::getMeaning)
-				.map(Meaning::getReference)
-				.forEach(m -> tfidf.put(m, avgTfidf));
+		contents.stream()
+				.filter(i -> !filter.test(i))
+				.forEach(i -> tfidf.put(i, avgTfidf));
 	}
 
 	@Override

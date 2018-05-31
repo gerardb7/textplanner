@@ -22,25 +22,26 @@ public class GlobalSemanticGraph extends SimpleDirectedGraph<String, Role> imple
 		super(Role.class);
 	}
 
-	/*  Build a graph G=(V,E) where V=set of instances, and E is determined by an adjacency_function and a
+	/*  Build a graph G=(V,E) where V=set of vertices, and E is determined by an adjacency_function and a
 		labelling_function.
 		Each instance is associated with:
-	        - The meaning it instantiates
+	        - The weighted meaning it instantiates,
 	        - One or more mentions (text annotations)
 	        - A weight indicating the importance or relevance of each instance
 	 */
-	public GlobalSemanticGraph(Set<String> instances, Map<String, Meaning> meanings, Multimap<String, Mention> mentions,
-	                           Map<String, Double> weights, BiPredicate<String, String> adjacency_function,
+	public GlobalSemanticGraph(Set<String> vertices,
+	                           Map<String, Meaning> ranked_meanings,
+	                           Multimap<String, Mention> mentions,
+	                           BiPredicate<String, String> adjacency_function,
 	                           BinaryOperator<String> labelling_function)
 	{
 		super(Role.class);
 
-		instances.forEach(this::addVertex);
-		this.meanings.putAll(meanings);
+		vertices.forEach(this::addVertex);
+		this.meanings.putAll(ranked_meanings);
 		this.mentions.putAll(mentions);
-		this.weights.putAll(weights);
-		instances.forEach(v1 ->
-				instances.stream()
+		vertices.forEach(v1 ->
+				vertices.stream()
 						.filter(v2 -> adjacency_function.test(v1, v2))
 						.forEach(v2 -> addNewEdge(v1, v2, labelling_function.apply(v1, v2))));
 	}

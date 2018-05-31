@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.weighting;
 
 import edu.upf.taln.textplanning.input.amr.GraphList;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,7 +18,7 @@ public final class Linear implements WeightingFunction
 	}
 
 	@Override
-	public void setContents(GraphList contents)
+	public void setContents(Collection<String> contents)
 	{
 		functions.forEach((f, w) -> f.setContents(contents));
 	}

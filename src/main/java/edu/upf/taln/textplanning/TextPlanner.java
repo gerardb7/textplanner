@@ -3,14 +3,16 @@ package edu.upf.taln.textplanning;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.discourse.DiscoursePlanner;
 import edu.upf.taln.textplanning.input.GlobalGraphFactory;
+import edu.upf.taln.textplanning.input.amr.Candidate;
+import edu.upf.taln.textplanning.input.amr.GraphList;
 import edu.upf.taln.textplanning.pattern.SubgraphExtraction;
 import edu.upf.taln.textplanning.ranking.GraphRanking;
 import edu.upf.taln.textplanning.redundancy.RedundancyRemover;
 import edu.upf.taln.textplanning.similarity.SemanticTreeSimilarity;
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
+import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
-import edu.upf.taln.textplanning.input.amr.GraphList;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,6 +21,9 @@ import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+
+import static java.util.stream.Collectors.toSet;
 
 
 /**
@@ -62,7 +67,7 @@ public final class TextPlanner
 	/**
 	 * Generates a text plan from a global semantic graph
 	 */
-	static List<SemanticSubgraph> plan(GraphList graphs, SimilarityFunction similarity, WeightingFunction weighting,
+	public static List<SemanticSubgraph> plan(GraphList graphs, SimilarityFunction similarity, WeightingFunction weighting,
 	                                   int num_graphs, Options o)
 	{
 		try
@@ -71,7 +76,10 @@ public final class TextPlanner
 			Stopwatch timer = Stopwatch.createStarted();
 
 			// 1- Rank meanings
-			rankMeanings(graphs, weighting, similarity, o);
+			final Set<Meaning> meanings = graphs.getCandidates().stream()
+					.map(Candidate::getMeaning)
+					.collect(toSet());
+			rankMeanings(meanings, weighting, similarity, o);
 
 			// 2- Create global graph
 			final GlobalSemanticGraph global_graph = createGlobalGraph(graphs);
@@ -102,20 +110,20 @@ public final class TextPlanner
 	 * Ranks set of candidate meanings associated with a collection of semantic graphs, and stores the resulting ranks as
 	 * candidate weights.
 	 */
-	static void rankMeanings(GraphList graphs, WeightingFunction weighting, SimilarityFunction similarity,
-	                         Options o)
+	public static void  rankMeanings(Set<Meaning> meanings, WeightingFunction weighting, SimilarityFunction similarity,
+	                                 Options o)
 	{
 		log.info("Ranking meanings");
 		Stopwatch timer = Stopwatch.createStarted();
 
-		GraphRanking.rankMeanings(graphs, weighting, similarity, o.sim_threshold, o.damping_meanings);
+		GraphRanking.rankMeanings(meanings, weighting, similarity, o.sim_threshold, o.damping_meanings);
 		log.info("Ranking completed in " + timer.stop());
 	}
 
 	/**
 	 * 	Creates a global planning graph from a collection of semantic graphs
  	 */
-	static GlobalSemanticGraph createGlobalGraph(GraphList graphs)
+	public static GlobalSemanticGraph createGlobalGraph(GraphList graphs)
 	{
 		log.info("Creating global semantic graph");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -128,7 +136,7 @@ public final class TextPlanner
 	/**
 	 * 	Ranks variables in a global planning graph
 	 */
-	static void rankVariables(GlobalSemanticGraph graph, Options o)
+	public static void rankVariables(GlobalSemanticGraph graph, Options o)
 	{
 		log.info("Ranking variables of a global semantic graph");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -139,7 +147,7 @@ public final class TextPlanner
 	/**
 	 * 	Extract subgraphs from a global planning graph
 	 */
-	static Collection<SemanticSubgraph> extractSubgraphs(GlobalSemanticGraph graph, int num_graphs, Options o)
+	public static Collection<SemanticSubgraph> extractSubgraphs(GlobalSemanticGraph graph, int num_graphs, Options o)
 	{
 		log.info("Extracting subgraphs from a global semantic graph");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -153,7 +161,7 @@ public final class TextPlanner
 	/**
 	 * 	Remove redundant subgraphs
 	 */
-	static Collection<SemanticSubgraph> removeRedundantSubgraphs(Collection<SemanticSubgraph> subgraphs, int num_graphs,
+	public static Collection<SemanticSubgraph> removeRedundantSubgraphs(Collection<SemanticSubgraph> subgraphs, int num_graphs,
 	                                                     SimilarityFunction similarity, Options o)
 	{
 		log.info("Removing redundant subgraphs");
@@ -169,7 +177,7 @@ public final class TextPlanner
 	/**
 	 * 	Sort subgraphs
 	 */
-	static List<SemanticSubgraph> sortSubgraphs(Collection<SemanticSubgraph> subgraphs, SimilarityFunction similarity,
+	public static List<SemanticSubgraph> sortSubgraphs(Collection<SemanticSubgraph> subgraphs, SimilarityFunction similarity,
 	                                            Options o)
 	{
 		log.info("Sorting subgraphs");

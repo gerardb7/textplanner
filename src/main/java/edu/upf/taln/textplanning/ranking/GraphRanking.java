@@ -14,6 +14,9 @@ import org.apache.logging.log4j.LogManager;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
@@ -39,17 +42,16 @@ public class GraphRanking
 	private final static Logger log = LogManager.getLogger(TextPlanner.class);
 
 
-	public static void rankMeanings(GraphList graphs, WeightingFunction weighting, SimilarityFunction similarity,
-	                         double meaning_similarity_threshold, double damping_factor_meanings)
+	public static void rankMeanings(Set<Meaning> meanings, WeightingFunction weighting, SimilarityFunction similarity,
+	                                double meaning_similarity_threshold, double damping_factor_meanings)
 	{
 		Stopwatch timer = Stopwatch.createStarted();
-		weighting.setContents(graphs);
-
-		List<String> meanings = graphs.getCandidates().stream()
-				.map(Candidate::getMeaning)
+		final List<String> references = meanings.stream()
 				.map(Meaning::getReference)
-				.collect(toList());
-		double[][] rankingArrays = MatrixFactory.createMeaningRankingMatrix(meanings, weighting, similarity,
+				.collect(Collectors.toList());
+		weighting.setContents(references);
+
+		double[][] rankingArrays = MatrixFactory.createMeaningRankingMatrix(references, weighting, similarity,
 				meaning_similarity_threshold, damping_factor_meanings);
 		Matrix rankingMatrix = new Matrix(rankingArrays);
 
@@ -58,19 +60,18 @@ public class GraphRanking
 		double[] ranking = finalDistribution.getColumnPackedCopy();
 
 		// Assign ranking values to meanings
-		graphs.getCandidates().stream()
-				.map(Candidate::getMeaning)
+		meanings.stream()
 				.distinct()
 				.forEach(m ->
 				{
-					int i = meanings.indexOf(m.getReference());
+					int i = references.indexOf(m.getReference());
 					m.setWeight(ranking[i]);
 				});
 
 		log.info("Meanings ranked in " + timer.stop());
 	}
 
-	public static void rankVariables(   GlobalSemanticGraph graph, double minimum_meaning_ranking,
+	public static void rankVariables(GlobalSemanticGraph graph, double minimum_meaning_ranking,
 	                                    double damping_factor_variables)
 	{
 		Stopwatch timer = Stopwatch.createStarted();

@@ -1,12 +1,12 @@
 package edu.upf.taln.textplanning.weighting;
 
-import edu.upf.taln.textplanning.input.amr.GraphList;
+import java.util.Collection;
 
 /**
  * Interface for weighting functions
  */
 public interface WeightingFunction
 {
-	void setContents(GraphList contents);
+	void setContents(Collection<String> contents);
 	double weight(String item);
 }

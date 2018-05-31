@@ -271,7 +271,7 @@ public class FrequencyUtils
 				.sum();
 
 
-		Map<Meaning, Long> sense_freqs = graphs.getCandidates().stream()
+		Map<Meaning, Long> reference_freqs = graphs.getCandidates().stream()
 				.collect(groupingBy(Candidate::getMeaning, counting()));
 		Map<String, Long> form_freqs = graphs.getGraphs().stream()
 				.map(g -> g.getAlignments().getTokens())
@@ -289,27 +289,27 @@ public class FrequencyUtils
 				.flatMap(List::stream)
 				.collect(groupingBy(s -> s, counting()));
 
-		Set<String> senses = graphs.getCandidates().stream()
+		Set<String> references = graphs.getCandidates().stream()
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
 				.collect(Collectors.toSet());
 
 
 		CompactFrequencies corpus = (CompactFrequencies) Serializer.deserialize(freqs_file);
-		Map<String, OptionalInt> sense_idfs = senses.stream()
+		Map<String, OptionalInt> reference_idfs = references.stream()
 				.collect(toMap(s -> s, corpus::getMeaningDocumentCount));
-		long num_sense_in_corpus = sense_idfs.keySet().stream()
-				.filter(s -> sense_idfs.get(s).isPresent())
+		long num_ref_in_corpus = reference_idfs.keySet().stream()
+				.filter(s -> reference_idfs.get(s).isPresent())
 				.count();
-		List<String> sorted_senses_idf = sense_idfs.keySet().stream()
-				.sorted(Comparator.comparingInt(s -> sense_idfs.get(s).orElse(-1)))
+		List<String> sorted_refs_idf = reference_idfs.keySet().stream()
+				.sorted(Comparator.comparingInt(s -> reference_idfs.get(s).orElse(-1)))
 				.collect(Collectors.toList());
 
-		final TFIDF tfidf = new TFIDF(corpus, false);
-		tfidf.setContents(graphs);
-		Map<String, Double> sense_tf_idfs = senses.stream()
+		final TFIDF tfidf = new TFIDF(corpus, (n) -> n.endsWith("n"));
+		tfidf.setContents(references);
+		Map<String, Double> sense_tf_idfs = references.stream()
 				.collect(toMap(s -> s, tfidf::weight));
-		List<String> sorted_senses_tf_idf = sense_tf_idfs.keySet().stream()
+		List<String> sorted_refs_tf_idf = sense_tf_idfs.keySet().stream()
 				.sorted(Comparator.comparingDouble(sense_tf_idfs::get))
 				.collect(Collectors.toList());
 

@@ -1,6 +1,6 @@
 package edu.upf.taln.textplanning.weighting;
 
-import edu.upf.taln.textplanning.input.amr.GraphList;
+import java.util.Collection;
 
 /**
  * Used for testing
@@ -8,7 +8,7 @@ import edu.upf.taln.textplanning.input.amr.GraphList;
 public final class Random implements WeightingFunction
 {
 	@Override
-	public void setContents(GraphList contents) { }
+	public void setContents(Collection<String> contents) { }
 
 	@Override
 	public double weight(String item)
