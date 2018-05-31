@@ -13,6 +13,7 @@ import java.util.Objects;
 public final class Meaning implements Serializable
 {
 	private final String reference; // should be unique
+	private final String label; // human-readable label
 	private final boolean is_NE; // refers to the meaning itself (e.g. synset for Chicago is a NE)
 	private Type type = Type.Other; // specific NE type
 	private double weight = 0.0; // used when ranking meaning for disambiguation
@@ -21,20 +22,21 @@ public final class Meaning implements Serializable
 
 
 	// Factory method
-	public static Meaning get(String reference, boolean is_NE)
+	public static Meaning get(String reference, String label, boolean is_NE)
 	{
 		if (references.containsKey(reference))
 			return references.get(reference);
 
-		Meaning e = new Meaning(reference, is_NE);
+		Meaning e = new Meaning(reference, label, is_NE);
 		references.put(reference, e);
 		return e;
 	}
 
 	// Constructor, kept private
-	private Meaning(String reference, boolean is_NE)
+	private Meaning(String reference, String label, boolean is_NE)
 	{
 		this.reference = reference;
+		this.label = label;
 		this.is_NE = is_NE;
 	}
 
@@ -46,7 +48,7 @@ public final class Meaning implements Serializable
 	public void setWeight(double weight) { this.weight = weight; }
 
 	@Override
-	public String toString() { return reference; }
+	public String toString() { return reference + "-" + this.label; }
 
 	@Override
 	public boolean equals(Object o)

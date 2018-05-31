@@ -18,10 +18,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -127,14 +124,16 @@ class StanfordWrapper
 						SemanticGraph g = graphs.get(m.sentNum-1);
 						GraphAlignments a = g.getAlignments();
 						Pair<Integer, Integer> span = Pair.of(m.startIndex-1, m.endIndex-1);
-						a.getTopSpanVertex(span).ifPresent(v ->
+
+						final Set<String> top_v = a.getTopSpanVertex(span);
+						if (!top_v.isEmpty())
 						{
 							String lemma_v = a.getLemma(span).orElse("");
 							String pos_v = a.getPOS(span).orElse("N"); // assume nominal
 							Type ner_v = a.getNER(span).orElse(Type.Other);
 							Mention mention = new Mention(g.getId(), span, a.getSurfaceForm(span), lemma_v, pos_v, ner_v);
-							chain.put(v, mention);
-						});
+							top_v.forEach(v -> chain.put(v, mention));
+						}
 					});
 
 					return chain;

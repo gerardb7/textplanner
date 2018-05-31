@@ -33,14 +33,13 @@ public class GraphListFactory
 		List<SemanticGraph> graphs = reader.read(graph_bank);
 
 		// Make variable ids unique across graphs
-		for (int i=0; i<graphs.size(); ++i)
+		for (SemanticGraph g : graphs)
 		{
-			SemanticGraph g = graphs.get(i);
-				String suffix = "_" + i;
-				List<String> nodes_to_rename = g.vertexSet().stream()
-						.filter(v -> g.outgoingEdgesOf(v).stream().anyMatch(e -> e.toString().equals(AMRConstants.instance)))
-						.collect(toList());
-				nodes_to_rename.forEach(v -> g.renameVertex(v, v + suffix));
+			String prefix = g.getId() + "_";
+			List<String> nodes_to_rename = g.vertexSet().stream()
+					.filter(v -> g.outgoingEdgesOf(v).stream().anyMatch(e -> e.toString().equals(AMRConstants.instance)))
+					.collect(toList());
+			nodes_to_rename.forEach(v -> g.renameVertex(v, prefix + v));
 		}
 
 		// Process with Stanford

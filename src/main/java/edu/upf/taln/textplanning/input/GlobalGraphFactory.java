@@ -8,24 +8,61 @@ import edu.upf.taln.textplanning.input.amr.SemanticGraph;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jgrapht.graph.AbstractGraph;
 
 import java.util.*;
 
 import static java.util.Comparator.comparingDouble;
-import static java.util.stream.Collectors.toCollection;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.*;
 
 // Creates global semantic graphs from a lists of AMR-like semantic graphs
 public class GlobalGraphFactory
 {
 	public static GlobalSemanticGraph create(GraphList graphs)
 	{
+		remove_concepts(graphs);
+		remove_names(graphs);
 		disambiguate_candidates(graphs);
 		collapse_multiwords(graphs);
 		GlobalSemanticGraph merge = merge(graphs);
 		resolve_arguments();
 
 		return merge;
+	}
+
+	private static void remove_concepts(GraphList graphs)
+	{
+		final Map<SemanticGraph, Set<String>> concepts = graphs.getGraphs().stream()
+				.map(g -> Pair.of(g, g.edgeSet().stream()
+						.filter(e -> e.getLabel().equals(AMRConstants.instance))
+						.map(g::getEdgeTarget)
+						.collect(toSet())))
+				.collect(toMap(Pair::getLeft, Pair::getRight));
+
+		concepts.forEach(AbstractGraph::removeAllVertices);
+	}
+
+	/**
+	 * Given:
+	 *      x -name-> n -op*-> strings
+	 * Removes all but x.
+ 	 */
+	private static void remove_names(GraphList graphs)
+	{
+		final Map<SemanticGraph, Set<String>> names = graphs.getGraphs().stream()
+				.map(g -> Pair.of(g, g.edgeSet().stream()
+						.filter(e -> e.getLabel().equals(AMRConstants.name))
+						.map(g::getEdgeTarget)
+						.map(name -> {
+							final Set<String> descendants = g.getDescendants(name); // this adds names
+							descendants.add(name);
+							return descendants;
+						})
+						.flatMap(Set::stream)
+						.collect(toSet())))
+				.collect(toMap(Pair::getLeft, Pair::getRight));
+
+		names.forEach(AbstractGraph::removeAllVertices);
 	}
 
 	private static void disambiguate_candidates(GraphList graphs)
@@ -38,52 +75,57 @@ public class GlobalGraphFactory
 								.ifPresent(graphs::chooseCandidate)));
 	}
 
+	/**
+	 * Subsumers: vertices with a multiword meaning and at least one descendant
+	 * Remember:    - vertices have 1 or 2 spans, one for the aligned token and one covering all descendants
+	 * 	              - candidates are assigned to vertices matching the span of their mentions
+	 * 	              - after disambiguation each vertex has a single candidate
+	 * 	              - multiword candidates subsume all descendants of the vertex they're associated with
+	 */
 	private static void collapse_multiwords(GraphList graphs)
 	{
-		LinkedList<Pair<SemanticGraph, String>> multiwords = graphs.getGraphs().stream()
+		LinkedList<Pair<SemanticGraph, String>> subsumers = graphs.getGraphs().stream()
 				.flatMap(g -> g.vertexSet().stream()
 						.filter(v -> !graphs.getCandidates(v).isEmpty())
-						.filter(v ->
-						{
-							Candidate c = graphs.getCandidates(v).iterator().next(); // there should be just one...
-							return c.getMention().isMultiWord();
-						})
+						.filter(v -> graphs.getCandidates(v).iterator().next().getMention().isMultiWord())
+						.filter( v -> !g.getDescendants(v).isEmpty())
 						.map(v -> Pair.of(g, v)))
 				.collect(toCollection(LinkedList::new));
 
-		while(!multiwords.isEmpty())
+		while(!subsumers.isEmpty())
 		{
-			// Pop a multiword from the queue
-			final Pair<SemanticGraph, String> multiword = multiwords.pop();
-			final SemanticGraph g = multiword.getLeft();
-			final String v = multiword.getRight();
+			// Pop a subsumer from the queue
+			final Pair<SemanticGraph, String> subsumer = subsumers.pop();
+			final SemanticGraph g = subsumer.getLeft();
+			final String v = subsumer.getRight();
 
-			Candidate c = graphs.getCandidates().iterator().next();
+			Candidate c = graphs.getCandidates(v).iterator().next();
 			// v_value = value of highest scored meaning of v
 			double v_value = c.getMeaning().getWeight();
 
-			// d_max -> value of highest scored descendant meaning
-			Set<String> descendants = g.getDescendants(v);
-			double d_max = descendants.stream()
+			// s_max -> value of highest scored subsumed meaning
+			final Set<String> descendants = g.getDescendants(v);
+			double s_max = descendants.stream()
 					.map(graphs::getCandidates)
 					.flatMap(Collection::stream)
 					.map(Candidate::getMeaning)
 					.mapToDouble(Meaning::getWeight)
 					.max().orElse(0.0);
 
-			if (v_value >= d_max)
+			// Is there a descendant with a highest scored meaning?
+			if (v_value >= s_max)
 			{
 				// this also updates meanings and coreference
 				graphs.vertexContraction(g, v, descendants);
 
-				// Update remaining multiwords affected by this contraction
-				final List<Pair<SemanticGraph, String>> renamed_multiwords = multiwords.stream()
+				// Update remaining subsumers affected by this contraction
+				final List<Pair<SemanticGraph, String>> renamed_multiwords = subsumers.stream()
 						.filter(p -> descendants.contains(p.getRight()))
 						.collect(toList());
 				renamed_multiwords.forEach(p ->
 				{
-					multiwords.remove(p);
-					multiwords.add(Pair.of(p.getLeft(), v)); // multiword node has been replaced by v
+					subsumers.remove(p);
+					subsumers.add(Pair.of(p.getLeft(), v)); // subsumer node has been replaced by v
 				});
 			}
 		}
@@ -99,7 +141,7 @@ public class GlobalGraphFactory
 			merged.addVertex(v1);
 			String v2 = g.getEdgeTarget(e);
 			merged.addVertex(v2);
-			merged.addEdge(v1, v2, e);
+			merged.addNewEdge(v1, v2, e.getLabel());
 		}));
 
 		graphs.getCandidates().forEach(c ->

@@ -40,7 +40,7 @@ public class Driver
 		log.info("Graphs serialized to " + output);
 	}
 
-	private void rank_graphs(Path graphs_file, Path freqs, Path vectors, Format format, Path output) throws IOException, ClassNotFoundException
+	private void rank_meanings(Path graphs_file, Path freqs, Path vectors, Format format, Path output) throws IOException, ClassNotFoundException
 	{
 		Stopwatch timer = Stopwatch.createStarted();
 		GraphList graphs = (GraphList) Serializer.deserialize(graphs_file);
@@ -312,7 +312,7 @@ public class Driver
 			driver.create_graphs(create_graphs.inputFile, create_graphs.bnFolder,
 					create_graphs.outputFile);
 		else if (jc.getParsedCommand().equals("rank_meanings"))
-			driver.rank_graphs(rank_meanings.inputFile, rank_meanings.freqsFile, rank_meanings.vectorsPath,
+			driver.rank_meanings(rank_meanings.inputFile, rank_meanings.freqsFile, rank_meanings.vectorsPath,
 					rank_meanings.format, rank_meanings.outputFile);
 		else if (jc.getParsedCommand().equals("create_global"))
 			driver.create_global(create_global.inputFile, create_global.outputFile);

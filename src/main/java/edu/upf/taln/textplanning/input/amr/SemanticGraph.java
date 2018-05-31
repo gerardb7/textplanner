@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.input.amr;
 
 import edu.upf.taln.textplanning.input.GraphAlignments;
 import edu.upf.taln.textplanning.structures.Role;
+import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.jgrapht.graph.DirectedAcyclicGraph;
 
 import java.io.Serializable;
@@ -11,7 +12,7 @@ public class SemanticGraph extends DirectedAcyclicGraph<String, Role> implements
 {
 	private GraphAlignments alignments = null;
 	private final String id;
-	private final String root;
+	private String root;
 	private final static long serialVersionUID = 1L;
 
 	public SemanticGraph(String id, String root)
@@ -35,6 +36,11 @@ public class SemanticGraph extends DirectedAcyclicGraph<String, Role> implements
 	public String getId() { return id; }
 	public String getRoot() { return root; }
 
+	public int getDepth(String v)
+	{
+		return DijkstraShortestPath.findPathBetween(this, root, v).getLength();
+	}
+
 	public void renameVertex(String old_label, String new_label)
 	{
 		if (this.containsVertex(old_label))
@@ -44,6 +50,9 @@ public class SemanticGraph extends DirectedAcyclicGraph<String, Role> implements
 			outgoingEdgesOf(old_label).forEach(e ->	addNewEdge(new_label, getEdgeTarget(e), e.getLabel()));
 			removeVertex(old_label);
 			alignments.renameVertex(old_label, new_label);
+
+			if (root.equals(old_label))
+				root = new_label;
 		}
 	}
 

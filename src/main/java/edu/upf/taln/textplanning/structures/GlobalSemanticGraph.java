@@ -42,7 +42,7 @@ public class GlobalSemanticGraph extends SimpleDirectedGraph<String, Role> imple
 		instances.forEach(v1 ->
 				instances.stream()
 						.filter(v2 -> adjacency_function.test(v1, v2))
-						.forEach(v2 -> this.addEdge(v1, v2, Role.create(labelling_function.apply(v1, v2)))));
+						.forEach(v2 -> addNewEdge(v1, v2, labelling_function.apply(v1, v2))));
 	}
 
 	public double getWeight(String v) { return weights.getOrDefault(v,0.0); }
@@ -77,7 +77,7 @@ public class GlobalSemanticGraph extends SimpleDirectedGraph<String, Role> imple
 		removeAllVertices(C);
 	}
 
-	private void addNewEdge(String source, String target, String role)
+	public void addNewEdge(String source, String target, String role)
 	{
 		Role new_edge = Role.create(role);
 		addEdge(source, target, new_edge);

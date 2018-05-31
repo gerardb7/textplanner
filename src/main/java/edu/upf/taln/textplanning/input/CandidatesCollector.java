@@ -1,12 +1,15 @@
 package edu.upf.taln.textplanning.input;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.structures.Mention;
 import edu.upf.taln.textplanning.input.amr.SemanticGraph;
 import it.uniroma1.lcl.babelnet.BabelSynset;
 import it.uniroma1.lcl.babelnet.BabelSynsetType;
+import it.uniroma1.lcl.jlt.util.Language;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.logging.log4j.LogManager;
@@ -80,25 +83,27 @@ class CandidatesCollector
 						.collect(toSet())));
 
 		// Get vertex governing each mention
-		Function<Mention, String> getVertex =
-				m ->
-				{
-					Pair<Integer, Integer> span = m.getSpan();
-					SemanticGraph graph = graph_ids.get(m.getSentenceId());
-					return graph.getAlignments().getTopSpanVertex(span).get();
-				};
-		Map<Mention, String> mentions2vertices = anchors2Mentions.values().stream()
+		Multimap<Mention, String> mentions2vertices = HashMultimap.create();
+		anchors2Mentions.values().stream()
 				.flatMap(List::stream)
-				.collect(toMap(m -> m, getVertex));
+				.forEach(m -> {
+							Pair<Integer, Integer> span = m.getSpan();
+							SemanticGraph graph = graph_ids.get(m.getSentenceId());
+							Set<String> top_vertices = graph.getAlignments().getTopSpanVertex(span);
+							mentions2vertices.putAll(m, top_vertices);
+						});
 
 		// Create candidates
 		List<Candidate> candidates = anchors2Meanings.keySet().stream()
 				.flatMap(l -> anchors2Meanings.get(l).stream() // given a label l
-						.flatMap(meaning -> anchors2Mentions.get(l).stream() // for each mention with label l
-								.map(mention -> new Candidate(mentions2vertices.get(mention), meaning, mention))))
+						.flatMap(meaning -> anchors2Mentions.get(l).stream() // for each mention m with label l
+								.flatMap(m -> mentions2vertices.get(m).stream() // for each vertex v with mention m
+									.map(v -> new Candidate(v, meaning, m)))))
 				.collect(toList());
 
-		log.info("Created " + candidates.size() + " candidates using " + BabelNetWrapper.num_queries.get() + " queries");
+		int num_references = candidates.stream().map(Candidate::getMeaning).map(Meaning::getReference).collect(toSet()).size();
+		log.info("Created " + candidates.size() + " candidates, with " + num_references +
+				" different references, and using " + BabelNetWrapper.num_queries.get() + " queries");
 		log.info("Candidate meanings collected in " + timer.stop());
 		return candidates;
 	}
@@ -122,7 +127,8 @@ class CandidatesCollector
 	private Meaning createMeaning(BabelSynset s)
 	{
 		String reference = s.getId().getID();
+		String label = s.getSenses(Language.EN).iterator().next().toString();
 		boolean is_NE = s.getSynsetType() == BabelSynsetType.NAMED_ENTITY;
-		return Meaning.get(reference, is_NE);
+		return Meaning.get(reference, label, is_NE);
 	}
 }

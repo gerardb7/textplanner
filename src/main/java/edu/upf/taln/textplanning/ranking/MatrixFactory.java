@@ -1,16 +1,15 @@
 package edu.upf.taln.textplanning.ranking;
 
-import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.input.amr.Candidate;
+import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
-import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.IntStream;
 
@@ -39,8 +38,8 @@ public class MatrixFactory
 
 		// Bias each row in X using bias L and d factor d
 		// Ruv = d*Lu + (1.0-d)*Xuv
-		AtomicLong counter = new AtomicLong(0);
-		long num_calculations2 = n * n;
+//		AtomicLong counter = new AtomicLong(0);
+//		long num_calculations2 = n * n;
 
 		IntStream.range(0, n).forEach(u ->
 				IntStream.range(0, n).forEach(v -> {
@@ -49,8 +48,8 @@ public class MatrixFactory
 					double Ruv = d * Lu + (1.0 - d)*Xuv;
 
 					R[u][v] = Ruv;
-					if (counter.incrementAndGet() % 10000000 == 0)
-						log.info(counter.get() + " out of " + num_calculations2);
+//					if (counter.incrementAndGet() % 10000000 == 0)
+//						log.info(counter.get() + " out of " + num_calculations2);
 				}));
 
 		// R is row-normalized because both L and X are normalized
@@ -120,8 +119,7 @@ public class MatrixFactory
 		int num_variables = variables.size();
 		double[] v = variables.stream()
 				.map(graph::getMeaning)
-				.filter(Optional::isPresent).map(Optional::get)
-				.mapToDouble(Meaning::getWeight)
+				.mapToDouble(om -> om.map(Meaning::getWeight).orElse(0.0))
 				.map(w -> w = Math.max(min_rank, (1.0/num_variables)*w)) // Laplace smoothing to avoid non-positive values
 				.toArray();
 		double accum = Arrays.stream(v).sum();

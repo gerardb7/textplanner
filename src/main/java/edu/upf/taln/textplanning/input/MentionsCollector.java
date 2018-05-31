@@ -42,8 +42,18 @@ class MentionsCollector
 						.mapToObj(j -> Pair.of(i, j))
 						.filter(a::covers)
 						.filter(span -> {
-							Optional<String> top_v = a.getTopSpanVertex(span);
-							return top_v.filter(s -> a.isNominal(s) || a.isConjunction(s)).isPresent();
+							Set<String> top_vertices = a.getTopSpanVertex(span);
+							if (top_vertices.isEmpty())
+								return false; // not top vertex, god knows what it is
+							else if (top_vertices.size() == 1)
+							{
+								String v = top_vertices.iterator().next();
+								return a.isNominal(v) || a.isConjunction(v);
+							}
+							else
+							{
+								return top_vertices.stream().allMatch(a::isNominal); // coords, must be between nouns
+							}
 						})
 						.map(span -> new Mention(
 								graph.getId(),

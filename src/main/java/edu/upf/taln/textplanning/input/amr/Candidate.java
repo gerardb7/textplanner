@@ -32,7 +32,7 @@ public class Candidate implements Serializable
 	@Override
 	public String toString()
 	{
-		return vertex + "-" + meaning;
+		return vertex + "-" + mention.getSpan() + "-" + meaning;
 	}
 
 	// Two candidates are the same if they have same vertex and meaning. Mentions are ignored!

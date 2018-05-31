@@ -24,7 +24,11 @@ public class SemanticTree extends SimpleDirectedGraph<String, Role>
 		// Duplicate subgraph
 		this.subgraph = subgraph;
 		subgraph.vertexSet().forEach(this::addVertex);
-		subgraph.edgeSet().forEach(e -> this.addEdge(subgraph.getEdgeSource(e), subgraph.getEdgeTarget(e), e));
+		subgraph.edgeSet().forEach(e ->
+		{
+			Role new_e = Role.create(e.getLabel());
+			this.addEdge(subgraph.getEdgeSource(e), subgraph.getEdgeTarget(e), new_e);
+		});
 
 		// Replicate vertices with multiple ancestors
 		Set<String> M = vertexSet().stream()
@@ -107,8 +111,8 @@ public class SemanticTree extends SimpleDirectedGraph<String, Role>
 		int count = counters.count(y);
 		String y2 = String.format("%s_%d", y, count);
 		addVertex(y2);
-		addEdge(x, y2, e);
-		outgoingEdgesOf(y).forEach(e2 -> addEdge(y2, getEdgeTarget(e2), e2));
+		addNewEdge(x, y2, e.getLabel());
+		outgoingEdgesOf(y).forEach(e2 -> addNewEdge(y2, getEdgeTarget(e2), e2.getLabel()));
 		removeVertex(y);
 		correspondences.put(y2, y);
 	}
@@ -122,13 +126,9 @@ public class SemanticTree extends SimpleDirectedGraph<String, Role>
 			return String.format("%s_%s", getMeaning(v), incomingEdgesOf(v).iterator().next());
 	}
 
-//	public String toString()
-//	{
-//		return root + (outDegreeOf(root) == 0 ? " // " : "") +
-//				getTopologicalOrder().stream()
-//				.map(v -> v + outgoingEdgesOf(v).stream()
-//						.map(this::getEdgeTarget)
-//						.collect(joining("(", ",", ")")))
-//				.collect(joining(" "));
-//	}
+	private void addNewEdge(String source, String target, String role)
+	{
+		Role new_edge = Role.create(role);
+		addEdge(source, target, new_edge);
+	}
 }
