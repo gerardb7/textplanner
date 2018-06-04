@@ -1,9 +1,10 @@
 package edu.upf.taln.textplanning;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.discourse.DiscoursePlanner;
 import edu.upf.taln.textplanning.input.GlobalGraphFactory;
-import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.input.amr.GraphList;
 import edu.upf.taln.textplanning.pattern.SubgraphExtraction;
 import edu.upf.taln.textplanning.ranking.GraphRanking;
@@ -12,6 +13,7 @@ import edu.upf.taln.textplanning.similarity.SemanticTreeSimilarity;
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
+import edu.upf.taln.textplanning.structures.Mention;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.apache.logging.log4j.LogManager;
@@ -21,9 +23,6 @@ import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
-
-import static java.util.stream.Collectors.toSet;
 
 
 /**
@@ -76,10 +75,9 @@ public final class TextPlanner
 			Stopwatch timer = Stopwatch.createStarted();
 
 			// 1- Rank meanings
-			final Set<Meaning> meanings = graphs.getCandidates().stream()
-					.map(Candidate::getMeaning)
-					.collect(toSet());
-			rankMeanings(meanings, weighting, similarity, o);
+			Multimap<Meaning, Mention> map = HashMultimap.create();
+			graphs.getCandidates().forEach(m -> map.put(m.getMeaning(), m.getMention()));
+			rankMeanings(map, weighting, similarity, o);
 
 			// 2- Create global graph
 			final GlobalSemanticGraph global_graph = createGlobalGraph(graphs);
@@ -110,8 +108,8 @@ public final class TextPlanner
 	 * Ranks set of candidate meanings associated with a collection of semantic graphs, and stores the resulting ranks as
 	 * candidate weights.
 	 */
-	public static void  rankMeanings(Set<Meaning> meanings, WeightingFunction weighting, SimilarityFunction similarity,
-	                                 Options o)
+	public static void rankMeanings(Multimap<Meaning, Mention> meanings, WeightingFunction weighting, SimilarityFunction similarity,
+	                                Options o)
 	{
 		log.info("Ranking meanings");
 		Stopwatch timer = Stopwatch.createStarted();

@@ -22,12 +22,13 @@ public class GlobalSemanticGraph extends SimpleDirectedGraph<String, Role> imple
 		super(Role.class);
 	}
 
-	/*  Build a graph G=(V,E) where V=set of vertices, and E is determined by an adjacency_function and a
-		labelling_function.
-		Each instance is associated with:
-	        - The weighted meaning it instantiates,
-	        - One or more mentions (text annotations)
-	        - A weight indicating the importance or relevance of each instance
+	/**
+	 *  Build a graph G=(V,E) where V=set of vertices, and E is determined by an adjacency_function and a
+	 * 	labelling_function.
+	 * 	Each instance is associated with:
+	 * 	    - The weighted meaning it instantiates,
+	 * 	    - One or more mentions (text annotations)
+	 * 	    - A weight indicating the importance or relevance of each instance
 	 */
 	public GlobalSemanticGraph(Set<String> vertices,
 	                           Map<String, Meaning> ranked_meanings,

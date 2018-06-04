@@ -9,6 +9,8 @@ import org.apache.logging.log4j.Logger;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.math.RoundingMode;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -24,6 +26,7 @@ public class GraphList implements Serializable
 	private final Set<String> vertices; // use to performs consistency checks
 	private final Multimap<String, Candidate> candidate_meanings = HashMultimap.create();
 	private final List<CoreferenceChain> chains = new ArrayList<>();
+	private final NumberFormat format;
 	private final static long serialVersionUID = 1L;
 	private final static Logger log = LogManager.getLogger(GraphList.class);
 
@@ -49,6 +52,10 @@ public class GraphList implements Serializable
 				.anyMatch(v -> !vertices.contains(v)))
 			throw new RuntimeException("Invalid coreference vertex");
 
+		format = NumberFormat.getInstance();
+		format.setRoundingMode(RoundingMode.UP);
+		format.setMaximumFractionDigits(2);
+		format.setMinimumFractionDigits(2);
 	}
 
 	public List<SemanticGraph> getGraphs() { return graphs; }
@@ -68,8 +75,27 @@ public class GraphList implements Serializable
 	{
 		if (!vertices.contains(c.getVertex()))
 			throw new RuntimeException("Invalid candidate vertex");
-		candidate_meanings.get(c.getVertex()).clear();
+
+		final Collection<Candidate> candidates = candidate_meanings.get(c.getVertex());
+
+		log.debug(c.getMention().getSurface_form() + " <- " + c.getMeaning() + " (candidate set = " + candidates + ")");
+
+		candidates.clear();
 		candidate_meanings.put(c.getVertex(), c);
+	}
+
+	public void removeVertices(Collection<String> vertices)
+	{
+		// Remove candidates for removed vertices
+		this.candidate_meanings.removeAll(vertices);
+
+		// Now update coreference chains
+		chains.forEach(v_old ->
+				chains.forEach(c -> c.getVertices().removeAll(vertices)));
+		chains.removeIf(c -> c.getVertices().isEmpty());
+
+		// And now remove the vertices
+		graphs.forEach(g -> g.removeAllVertices(vertices));
 	}
 
 	public void vertexContraction(SemanticGraph g, String v, Collection<String> C)

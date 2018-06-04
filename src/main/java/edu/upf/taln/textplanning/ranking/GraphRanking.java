@@ -2,20 +2,19 @@ package edu.upf.taln.textplanning.ranking;
 
 import Jama.Matrix;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.TextPlanner;
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
-import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
-import edu.upf.taln.textplanning.input.amr.GraphList;
 import edu.upf.taln.textplanning.structures.Meaning;
+import edu.upf.taln.textplanning.structures.Mention;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
-import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -42,25 +41,28 @@ public class GraphRanking
 	private final static Logger log = LogManager.getLogger(TextPlanner.class);
 
 
-	public static void rankMeanings(Set<Meaning> meanings, WeightingFunction weighting, SimilarityFunction similarity,
+	public static void rankMeanings(Multimap<Meaning, Mention> meanings, WeightingFunction weighting, SimilarityFunction similarity,
 	                                double meaning_similarity_threshold, double damping_factor_meanings)
 	{
 		Stopwatch timer = Stopwatch.createStarted();
-		final List<String> references = meanings.stream()
+		weighting.setContents(meanings);
+		final List<String> labels = new ArrayList<>(meanings.keySet()).stream()
+				.map(Meaning::toString)
+				.collect(toList());
+		final List<String> references = meanings.keySet().stream()
 				.map(Meaning::getReference)
 				.collect(Collectors.toList());
-		weighting.setContents(references);
 
 		double[][] rankingArrays = MatrixFactory.createMeaningRankingMatrix(references, weighting, similarity,
 				meaning_similarity_threshold, damping_factor_meanings);
 		Matrix rankingMatrix = new Matrix(rankingArrays);
 
 		JamaPowerIteration alg = new JamaPowerIteration();
-		Matrix finalDistribution = alg.run(rankingMatrix);
+		Matrix finalDistribution = alg.run(rankingMatrix, labels);
 		double[] ranking = finalDistribution.getColumnPackedCopy();
 
 		// Assign ranking values to meanings
-		meanings.stream()
+		meanings.keySet().stream()
 				.distinct()
 				.forEach(m ->
 				{
@@ -78,13 +80,14 @@ public class GraphRanking
 		List<String> variables = graph.vertexSet().stream()
 				.sorted(Comparator.naturalOrder())
 				.collect(toList());
+
 		double[][] rankingArrays = MatrixFactory.createVariableRankingMatrix(variables, graph, damping_factor_variables,
 				minimum_meaning_ranking);
 		Matrix rankingMatrix = new Matrix(rankingArrays);
 
 		timer.reset(); timer.start();
 		JamaPowerIteration alg = new JamaPowerIteration();
-		Matrix finalDistribution = alg.run(rankingMatrix);
+		Matrix finalDistribution = alg.run(rankingMatrix, variables);
 		double[] ranking = finalDistribution.getColumnPackedCopy();
 
 		IntStream.range(0, variables.size()).boxed()

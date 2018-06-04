@@ -8,7 +8,6 @@ import edu.upf.taln.textplanning.input.amr.SemanticGraph;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
 import org.apache.commons.lang3.tuple.Pair;
-import org.jgrapht.graph.AbstractGraph;
 
 import java.util.*;
 
@@ -32,14 +31,13 @@ public class GlobalGraphFactory
 
 	private static void remove_concepts(GraphList graphs)
 	{
-		final Map<SemanticGraph, Set<String>> concepts = graphs.getGraphs().stream()
-				.map(g -> Pair.of(g, g.edgeSet().stream()
+		final Set<String> concepts = graphs.getGraphs().stream()
+				.flatMap(g -> g.edgeSet().stream()
 						.filter(e -> e.getLabel().equals(AMRConstants.instance))
-						.map(g::getEdgeTarget)
-						.collect(toSet())))
-				.collect(toMap(Pair::getLeft, Pair::getRight));
+						.map(g::getEdgeTarget))
+				.collect(toSet());
 
-		concepts.forEach(AbstractGraph::removeAllVertices);
+		graphs.removeVertices(concepts);
 	}
 
 	/**
@@ -49,8 +47,8 @@ public class GlobalGraphFactory
  	 */
 	private static void remove_names(GraphList graphs)
 	{
-		final Map<SemanticGraph, Set<String>> names = graphs.getGraphs().stream()
-				.map(g -> Pair.of(g, g.edgeSet().stream()
+		final Set<String> names = graphs.getGraphs().stream()
+				.flatMap(g -> g.edgeSet().stream()
 						.filter(e -> e.getLabel().equals(AMRConstants.name))
 						.map(g::getEdgeTarget)
 						.map(name -> {
@@ -58,11 +56,10 @@ public class GlobalGraphFactory
 							descendants.add(name);
 							return descendants;
 						})
-						.flatMap(Set::stream)
-						.collect(toSet())))
-				.collect(toMap(Pair::getLeft, Pair::getRight));
+						.flatMap(Set::stream))
+				.collect(toSet());
 
-		names.forEach(AbstractGraph::removeAllVertices);
+		graphs.removeVertices(names);
 	}
 
 	private static void disambiguate_candidates(GraphList graphs)

@@ -33,6 +33,8 @@ public class TextVectorsSimilarity implements SimilarityFunction
 	}
 
 	@Override
+	public boolean isDefinedFor(String e) {	return vectors.containsKey(e); }
+	@Override
 	public boolean isDefinedFor(String e1, String e2)
 	{
 		return vectors.containsKey(e1) && vectors.containsKey(e2);

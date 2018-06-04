@@ -2,19 +2,24 @@ package edu.upf.taln.textplanning;
 
 import com.beust.jcommander.*;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.corpora.CompactFrequencies;
 import edu.upf.taln.textplanning.input.AMRReader;
 import edu.upf.taln.textplanning.input.GraphListFactory;
-import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.input.amr.GraphList;
 import edu.upf.taln.textplanning.similarity.BinaryVectorsSimilarity;
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
+import edu.upf.taln.textplanning.structures.Mention;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.utils.CMLCheckers;
 import edu.upf.taln.textplanning.utils.Serializer;
+import edu.upf.taln.textplanning.weighting.NoWeights;
+import edu.upf.taln.textplanning.weighting.NumberForms;
 import edu.upf.taln.textplanning.weighting.TFIDF;
+import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -24,10 +29,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 import static edu.upf.taln.textplanning.utils.VectorsTextFileUtils.Format;
-import static java.util.stream.Collectors.toSet;
 
 @SuppressWarnings("ALL")
 public class Driver
@@ -36,6 +39,7 @@ public class Driver
 
 	private void create_graphs(Path amr, Path bn_config_folder, Path output) throws IOException
 	{
+		log.info("Running from " + amr);
 		String amr_bank = FileUtils.readFileToString(amr.toFile(), StandardCharsets.UTF_8);
 		AMRReader reader = new AMRReader();
 		GraphListFactory factory = new GraphListFactory(reader, null, bn_config_folder);
@@ -46,24 +50,25 @@ public class Driver
 
 	private void rank_meanings(Path graphs_file, Path freqs, Path vectors, Format format, Path output) throws IOException, ClassNotFoundException
 	{
+		log.info("Running from " + graphs_file);
 		Stopwatch timer = Stopwatch.createStarted();
 		GraphList graphs = (GraphList) Serializer.deserialize(graphs_file);
 		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
-		TFIDF weighting = new TFIDF(corpus, (r) -> r.endsWith("n"));
+		WeightingFunction weighting = new NoWeights();
 		SimilarityFunction similarity = new BinaryVectorsSimilarity(vectors);
 		log.info("Loading resources took " + timer.stop());
 
-		final Set<Meaning> meanings = graphs.getCandidates().stream()
-				.map(Candidate::getMeaning)
-				.collect(toSet());
+		final Multimap<Meaning, Mention> map = HashMultimap.create();
+		graphs.getCandidates().forEach(m -> map.put(m.getMeaning(), m.getMention()));
 		TextPlanner.Options options = new TextPlanner.Options();
-		TextPlanner.rankMeanings(meanings, weighting, similarity, options);
+		TextPlanner.rankMeanings(map, weighting, similarity, options);
 		Serializer.serialize(graphs, output);
 		log.info("Ranked graphs serialized to " + output);
 	}
 
 	private void create_global(Path graphs_file, Path output) throws IOException, ClassNotFoundException
 	{
+		log.info("Running from " + graphs_file);
 		Stopwatch timer = Stopwatch.createStarted();
 		GraphList graphs = (GraphList) Serializer.deserialize(graphs_file);
 		log.info("Loading resources took " + timer.stop());
@@ -75,6 +80,7 @@ public class Driver
 
 	private void rank_variables(Path graph_file, Path output) throws IOException, ClassNotFoundException
 	{
+		log.info("Running from " + graph_file);
 		Stopwatch timer = Stopwatch.createStarted();
 		GlobalSemanticGraph graph = (GlobalSemanticGraph) Serializer.deserialize(graph_file);
 		log.info("Loading resources took " + timer.stop());
@@ -87,6 +93,7 @@ public class Driver
 
 	private void extract_subgraphs(Path graph_file, int num_subgraphs, Path output) throws IOException, ClassNotFoundException
 	{
+		log.info("Running from " + graph_file);
 		Stopwatch timer = Stopwatch.createStarted();
 		GlobalSemanticGraph graph = (GlobalSemanticGraph) Serializer.deserialize(graph_file);
 		log.info("Loading resources took " + timer.stop());
@@ -99,6 +106,7 @@ public class Driver
 
 	private void remove_redundancy(Path subgraphs_file, int num_subgraphs, Path vectors, Format format, Path output) throws IOException, ClassNotFoundException
 	{
+		log.info("Running from " + subgraphs_file);
 		Stopwatch timer = Stopwatch.createStarted();
 		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
 		SimilarityFunction similarity = new BinaryVectorsSimilarity(vectors);
@@ -112,6 +120,7 @@ public class Driver
 
 	private void sort_subgraphs(Path subgraphs_file, Path vectors, Format format, Path output) throws IOException, ClassNotFoundException
 	{
+		log.info("Running from " + subgraphs_file);
 		Stopwatch timer = Stopwatch.createStarted();
 		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
 		SimilarityFunction similarity = new BinaryVectorsSimilarity(vectors);
@@ -125,6 +134,7 @@ public class Driver
 
 	private void plan(Path graphs_file, Path freqs, Path vectors, Format format, int num_subgraphs, Path output) throws Exception
 	{
+		log.info("Running from " + graphs_file);
 		Stopwatch timer = Stopwatch.createStarted();
 		GraphList graphs = (GraphList) Serializer.deserialize(graphs_file);
 		SimilarityFunction similarity = new BinaryVectorsSimilarity(vectors);

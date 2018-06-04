@@ -5,6 +5,8 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.corpora.CompactFrequencies;
 import edu.upf.taln.textplanning.corpora.FreqsFile;
 import edu.upf.taln.textplanning.input.AMRReader;
@@ -13,6 +15,7 @@ import edu.upf.taln.textplanning.input.GraphListFactory;
 import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.input.amr.GraphList;
+import edu.upf.taln.textplanning.structures.Mention;
 import edu.upf.taln.textplanning.utils.CMLCheckers.PathConverter;
 import edu.upf.taln.textplanning.weighting.TFIDF;
 import org.apache.commons.io.FileUtils;
@@ -306,7 +309,9 @@ public class FrequencyUtils
 				.collect(Collectors.toList());
 
 		final TFIDF tfidf = new TFIDF(corpus, (n) -> n.endsWith("n"));
-		tfidf.setContents(references);
+		final Multimap<Meaning, Mention> map = HashMultimap.create();
+		graphs.getCandidates().forEach(m -> map.put(m.getMeaning(), m.getMention()));
+		tfidf.setContents(map);
 		Map<String, Double> sense_tf_idfs = references.stream()
 				.collect(toMap(s -> s, tfidf::weight));
 		List<String> sorted_refs_tf_idf = sense_tf_idfs.keySet().stream()

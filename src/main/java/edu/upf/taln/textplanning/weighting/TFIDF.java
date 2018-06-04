@@ -1,6 +1,9 @@
 package edu.upf.taln.textplanning.weighting;
 
+import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.corpora.Corpus;
+import edu.upf.taln.textplanning.structures.Meaning;
+import edu.upf.taln.textplanning.structures.Mention;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -27,12 +30,15 @@ public final class TFIDF implements WeightingFunction
 		this.filter = filter;
 	}
 
-	public void setContents(Collection<String> contents)
+	public void setContents(Multimap<Meaning, Mention> contents)
 	{
 		tfidf.clear();
+		final Set<String> references = contents.keySet().stream()
+				.map(Meaning::getReference)
+				.collect(Collectors.toSet());
 
 		// Collect frequencies for selected items
-		Map<String, Long> freqs = contents.stream()
+		Map<String, Long> freqs = references.stream()
 				.filter(filter)
 				.collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
@@ -64,7 +70,7 @@ public final class TFIDF implements WeightingFunction
 
 		// Set the tf*idf score of excluded items to the avg of selected items
 		double avgTfidf = tfidf.values().stream().mapToDouble(d -> d).average().orElse(0.0);
-		contents.stream()
+		references.stream()
 				.filter(i -> !filter.test(i))
 				.forEach(i -> tfidf.put(i, avgTfidf));
 	}

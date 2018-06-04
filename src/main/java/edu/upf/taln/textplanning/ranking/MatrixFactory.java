@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.OptionalDouble;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.IntStream;
 
@@ -102,16 +103,15 @@ public class MatrixFactory
 				.mapToDouble(weighting::weight)
 				.toArray();
 
-
 		if (normalize)
 		{
 			double accum = Arrays.stream(v).sum();
-			IntStream.range(0, num_entities).forEach(i -> v[i] /= accum); // normalize vector with sum of row
+			if (accum > 0.0)
+				IntStream.range(0, num_entities).forEach(i -> v[i] /= accum); // normalize vector with sum of row
 		}
 
 		return v;
 	}
-
 
 	// Creates normalized *strictly positive* bias row vector for variables from the rankings of their meanings
 	private static double[] createVariablesBiasVector(List<String> variables, GlobalSemanticGraph graph, double min_rank)
@@ -136,27 +136,59 @@ public class MatrixFactory
 		double[][] m = new double[n][n];
 
 		AtomicLong counter = new AtomicLong(0);
-		long num_calculations1 = ((((long)n * (long)n) - n)  / 2) + n;
+		long num_calculations = ((((long)n * (long)n) - n)  / 2) + n;
+		AtomicLong num_defined = new AtomicLong(0);
 
+		final Boolean[] defined_meanings = meaning.stream()
+			.map(sim::isDefinedFor)
+			.toArray(Boolean[]::new);
+
+		// Calculate similarity values
 		IntStream.range(0, n).forEach(i ->
-				IntStream.range(i, n).forEach(j -> {
-					double simij = 1.0;
-					if (i != j)
+				IntStream.range(i, n).forEach(j ->
+				{
+					double simij = 0.0;
+					if (i == j)
+						simij = 1.0;
+					else
 					{
-						String e1 = meaning.get(i);
-						String e2 = meaning.get(j);
-						simij = sim.computeSimilarity(e1, e2).orElse(sim.getAverageSimiliarity());
-						if (simij < sim_threshold)
-							simij = 0.0;
+						if (defined_meanings[i] && defined_meanings[j])
+						{
+							final String e1 = meaning.get(i);
+							final String e2 = meaning.get(j);
+							final OptionalDouble osim = sim.computeSimilarity(e1, e2);
+							if (osim.isPresent())
+								num_defined.incrementAndGet();
+							simij = osim.orElse(sim.getAverageSimiliarity());
+						}
 					}
+
+					if (simij < sim_threshold)
+						simij = 0.0;
 
 					m[i][j] = simij;
 					m[j][i] = simij; // symmetric matrix
 
 					if (counter.incrementAndGet() % 100000 == 0)
-						log.info(counter.get() + " out of " + num_calculations1);
+						log.info(counter.get() + " out of " + num_calculations);
 				}));
 
+		// Set all 0-valued similarity values to the average of non-zero similarities
+		final OptionalDouble average = Arrays.stream(m)
+				.flatMapToDouble(Arrays::stream)
+				.filter(v -> v >= 0.0)
+				.average();
+		if (average.isPresent())
+		{
+			final double avg = average.getAsDouble();
+			IntStream.range(0, n).forEach(i ->
+					IntStream.range(0, n).forEach(j -> {
+						if (m[i][j] == 0.0)
+							m[i][j] = avg;
+					}));
+		}
+
+		log.info("Similarity function defined for " + num_defined.get() + " out of " + num_calculations);
 		if (normalize)
 			normalize(m);
 
