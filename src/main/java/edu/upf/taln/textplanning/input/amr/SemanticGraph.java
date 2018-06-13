@@ -7,6 +7,7 @@ import org.jgrapht.graph.DirectedAcyclicGraph;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.Collections;
 
 public class SemanticGraph extends DirectedAcyclicGraph<String, Role> implements Serializable
 {
@@ -56,7 +57,7 @@ public class SemanticGraph extends DirectedAcyclicGraph<String, Role> implements
 		}
 	}
 
-	void vertexContraction(String v, Collection<String> C)
+	public void vertexContraction(String v, Collection<String> C)
 	{
 		C.stream()
 				.map(this::incomingEdgesOf)
@@ -71,6 +72,23 @@ public class SemanticGraph extends DirectedAcyclicGraph<String, Role> implements
 
 		removeAllVertices(C);
 		C.forEach(c -> alignments.removeVertex(c));
+	}
+
+	@Override
+	public boolean removeAllVertices(Collection<? extends String> vertices)
+	{
+		// Update the alignments
+		vertices.forEach(alignments::removeVertex);
+
+		return super.removeAllVertices(vertices);
+	}
+
+	@Override
+	public boolean removeVertex(String vertex)
+	{
+		alignments.removeVertex(vertex);
+
+		return super.removeVertex(vertex);
 	}
 
 	private void addNewEdge(String source, String target, String role)

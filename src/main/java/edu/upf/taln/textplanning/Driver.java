@@ -17,7 +17,6 @@ import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.utils.CMLCheckers;
 import edu.upf.taln.textplanning.utils.Serializer;
 import edu.upf.taln.textplanning.weighting.NoWeights;
-import edu.upf.taln.textplanning.weighting.NumberForms;
 import edu.upf.taln.textplanning.weighting.TFIDF;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.apache.commons.io.FileUtils;
@@ -37,12 +36,13 @@ public class Driver
 {
 	private final static Logger log = LogManager.getLogger(Driver.class);
 
-	private void create_graphs(Path amr, Path bn_config_folder, Path output) throws IOException
+	private void create_graphs(Path amr, Path bn_config_folder, Path output, boolean no_stanford, boolean no_babelnet)
+			throws IOException
 	{
 		log.info("Running from " + amr);
 		String amr_bank = FileUtils.readFileToString(amr.toFile(), StandardCharsets.UTF_8);
 		AMRReader reader = new AMRReader();
-		GraphListFactory factory = new GraphListFactory(reader, null, bn_config_folder);
+		GraphListFactory factory = new GraphListFactory(reader, null, bn_config_folder, no_stanford, no_babelnet);
 		GraphList graphs = factory.getGraphs(amr_bank);
 		Serializer.serialize(graphs, output);
 		log.info("Graphs serialized to " + output);
@@ -184,6 +184,10 @@ public class Driver
 		@Parameter(names = {"-o", "-output"}, description = "Output binary graphs file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFile.class)
 		private Path outputFile;
+		@Parameter(names = {"-ns", "-nostanford"}, description = "Do not load Stanford CoreNLP pipeline")
+		private boolean no_stanford = false;
+		@Parameter(names = {"-nb", "-nobabelnet"}, description = "Do not query BabelNet")
+		private boolean no_babelnet = false;
 	}
 
 	@Parameters(commandDescription = "Rank meanings in a collection of semantic graphs")
@@ -326,8 +330,8 @@ public class Driver
 
 		Driver driver = new Driver();
 		if (jc.getParsedCommand().equals("create_graphs"))
-			driver.create_graphs(create_graphs.inputFile, create_graphs.bnFolder,
-					create_graphs.outputFile);
+			driver.create_graphs(create_graphs.inputFile, create_graphs.bnFolder, create_graphs.outputFile,
+					create_graphs.no_stanford, create_graphs.no_babelnet);
 		else if (jc.getParsedCommand().equals("rank_meanings"))
 			driver.rank_meanings(rank_meanings.inputFile, rank_meanings.freqsFile, rank_meanings.vectorsPath,
 					rank_meanings.format, rank_meanings.outputFile);

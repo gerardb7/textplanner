@@ -68,16 +68,19 @@ class TypesCollector
 			try
 			{
 				BabelSynset synset = babelnet.getSynset(new BabelSynsetID(r));
-				List<String> dbPediaURIs = synset.getDBPediaURIs(Language.EN);
-				Candidate.Type t = Candidate.Type.Other;
-				if (!dbPediaURIs.isEmpty())
+				if (synset != null)
 				{
-					t = dbpedia.getType(dbPediaURIs.get(0));
-				}
-				types.put(r, t);
+					List<String> dbPediaURIs = synset.getDBPediaURIs(Language.EN);
+					Candidate.Type t = Candidate.Type.Other;
+					if (!dbPediaURIs.isEmpty())
+					{
+						t = dbpedia.getType(dbPediaURIs.get(0));
+					}
+					types.put(r, t);
 
-				if (counter.incrementAndGet() % 1000 == 0)
-					log.info(counter.get() + " types queried");
+					if (counter.incrementAndGet() % 1000 == 0)
+						log.info(counter.get() + " types queried");
+				}
 
 			}
 			catch (Exception e) { throw new RuntimeException(e); }

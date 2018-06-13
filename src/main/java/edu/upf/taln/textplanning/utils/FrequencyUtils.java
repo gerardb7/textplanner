@@ -233,7 +233,7 @@ public class FrequencyUtils
 	private static void getStats(Path amr_bank, Path freqs_file, Path babel_config) throws IOException, ClassNotFoundException
 	{
 		AMRReader reader = new AMRReader();
-		GraphListFactory factory = new GraphListFactory(reader, null, babel_config);
+		GraphListFactory factory = new GraphListFactory(reader, null, babel_config, false, false);
 		String contents = FileUtils.readFileToString(amr_bank.toFile(), Charsets.UTF_8);
 		GraphList graphs = factory.getGraphs(contents);
 
@@ -252,7 +252,7 @@ public class FrequencyUtils
 					GraphAlignments a = g.getAlignments();
 					List<String> tokens = a.getTokens();
 					return IntStream.range(0, tokens.size())
-							.mapToObj(a::getVertices)
+							.mapToObj(a::getAlignedVertices)
 							.filter(l -> !l.isEmpty())
 							.count();
 				})
@@ -264,7 +264,7 @@ public class FrequencyUtils
 					GraphAlignments a = g.getAlignments();
 					List<String> tokens = a.getTokens();
 					return IntStream.range(0, tokens.size())
-							.mapToObj(a::getVertices)
+							.mapToObj(a::getAlignedVertices)
 							.filter(l -> !l.isEmpty())
 							.flatMap(Set::stream)
 							.map(graphs::getCandidates)

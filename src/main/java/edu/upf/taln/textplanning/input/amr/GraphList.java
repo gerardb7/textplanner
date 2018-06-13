@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.input.amr;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import edu.upf.taln.textplanning.structures.Meaning;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -16,6 +17,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
@@ -78,7 +80,11 @@ public class GraphList implements Serializable
 
 		final Collection<Candidate> candidates = candidate_meanings.get(c.getVertex());
 
-		log.debug(c.getMention().getSurface_form() + " <- " + c.getMeaning() + " (candidate set = " + candidates + ")");
+		log.debug(c.getMention().getSurface_form() + " <- " + c.getMeaning() +
+				" (candidate set = " + candidates.stream()
+				.map(Candidate::getMeaning)
+				.map(Meaning::toString)
+				.collect(joining(", ")) + ")");
 
 		candidates.clear();
 		candidate_meanings.put(c.getVertex(), c);
@@ -95,7 +101,7 @@ public class GraphList implements Serializable
 		chains.removeIf(c -> c.getVertices().isEmpty());
 
 		// And now remove the vertices
-		graphs.forEach(g -> g.removeAllVertices(vertices));
+		graphs.forEach(g -> g.removeAllVertices(vertices)); // this updates the alignments
 	}
 
 	public void vertexContraction(SemanticGraph g, String v, Collection<String> C)
@@ -104,7 +110,7 @@ public class GraphList implements Serializable
 			throw new RuntimeException("Invalid contraction vertices");
 
 		// Perform contraction on graph
-		g.vertexContraction(v, C);
+		g.vertexContraction(v, C); // this updates the alignments
 
 		// Remove candidates for contracted vertices
 		// And add new ones to v

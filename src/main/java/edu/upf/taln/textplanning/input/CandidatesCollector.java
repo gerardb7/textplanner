@@ -15,10 +15,7 @@ import org.apache.commons.lang3.tuple.Triple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -68,7 +65,6 @@ class CandidatesCollector
 
 		// Create a map of anchors and associated candidate synsets
 		AtomicInteger counter = new AtomicInteger(0);
-
 		Map<Triple<String, String, String>, Set<BabelSynset>> anchorsSynsets = anchors2Mentions.keySet().stream()
 				.peek(l -> {
 					if (counter.incrementAndGet() % 1000 == 0)
@@ -89,8 +85,8 @@ class CandidatesCollector
 				.forEach(m -> {
 							Pair<Integer, Integer> span = m.getSpan();
 							SemanticGraph graph = graph_ids.get(m.getSentenceId());
-							Set<String> top_vertices = graph.getAlignments().getTopSpanVertex(span);
-							mentions2vertices.putAll(m, top_vertices);
+							Optional<String> top = graph.getAlignments().getSpanTopVertex(span);
+							top.ifPresent(t -> mentions2vertices.put(m, t));
 						});
 
 		// Create candidates
@@ -105,6 +101,13 @@ class CandidatesCollector
 		log.info("Created " + candidates.size() + " candidates, with " + num_references +
 				" different references, and using " + BabelNetWrapper.num_queries.get() + " queries");
 		log.info("Candidate meanings collected in " + timer.stop());
+
+		final List<String> multiwords = candidates.stream()
+				.filter(c -> c.getMention().isMultiWord())
+				.map(c -> c.getMention().getSurface_form() + "-" + c.getMeaning())
+				.collect(Collectors.toList());
+		log.debug("List of multiword candidates: " + multiwords);
+
 		return candidates;
 	}
 

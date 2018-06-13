@@ -26,9 +26,9 @@ public class BabelNetWrapper
 	static final AtomicLong num_queries = new AtomicLong();
 	private final static Logger log = LogManager.getLogger(BabelNetWrapper.class);
 
-	public BabelNetWrapper(Path config_folder)
+	public BabelNetWrapper(Path config_folder, boolean no_babelnet)
 	{
-		bn = getBabelNetInstance(config_folder);
+		bn = no_babelnet ? null : getBabelNetInstance(config_folder);
 	}
 
 	private it.uniroma1.lcl.babelnet.BabelNet getBabelNetInstance(Path config_folder)
@@ -70,6 +70,9 @@ public class BabelNetWrapper
 	@SuppressWarnings("unused")
 	public List<BabelSynset> getSynsets(String form)
 	{
+		if (bn == null)
+			return Collections.emptyList();
+
 		// Get candidate entities using strict matching
 		try
 		{
@@ -85,11 +88,13 @@ public class BabelNetWrapper
 
 	List<BabelSynset> getSynsets(String form, String pos)
 	{
-		BabelPOS bnPOS = BN_POS_EN.get(pos);
+		if (bn == null)
+			return Collections.emptyList();
 
 		// Get candidate entities using strict matching
 		try
 		{
+			BabelPOS bnPOS = BN_POS_EN.get(pos);
 			num_queries.getAndIncrement();
 			return bn.getSynsets(form, Language.EN, bnPOS);
 		}
@@ -102,6 +107,9 @@ public class BabelNetWrapper
 
 	BabelSynset getSynset(BabelSynsetID id) throws IOException
 	{
+		if (bn == null)
+			return null;
+
 		num_queries.getAndIncrement();
 		return bn.getSynset(id);
 	}

@@ -8,6 +8,8 @@ import edu.upf.taln.textplanning.input.amr.SemanticGraph;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 
@@ -17,6 +19,9 @@ import static java.util.stream.Collectors.*;
 // Creates global semantic graphs from a lists of AMR-like semantic graphs
 public class GlobalGraphFactory
 {
+	private final static Logger log = LogManager.getLogger(GlobalGraphFactory.class);
+
+
 	public static GlobalSemanticGraph create(GraphList graphs)
 	{
 		remove_concepts(graphs);
@@ -89,6 +94,7 @@ public class GlobalGraphFactory
 						.map(v -> Pair.of(g, v)))
 				.collect(toCollection(LinkedList::new));
 
+
 		while(!subsumers.isEmpty())
 		{
 			// Pop a subsumer from the queue
@@ -101,8 +107,8 @@ public class GlobalGraphFactory
 			double v_value = c.getMeaning().getWeight();
 
 			// s_max -> value of highest scored subsumed meaning
-			final Set<String> descendants = g.getDescendants(v);
-			double s_max = descendants.stream()
+			final Set<String> subsumed = g.getAlignments().getSpanVertices(c.getMention().getSpan());
+			double s_max = subsumed.stream()
 					.map(graphs::getCandidates)
 					.flatMap(Collection::stream)
 					.map(Candidate::getMeaning)
@@ -113,18 +119,22 @@ public class GlobalGraphFactory
 			if (v_value >= s_max)
 			{
 				// this also updates meanings and coreference
-				graphs.vertexContraction(g, v, descendants);
+				graphs.vertexContraction(g, v, subsumed);
 
 				// Update remaining subsumers affected by this contraction
 				final List<Pair<SemanticGraph, String>> renamed_multiwords = subsumers.stream()
-						.filter(p -> descendants.contains(p.getRight()))
+						.filter(p -> subsumed.contains(p.getRight()))
 						.collect(toList());
 				renamed_multiwords.forEach(p ->
 				{
 					subsumers.remove(p);
 					subsumers.add(Pair.of(p.getLeft(), v)); // subsumer node has been replaced by v
 				});
+
+				log.debug("Accepted multiword " + c.getMention().getSurface_form() + " <- " + c.getMeaning());
 			}
+			else
+				log.debug("Rejected multiword " + c.getMention().getSurface_form() + " <- " + c.getMeaning());
 		}
 	}
 

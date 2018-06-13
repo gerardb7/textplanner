@@ -39,7 +39,7 @@ public class DBPediaTypeUtils
 	private static void getTypes(Path amrPath, String extension, Path o, Path babel_config) throws IOException
 	{
 		log.info("Reading structures");
-		GraphListFactory factory = new GraphListFactory(new AMRReader(), null, babel_config);
+		GraphListFactory factory = new GraphListFactory(new AMRReader(), null, babel_config, false, false);
 		List<GraphList> graphs = Files.walk(amrPath.toAbsolutePath())
 				.filter(Files::isRegularFile)
 				.filter(p -> p.toString().endsWith(extension))

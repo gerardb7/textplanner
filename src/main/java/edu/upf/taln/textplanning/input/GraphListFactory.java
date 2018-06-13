@@ -15,14 +15,16 @@ import static java.util.stream.Collectors.toList;
 public class GraphListFactory
 {
 	private final DocumentReader reader;
-	private final StanfordWrapper stanford = new StanfordWrapper();
+	private final StanfordWrapper stanford;
 	private final CandidatesCollector candidate_collector;
 	private final TypesCollector types_collector;
 
-	public GraphListFactory(DocumentReader reader, Path types_file, Path bn_config_folder) throws IOException
+	public GraphListFactory(DocumentReader reader, Path types_file, Path bn_config_folder, boolean no_stanford,
+	                        boolean no_babelnet) throws IOException
 	{
 		this.reader = reader;
-		BabelNetWrapper babelnet = new BabelNetWrapper(bn_config_folder);
+		stanford = new StanfordWrapper(no_stanford);
+		BabelNetWrapper babelnet = new BabelNetWrapper(bn_config_folder, no_babelnet);
 		this.candidate_collector = new CandidatesCollector(babelnet);
 		this.types_collector = (types_file != null) ? new TypesCollector(types_file, babelnet) : null;
 	}

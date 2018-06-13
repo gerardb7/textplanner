@@ -29,7 +29,7 @@ class StanfordWrapper
 	private final StanfordCoreNLP pipeline;
 	private final static Logger log = LogManager.getLogger(StanfordWrapper.class);
 
-	StanfordWrapper()
+	StanfordWrapper(boolean no_stanford)
 	{
 		Properties props = new Properties();
 		props.setProperty("annotators", "tokenize,ssplit,pos,lemma,ner,parse,depparse,coref");
@@ -40,7 +40,7 @@ class StanfordWrapper
 
 		Stopwatch timer = Stopwatch.createStarted();
 		RedwoodConfiguration.current().clear().apply(); // shut up, CoreNLP
-		pipeline = new StanfordCoreNLP(props);
+		pipeline = no_stanford ? null : new StanfordCoreNLP(props);
 		log.info("CoreNLP pipeline created in " + timer.stop());
 	}
 
@@ -125,14 +125,14 @@ class StanfordWrapper
 						GraphAlignments a = g.getAlignments();
 						Pair<Integer, Integer> span = Pair.of(m.startIndex-1, m.endIndex-1);
 
-						final Set<String> top_v = a.getTopSpanVertex(span);
-						if (!top_v.isEmpty())
+						final Optional<String> top_v = a.getSpanTopVertex(span);
+						if (top_v.isPresent())
 						{
 							String lemma_v = a.getLemma(span).orElse("");
 							String pos_v = a.getPOS(span).orElse("N"); // assume nominal
 							Type ner_v = a.getNER(span).orElse(Type.Other);
 							Mention mention = new Mention(g.getId(), span, a.getSurfaceForm(span), lemma_v, pos_v, ner_v);
-							top_v.forEach(v -> chain.put(v, mention));
+							chain.put(top_v.get(), mention);
 						}
 					});
 
