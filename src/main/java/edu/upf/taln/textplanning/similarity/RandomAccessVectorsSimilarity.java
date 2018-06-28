@@ -9,8 +9,6 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.OptionalDouble;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Computes similarity between items according to precomputed distributional vectors (embeddings) stored in a binary
@@ -20,8 +18,6 @@ public class RandomAccessVectorsSimilarity implements SimilarityFunction
 {
 	private final GloveRandomAccessReader db;
 	private final CosineDistance cos = new CosineDistance();
-	private AtomicLong num_defined = new AtomicLong(0);
-	private AtomicLong num_undefined = new AtomicLong(0);
 	private final static Logger log = LogManager.getLogger(TextVectorsSimilarity.class);
 
 	public RandomAccessVectorsSimilarity(Path vectors_path) throws IOException
@@ -44,18 +40,15 @@ public class RandomAccessVectorsSimilarity implements SimilarityFunction
 	}
 
 	@Override
-	public OptionalDouble computeSimilarity(String e1, String e2)
+	public double computeSimilarity(String e1, String e2)
 	{
 		try
 		{
-			final OptionalDouble v = OptionalDouble.of(cos.measureDistance(db.get(e1), db.get(e2)));
-			num_defined.incrementAndGet();
-			return v;
+			return cos.measureDistance(db.get(e1), db.get(e2));
 		}
 		catch (Exception e)
 		{
-			num_undefined.incrementAndGet();
-			return OptionalDouble.empty();
+			return Double.NaN;
 		}
 	}
 }

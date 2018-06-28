@@ -8,8 +8,6 @@ import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.OptionalDouble;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Computes similarity between items according to precomputed distributional vectors (embeddings) stored in a text
@@ -39,13 +37,8 @@ public class TextVectorsSimilarity implements SimilarityFunction
 	}
 
 	@Override
-	public OptionalDouble computeSimilarity(String e1, String e2)
+	public double computeSimilarity(String e1, String e2)
 	{
-		if (e1.equals(e2))
-			return OptionalDouble.of(1.0);
-		if (!isDefinedFor(e1, e2))
-			return OptionalDouble.empty(); // todo consider throwing an exception or returning an optional
-
 		double[] v1 = vectors.get(e1);
 		double[] v2 = vectors.get(e2);
 
@@ -60,37 +53,6 @@ public class TextVectorsSimilarity implements SimilarityFunction
 		}
 
 		double magnitude = Math.sqrt(normA) * Math.sqrt(normB); // will normalize with magnitude in order to ignore it
-		double cosineSimilarity = dotProduct / magnitude; // range (-1,1)
-		// Negative values indicate senses cooccur less than expected by chance
-		// They seem to be unreliable, so replace with 0 (see https://web.stanford.edu/~jurafsky/slp3/15.pdf page 7)
-		return OptionalDouble.of(Math.max(0.0, cosineSimilarity));
-		//double distanceMetric = Math.acos(cosineSimilarity) / Math.PI; // range (0,1)
-		//return (cosineSimilarity + 1.0) / 2.0;
-	}
-
-	@SuppressWarnings("unused")
-	private double computeAverageSimilarity()
-	{
-		log.info("Computing average similarity for " + vectors.keySet().size() + " vectors");
-		AtomicInteger counter = new AtomicInteger(0);
-		int num_pairs = vectors.keySet().size() * vectors.keySet().size();
-		Stopwatch timer = Stopwatch.createStarted();
-
-		double average = vectors.keySet().stream()
-				.map(r1 -> vectors.keySet().stream()
-						.filter(r2 -> !r1.equals(r2))
-						.map(r2 -> computeSimilarity(r1, r2))
-						.mapToDouble(OptionalDouble::getAsDouble)
-						.peek(v -> {
-							if (counter.incrementAndGet() % 100000 == 0)
-								log.info(counter.get() + " out of " + num_pairs);
-						})
-						.average())
-				.mapToDouble(OptionalDouble::getAsDouble)
-				.average()
-				.orElse(0.0);
-
-		log.info("Average similarity is " + average + ", computed in " + timer.stop());
-		return average;
+		return dotProduct / magnitude; // range (-1,1)
 	}
 }

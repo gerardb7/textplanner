@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
@@ -130,18 +131,19 @@ public class MatrixFactory
 	}
 
 	// Creates row-normalized symmetric non-negative similarity matrix
-	public static double[][] createMeaningsSimilarityMatrix(List<String> meaning, SimilarityFunction sim,
+	public static double[][] createMeaningsSimilarityMatrix(List<String> meanings, SimilarityFunction sim,
 	                                                        BiPredicate<String, String> filter,
 	                                                        double sim_threshold, boolean normalize)
 	{
-		int n = meaning.size();
+		int n = meanings.size();
 		double[][] m = new double[n][n];
 
 		AtomicLong counter = new AtomicLong(0);
-		long num_calculations = ((((long)n * (long)n) - n)  / 2) + n;
+		AtomicLong num_calculations = new AtomicLong(0);
 		AtomicLong num_defined = new AtomicLong(0);
+		AtomicLong num_negative = new AtomicLong(0);
 
-		final Boolean[] defined_meanings = meaning.stream()
+		final Boolean[] defined_meanings = meanings.stream()
 			.map(sim::isDefinedFor)
 			.toArray(Boolean[]::new);
 
@@ -154,18 +156,26 @@ public class MatrixFactory
 						simij = 1.0;
 					else
 					{
-						if (defined_meanings[i] && defined_meanings[j])
+						String e1 = meanings.get(i);
+						String e2 = meanings.get(j);
+						boolean filtered_in = filter.test(e1, e2);
+						boolean pair_defined = defined_meanings[i] && defined_meanings[j];
+
+						if (filtered_in && pair_defined )
 						{
-							final String e1 = meaning.get(i);
-							final String e2 = meaning.get(j);
-							if (filter.test(e1, e2))
-							{
-								final OptionalDouble osim = sim.computeSimilarity(e1, e2);
-								if (osim.isPresent())
-									num_defined.incrementAndGet();
-								simij = osim.orElse(0.0);
-							}
+							final Optional<Double> osim = sim.getSimilarity(e1, e2);
+							if (osim.isPresent())
+								num_defined.incrementAndGet();
+
+							double sim_value = osim.orElse(0.0);
+							if (sim_value < 0.0)
+								num_negative.incrementAndGet();
+							else
+								simij = sim_value;
 						}
+
+						if (filtered_in)
+							num_calculations.incrementAndGet();
 					}
 
 					if (simij < sim_threshold)
@@ -193,7 +203,8 @@ public class MatrixFactory
 					}));
 		}
 
-		log.info("Similarity function defined for " + num_defined.get() + " out of " + num_calculations);
+		log.info("Similarity function defined for " + num_defined + " out of " + num_calculations);
+		log.info("Similarity values are negative for " + num_negative.get() + " out of " + num_calculations);
 		if (normalize)
 			normalize(m);
 
