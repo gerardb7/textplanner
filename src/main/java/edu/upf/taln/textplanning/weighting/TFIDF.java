@@ -1,9 +1,8 @@
 package edu.upf.taln.textplanning.weighting;
 
-import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.corpora.Corpus;
+import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.structures.Meaning;
-import edu.upf.taln.textplanning.structures.Mention;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -30,10 +29,11 @@ public final class TFIDF implements WeightingFunction
 		this.filter = filter;
 	}
 
-	public void setContents(Multimap<Meaning, Mention> contents)
+	public void setContents(Collection<Candidate> contents)
 	{
 		tfidf.clear();
-		final Set<String> references = contents.keySet().stream()
+		final Set<String> references = contents.stream()
+				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
 				.collect(Collectors.toSet());
 

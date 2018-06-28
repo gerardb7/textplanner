@@ -5,11 +5,16 @@ import edu.upf.taln.textplanning.ranking.MatrixFactory;
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.structures.Meaning;
+import edu.upf.taln.textplanning.structures.Mention;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiPredicate;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
@@ -30,8 +35,23 @@ public class Coherence implements Function
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
 				.collect(toList()); // with duplicates
+
+		// Similarity for pairs of references that appear in the same mentions should be 0
+		BiPredicate<String, String> filter = (r1, r2) ->
+		{
+			final Set<Mention> mentions_r1 = candidates.stream()
+					.filter(c -> c.getMeaning().getReference().equals(r1))
+					.map(Candidate::getMention)
+					.collect(Collectors.toSet());
+			final Set<Mention> mentions_r2 = candidates.stream()
+					.filter(c -> c.getMeaning().getReference().equals(r2))
+					.map(Candidate::getMention)
+					.collect(Collectors.toSet());
+			return Collections.disjoint(mentions_r1, mentions_r2);
+		};
+
 		// Don't normalize matrix, normalization is part of the optimizable softmax function
-		semantic_similarity = MatrixFactory.createMeaningsSimilarityMatrix(meanings, similarity, lower_bound,
+		semantic_similarity = MatrixFactory.createMeaningsSimilarityMatrix(meanings, similarity, filter, lower_bound,
 				false);
 	}
 

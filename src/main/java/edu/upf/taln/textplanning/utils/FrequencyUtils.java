@@ -309,9 +309,7 @@ public class FrequencyUtils
 				.collect(Collectors.toList());
 
 		final TFIDF tfidf = new TFIDF(corpus, (n) -> n.endsWith("n"));
-		final Multimap<Meaning, Mention> map = HashMultimap.create();
-		graphs.getCandidates().forEach(m -> map.put(m.getMeaning(), m.getMention()));
-		tfidf.setContents(map);
+		tfidf.setContents(graphs.getCandidates());
 		Map<String, Double> sense_tf_idfs = references.stream()
 				.collect(toMap(s -> s, tfidf::weight));
 		List<String> sorted_refs_tf_idf = sense_tf_idfs.keySet().stream()

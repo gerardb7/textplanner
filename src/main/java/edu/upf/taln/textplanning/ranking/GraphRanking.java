@@ -2,8 +2,8 @@ package edu.upf.taln.textplanning.ranking;
 
 import Jama.Matrix;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.TextPlanner;
+import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
@@ -12,9 +12,8 @@ import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -41,19 +40,39 @@ public class GraphRanking
 	private final static Logger log = LogManager.getLogger(TextPlanner.class);
 
 
-	public static void rankMeanings(Multimap<Meaning, Mention> meanings, WeightingFunction weighting, SimilarityFunction similarity,
+	public static void rankMeanings(Collection<Candidate> candidates, WeightingFunction weighting, SimilarityFunction similarity,
 	                                double meaning_similarity_threshold, double damping_factor_meanings)
 	{
-		Stopwatch timer = Stopwatch.createStarted();
-		weighting.setContents(meanings);
-		final List<String> labels = new ArrayList<>(meanings.keySet()).stream()
+		weighting.setContents(candidates);
+		final List<String> labels = candidates.stream()
+				.map(Candidate::getMeaning)
 				.map(Meaning::toString)
+				.distinct()
 				.collect(toList());
-		final List<String> references = meanings.keySet().stream()
+		final List<String> references = candidates.stream()
+				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
+				.distinct()
 				.collect(Collectors.toList());
 
-		double[][] rankingArrays = MatrixFactory.createMeaningRankingMatrix(references, weighting, similarity,
+		if (references.isEmpty())
+			return;
+
+		// Accept references which are not candidates of exactly the same set of mentions
+		BiPredicate<String, String> filter = (r1, r2) ->
+		{
+			final Set<Mention> mentions_r1 = candidates.stream()
+					.filter(c -> c.getMeaning().getReference().equals(r1))
+					.map(Candidate::getMention)
+					.collect(Collectors.toSet());
+			final Set<Mention> mentions_r2 = candidates.stream()
+					.filter(c -> c.getMeaning().getReference().equals(r2))
+					.map(Candidate::getMention)
+					.collect(Collectors.toSet());
+			return !mentions_r1.equals(mentions_r2); // should differ in at least one mention
+		};
+
+		double[][] rankingArrays = MatrixFactory.createMeaningRankingMatrix(references, weighting, similarity, filter,
 				meaning_similarity_threshold, damping_factor_meanings);
 		Matrix rankingMatrix = new Matrix(rankingArrays);
 
@@ -62,15 +81,14 @@ public class GraphRanking
 		double[] ranking = finalDistribution.getColumnPackedCopy();
 
 		// Assign ranking values to meanings
-		meanings.keySet().stream()
+		candidates.stream()
+				.map(Candidate::getMeaning)
 				.distinct()
 				.forEach(m ->
 				{
 					int i = references.indexOf(m.getReference());
 					m.setWeight(ranking[i]);
 				});
-
-		log.info("Meanings ranked in " + timer.stop());
 	}
 
 	public static void rankVariables(GlobalSemanticGraph graph, double minimum_meaning_ranking,

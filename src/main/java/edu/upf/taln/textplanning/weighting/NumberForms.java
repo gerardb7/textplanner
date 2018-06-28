@@ -1,10 +1,11 @@
 package edu.upf.taln.textplanning.weighting;
 
-import com.google.common.collect.Multimap;
+import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.structures.Mention;
 import org.apache.commons.lang3.tuple.Pair;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,11 +26,13 @@ public class NumberForms implements WeightingFunction
 	}
 
 	@Override
-	public void setContents(Multimap<Meaning, Mention> contents)
+	public void setContents(Collection<Candidate> contents)
 	{
-		final List<Pair<Meaning, Long>> counts = contents.keySet().stream()
-				.filter(m -> filter.test(m.getReference()))
-				.map(meaning -> Pair.of(meaning, contents.get(meaning).stream()
+		final List<Pair<Meaning, Long>> counts = contents.stream()
+				.filter(c -> filter.test(c.getMeaning().getReference()))
+				.map(c -> Pair.of(c.getMeaning(), contents.stream()
+						.filter(c2 -> c2.getMeaning().equals(c.getMeaning()))
+						.map(Candidate::getMention)
 						.map(Mention::getSurface_form)
 						.distinct()
 						.count()))

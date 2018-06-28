@@ -74,7 +74,7 @@ public class GlobalGraphFactory
 				g.vertexSet().forEach(v ->
 						graphs.getCandidates(v).stream()
 								.max(comparingDouble(c -> c.getMeaning().getWeight()))
-								.ifPresent(graphs::chooseCandidate)));
+								.ifPresent(c -> graphs.chooseCandidate(v, c))));
 	}
 
 	/**
@@ -149,13 +149,13 @@ public class GlobalGraphFactory
 			String v2 = g.getEdgeTarget(e);
 			merged.addVertex(v2);
 			merged.addNewEdge(v1, v2, e.getLabel());
-		}));
 
-		graphs.getCandidates().forEach(c ->
-		{
-			merged.setMeaning(c.getVertex(), c.getMeaning());
-			merged.addMention(c.getVertex(), c.getMention());
-		});
+			graphs.getCandidates(v1).forEach(c ->
+			{
+				merged.setMeaning(v1, c.getMeaning());
+				merged.addMention(v1, c.getMention());
+			});
+		}));
 
 		// Merge all coreferent vertices
 		graphs.getChains().stream()

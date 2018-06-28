@@ -334,6 +334,6 @@ public class CompactFrequencies implements Corpus, Serializable
 		//noinspection ResultOfMethodCallIgnored
 		in.readFully(buffer, 0, bufferSize);
 		form_counts = ByteBuffer.wrap(buffer, 0, bufferSize);
-		log.info("Loading took " + timer.stop());
+		log.info("Frequencies loaded in " + timer.stop());
 	}
 }

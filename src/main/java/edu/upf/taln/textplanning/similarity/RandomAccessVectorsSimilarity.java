@@ -16,16 +16,15 @@ import java.util.concurrent.atomic.AtomicLong;
  * Computes similarity between items according to precomputed distributional vectors (embeddings) stored in a binary
  * file and accessed with random access glove library: https://github.com/thomasjungblut/glove/blob/master/README.md
  */
-public class BinaryVectorsSimilarity implements SimilarityFunction
+public class RandomAccessVectorsSimilarity implements SimilarityFunction
 {
 	private final GloveRandomAccessReader db;
 	private final CosineDistance cos = new CosineDistance();
 	private AtomicLong num_defined = new AtomicLong(0);
 	private AtomicLong num_undefined = new AtomicLong(0);
 	private final static Logger log = LogManager.getLogger(TextVectorsSimilarity.class);
-	private final static double avg_sim = 0.0;
 
-	public BinaryVectorsSimilarity(Path vectors_path) throws IOException
+	public RandomAccessVectorsSimilarity(Path vectors_path) throws IOException
 	{
 		log.info("Loading vectors from binary files " + vectors_path.getFileName().toString());
 		Stopwatch timer = Stopwatch.createStarted();
@@ -58,11 +57,5 @@ public class BinaryVectorsSimilarity implements SimilarityFunction
 			num_undefined.incrementAndGet();
 			return OptionalDouble.empty();
 		}
-	}
-
-	@Override
-	public double getAverageSimiliarity()
-	{
-		return avg_sim;
 	}
 }

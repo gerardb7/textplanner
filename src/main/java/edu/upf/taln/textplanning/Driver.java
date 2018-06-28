@@ -2,17 +2,15 @@ package edu.upf.taln.textplanning;
 
 import com.beust.jcommander.*;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.corpora.CompactFrequencies;
 import edu.upf.taln.textplanning.input.AMRReader;
 import edu.upf.taln.textplanning.input.GraphListFactory;
 import edu.upf.taln.textplanning.input.amr.GraphList;
-import edu.upf.taln.textplanning.similarity.BinaryVectorsSimilarity;
+import edu.upf.taln.textplanning.similarity.RandomAccessVectorsSimilarity;
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
+import edu.upf.taln.textplanning.similarity.TextVectorsSimilarity;
+import edu.upf.taln.textplanning.similarity.Word2VecVectorsSimilarity;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
-import edu.upf.taln.textplanning.structures.Meaning;
-import edu.upf.taln.textplanning.structures.Mention;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.utils.CMLCheckers;
 import edu.upf.taln.textplanning.utils.Serializer;
@@ -20,12 +18,14 @@ import edu.upf.taln.textplanning.weighting.NoWeights;
 import edu.upf.taln.textplanning.weighting.TFIDF;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
 
@@ -34,13 +34,20 @@ import static edu.upf.taln.textplanning.utils.VectorsTextFileUtils.Format;
 @SuppressWarnings("ALL")
 public class Driver
 {
+	private final static String semantic_graphs_suffix = "_graphs.bin";
+	private final static String semantic_graphs_ranked_suffix = "_graphs_ranked.bin";
+	private final static String global_graph_suffix = "_global.bin";
+	private final static String global_graph_ranked_suffix = "_global_ranked.bin";
+	private final static String subgraphs_suffix = "_subgraphs.bin";
+	private final static String plan_suffix = "_plan.bin";
+
 	private final static Logger log = LogManager.getLogger(Driver.class);
 
-	private void create_graphs(Path amr, Path bn_config_folder, Path output, boolean no_stanford, boolean no_babelnet)
+	private void create_graphs(Path amr_bank_file, Path bn_config_folder, Path output, boolean no_stanford, boolean no_babelnet)
 			throws IOException
 	{
-		log.info("Running from " + amr);
-		String amr_bank = FileUtils.readFileToString(amr.toFile(), StandardCharsets.UTF_8);
+		log.info("Running from " + amr_bank_file);
+		String amr_bank = FileUtils.readFileToString(amr_bank_file.toFile(), StandardCharsets.UTF_8);
 		AMRReader reader = new AMRReader();
 		GraphListFactory factory = new GraphListFactory(reader, null, bn_config_folder, no_stanford, no_babelnet);
 		GraphList graphs = factory.getGraphs(amr_bank);
@@ -48,20 +55,20 @@ public class Driver
 		log.info("Graphs serialized to " + output);
 	}
 
-	private void rank_meanings(Path graphs_file, Path freqs, Path vectors, Format format, Path output) throws IOException, ClassNotFoundException
+	private void rank_meanings(Path graphs_file, Path freqs, Path vectors, Format format, Path output) throws Exception
 	{
 		log.info("Running from " + graphs_file);
 		Stopwatch timer = Stopwatch.createStarted();
 		GraphList graphs = (GraphList) Serializer.deserialize(graphs_file);
+
+
 		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
 		WeightingFunction weighting = new NoWeights();
-		SimilarityFunction similarity = new BinaryVectorsSimilarity(vectors);
+		SimilarityFunction similarity = chooseSimilarityFunction(vectors, format);
 		log.info("Loading resources took " + timer.stop());
 
-		final Multimap<Meaning, Mention> map = HashMultimap.create();
-		graphs.getCandidates().forEach(m -> map.put(m.getMeaning(), m.getMention()));
 		TextPlanner.Options options = new TextPlanner.Options();
-		TextPlanner.rankMeanings(map, weighting, similarity, options);
+		TextPlanner.rankMeanings(graphs.getCandidates(), weighting, similarity, options);
 		Serializer.serialize(graphs, output);
 		log.info("Ranked graphs serialized to " + output);
 	}
@@ -76,6 +83,43 @@ public class Driver
 		GlobalSemanticGraph graph = TextPlanner.createGlobalGraph(graphs);
 		Serializer.serialize(graph, output);
 		log.info("Global semantic graph serialized to " + output);
+	}
+
+	private void amr2global(Path amr_bank_file, Path bn_config_folder, Path freqs, Path vectors, Format format,
+	                        boolean no_stanford, boolean no_babelnet) throws Exception
+	{
+		log.info("Running from " + amr_bank_file);
+		Stopwatch timer = Stopwatch.createStarted();
+
+		AMRReader reader = new AMRReader();
+		GraphListFactory factory = new GraphListFactory(reader, null, bn_config_folder, no_stanford, no_babelnet);
+		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
+		WeightingFunction weighting = new NoWeights();
+		SimilarityFunction similarity = chooseSimilarityFunction(vectors, format);
+
+		log.info("Loading resources took " + timer.stop());
+		log.info("***********************");
+
+		String amr_bank = FileUtils.readFileToString(amr_bank_file.toFile(), StandardCharsets.UTF_8);
+		GraphList graphs = factory.getGraphs(amr_bank);
+
+		Path output_path = createOutputPath(amr_bank_file, semantic_graphs_suffix);
+		Serializer.serialize(graphs, output_path);
+		log.info("Graphs serialized to " + output_path);
+
+		TextPlanner.Options options = new TextPlanner.Options();
+		log.info("Options:\n" + options);
+		TextPlanner.rankMeanings(graphs.getCandidates(), weighting, similarity, options);
+
+		output_path = createOutputPath(amr_bank_file, semantic_graphs_ranked_suffix);
+		Serializer.serialize(graphs, output_path);
+		log.info("Ranked graphs serialized to " + output_path);
+
+		GlobalSemanticGraph graph = TextPlanner.createGlobalGraph(graphs);
+
+		output_path = createOutputPath(amr_bank_file, global_graph_suffix);
+		Serializer.serialize(graph, output_path);
+		log.info("Global semantic graph serialized to " + output_path);
 	}
 
 	private void rank_variables(Path graph_file, Path output) throws IOException, ClassNotFoundException
@@ -104,12 +148,12 @@ public class Driver
 		log.info("Subgraphs serialized to " + output);
 	}
 
-	private void remove_redundancy(Path subgraphs_file, int num_subgraphs, Path vectors, Format format, Path output) throws IOException, ClassNotFoundException
+	private void remove_redundancy(Path subgraphs_file, int num_subgraphs, Path vectors, Format format, Path output) throws Exception
 	{
 		log.info("Running from " + subgraphs_file);
 		Stopwatch timer = Stopwatch.createStarted();
 		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
-		SimilarityFunction similarity = new BinaryVectorsSimilarity(vectors);
+		SimilarityFunction similarity = chooseSimilarityFunction(vectors, format);
 		log.info("Loading resources took " + timer.stop());
 
 		TextPlanner.Options options = new TextPlanner.Options();
@@ -118,12 +162,12 @@ public class Driver
 		log.info("Non-redundant subgraphs serialized to " + output);
 	}
 
-	private void sort_subgraphs(Path subgraphs_file, Path vectors, Format format, Path output) throws IOException, ClassNotFoundException
+	private void sort_subgraphs(Path subgraphs_file, Path vectors, Format format, Path output) throws Exception
 	{
 		log.info("Running from " + subgraphs_file);
 		Stopwatch timer = Stopwatch.createStarted();
 		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
-		SimilarityFunction similarity = new BinaryVectorsSimilarity(vectors);
+		SimilarityFunction similarity = chooseSimilarityFunction(vectors, format);
 		log.info("Loading resources took " + timer.stop());
 
 		TextPlanner.Options options = new TextPlanner.Options();
@@ -137,18 +181,41 @@ public class Driver
 		log.info("Running from " + graphs_file);
 		Stopwatch timer = Stopwatch.createStarted();
 		GraphList graphs = (GraphList) Serializer.deserialize(graphs_file);
-		SimilarityFunction similarity = new BinaryVectorsSimilarity(vectors);
 		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
 		TFIDF weighting = new TFIDF(corpus, (n) -> n.endsWith("n"));
+		SimilarityFunction similarity = chooseSimilarityFunction(vectors, format);
 		log.info("Loading resources took " + timer.stop());
 
 		TextPlanner.Options options = new TextPlanner.Options();
+		log.info("Options:\n" + options);
 		List<SemanticSubgraph> plan = TextPlanner.plan(graphs, similarity, weighting, num_subgraphs, options);
 
 		Serializer.serialize(plan, output);
 		log.info("Text plan serialized to " + output);
 	}
 
+	private static Path createOutputPath(Path input, String suffix)
+	{
+		String baseName = FilenameUtils.getBaseName(input.toAbsolutePath().toString());
+		return input.getParent().resolve(Paths.get(baseName + suffix)).toAbsolutePath();
+	}
+
+	private SimilarityFunction chooseSimilarityFunction(Path vectors, Format format) throws Exception
+	{
+		SimilarityFunction similarity = null;
+		switch (format)
+		{
+			case Text_Glove:
+			case Text_Word2vec:
+				return new TextVectorsSimilarity(vectors, format);
+			case Binary_Word2vec:
+				return new Word2VecVectorsSimilarity(vectors);
+			case Binary_RandomAccess:
+				return new RandomAccessVectorsSimilarity(vectors);
+		}
+
+		return null;
+	}
 
 	public static class FormatConverter implements IStringConverter<Format>
 	{
@@ -172,7 +239,7 @@ public class Driver
 		}
 	}
 
-	@Parameters(commandDescription = "Create graphs from an AMR bank")
+	@Parameters(commandDescription = "Create semantic graphs from an AMR bank")
 	private static class CreateGraphsCommand
 	{
 		@Parameter(names = {"-i", "-input"}, description = "Input text-based amr file", arity = 1, required = true,
@@ -204,7 +271,7 @@ public class Driver
 		private Path vectorsPath;
 		@Parameter(names = {"-vf", "-format"}, description = "Vectors format", arity = 1, required = true,
 				converter = FormatConverter.class, validateWith = FormatValidator.class)
-		private Format format = Format.Glove;
+		private Format format = Format.Text_Glove;
 		@Parameter(names = {"-o", "-output"}, description = "Output binary graphs file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFile.class)
 		private Path outputFile;
@@ -219,6 +286,30 @@ public class Driver
 		@Parameter(names = {"-o", "-output"}, description = "Output binary graph file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFile.class)
 		private Path outputFile;
+	}
+
+	@Parameters(commandDescription = "Create a global graph from an AMR bank")
+	private static class AMR2GlobalCommand
+	{
+		@Parameter(names = {"-i", "-input"}, description = "Input text-based amr file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path inputFile;
+		@Parameter(names = {"-b", "-babelconfig"}, description = "BabelNet configuration folder", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path bnFolder;
+		@Parameter(names = {"-f", "-frequencies"}, description = "Frequencies file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path freqsFile;
+		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path vectorsPath;
+		@Parameter(names = {"-vf", "-format"}, description = "Vectors format", arity = 1, required = true,
+				converter = FormatConverter.class, validateWith = FormatValidator.class)
+		private Format format = Format.Text_Glove;
+		@Parameter(names = {"-ns", "-nostanford"}, description = "Do not load Stanford CoreNLP pipeline")
+		private boolean no_stanford = false;
+		@Parameter(names = {"-nb", "-nobabelnet"}, description = "Do not query BabelNet")
+		private boolean no_babelnet = false;
 	}
 
 	@Parameters(commandDescription = "Rank vertices in a global semantic graph")
@@ -260,7 +351,7 @@ public class Driver
 		private Path vectorsPath;
 		@Parameter(names = {"-vf", "-format"}, description = "Vectors format", arity = 1, required = true,
 				converter = FormatConverter.class, validateWith = FormatValidator.class)
-		private Format format = Format.Glove;
+		private Format format = Format.Text_Glove;
 		@Parameter(names = {"-o", "-output"}, description = "Output binary subgraphs file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFile.class)
 		private Path outputFile;
@@ -277,7 +368,7 @@ public class Driver
 		private Path vectorsPath;
 		@Parameter(names = {"-vf", "-format"}, description = "Vectors format", arity = 1, required = true,
 				converter = FormatConverter.class, validateWith = FormatValidator.class)
-		private Format format = Format.Glove;
+		private Format format = Format.Text_Glove;
 		@Parameter(names = {"-o", "-output"}, description = "Output binary subgraphs file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFile.class)
 		private Path outputFile;
@@ -297,7 +388,7 @@ public class Driver
 		private Path vectorsPath;
 		@Parameter(names = {"-vf", "-format"}, description = "Vectors format", arity = 1, required = true,
 				converter = FormatConverter.class, validateWith = FormatValidator.class)
-		private Format format = Format.Glove;
+		private Format format = Format.Text_Glove;
 		@Parameter(names = {"-n", "-number"}, description = "Number of subgraphs to extract", arity = 1, required = true,
 				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
 		private int num_subgraphs;
@@ -311,6 +402,7 @@ public class Driver
 		CreateGraphsCommand create_graphs = new CreateGraphsCommand();
 		RankMeaningsCommand rank_meanings = new RankMeaningsCommand();
 		CreateGlobalCommand create_global = new CreateGlobalCommand();
+		AMR2GlobalCommand amr2global = new AMR2GlobalCommand();
 		RankVariablesCommand rank_variables = new RankVariablesCommand();
 		ExtractCommand extract_subgraphs = new ExtractCommand();
 		RemoveRedundancyCommand remove_redundancy = new RemoveRedundancyCommand();
@@ -321,6 +413,7 @@ public class Driver
 		jc.addCommand("create_graphs", create_graphs);
 		jc.addCommand("rank_meanings", rank_meanings);
 		jc.addCommand("create_global", create_global);
+		jc.addCommand("amr2global", amr2global);
 		jc.addCommand("rank_variables", rank_variables);
 		jc.addCommand("extract_subgraphs", extract_subgraphs);
 		jc.addCommand("remove_redundancy", remove_redundancy);
@@ -337,6 +430,9 @@ public class Driver
 					rank_meanings.format, rank_meanings.outputFile);
 		else if (jc.getParsedCommand().equals("create_global"))
 			driver.create_global(create_global.inputFile, create_global.outputFile);
+		else if (jc.getParsedCommand().equals("amr2global"))
+			driver.amr2global(amr2global.inputFile, amr2global.bnFolder, amr2global.freqsFile, amr2global.vectorsPath,
+					amr2global.format, amr2global.no_stanford, amr2global.no_babelnet);
 		else if (jc.getParsedCommand().equals("rank_variables"))
 			driver.rank_variables(rank_variables.inputFile, rank_variables.outputFile);
 		else if (jc.getParsedCommand().equals("extract_subgraphs"))
@@ -351,6 +447,8 @@ public class Driver
 		else if (jc.getParsedCommand().equals("plan"))
 			driver.plan(plan.inputFile, plan.freqsFile, plan.vectorsPath, plan.format, plan.num_subgraphs,
 					plan.outputFile);
+		else
+			jc.usage();
 	}
 }
 

@@ -49,8 +49,8 @@ public class SemanticGraph extends DirectedAcyclicGraph<String, Role> implements
 			addVertex(new_label);
 			incomingEdgesOf(old_label).forEach(e ->	addNewEdge(getEdgeSource(e), new_label, e.getLabel()));
 			outgoingEdgesOf(old_label).forEach(e ->	addNewEdge(new_label, getEdgeTarget(e), e.getLabel()));
+			alignments.renameVertex(old_label, new_label); // this must go before removeVertex call
 			removeVertex(old_label);
-			alignments.renameVertex(old_label, new_label);
 
 			if (root.equals(old_label))
 				root = new_label;

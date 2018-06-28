@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.OptionalDouble;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiPredicate;
 import java.util.stream.IntStream;
 
 public class MatrixFactory
@@ -22,8 +23,8 @@ public class MatrixFactory
 	 * Creates a row-stochastic matrix to rank a set of meanings
 	 */
 	static double[][] createMeaningRankingMatrix(List<String> meanings, WeightingFunction weighting,
-	                                             SimilarityFunction sim, double sim_threshold,
-	                                             double d)
+	                                             SimilarityFunction sim, BiPredicate<String, String> filter,
+	                                             double sim_threshold, double d)
 	{
 		int n = meanings.size();
 
@@ -31,7 +32,7 @@ public class MatrixFactory
 		double[] L = createMeaningsBiasVector(meanings, weighting, true);
 
 		// Create *non-symmetric non-negative* similarity matrix
-		double[][] X = createMeaningsSimilarityMatrix(meanings, sim, sim_threshold, true);
+		double[][] X = createMeaningsSimilarityMatrix(meanings, sim, filter, sim_threshold, true);
 
 		// GraphRanking matrix: stochastic matrix describing probabilities of a random walk going from a type u to another
 		// type v.
@@ -130,6 +131,7 @@ public class MatrixFactory
 
 	// Creates row-normalized symmetric non-negative similarity matrix
 	public static double[][] createMeaningsSimilarityMatrix(List<String> meaning, SimilarityFunction sim,
+	                                                        BiPredicate<String, String> filter,
 	                                                        double sim_threshold, boolean normalize)
 	{
 		int n = meaning.size();
@@ -156,10 +158,13 @@ public class MatrixFactory
 						{
 							final String e1 = meaning.get(i);
 							final String e2 = meaning.get(j);
-							final OptionalDouble osim = sim.computeSimilarity(e1, e2);
-							if (osim.isPresent())
-								num_defined.incrementAndGet();
-							simij = osim.orElse(sim.getAverageSimiliarity());
+							if (filter.test(e1, e2))
+							{
+								final OptionalDouble osim = sim.computeSimilarity(e1, e2);
+								if (osim.isPresent())
+									num_defined.incrementAndGet();
+								simij = osim.orElse(0.0);
+							}
 						}
 					}
 

@@ -12,13 +12,11 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
 // Assumes unique vertex labels across graphs
@@ -40,14 +38,21 @@ public class GraphList implements Serializable
 		super();
 		this.graphs.addAll(graphs);
 		vertices = graphs.stream().map(SemanticGraph::vertexSet).flatMap(Set::stream).collect(toSet());
-		candidates.forEach(c -> candidate_meanings.put(c.getVertex(), c));
+
+		Map<String, SemanticGraph> graph_ids = graphs.stream()
+				.collect(Collectors.toMap(SemanticGraph::getId, Function.identity()));
+		candidates.forEach(c ->
+		{
+			final SemanticGraph g = graph_ids.get(c.getMention().getSentenceId());
+			final Optional<String> ov = g.getAlignments().getSpanTopVertex(c.getMention().getSpan());
+			ov.ifPresent(v -> 	candidate_meanings.put(v, c));
+			if (!ov.isPresent())
+				log.warn("Candidate " + c + " has no vertex");
+		});
 		this.chains.addAll(chains);
 
-		// Sanity checks
-		if (candidates.stream()
-				.map(Candidate::getVertex)
-				.anyMatch(v -> !vertices.contains(v)))
-			throw new RuntimeException("Invalid candidate vertex");
+		// Sanity check
+
 		if (chains.stream()
 				.map(CoreferenceChain::getVertices)
 				.flatMap(Collection::stream)
@@ -73,21 +78,22 @@ public class GraphList implements Serializable
 	}
 
 	// assigns candidate c as node v only candidate
-	public void chooseCandidate(Candidate c)
+	public void chooseCandidate(String v, Candidate c)
 	{
-		if (!vertices.contains(c.getVertex()))
+		if (!vertices.contains(v))
 			throw new RuntimeException("Invalid candidate vertex");
 
-		final Collection<Candidate> candidates = candidate_meanings.get(c.getVertex());
+		final Collection<Candidate> candidates = candidate_meanings.get(v);
 
 		log.debug(c.getMention().getSurface_form() + " <- " + c.getMeaning() +
 				" (candidate set = " + candidates.stream()
-				.map(Candidate::getMeaning)
-				.map(Meaning::toString)
-				.collect(joining(", ")) + ")");
+						.filter(c2 -> c2 != c)
+						.map(Candidate::getMeaning)
+						.map(Meaning::toString)
+						.collect(joining(", ")) + ")");
 
 		candidates.clear();
-		candidate_meanings.put(c.getVertex(), c);
+		candidate_meanings.put(v, c);
 	}
 
 	public void removeVertices(Collection<String> vertices)
@@ -113,14 +119,11 @@ public class GraphList implements Serializable
 		g.vertexContraction(v, C); // this updates the alignments
 
 		// Remove candidates for contracted vertices
-		// And add new ones to v
-		List<Candidate> new_candidates = candidate_meanings.values().stream()
-				.filter(c -> C.contains(c.getVertex()))
-				.map(c -> new Candidate(v, c.getMeaning(), c.getMention()))
-				.collect(toList());
-
-		C.forEach(candidate_meanings::removeAll);
-		new_candidates.forEach(c -> candidate_meanings.put(v, c));
+		// And re-assign them to v
+		C.stream()
+			.map(candidate_meanings::removeAll)
+			.flatMap(Collection::stream)
+			.forEach(candidate -> candidate_meanings.put(v, candidate));
 
 		// Now update coreference chains
 		C.forEach(v_old ->

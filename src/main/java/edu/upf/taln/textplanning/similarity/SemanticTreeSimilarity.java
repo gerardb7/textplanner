@@ -47,6 +47,6 @@ public final class SemanticTreeSimilarity
 	 */
 	public double getSimilarity(String m1, String m2)
 	{
-		return sim.computeSimilarity(m1, m2).orElse(sim.getAverageSimiliarity());
+		return sim.computeSimilarity(m1, m2).orElse(0.0);
 	}
 }

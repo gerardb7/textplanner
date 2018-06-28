@@ -1,23 +1,22 @@
 package edu.upf.taln.textplanning.input;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.input.amr.Candidate;
+import edu.upf.taln.textplanning.input.amr.SemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.structures.Mention;
-import edu.upf.taln.textplanning.input.amr.SemanticGraph;
 import it.uniroma1.lcl.babelnet.BabelSynset;
 import it.uniroma1.lcl.babelnet.BabelSynsetType;
 import it.uniroma1.lcl.jlt.util.Language;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.*;
@@ -42,11 +41,10 @@ class CandidatesCollector
 	@SuppressWarnings("ConstantConditions")
 	List<Candidate> getCandidateMeanings(List<SemanticGraph> graphs)
 	{
-		Map<String, SemanticGraph> graph_ids =
-				graphs.stream().collect(Collectors.toMap(SemanticGraph::getId, Function.identity()));
+		log.info("Collecting candidate meanings");
+		Stopwatch timer = Stopwatch.createStarted();
 
 		// Collect mentions and group them by anchor (triple of surface form, lemma and POS) -> to reduce lookups
-		Stopwatch timer = Stopwatch.createStarted();
 		Map<Triple<String, String, String>, List<Mention>> anchors2Mentions = graphs.stream()
 				.map(MentionsCollector::collectMentions)
 				.flatMap(Set::stream)
@@ -78,35 +76,24 @@ class CandidatesCollector
 						.map(this::createMeaning)
 						.collect(toSet())));
 
-		// Get vertex governing each mention
-		Multimap<Mention, String> mentions2vertices = HashMultimap.create();
-		anchors2Mentions.values().stream()
-				.flatMap(List::stream)
-				.forEach(m -> {
-							Pair<Integer, Integer> span = m.getSpan();
-							SemanticGraph graph = graph_ids.get(m.getSentenceId());
-							Optional<String> top = graph.getAlignments().getSpanTopVertex(span);
-							top.ifPresent(t -> mentions2vertices.put(m, t));
-						});
-
 		// Create candidates
 		List<Candidate> candidates = anchors2Meanings.keySet().stream()
 				.flatMap(l -> anchors2Meanings.get(l).stream() // given a label l
 						.flatMap(meaning -> anchors2Mentions.get(l).stream() // for each mention m with label l
-								.flatMap(m -> mentions2vertices.get(m).stream() // for each vertex v with mention m
-									.map(v -> new Candidate(v, meaning, m)))))
+								.map(mention -> new Candidate(meaning, mention))))
+								//.flatMap(m -> mentions2vertices.get(m).stream() // for each vertex v with mention m
+//									.map(v -> new Candidate(meaning, m)))))
 				.collect(toList());
 
 		int num_references = candidates.stream().map(Candidate::getMeaning).map(Meaning::getReference).collect(toSet()).size();
-		log.info("Created " + candidates.size() + " candidates, with " + num_references +
-				" different references, and using " + BabelNetWrapper.num_queries.get() + " queries");
-		log.info("Candidate meanings collected in " + timer.stop());
-
 		final List<String> multiwords = candidates.stream()
 				.filter(c -> c.getMention().isMultiWord())
 				.map(c -> c.getMention().getSurface_form() + "-" + c.getMeaning())
 				.collect(Collectors.toList());
-		log.debug("List of multiword candidates: " + multiwords);
+		log.info("Created " + candidates.size() + " candidates, with " + num_references +
+				" different references, and using " + BabelNetWrapper.num_queries.get() +
+				" queries\nList of multiword candidates: " + multiwords +
+				"\nCandidate meanings collected in " + timer.stop());
 
 		return candidates;
 	}

@@ -76,11 +76,11 @@ class MentionsCollector
 		GraphAlignments a = g.getAlignments();
 
 		return  g.vertexSet().stream()
-//				.filter(v -> !a.isNominal(v))
 				.map(a::getAlignment)
 				.filter(Optional::isPresent)
 				.map(Optional::get)
 				.distinct() // multiple vertices can be aligned to same token...
+				.filter(i -> a.getPOS(i).startsWith("N"))
 				.map(i ->
 				{
 					Pair<Integer, Integer> span = Pair.of(i, i + 1);

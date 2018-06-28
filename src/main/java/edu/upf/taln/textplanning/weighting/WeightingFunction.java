@@ -1,15 +1,15 @@
 package edu.upf.taln.textplanning.weighting;
 
 
-import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.structures.Meaning;
-import edu.upf.taln.textplanning.structures.Mention;
+import edu.upf.taln.textplanning.input.amr.Candidate;
+
+import java.util.Collection;
 
 /**
  * Interface for weighting functions
  */
 public interface WeightingFunction
 {
-	void setContents(Multimap<Meaning, Mention> contents);
+	void setContents(Collection<Candidate> contents);
 	double weight(String item);
 }

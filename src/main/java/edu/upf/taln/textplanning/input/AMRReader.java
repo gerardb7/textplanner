@@ -36,6 +36,7 @@ public class AMRReader implements DocumentReader
 
     public List<SemanticGraph> read(String amrBank)
     {
+	    log.info("Reading AMR graphs");
 	    Stopwatch timer = Stopwatch.createStarted();
     	List<SemanticGraph> graphs = new ArrayList<>();
 	    final String regex = "\\(([a-z]+[0-9]*)\\s";

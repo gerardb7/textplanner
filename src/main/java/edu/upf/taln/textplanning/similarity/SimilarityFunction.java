@@ -9,6 +9,4 @@ public interface SimilarityFunction
 {
 	boolean isDefinedFor(String e);
 	boolean isDefinedFor(String e1, String e2);
-	OptionalDouble computeSimilarity(String e1, String e2);
-	double getAverageSimiliarity();
-}
+	OptionalDouble computeSimilarity(String e1, String e2);}

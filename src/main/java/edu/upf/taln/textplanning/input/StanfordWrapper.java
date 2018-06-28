@@ -31,6 +31,7 @@ class StanfordWrapper
 
 	StanfordWrapper(boolean no_stanford)
 	{
+		log.info("Setting up Stanford CoreNLP");
 		Properties props = new Properties();
 		props.setProperty("annotators", "tokenize,ssplit,pos,lemma,ner,parse,depparse,coref");
 		props.setProperty("tokenize.whitespace", "true"); // no tokenization
@@ -49,6 +50,7 @@ class StanfordWrapper
 		if (pipeline == null)
 			return Collections.emptyList();
 
+		log.info("Processing graphs with CoreNLP");
 		Stopwatch timer = Stopwatch.createStarted();
 
 		List<List<String>> tokens = graphs.stream()

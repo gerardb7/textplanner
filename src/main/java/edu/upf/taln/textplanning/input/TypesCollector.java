@@ -33,17 +33,19 @@ class TypesCollector
 	{
 		this.babelnet = babelnet;
 
+		log.info("Reading DBPedia types");
 		Stopwatch timer = Stopwatch.createStarted();
 		String json = FileUtils.readFileToString(types_file.toFile(), UTF_8);
 		Gson gson = new Gson();
 		java.lang.reflect.Type type = new TypeToken<Map<String, String>>() { }.getType();
 		Map<String, String> types_in_file = gson.fromJson(json, type);
 		types_in_file.forEach((key, value) -> types.put(key, Candidate.Type.valueOf(value)));
-		log.info(types.size() + " DBpedia types read from file in " + timer.stop());
+		log.info(types.size() + " DBpedia types read in " + timer.stop());
 	}
 
 	void getMeaningTypes(Collection<Candidate> candidates)
 	{
+		log.info("Retrieving DBPedia types for candidate meanings");
 		Stopwatch timer = Stopwatch.createStarted();
 
 		// Collect distinct references
@@ -91,6 +93,6 @@ class TypesCollector
 				.map(Candidate::getMeaning)
 				.forEach(m -> m.setType(types.get(m.getReference())));
 
-		log.info("Types determined in " + timer.stop());
+		log.info("DBPedia types retrieved in " + timer.stop());
 	}
 }

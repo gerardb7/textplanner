@@ -33,6 +33,7 @@ public class BabelNetWrapper
 
 	private it.uniroma1.lcl.babelnet.BabelNet getBabelNetInstance(Path config_folder)
 	{
+		log.info("Setting up BabelNet");
 		Stopwatch timer = Stopwatch.createStarted();
 		PrintStream oldOut = System.err;
 		System.setErr(new PrintStream(new OutputStream()

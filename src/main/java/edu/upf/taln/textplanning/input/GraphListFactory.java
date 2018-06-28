@@ -1,9 +1,12 @@
 package edu.upf.taln.textplanning.input;
 
+import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.input.amr.CoreferenceChain;
 import edu.upf.taln.textplanning.input.amr.GraphList;
 import edu.upf.taln.textplanning.input.amr.SemanticGraph;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -18,6 +21,7 @@ public class GraphListFactory
 	private final StanfordWrapper stanford;
 	private final CandidatesCollector candidate_collector;
 	private final TypesCollector types_collector;
+	private final static Logger log = LogManager.getLogger(GraphListFactory.class);
 
 	public GraphListFactory(DocumentReader reader, Path types_file, Path bn_config_folder, boolean no_stanford,
 	                        boolean no_babelnet) throws IOException
@@ -31,6 +35,9 @@ public class GraphListFactory
 
 	public GraphList getGraphs(String graph_bank)
 	{
+		log.info("***Creating semantic graphs***");
+		Stopwatch timer = Stopwatch.createStarted();
+
 		// Read graphs from file
 		List<SemanticGraph> graphs = reader.read(graph_bank);
 
@@ -54,6 +61,8 @@ public class GraphListFactory
 		if (types_collector != null)
 			types_collector.getMeaningTypes(candidate_meanings);
 
-		return new GraphList(graphs, candidate_meanings, chains);
+		final GraphList graph_list = new GraphList(graphs, candidate_meanings, chains);
+		log.info("Semantic graphs created in " + timer.stop());
+		return graph_list;
 	}
 }

@@ -1,13 +1,13 @@
 package edu.upf.taln.textplanning.weighting;
 
-import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.structures.Meaning;
-import edu.upf.taln.textplanning.structures.Mention;
+import edu.upf.taln.textplanning.input.amr.Candidate;
+
+import java.util.Collection;
 
 public class NoWeights implements WeightingFunction
 {
 	@Override
-	public void setContents(Multimap<Meaning, Mention> contents){ }
+	public void setContents(Collection<Candidate> contents){ }
 
 	@Override
 	public double weight(String item)

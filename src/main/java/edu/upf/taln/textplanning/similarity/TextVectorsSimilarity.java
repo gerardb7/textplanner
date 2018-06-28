@@ -28,8 +28,6 @@ public class TextVectorsSimilarity implements SimilarityFunction
 		Stopwatch timer = Stopwatch.createStarted();
 		vectors = VectorsTextFileUtils.readVectorsFromFile(vectors_path, format);
 		log.info("Loading took " + timer.stop());
-
-		//avg_sim = computeAverageSimilarity();
 	}
 
 	@Override
@@ -68,12 +66,6 @@ public class TextVectorsSimilarity implements SimilarityFunction
 		return OptionalDouble.of(Math.max(0.0, cosineSimilarity));
 		//double distanceMetric = Math.acos(cosineSimilarity) / Math.PI; // range (0,1)
 		//return (cosineSimilarity + 1.0) / 2.0;
-	}
-
-	@Override
-	public double getAverageSimiliarity()
-	{
-		return 0.0;
 	}
 
 	@SuppressWarnings("unused")

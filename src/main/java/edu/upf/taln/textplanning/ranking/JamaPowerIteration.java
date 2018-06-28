@@ -44,7 +44,7 @@ public class JamaPowerIteration implements PowerIterationRanking
 		double delta;
 		do
 		{
-			debug_rank(v, n, labels);
+			//debug_rank(v, n, labels);
 
 			// Core operation: transform distribution according to stochastic matrix
 			Matrix tmp = a.times(v); // right-multiply column-stochastic square matrix and column vector, produces column vector

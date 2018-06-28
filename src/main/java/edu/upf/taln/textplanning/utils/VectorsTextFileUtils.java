@@ -28,7 +28,7 @@ import static java.util.stream.Collectors.*;
  */
 public class VectorsTextFileUtils
 {
-	public enum Format {Glove, Word2vec, Binary};
+	public enum Format {Text_Glove, Text_Word2vec, Binary_Word2vec, Binary_RandomAccess}
 	private final static Logger log = LogManager.getLogger(VectorsTextFileUtils.class);
 
 	/**
@@ -78,7 +78,7 @@ public class VectorsTextFileUtils
 	 */
 	public static Map<String, double[]> readVectorsFromFile(Path vectors_file, Format format) throws Exception
 	{
-		if (format != Format.Glove && format != Format.Word2vec)
+		if (format != Format.Text_Glove && format != Format.Text_Word2vec)
 			throw new Exception("Format " + format + " not supported");
 
 		int num_lines = 0;
@@ -101,7 +101,7 @@ public class VectorsTextFileUtils
 				String[] columns = line.split(" ");
 				if (first_line)
 				{
-					if (format == Format.Glove)
+					if (format == Format.Text_Glove)
 					{
 						num_lines = Integer.parseInt(columns[0]);
 						num_dimensions = Integer.parseInt(columns[1]);
@@ -113,7 +113,7 @@ public class VectorsTextFileUtils
 						columns = line.split(" ");
 						++line_counter;
 					}
-					else if (format == Format.Word2vec)
+					else // if (format == Format.Text_Word2vec)
 					{
 						try (LineNumberReader count = new LineNumberReader(new FileReader(vectors_file.toFile())))
 						{
@@ -284,8 +284,8 @@ public class VectorsTextFileUtils
 		Function<String, String> key_merger = k -> k.substring(k.indexOf("bn:"));
 
 		if (jc.getParsedCommand().equals("subset"))
-			VectorsTextFileUtils.subsetVectors(subset.graphs.get(0), Format.Glove, subset.inputFile.get(0), subset.outputFile.get(0));
+			VectorsTextFileUtils.subsetVectors(subset.graphs.get(0), Format.Text_Glove, subset.inputFile.get(0), subset.outputFile.get(0));
 		else if (jc.getParsedCommand().equals("convert"))
-			VectorsTextFileUtils.mergeVectors(key_merger, merge.inputFile.get(0), Format.Glove, subset.outputFile.get(0));
+			VectorsTextFileUtils.mergeVectors(key_merger, merge.inputFile.get(0), Format.Text_Glove, subset.outputFile.get(0));
 	}
 }
