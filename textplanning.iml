@@ -29,15 +29,6 @@
     <orderEntry type="library" name="Maven: org.codehaus.mojo:animal-sniffer-annotations:1.14" level="project" />
     <orderEntry type="library" name="Maven: com.beust:jcommander:1.58" level="project" />
     <orderEntry type="library" name="Maven: gov.nist.math:jama:1.0.3" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.solr:solr-solrj:5.3.1" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.httpcomponents:httpclient:4.4.1" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.httpcomponents:httpcore:4.4.1" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.httpcomponents:httpmime:4.4.1" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.zookeeper:zookeeper:3.4.6" level="project" />
-    <orderEntry type="library" name="Maven: org.codehaus.woodstox:stax2-api:3.1.4" level="project" />
-    <orderEntry type="library" name="Maven: org.codehaus.woodstox:woodstox-core-asl:4.4.1" level="project" />
-    <orderEntry type="library" name="Maven: org.noggit:noggit:0.6" level="project" />
-    <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.7" level="project" />
     <orderEntry type="library" name="Maven: org.jgrapht:jgrapht-core:1.1.0" level="project" />
     <orderEntry type="library" name="Maven: org.jgrapht:jgrapht-ext:1.1.0" level="project" />
     <orderEntry type="library" name="Maven: org.jgrapht:jgrapht-io:1.1.0" level="project" />
@@ -53,6 +44,8 @@
     <orderEntry type="library" name="Maven: commons-configuration:commons-configuration:1.5" level="project" />
     <orderEntry type="library" name="Maven: commons-digester:commons-digester:1.8" level="project" />
     <orderEntry type="library" name="Maven: commons-lang:commons-lang:2.3" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.httpcomponents:httpclient:4.3.6" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.httpcomponents:httpcore:4.3.3" level="project" />
     <orderEntry type="library" name="Maven: com.ibm.icu:icu4j:56.1" level="project" />
     <orderEntry type="library" name="Maven: edu.mit:jwi:2.2.3" level="project" />
     <orderEntry type="library" name="Maven: org.apache.lucene:lucene-core:4.9.0" level="project" />
@@ -99,6 +92,7 @@
     <orderEntry type="library" name="Maven: joda-time:joda-time:2.9.4" level="project" />
     <orderEntry type="library" name="Maven: com.googlecode.efficient-java-matrix-library:ejml:0.23" level="project" />
     <orderEntry type="library" name="Maven: org.glassfish:javax.json:1.0.4" level="project" />
+    <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.12" level="project" />
     <orderEntry type="library" name="Maven: com.google.protobuf:protobuf-java:3.2.0" level="project" />
     <orderEntry type="library" name="Maven: edu.stanford.nlp:stanford-corenlp:models:3.9.1" level="project" />
     <orderEntry type="library" name="Maven: de.jungblut.glove:glove:0.3" level="project" />
@@ -173,6 +167,7 @@
     <orderEntry type="library" name="Maven: org.objenesis:objenesis:2.6" level="project" />
     <orderEntry type="library" name="Maven: org.nd4j:jackson:1.0.0-beta" level="project" />
     <orderEntry type="library" name="Maven: org.yaml:snakeyaml:1.12" level="project" />
+    <orderEntry type="library" name="Maven: org.codehaus.woodstox:stax2-api:3.1.4" level="project" />
     <orderEntry type="library" name="Maven: org.datavec:datavec-api:1.0.0-beta" level="project" />
     <orderEntry type="library" name="Maven: org.jetbrains:annotations:13.0" level="project" />
     <orderEntry type="library" name="Maven: org.freemarker:freemarker:2.3.23" level="project" />

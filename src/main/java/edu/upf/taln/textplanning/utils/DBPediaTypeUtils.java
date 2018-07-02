@@ -34,7 +34,7 @@ import static org.apache.commons.io.FileUtils.readFileToString;
 
 public class DBPediaTypeUtils
 {
-	private final static Logger log = LogManager.getLogger(DBPediaTypeUtils.class);
+	private final static Logger log = LogManager.getLogger();
 
 	private static void getTypes(Path amrPath, String extension, Path o, Path babel_config) throws IOException
 	{

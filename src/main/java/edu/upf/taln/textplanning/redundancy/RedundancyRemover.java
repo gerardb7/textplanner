@@ -17,7 +17,7 @@ import static java.util.stream.Collectors.toSet;
 public class RedundancyRemover
 {
 	private final SemanticTreeSimilarity sim;
-	private final static Logger log = LogManager.getLogger(RedundancyRemover.class);
+	private final static Logger log = LogManager.getLogger();
 
 	public RedundancyRemover(SemanticTreeSimilarity sim)
 	{

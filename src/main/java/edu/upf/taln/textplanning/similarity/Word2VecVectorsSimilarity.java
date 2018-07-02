@@ -16,7 +16,7 @@ import java.nio.file.Path;
 public class Word2VecVectorsSimilarity implements SimilarityFunction
 {
 	private final Word2Vec vectors;
-	private final static Logger log = LogManager.getLogger(Word2VecVectorsSimilarity.class);
+	private final static Logger log = LogManager.getLogger();
 
 
 	public Word2VecVectorsSimilarity(Path vectors_file)

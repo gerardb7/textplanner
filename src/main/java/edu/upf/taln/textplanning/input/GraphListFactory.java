@@ -21,7 +21,7 @@ public class GraphListFactory
 	private final StanfordWrapper stanford;
 	private final CandidatesCollector candidate_collector;
 	private final TypesCollector types_collector;
-	private final static Logger log = LogManager.getLogger(GraphListFactory.class);
+	private final static Logger log = LogManager.getLogger();
 
 	public GraphListFactory(DocumentReader reader, Path types_file, Path bn_config_folder, boolean no_stanford,
 	                        boolean no_babelnet) throws IOException

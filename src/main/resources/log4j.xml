@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <File name="debug_file" fileName="~/scripts/logs/textplanning.log" append="false">
+            <ThresholdFilter level="DEBUG" onMatch="ACCEPT" onMismatch="DENY"/>
+            <PatternLayout pattern="%m%n"/>
+        </File>
+        <Console name="console" target="SYSTEM_OUT">
+            <ThresholdFilter level="DEBUG" onMatch="DENY" onMismatch="ACCEPT"/>
+            <PatternLayout pattern="%d [%p] %c{1} – %m%n"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <logger name="edu.upf.taln.textplanning">
+            <level value="INFO"/>
+            <appender-ref ref="debug_file"/>
+            <appender-ref ref="console"/>
+        </logger>
+    </Loggers>
+</Configuration>

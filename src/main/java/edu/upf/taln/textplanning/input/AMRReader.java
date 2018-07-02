@@ -24,7 +24,7 @@ public class AMRReader implements DocumentReader
 {
 	private final boolean keep_inverse_relations; // If false -> convert ':*-of' relations to their non-inverted counterparts
 	private final boolean keep_relation_alignments; // If true -> move relation alignments to their target variables
-    private final static Logger log = LogManager.getLogger(AMRReader.class);
+    private final static Logger log = LogManager.getLogger();
 
     public AMRReader() { keep_inverse_relations = true; keep_relation_alignments = false; }
 	@SuppressWarnings("unused")

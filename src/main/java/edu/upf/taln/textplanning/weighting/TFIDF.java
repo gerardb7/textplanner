@@ -21,7 +21,7 @@ public final class TFIDF implements WeightingFunction
 	private final Corpus corpus;
 	private final Predicate<String> filter;
 	private final Map<String, Double> tfidf = new HashMap<>();
-	private final static Logger log = LogManager.getLogger(TFIDF.class);
+	private final static Logger log = LogManager.getLogger();
 
 	public TFIDF(Corpus inCorpus, Predicate<String> filter)
 	{

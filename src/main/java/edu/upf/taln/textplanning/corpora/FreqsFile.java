@@ -21,7 +21,7 @@ public class FreqsFile implements Corpus
 	private final Map<String, Integer> sense_counts = new HashMap<>();
 	private final Map<String, Integer> sense_doc_counts = new HashMap<>();
 	private final Map<String, Map<String, Integer>> form_sense_counts = new HashMap<>();
-	private final static Logger log = LogManager.getLogger(FreqsFile.class);
+	private final static Logger log = LogManager.getLogger();
 
 	public FreqsFile(Path file) throws IOException
 	{

@@ -29,7 +29,7 @@ import java.util.List;
  */
 public final class TextPlanner
 {
-	private final static Logger log = LogManager.getLogger(TextPlanner.class);
+	private final static Logger log = LogManager.getLogger();
 
 	public static class Options
 	{
@@ -40,7 +40,6 @@ public final class TextPlanner
 		double damping_variables = 0.2; // controls bias towards meanings rank when ranking variables
 		double pattern_lambda = 1.0; // Controls balance between weight of nodes and cost of edges during pattern extraction
 		double tree_edit_lambda = 0.1; // Controls impact of roles when calculating similarity between semantic trees
-		String stats = "";
 
 		@Override
 		public String toString()
@@ -55,8 +54,7 @@ public final class TextPlanner
 					"\n\tmin_rank =" + f.format(min_meaning_rank) +
 					"\n\tdamping_variables = " + f.format(damping_variables) +
 					"\n\tpattern_lambda = " + f.format(pattern_lambda) +
-					"\n\tredundancy lambda = " + f.format(tree_edit_lambda) +
-					"\n\n" + stats;
+					"\n\tredundancy lambda = " + f.format(tree_edit_lambda);
 		}
 	}
 

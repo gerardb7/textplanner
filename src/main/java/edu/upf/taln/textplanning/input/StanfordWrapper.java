@@ -27,7 +27,7 @@ import static java.util.stream.Collectors.toList;
 class StanfordWrapper
 {
 	private final StanfordCoreNLP pipeline;
-	private final static Logger log = LogManager.getLogger(StanfordWrapper.class);
+	private final static Logger log = LogManager.getLogger();
 
 	StanfordWrapper(boolean no_stanford)
 	{

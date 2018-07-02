@@ -18,7 +18,7 @@ import java.util.stream.IntStream;
 
 public class MatrixFactory
 {
-	private final static Logger log = LogManager.getLogger(MatrixFactory.class);
+	private final static Logger log = LogManager.getLogger();
 
 	/**
 	 * Creates a row-stochastic matrix to rank a set of meanings
@@ -27,6 +27,7 @@ public class MatrixFactory
 	                                             SimilarityFunction sim, BiPredicate<String, String> filter,
 	                                             double sim_threshold, double d)
 	{
+		log.info("Creating meanings ranking matrix");
 		int n = meanings.size();
 
 		// Create *strictly positive* bias row vector for the set of meanings
@@ -41,9 +42,6 @@ public class MatrixFactory
 
 		// Bias each row in X using bias L and d factor d
 		// Ruv = d*Lu + (1.0-d)*Xuv
-//		AtomicLong counter = new AtomicLong(0);
-//		long num_calculations2 = n * n;
-
 		IntStream.range(0, n).forEach(u ->
 				IntStream.range(0, n).forEach(v -> {
 					double Lu = L[u]; // bias towards relevance of v
@@ -51,9 +49,8 @@ public class MatrixFactory
 					double Ruv = d * Lu + (1.0 - d)*Xuv;
 
 					R[u][v] = Ruv;
-//					if (counter.incrementAndGet() % 10000000 == 0)
-//						log.info(counter.get() + " out of " + num_calculations2);
 				}));
+		log.info("Meanings matrix created");
 
 		// R is row-normalized because both L and X are normalized
 		return R;
@@ -65,6 +62,7 @@ public class MatrixFactory
 	static double[][] createVariableRankingMatrix(List<String> variables, GlobalSemanticGraph graph,
 	                                              double d, double min_rank)
 	{
+		log.info("Creating variables ranking matrix");
 		int n = variables.size();
 
 		// Get normalized *strictly positive* bias row vector for the set of variables
@@ -79,8 +77,6 @@ public class MatrixFactory
 
 		// Bias each row in Y using bias T and d factor d
 		// Prob index->j = a*T(j) + b*t(j) + (1.0-a-b)*Y(index,j)
-//		AtomicLong counter = new AtomicLong(0);
-//		long num_calculations2 = n * n;
 		IntStream.range(0, n).forEach(u ->
 				IntStream.range(0, n).forEach(v -> {
 					double tu = T[u]; // bias towards meanings of u
@@ -88,10 +84,9 @@ public class MatrixFactory
 					double Ruv = d * tu + (1.0 - d)*Yuv;
 
 					R[u][v] = Ruv;
-//					if (counter.incrementAndGet() % 10000000 == 0)
-//						log.info(counter.create() + " out of " + num_calculations2);
 				}));
 
+		log.info("Variables matrix created");
 		// R is row-normalized because both T and Y are normalized
 		return R;
 	}
@@ -138,8 +133,9 @@ public class MatrixFactory
 		int n = meanings.size();
 		double[][] m = new double[n][n];
 
-		AtomicLong counter = new AtomicLong(0);
-		AtomicLong num_calculations = new AtomicLong(0);
+		int total_pairs = ((n * n) / 2);
+		AtomicLong counter_pairs = new AtomicLong(0);
+		AtomicLong num_filtered = new AtomicLong(0);
 		AtomicLong num_defined = new AtomicLong(0);
 		AtomicLong num_negative = new AtomicLong(0);
 
@@ -175,7 +171,7 @@ public class MatrixFactory
 						}
 
 						if (filtered_in)
-							num_calculations.incrementAndGet();
+							num_filtered.incrementAndGet();
 					}
 
 					if (simij < sim_threshold)
@@ -184,8 +180,8 @@ public class MatrixFactory
 					m[i][j] = simij;
 					m[j][i] = simij; // symmetric matrix
 
-					if (counter.incrementAndGet() % 100000 == 0)
-						log.info(counter.get() + " out of " + num_calculations);
+					if (counter_pairs.incrementAndGet() % 100000 == 0)
+						log.info(counter_pairs.get() + " out of " + total_pairs);
 				}));
 
 		// Set all 0-valued similarity values to the average of non-zero similarities
@@ -203,8 +199,9 @@ public class MatrixFactory
 					}));
 		}
 
-		log.info("Similarity function defined for " + num_defined + " out of " + num_calculations);
-		log.info("Similarity values are negative for " + num_negative.get() + " out of " + num_calculations);
+		log.info("Similarity function invoked for " + num_filtered + " out of " + total_pairs);
+		log.info("Similarity function defined for " + num_defined + " out of " + num_filtered);
+		log.info("Similarity values are negative for " + num_negative.get() + " out of " + num_defined);
 		if (normalize)
 			normalize(m);
 

@@ -26,7 +26,7 @@ public class Coherence implements Function
 {
 	private final List<Candidate> candidates;
 	private final double[][] semantic_similarity;
-	private final static Logger log = LogManager.getLogger(Coherence.class);
+	private final static Logger log = LogManager.getLogger();
 
 	Coherence(List<Candidate> candidates, SimilarityFunction similarity, double lower_bound)
 	{

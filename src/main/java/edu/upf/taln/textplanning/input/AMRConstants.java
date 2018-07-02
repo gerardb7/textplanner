@@ -75,6 +75,7 @@ public class AMRConstants
 	public static final String op10 = ":op10";
 	public static final String prep = ":prep-";
 	public static final String conj = ":conj-";
+	public static final String name_concept = "name";
 	public static final String unknown = "amr-unknown";
 	public static final String choice = "amr-choice";
 	public static final String product = "product-of";

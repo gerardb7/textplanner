@@ -40,7 +40,7 @@ public class CompactFrequencies implements Corpus, Serializable
 	transient private ByteBuffer form_counts = ByteBuffer.allocate(BUFFER_SIZE_STEP);
 
 	private final static long serialVersionUID = 1L;
-	private final static Logger log = LogManager.getLogger(CompactFrequencies.class);
+	private final static Logger log = LogManager.getLogger();
 
 	public CompactFrequencies(int num_docs, Map<String, Integer> total_counts, Map<String, Integer> doc_counts, Map<String, Map<String, Integer>> form_counts)
 	{

@@ -27,7 +27,7 @@ import static java.util.stream.Collectors.*;
 class CandidatesCollector
 {
 	private final BabelNetWrapper bn;
-	private final static Logger log = LogManager.getLogger(CandidatesCollector.class);
+	private final static Logger log = LogManager.getLogger();
 
 	CandidatesCollector(BabelNetWrapper babelnet)
 	{
@@ -88,12 +88,14 @@ class CandidatesCollector
 		int num_references = candidates.stream().map(Candidate::getMeaning).map(Meaning::getReference).collect(toSet()).size();
 		final List<String> multiwords = candidates.stream()
 				.filter(c -> c.getMention().isMultiWord())
-				.map(c -> c.getMention().getSurface_form() + "-" + c.getMeaning())
+				.map(c -> c.getMention().getSurface_form() + "\t" + c.getMeaning())
 				.collect(Collectors.toList());
 		log.info("Created " + candidates.size() + " candidates, with " + num_references +
 				" different references, and using " + BabelNetWrapper.num_queries.get() +
-				" queries\nList of multiword candidates: " + multiwords +
-				"\nCandidate meanings collected in " + timer.stop());
+				" queries.");
+		log.info("Candidate meanings collected in " + timer.stop());
+		log.debug("List of multiwords:");
+		multiwords.forEach(log::debug);
 
 		return candidates;
 	}

@@ -21,7 +21,7 @@ public class MultiObjectiveOptimizationRanking
 	private final SimilarityFunction similarity;
 	private final double meaning_similarity_threshold;
 	private final Corpus corpus;
-	private final static Logger log = LogManager.getLogger(MultiObjectiveOptimizationRanking.class);
+	private final static Logger log = LogManager.getLogger();
 
 	public MultiObjectiveOptimizationRanking(WeightingFunction weighting, SimilarityFunction similarity, Corpus corpus,
 	                                         double meaning_similarity_threshold)

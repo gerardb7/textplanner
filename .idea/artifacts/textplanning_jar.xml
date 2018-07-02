@@ -6,20 +6,18 @@
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/hdf5/1.10.1-1.4.1/hdf5-1.10.1-1.4.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/openblas/0.2.20-1.4.1/openblas-0.2.20-1.4.1-android-x86_64.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/eclipse/rdf4j/rdf4j-query/2.2.2/rdf4j-query-2.2.2.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/joda-time/joda-time/2.9.4/joda-time-2.9.4.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/deeplearning4j/deeplearning4j-core/1.0.0-beta/deeplearning4j-core-1.0.0-beta.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/nd4j/jackson/1.0.0-beta/jackson-1.0.0-beta.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/httpcomponents/httpclient/4.4.1/httpclient-4.4.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/datavec/datavec-data-image/1.0.0-beta/datavec-data-image-1.0.0-beta.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/libfreenect/0.5.3-1.4.1/libfreenect-0.5.3-1.4.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/codehaus/mojo/animal-sniffer-annotations/1.14/animal-sniffer-annotations-1.14.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/openblas/0.2.20-1.4.1/openblas-0.2.20-1.4.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/nd4j/nd4j-native/1.0.0-beta/nd4j-native-1.0.0-beta.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacv/1.4.1/javacv-1.4.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/javax/xml/bind/jaxb-api/2.2.7/jaxb-api-2.2.7.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/googlecode/netlib-java/netlib-java/0.9.3/netlib-java-0.9.3.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/google/errorprone/error_prone_annotations/2.1.3/error_prone_annotations-2.1.3.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/eclipse/rdf4j/rdf4j-rio-datatypes/2.2.2/rdf4j-rio-datatypes-2.2.2.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/threadly/threadly/4.10.0/threadly-4.10.0.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/opencv/3.4.1-1.4.1/opencv-3.4.1-1.4.1-macosx-x86_64.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/commons-beanutils/commons-beanutils-core/1.7.0/commons-beanutils-core-1.7.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/opencv/3.4.1-1.4.1/opencv-3.4.1-1.4.1-android-arm.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jgrapht/jgrapht-io/1.1.0/jgrapht-io-1.1.0.jar" path-in-jar="/" />
@@ -46,10 +44,11 @@
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/opencv/3.4.1-1.4.1/opencv-3.4.1-1.4.1-linux-x86_64.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/lucene/lucene-analyzers-common/4.10.3/lucene-analyzers-common-4.10.3.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/nd4j/nd4j-native-api/1.0.0-beta/nd4j-native-api-1.0.0-beta.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/opencv/3.4.1-1.4.1/opencv-3.4.1-1.4.1-android-arm64.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/nd4j/nd4j-native/1.0.0-beta/nd4j-native-1.0.0-beta-android-x86_64.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/edu/stanford/nlp/stanford-corenlp/3.9.1/stanford-corenlp-3.9.1-models.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/hdf5/1.10.1-1.4.1/hdf5-1.10.1-1.4.1-macosx-x86_64.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/opencv/3.4.1-1.4.1/opencv-3.4.1-1.4.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/httpcomponents/httpclient/4.3.6/httpclient-4.3.6.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/commons-digester/commons-digester/1.8/commons-digester-1.8.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/eclipse/rdf4j/rdf4j-repository-sparql/2.2.2/rdf4j-repository-sparql-2.2.2.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/eclipse/rdf4j/rdf4j-rio-ntriples/2.2.2/rdf4j-rio-ntriples-2.2.2.jar" path-in-jar="/" />
@@ -57,7 +56,7 @@
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/ibm/icu/icu4j/56.1/icu4j-56.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/eclipse/rdf4j/rdf4j-queryparser-api/2.2.2/rdf4j-queryparser-api-2.2.2.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/nd4j/nd4j-native/1.0.0-beta/nd4j-native-1.0.0-beta-linux-x86_64.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/gov/nist/math/jama/1.0.3/jama-1.0.3.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/openblas/0.2.20-1.4.1/openblas-0.2.20-1.4.1-linux-x86.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/openblas/0.2.20-1.4.1/openblas-0.2.20-1.4.1-windows-x86.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jgrapht/jgrapht-core/1.1.0/jgrapht-core-1.1.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/commons-beanutils/commons-beanutils/1.7.0/commons-beanutils-1.7.0.jar" path-in-jar="/" />
@@ -65,9 +64,9 @@
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/logging/log4j/log4j-core/2.11.0/log4j-core-2.11.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/leptonica/1.75.3-1.4.1/leptonica-1.75.3-1.4.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/leptonica/1.75.3-1.4.1/leptonica-1.75.3-1.4.1-android-x86_64.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/nd4j/nd4j-native/1.0.0-beta/nd4j-native-1.0.0-beta.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/json/json/20170516/json-20170516.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/openblas/0.2.20-1.4.1/openblas-0.2.20-1.4.1-ios-x86_64.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/hdf5/1.10.1-1.4.1/hdf5-1.10.1-1.4.1-linux-x86.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/lucene/lucene-core/4.9.0/lucene-core-4.9.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/leptonica/1.75.3-1.4.1/leptonica-1.75.3-1.4.1-android-arm.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/de/jungblut/common/thomasjungblut-common/1.0/thomasjungblut-common-1.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jdom/jdom/1.1/jdom-1.1.jar" path-in-jar="/" />
@@ -81,6 +80,7 @@
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/openblas/0.2.20-1.4.1/openblas-0.2.20-1.4.1-linux-x86_64.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/eclipse/rdf4j/rdf4j-queryparser-sparql/2.2.2/rdf4j-queryparser-sparql-2.2.2.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/leptonica/1.75.3-1.4.1/leptonica-1.75.3-1.4.1-macosx-x86_64.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/httpcomponents/httpcore/4.3.3/httpcore-4.3.3.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/hdf5/1.10.1-1.4.1/hdf5-1.10.1-1.4.1-windows-x86.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/commons-net/commons-net/3.1/commons-net-3.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/twelvemonkeys/imageio/imageio-core/3.1.1/imageio-core-3.1.1.jar" path-in-jar="/" />
@@ -90,7 +90,6 @@
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/openblas/0.2.20-1.4.1/openblas-0.2.20-1.4.1-windows-x86_64.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/it/unimi/dsi/fastutil/6.5.7/fastutil-6.5.7.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/it/uniroma1/lcl/jlt/jlt/2.2/jlt-2.2.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/glassfish/javax.json/1.0.4/javax.json-1.0.4.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/commons-codec/commons-codec/1.8/commons-codec-1.8.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/twelvemonkeys/common/common-image/3.1.1/common-image-3.1.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/commons/commons-compress/1.16.1/commons-compress-1.16.1.jar" path-in-jar="/" />
@@ -99,14 +98,14 @@
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/deeplearning4j/deeplearning4j-tsne/1.0.0-beta/deeplearning4j-tsne-1.0.0-beta.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/hdf5-platform/1.10.1-1.4.1/hdf5-platform-1.10.1-1.4.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/nd4j/nd4j-jackson/1.0.0-beta/nd4j-jackson-1.0.0-beta.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/noggit/noggit/0.6/noggit-0.6.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/gov/nist/math/jama/1.0.3/jama-1.0.3.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/antlr/antlr4-runtime/4.6/antlr4-runtime-4.6.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/javax/servlet/javax.servlet-api/3.0.1/javax.servlet-api-3.0.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/net/sf/trove4j/trove4j/3.0.3/trove4j-3.0.3.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/commons-lang/commons-lang/2.3/commons-lang-2.3.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/uk/com/robust-it/cloning/1.9.3/cloning-1.9.3.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/nd4j/nd4j-native/1.0.0-beta/nd4j-native-1.0.0-beta-ios-x86_64.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/libfreenect2/0.2.0-1.4.1/libfreenect2-0.2.0-1.4.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/hdf5/1.10.1-1.4.1/hdf5-1.10.1-1.4.1-linux-x86.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/openblas-platform/0.2.20-1.4.1/openblas-platform-0.2.20-1.4.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/lucene/lucene-queryparser/4.9.0/lucene-queryparser-4.9.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/commons/commons-collections4/4.1/commons-collections4-4.1.jar" path-in-jar="/" />
@@ -115,7 +114,7 @@
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp/1.4.1/javacpp-1.4.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/twelvemonkeys/imageio/imageio-jpeg/3.1.1/imageio-jpeg-3.1.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/opencv-platform/3.4.1-1.4.1/opencv-platform-3.4.1-1.4.1.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/commons-configuration/commons-configuration/1.5/commons-configuration-1.5.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/glassfish/javax.json/1.0.4/javax.json-1.0.4.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/nd4j/nd4j-native/1.0.0-beta/nd4j-native-1.0.0-beta-windows-x86_64.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/deeplearning4j/deeplearning4j-ui-components/1.0.0-beta/deeplearning4j-ui-components-1.0.0-beta.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/io7m/xom/xom/1.2.10/xom-1.2.10.jar" path-in-jar="/" />
@@ -123,44 +122,43 @@
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/cc/mallet/mallet/2.0.8/mallet-2.0.8.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/google/guava/guava/24.1-jre/guava-24.1-jre.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/net/sf/opencsv/opencsv/2.3/opencsv-2.3.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/nd4j/nd4j-base64/1.0.0-beta/nd4j-base64-1.0.0-beta.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/openblas/0.2.20-1.4.1/openblas-0.2.20-1.4.1-linux-armhf.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/mkl/2018.1-1.4.1/mkl-2018.1-1.4.1-windows-x86.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/jgraph/jgraph/5.13.0.0/jgraph-5.13.0.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/checkerframework/checker-compat-qual/2.0.0/checker-compat-qual-2.0.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/commons-collections/commons-collections/3.2/commons-collections-3.2.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/httpcomponents/httpmime/4.4.1/httpmime-4.4.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/opencv/3.4.1-1.4.1/opencv-3.4.1-1.4.1-android-arm64.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/nd4j/nd4j-base64/1.0.0-beta/nd4j-base64-1.0.0-beta.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/openblas/0.2.20-1.4.1/openblas-0.2.20-1.4.1-android-arm.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/opencv/3.4.1-1.4.1/opencv-3.4.1-1.4.1-windows-x86_64.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/beust/jcommander/1.58/jcommander-1.58.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/deeplearning4j/deeplearning4j-core/1.0.0-beta/deeplearning4j-core-1.0.0-beta.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jetbrains/annotations/13.0/annotations-13.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/leptonica/1.75.3-1.4.1/leptonica-1.75.3-1.4.1-android-x86.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/opencv/3.4.1-1.4.1/opencv-3.4.1-1.4.1-linux-x86.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/deeplearning4j/deeplearning4j-nn/1.0.0-beta/deeplearning4j-nn-1.0.0-beta.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/leptonica/1.75.3-1.4.1/leptonica-1.75.3-1.4.1-windows-x86_64.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/openblas/0.2.20-1.4.1/openblas-0.2.20-1.4.1-android-arm64.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/openblas/0.2.20-1.4.1/openblas-0.2.20-1.4.1-linux-armhf.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/openblas/0.2.20-1.4.1/openblas-0.2.20-1.4.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/hdf5/1.10.1-1.4.1/hdf5-1.10.1-1.4.1-windows-x86_64.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/clearspring/analytics/stream/2.7.0/stream-2.7.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/joda-time/joda-time/2.9.4/joda-time-2.9.4.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/edu/mit/jwi/2.2.3/jwi-2.2.3.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/eclipse/rdf4j/rdf4j-rio-languages/2.2.2/rdf4j-rio-languages-2.2.2.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/eclipse/rdf4j/rdf4j-rio-api/2.2.2/rdf4j-rio-api-2.2.2.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/librealsense/1.12.1-1.4.1/librealsense-1.12.1-1.4.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/lucene/lucene-sandbox/4.9.0/lucene-sandbox-4.9.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/nd4j/nd4j-native/1.0.0-beta/nd4j-native-1.0.0-beta-linux-ppc64le.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/deeplearning4j/deeplearning4j-nlp/1.0.0-beta/deeplearning4j-nlp-1.0.0-beta.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/openblas/0.2.20-1.4.1/openblas-0.2.20-1.4.1-linux-x86.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/mkl/2018.1-1.4.1/mkl-2018.1-1.4.1-linux-x86_64.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/twelvemonkeys/imageio/imageio-psd/3.1.1/imageio-psd-3.1.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/google/protobuf/protobuf-java/3.2.0/protobuf-java-3.2.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/twelvemonkeys/imageio/imageio-metadata/3.1.1/imageio-metadata-3.1.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/yaml/snakeyaml/1.12/snakeyaml-1.12.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/twelvemonkeys/imageio/imageio-tiff/3.1.1/imageio-tiff-3.1.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/hdf5/1.10.1-1.4.1/hdf5-1.10.1-1.4.1-linux-x86_64.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/deeplearning4j/deeplearning4j-util/1.0.0-beta/deeplearning4j-util-1.0.0-beta.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/commons-configuration/commons-configuration/1.5/commons-configuration-1.5.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/googlecode/efficient-java-matrix-library/ejml/0.23/ejml-0.23.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/apple/AppleJavaExtensions/1.4/AppleJavaExtensions-1.4.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/eclipse/rdf4j/rdf4j-queryalgebra-model/2.2.2/rdf4j-queryalgebra-model-2.2.2.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/deeplearning4j/deeplearning4j-modelimport/1.0.0-beta/deeplearning4j-modelimport-1.0.0-beta.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/nd4j/nd4j-native/1.0.0-beta/nd4j-native-1.0.0-beta-android-x86_64.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/librealsense/1.12.1-1.4.1/librealsense-1.12.1-1.4.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/slf4j/slf4j-api/1.7.12/slf4j-api-1.7.12.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/deeplearning4j/deeplearning4j-utility-iterators/1.0.0-beta/deeplearning4j-utility-iterators-1.0.0-beta.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/net/sourceforge/f2j/arpack_combined_all/0.1/arpack_combined_all-0.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/openblas/0.2.20-1.4.1/openblas-0.2.20-1.4.1-android-x86.jar" path-in-jar="/" />
@@ -175,14 +173,13 @@
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/mkl/2018.1-1.4.1/mkl-2018.1-1.4.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/nd4j/nd4j-native/1.0.0-beta/nd4j-native-1.0.0-beta-android-arm64.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/twelvemonkeys/common/common-io/3.1.1/common-io-3.1.1.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/json/json/20170516/json-20170516.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/lucene/lucene-core/4.9.0/lucene-core-4.9.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/mkl/2018.1-1.4.1/mkl-2018.1-1.4.1-linux-x86.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/beust/jcommander/1.58/jcommander-1.58.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/libfreenect2/0.2.0-1.4.1/libfreenect2-0.2.0-1.4.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/videoinput/0.200-1.4.1/videoinput-0.200-1.4.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/google/code/findbugs/jsr305/1.3.9/jsr305-1.3.9.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/httpcomponents/httpcore/4.4.1/httpcore-4.4.1.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/solr/solr-solrj/5.3.1/solr-solrj-5.3.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/deeplearning4j/deeplearning4j-nn/1.0.0-beta/deeplearning4j-nn-1.0.0-beta.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/opencv/3.4.1-1.4.1/opencv-3.4.1-1.4.1-android-x86_64.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/zookeeper/zookeeper/3.4.6/zookeeper-3.4.6.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/ffmpeg/3.4.2-1.4.1/ffmpeg-3.4.2-1.4.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/xalan/xalan/2.7.0/xalan-2.7.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/openblas/0.2.20-1.4.1/openblas-0.2.20-1.4.1-macosx-x86_64.jar" path-in-jar="/" />
@@ -204,18 +201,16 @@
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/commons/commons-math3/3.0/commons-math3-3.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/eclipse/rdf4j/rdf4j-http-client/2.2.2/rdf4j-http-client-2.2.2.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/leptonica/1.75.3-1.4.1/leptonica-1.75.3-1.4.1-linux-ppc64le.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/slf4j/slf4j-api/1.7.7/slf4j-api-1.7.7.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/mkl/2018.1-1.4.1/mkl-2018.1-1.4.1-linux-x86.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/mkl/2018.1-1.4.1/mkl-2018.1-1.4.1-linux-x86_64.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/deeplearning4j/deeplearning4j-util/1.0.0-beta/deeplearning4j-util-1.0.0-beta.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/deeplearning4j/deeplearning4j-modelimport/1.0.0-beta/deeplearning4j-modelimport-1.0.0-beta.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/opencv/3.4.1-1.4.1/opencv-3.4.1-1.4.1-macosx-x86_64.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/flycapture/2.11.3.121-1.4.1/flycapture-2.11.3.121-1.4.1.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jetbrains/annotations/13.0/annotations-13.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jgrapht/jgrapht-ext/1.1.0/jgrapht-ext-1.1.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/it/uniroma1/lcl/babelnet/babelnet-api/3.7/babelnet-api-3.7.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/nd4j/nd4j-native-platform/1.0.0-beta/nd4j-native-platform-1.0.0-beta.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/google/j2objc/j2objc-annotations/1.1/j2objc-annotations-1.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/nd4j/nd4j-common/1.0.0-beta/nd4j-common-1.0.0-beta.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/flandmark/1.07-1.4.1/flandmark-1.07-1.4.1.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/codehaus/woodstox/woodstox-core-asl/4.4.1/woodstox-core-asl-4.4.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/lucene/lucene-queries/4.10.3/lucene-queries-4.10.3.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.16.20/lombok-1.16.20.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bytedeco/javacpp-presets/leptonica/1.75.3-1.4.1/leptonica-1.75.3-1.4.1-linux-x86.jar" path-in-jar="/" />

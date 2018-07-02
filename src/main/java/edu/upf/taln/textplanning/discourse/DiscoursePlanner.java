@@ -24,7 +24,7 @@ public class DiscoursePlanner
 	}
 
 	private final SemanticTreeSimilarity sim;
-	private final static Logger log = LogManager.getLogger(DiscoursePlanner.class);
+	private final static Logger log = LogManager.getLogger();
 
 
 	public DiscoursePlanner(SemanticTreeSimilarity sim)

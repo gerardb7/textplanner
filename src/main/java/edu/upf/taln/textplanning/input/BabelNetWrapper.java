@@ -24,7 +24,7 @@ public class BabelNetWrapper
 {
 	private final it.uniroma1.lcl.babelnet.BabelNet bn;
 	static final AtomicLong num_queries = new AtomicLong();
-	private final static Logger log = LogManager.getLogger(BabelNetWrapper.class);
+	private final static Logger log = LogManager.getLogger();
 
 	public BabelNetWrapper(Path config_folder, boolean no_babelnet)
 	{

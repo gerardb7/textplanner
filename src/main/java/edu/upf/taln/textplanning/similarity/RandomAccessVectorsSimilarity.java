@@ -18,7 +18,7 @@ public class RandomAccessVectorsSimilarity implements SimilarityFunction
 {
 	private final GloveRandomAccessReader db;
 	private final CosineDistance cos = new CosineDistance();
-	private final static Logger log = LogManager.getLogger(TextVectorsSimilarity.class);
+	private final static Logger log = LogManager.getLogger();
 
 	public RandomAccessVectorsSimilarity(Path vectors_path) throws IOException
 	{

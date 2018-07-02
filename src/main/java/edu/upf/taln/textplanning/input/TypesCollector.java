@@ -27,7 +27,7 @@ class TypesCollector
 	private final DBPediaType dbpedia = new DBPediaType();
 	private final BabelNetWrapper babelnet;
 	private final Map<String, Candidate.Type> types = new HashMap<>();
-	private final static Logger log = LogManager.getLogger(TypesCollector.class);
+	private final static Logger log = LogManager.getLogger();
 
 	TypesCollector(Path types_file, BabelNetWrapper babelnet) throws IOException
 	{

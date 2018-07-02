@@ -18,7 +18,7 @@ public class TextVectorsSimilarity implements SimilarityFunction
 
 	private final Map<String, double[]> vectors;
 	//private final static double avg_sim = 0.041157715074586806;
-	private final static Logger log = LogManager.getLogger(TextVectorsSimilarity.class);
+	private final static Logger log = LogManager.getLogger();
 
 	public TextVectorsSimilarity(Path vectors_path, Format format) throws Exception
 	{

@@ -29,7 +29,7 @@ import static java.util.stream.Collectors.*;
 public class VectorsTextFileUtils
 {
 	public enum Format {Text_Glove, Text_Word2vec, Binary_Word2vec, Binary_RandomAccess}
-	private final static Logger log = LogManager.getLogger(VectorsTextFileUtils.class);
+	private final static Logger log = LogManager.getLogger();
 
 	/**
 	 * Given a file containing vectors for pairs of word and senses, produces a file with a mean vector for each sense

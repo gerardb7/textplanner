@@ -28,7 +28,7 @@ public class GraphList implements Serializable
 	private final List<CoreferenceChain> chains = new ArrayList<>();
 	private final NumberFormat format;
 	private final static long serialVersionUID = 1L;
-	private final static Logger log = LogManager.getLogger(GraphList.class);
+	private final static Logger log = LogManager.getLogger();
 
 
 	public GraphList(List<SemanticGraph> graphs,
@@ -85,12 +85,12 @@ public class GraphList implements Serializable
 
 		final Collection<Candidate> candidates = candidate_meanings.get(v);
 
-		log.debug(c.getMention().getSurface_form() + " <- " + c.getMeaning() +
-				" (candidate set = " + candidates.stream()
+		log.debug(c.getMention().getSurface_form() + "\t" + c.getMeaning() +
+				"\t" + candidates.stream()
 						.filter(c2 -> c2 != c)
 						.map(Candidate::getMeaning)
 						.map(Meaning::toString)
-						.collect(joining(", ")) + ")");
+						.collect(joining(", ")));
 
 		candidates.clear();
 		candidate_meanings.put(v, c);

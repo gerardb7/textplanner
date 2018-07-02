@@ -43,7 +43,7 @@ import static java.util.stream.Collectors.*;
  */
 public class FrequencyUtils
 {
-	private final static Logger log = LogManager.getLogger(FrequencyUtils.class);
+	private final static Logger log = LogManager.getLogger();
 
 	private static void getFrequenciesFromSEW(Path sew_folder, Path freqs_file)
 	{

@@ -18,7 +18,7 @@ public class DBPediaType
 	private final static String isPlace = "ASK{ <$r> a <http://dbpedia.org/ontology/Place> }";
 	private final static String isOrganization = "ASK{ <$r> a <http://dbpedia.org/ontology/Organisation> }";
 	private final RepositoryConnection conn;
-	private final static Logger log = LogManager.getLogger(DBPediaType.class);
+	private final static Logger log = LogManager.getLogger();
 
 	public DBPediaType()
 	{

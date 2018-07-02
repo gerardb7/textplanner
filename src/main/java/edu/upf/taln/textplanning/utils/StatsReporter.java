@@ -19,7 +19,7 @@ import static java.util.stream.Collectors.toSet;
 
 public class StatsReporter
 {
-	private final static Logger log = LogManager.getLogger(GraphListFactory.class);
+	private final static Logger log = LogManager.getLogger();
 
 	public static void reportStats(GraphList graphs, Map<String, List<Candidate>> candidates)
 	{

@@ -37,7 +37,7 @@ import static java.util.stream.Collectors.toList;
  */
 public class GraphRanking
 {
-	private final static Logger log = LogManager.getLogger(TextPlanner.class);
+	private final static Logger log = LogManager.getLogger();
 
 
 	public static void rankMeanings(Collection<Candidate> candidates, WeightingFunction weighting, SimilarityFunction similarity,

@@ -19,13 +19,13 @@ import static java.util.stream.Collectors.*;
 // Creates global semantic graphs from a lists of AMR-like semantic graphs
 public class GlobalGraphFactory
 {
-	private final static Logger log = LogManager.getLogger(GlobalGraphFactory.class);
+	private final static Logger log = LogManager.getLogger();
 
 
 	public static GlobalSemanticGraph create(GraphList graphs)
 	{
+		remove_names(graphs); // <- won't work unless executed before remove_concepts
 		remove_concepts(graphs);
-		remove_names(graphs);
 		disambiguate_candidates(graphs);
 		collapse_multiwords(graphs);
 		GlobalSemanticGraph merge = merge(graphs);
@@ -36,6 +36,7 @@ public class GlobalGraphFactory
 
 	private static void remove_concepts(GraphList graphs)
 	{
+		log.info("Removing concepts");
 		final Set<String> concepts = graphs.getGraphs().stream()
 				.flatMap(g -> g.edgeSet().stream()
 						.filter(e -> e.getLabel().equals(AMRConstants.instance))
@@ -47,28 +48,44 @@ public class GlobalGraphFactory
 
 	/**
 	 * Given:
-	 *      x -name-> n -op*-> strings
+	 *      (x :name (n /name (:op1 n1 .. :opN nN))) or (x /name (:op1 n1 .. :opN nN))
 	 * Removes all but x.
  	 */
 	private static void remove_names(GraphList graphs)
 	{
+		log.info("Removing names");
+
+		// (x :name (n /name (:op1 n1 .. :opN nN)))
 		final Set<String> names = graphs.getGraphs().stream()
 				.flatMap(g -> g.edgeSet().stream()
 						.filter(e -> e.getLabel().equals(AMRConstants.name))
-						.map(g::getEdgeTarget)
+						.map(g::getEdgeTarget) // n
 						.map(name -> {
-							final Set<String> descendants = g.getDescendants(name); // this adds names
-							descendants.add(name);
+							final Set<String> descendants = g.getDescendants(name); // adds n1..nN
+							descendants.add(name); // adds n
 							return descendants;
 						})
 						.flatMap(Set::stream))
 				.collect(toSet());
+
+		// (x /name (:op1 n1 .. :opN nN))
+		graphs.getGraphs().stream()
+				.flatMap(g -> g.edgeSet().stream()
+						.filter(e -> e.getLabel().equals(AMRConstants.instance))
+						.filter(e -> g.getEdgeTarget(e).equals(AMRConstants.name_concept))
+						.map(g::getEdgeSource) // x
+						.filter(x -> !names.contains(x))
+						.map(g::getDescendants) // adds n1..nN
+						.flatMap(Set::stream))
+				.forEach(names::add);
+
 
 		graphs.removeVertices(names);
 	}
 
 	private static void disambiguate_candidates(GraphList graphs)
 	{
+		log.info("Disambiguating candidates");
 		// Use vertex weights to choose best candidate for each vertex
 		graphs.getGraphs().forEach(g ->
 				g.vertexSet().forEach(v ->
@@ -86,6 +103,7 @@ public class GlobalGraphFactory
 	 */
 	private static void collapse_multiwords(GraphList graphs)
 	{
+		log.info("Collapsing multiwords");
 		LinkedList<Pair<SemanticGraph, String>> subsumers = graphs.getGraphs().stream()
 				.flatMap(g -> g.vertexSet().stream()
 						.filter(v -> !graphs.getCandidates(v).isEmpty())
@@ -131,15 +149,17 @@ public class GlobalGraphFactory
 					subsumers.add(Pair.of(p.getLeft(), v)); // subsumer node has been replaced by v
 				});
 
-				log.debug("Accepted multiword " + c.getMention().getSurface_form() + " <- " + c.getMeaning());
+				log.debug("Accepted multiword \"" + c.getMention().getSurface_form() + "\"\t" + c.getMeaning());
 			}
 			else
-				log.debug("Rejected multiword " + c.getMention().getSurface_form() + " <- " + c.getMeaning());
+				log.debug("Rejected multiword \"" + c.getMention().getSurface_form() + "\"\t" + c.getMeaning());
 		}
 	}
 
 	private static GlobalSemanticGraph merge(GraphList graphs)
 	{
+		log.info("Merging graphs");
+
 		// Create merged (disconnected) graph
 		GlobalSemanticGraph merged = new GlobalSemanticGraph();
 		graphs.getGraphs().forEach(g -> g.edgeSet().forEach(e ->

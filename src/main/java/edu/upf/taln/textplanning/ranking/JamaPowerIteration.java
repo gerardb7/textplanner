@@ -13,7 +13,7 @@ import java.util.stream.DoubleStream;
 
 public class JamaPowerIteration implements PowerIterationRanking
 {
-	private final static Logger log = LogManager.getLogger(JamaPowerIteration.class);
+	private final static Logger log = LogManager.getLogger();
 
 	/**
 	 * Power iteration method to obtain a final stationary distribution of a Markov chain
@@ -39,7 +39,7 @@ public class JamaPowerIteration implements PowerIterationRanking
 		final double e = 1.0/(n*1000); // set stopping threshold
 		Matrix v = new Matrix(n, 1, 1.0 / n); // v is the distribution vector that will create iteratively updated
 
-		log.debug("Starting power iteration");
+		log.info("Starting power iteration");
 		int numIterations = 0;
 		double delta;
 		do
@@ -59,7 +59,7 @@ public class JamaPowerIteration implements PowerIterationRanking
 			v = tmp;
 			if (++numIterations % 100 == 0)
 			{
-				log.debug("..." + numIterations + " iterations");
+				log.info("..." + numIterations + " iterations");
 			}
 		}
 		while (delta >= e); // stopping criterion: delta falls below a certain threshold
@@ -79,6 +79,7 @@ public class JamaPowerIteration implements PowerIterationRanking
 			sorted_items.add(Pair.of(l, v_i));
 		}
 		sorted_items.sort(Comparator.comparingDouble(Pair<String, Double>::getRight).reversed());
-		log.debug(sorted_items.subList(0, 100));
+		log.debug("Ranked list:");
+		sorted_items.subList(0, 100).forEach(p -> log.debug(p.getLeft() + "\t" + p.getRight()));
 	}
 }

@@ -27,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
+import java.util.Enumeration;
 import java.util.List;
 
 import static edu.upf.taln.textplanning.utils.VectorsTextFileUtils.Format;
@@ -41,7 +42,7 @@ public class Driver
 	private final static String subgraphs_suffix = "_subgraphs.bin";
 	private final static String plan_suffix = "_plan.bin";
 
-	private final static Logger log = LogManager.getLogger(Driver.class);
+	private final static Logger log = LogManager.getLogger();
 
 	private void create_graphs(Path amr_bank_file, Path bn_config_folder, Path output, boolean no_stanford, boolean no_babelnet)
 			throws IOException
@@ -97,7 +98,7 @@ public class Driver
 		WeightingFunction weighting = new NoWeights();
 		SimilarityFunction similarity = chooseSimilarityFunction(vectors, format);
 
-		log.info("Loading resources took " + timer.stop());
+		log.info("Loading resources took " + timer.reset());
 		log.info("***********************");
 
 		String amr_bank = FileUtils.readFileToString(amr_bank_file.toFile(), StandardCharsets.UTF_8);
@@ -120,6 +121,7 @@ public class Driver
 		output_path = createOutputPath(amr_bank_file, global_graph_suffix);
 		Serializer.serialize(graph, output_path);
 		log.info("Global semantic graph serialized to " + output_path);
+		log.info("Planning took " + timer.stop());
 	}
 
 	private void rank_variables(Path graph_file, Path output) throws IOException, ClassNotFoundException
