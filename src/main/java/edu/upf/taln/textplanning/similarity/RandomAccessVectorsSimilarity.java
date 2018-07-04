@@ -44,7 +44,7 @@ public class RandomAccessVectorsSimilarity implements SimilarityFunction
 	{
 		try
 		{
-			return cos.measureDistance(db.get(e1), db.get(e2));
+			return 1.0 - cos.measureDistance(db.get(e1), db.get(e2));
 		}
 		catch (Exception e)
 		{

@@ -27,7 +27,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
-import java.util.Enumeration;
 import java.util.List;
 
 import static edu.upf.taln.textplanning.utils.VectorsTextFileUtils.Format;
@@ -101,6 +100,7 @@ public class Driver
 		log.info("Loading resources took " + timer.reset());
 		log.info("***********************");
 
+		timer.start();
 		String amr_bank = FileUtils.readFileToString(amr_bank_file.toFile(), StandardCharsets.UTF_8);
 		GraphList graphs = factory.getGraphs(amr_bank);
 
