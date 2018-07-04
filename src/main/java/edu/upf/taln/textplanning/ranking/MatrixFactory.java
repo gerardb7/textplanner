@@ -105,6 +105,11 @@ public class MatrixFactory
 			double accum = Arrays.stream(v).sum();
 			if (accum > 0.0)
 				IntStream.range(0, num_entities).forEach(i -> v[i] /= accum); // normalize vector with sum of row
+			else
+			{
+				final double const_value = 1.0 / num_entities;
+				IntStream.range(0, num_entities).forEach(i -> v[i] = const_value);
+			}
 		}
 
 		return v;

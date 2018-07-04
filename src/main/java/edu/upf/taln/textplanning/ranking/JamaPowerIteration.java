@@ -44,7 +44,7 @@ public class JamaPowerIteration implements PowerIterationRanking
 		double delta;
 		do
 		{
-			//debug_rank(v, n, labels);
+			debug_rank(v, n, labels);
 
 			// Core operation: transform distribution according to stochastic matrix
 			Matrix tmp = a.times(v); // right-multiply column-stochastic square matrix and column vector, produces column vector
@@ -80,6 +80,6 @@ public class JamaPowerIteration implements PowerIterationRanking
 		}
 		sorted_items.sort(Comparator.comparingDouble(Pair<String, Double>::getRight).reversed());
 		log.debug("Ranked list:");
-		sorted_items.subList(0, 100).forEach(p -> log.debug(p.getLeft() + "\t" + p.getRight()));
+		sorted_items.subList(0, Math.min(n, 100)).forEach(p -> log.debug(p.getLeft() + "\t" + p.getRight()));
 	}
 }
