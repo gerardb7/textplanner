@@ -112,7 +112,7 @@ public class GraphList implements Serializable
 
 	public void vertexContraction(SemanticGraph g, String v, Collection<String> C)
 	{
-		if (!vertices.contains(v) || !vertices.containsAll(C))
+		if (!vertices.contains(v) || !vertices.containsAll(C) || C.contains(v))
 			throw new RuntimeException("Invalid contraction vertices");
 
 		// Perform contraction on graph

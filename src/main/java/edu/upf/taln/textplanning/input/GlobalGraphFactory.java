@@ -126,6 +126,7 @@ public class GlobalGraphFactory
 
 			// s_max -> value of highest scored subsumed meaning
 			final Set<String> subsumed = g.getAlignments().getSpanVertices(c.getMention().getSpan());
+			subsumed.remove(v); // do not include v itself!
 			double s_max = subsumed.stream()
 					.map(graphs::getCandidates)
 					.flatMap(Collection::stream)

@@ -42,9 +42,7 @@ public class NumberForms implements WeightingFunction
 		final long max_count = counts.stream()
 				.mapToLong(Pair::getRight)
 				.max().orElse(1);
-		counts.forEach(p -> {
-			weights.put(p.getLeft().getReference(), p.getRight().doubleValue() / max_count);
-		});
+		counts.forEach(p -> weights.put(p.getLeft().getReference(), p.getRight().doubleValue() / max_count));
 	}
 
 	@Override

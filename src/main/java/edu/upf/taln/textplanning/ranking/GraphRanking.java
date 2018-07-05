@@ -2,7 +2,6 @@ package edu.upf.taln.textplanning.ranking;
 
 import Jama.Matrix;
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.TextPlanner;
 import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
@@ -12,7 +11,10 @@ import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;

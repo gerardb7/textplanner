@@ -66,7 +66,10 @@ public class MeaningRankTester
 	public void rankMeaningsTest() throws IOException
 	{
 		WeightingFunction weighting = new NoWeights();
-		Path randoma_access_vectors = Paths.get("/home/gerard/data/NASARIembed+UMBC_w2v_bin");
+		//Path randoma_access_vectors = Paths.get("/home/gerard/data/NASARIembed+UMBC_w2v_bin");
+		//Path randoma_access_vectors = Paths.get("/home/gerard/data/sensembed-vectors-merged_bin");
+		Path randoma_access_vectors = Paths.get("/home/gerard/data/sew-embed.nasari_bin");
+		//Path randoma_access_vectors = Paths.get("/home/gerard/data/sew-embed.w2v_bin");
 		SimilarityFunction similarity = new RandomAccessVectorsSimilarity(randoma_access_vectors);
 
 		final Collection<Candidate> candidates = createCandidates();
