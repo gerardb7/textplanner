@@ -1,7 +1,6 @@
 package edu.upf.taln.textplanning.ranking;
 
 import Jama.Matrix;
-import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
@@ -46,16 +45,16 @@ public class GraphRanking
 	                                double meaning_similarity_threshold, double damping_factor_meanings)
 	{
 		weighting.setContents(candidates);
-		final List<String> labels = candidates.stream()
-				.map(Candidate::getMeaning)
-				.map(Meaning::toString)
-				.distinct()
-				.collect(toList());
 		final List<String> references = candidates.stream()
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
 				.distinct()
 				.collect(Collectors.toList());
+		final List<String> labels = candidates.stream() // for debugging purposes
+				.map(Candidate::getMeaning)
+				.map(Meaning::toString)
+				.distinct()
+				.collect(toList());
 
 		if (references.isEmpty())
 			return;
@@ -93,26 +92,33 @@ public class GraphRanking
 				});
 	}
 
-	public static void rankVariables(GlobalSemanticGraph graph, double minimum_meaning_ranking,
-	                                    double damping_factor_variables)
+	public static void rankVariables(GlobalSemanticGraph graph, double damping_factor_variables)
 	{
-		Stopwatch timer = Stopwatch.createStarted();
 		List<String> variables = graph.vertexSet().stream()
 				.sorted(Comparator.naturalOrder())
 				.collect(toList());
+		final List<String> labels = variables.stream() // for debugging purposes
+				.map(v -> {
+					final String meaning = graph.getMeaning(v).map(Meaning::toString).orElse("");
+					final String surface_forms = graph.getMentions(v).stream()
+							.map(Mention::getSurface_form)
+							.distinct()
+							.collect(Collectors.joining(","));
+					return v + "\t" + meaning + "\t" + surface_forms;
+				})
+				.collect(Collectors.toList());
 
-		double[][] rankingArrays = MatrixFactory.createVariableRankingMatrix(variables, graph, damping_factor_variables,
-				minimum_meaning_ranking);
+		if (variables.isEmpty())
+			return;
+
+		double[][] rankingArrays = MatrixFactory.createVariableRankingMatrix(variables, graph, damping_factor_variables);
 		Matrix rankingMatrix = new Matrix(rankingArrays);
 
-		timer.reset(); timer.start();
 		JamaPowerIteration alg = new JamaPowerIteration();
-		Matrix finalDistribution = alg.run(rankingMatrix, variables);
+		Matrix finalDistribution = alg.run(rankingMatrix, labels);
 		double[] ranking = finalDistribution.getColumnPackedCopy();
 
 		IntStream.range(0, variables.size()).boxed()
 				.forEach(i -> graph.setWeight(variables.get(i),  ranking[i]));
-
-		log.info("Variables ranked in " + timer.stop());
 	}
 }

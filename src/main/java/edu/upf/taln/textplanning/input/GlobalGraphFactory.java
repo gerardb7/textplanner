@@ -176,6 +176,11 @@ public class GlobalGraphFactory
 				merged.setMeaning(v1, c.getMeaning());
 				merged.addMention(v1, c.getMention());
 			});
+			graphs.getCandidates(v2).forEach(c ->
+			{
+				merged.setMeaning(v2, c.getMeaning());
+				merged.addMention(v2, c.getMention());
+			});
 		}));
 
 		// Merge all coreferent vertices

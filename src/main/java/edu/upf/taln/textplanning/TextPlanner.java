@@ -36,7 +36,6 @@ public final class TextPlanner
 		int num_subgraphs = 1000; // Number of subgraphs to extract
 		double sim_threshold = 0.1; // Pairs of meanings with sim below this value have their score set to 0
 		double damping_meanings = 0.2; // controls bias towards weighting function when ranking meanings
-		double min_meaning_rank = 0.1; // pseudocount α for additive smoothing of meaning rank values @todo this may be unnecessary
 		double damping_variables = 0.2; // controls bias towards meanings rank when ranking variables
 		double pattern_lambda = 1.0; // Controls balance between weight of nodes and cost of edges during pattern extraction
 		double tree_edit_lambda = 0.1; // Controls impact of roles when calculating similarity between semantic trees
@@ -51,7 +50,6 @@ public final class TextPlanner
 			return  "\tnum_subgraphs = " + num_subgraphs +
 					"\n\tsim_threshold = " + f.format(sim_threshold) +
 					"\n\tdamping_meanings = " + f.format(damping_meanings) +
-					"\n\tmin_rank =" + f.format(min_meaning_rank) +
 					"\n\tdamping_variables = " + f.format(damping_variables) +
 					"\n\tpattern_lambda = " + f.format(pattern_lambda) +
 					"\n\tredundancy lambda = " + f.format(tree_edit_lambda);
@@ -131,8 +129,8 @@ public final class TextPlanner
 	{
 		log.info("***Ranking variables***");
 		Stopwatch timer = Stopwatch.createStarted();
-		GraphRanking.rankVariables(graph, o.min_meaning_rank, o.damping_variables);
-		log.info("Ranking done in " + timer.stop());
+		GraphRanking.rankVariables(graph, o.damping_variables);
+		log.info("Ranking completed in " + timer.stop());
 	}
 
 	/**

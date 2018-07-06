@@ -5,6 +5,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.math.RoundingMode;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -13,6 +15,12 @@ import java.util.stream.DoubleStream;
 
 public class JamaPowerIteration implements PowerIterationRanking
 {
+	private final static NumberFormat format = NumberFormat.getInstance();
+	static {
+		format.setRoundingMode(RoundingMode.UP);
+		format.setMaximumFractionDigits(10);
+		format.setMinimumFractionDigits(10);
+	}
 	private final static Logger log = LogManager.getLogger();
 
 	/**
@@ -44,8 +52,6 @@ public class JamaPowerIteration implements PowerIterationRanking
 		double delta;
 		do
 		{
-			debug_rank(v, n, labels);
-
 			// Core operation: transform distribution according to stochastic matrix
 			Matrix tmp = a.times(v); // right-multiply column-stochastic square matrix and column vector, produces column vector
 			// Normalize distribution to obtain eigenvalue
@@ -80,6 +86,7 @@ public class JamaPowerIteration implements PowerIterationRanking
 		}
 		sorted_items.sort(Comparator.comparingDouble(Pair<String, Double>::getRight).reversed());
 		log.debug("Ranked list:");
-		sorted_items.subList(0, Math.min(n, 100)).forEach(p -> log.debug(p.getLeft() + "\t" + p.getRight()));
+		sorted_items.subList(0, Math.min(n, 100)).forEach(p ->
+				log.debug(format.format(p.getRight()) + "\t" + p.getLeft()));
 	}
 }

@@ -4,14 +4,13 @@ import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
+import edu.upf.taln.textplanning.structures.Role;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jgrapht.alg.ConnectivityInspector;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.OptionalDouble;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
 import java.util.stream.IntStream;
@@ -59,14 +58,13 @@ public class MatrixFactory
 	/**
 	 * Creates a row-stochastic matrix to rank a set of variables in a graph.
 	 */
-	static double[][] createVariableRankingMatrix(List<String> variables, GlobalSemanticGraph graph,
-	                                              double d, double min_rank)
+	static double[][] createVariableRankingMatrix(List<String> variables, GlobalSemanticGraph graph, double d)
 	{
 		log.info("Creating variables ranking matrix");
 		int n = variables.size();
 
 		// Get normalized *strictly positive* bias row vector for the set of variables
-		double[] T = createVariablesBiasVector(variables, graph, min_rank);
+		double[] T = createVariablesBiasVector(variables, graph);
 
 		// Get normalized symmetric non-negative adjacency matrix
 		double[][] Y = createVariablesAdjacencyMatrix(variables, graph);
@@ -116,15 +114,21 @@ public class MatrixFactory
 	}
 
 	// Creates normalized *strictly positive* bias row vector for variables from the rankings of their meanings
-	private static double[] createVariablesBiasVector(List<String> variables, GlobalSemanticGraph graph, double min_rank)
+	private static double[] createVariablesBiasVector(List<String> variables, GlobalSemanticGraph graph)
 	{
-		int num_variables = variables.size();
-		double[] v = variables.stream()
+		final double[] weights = variables.stream()
 				.map(graph::getMeaning)
 				.mapToDouble(om -> om.map(Meaning::getWeight).orElse(0.0))
-				.map(w -> w = Math.max(min_rank, (1.0/num_variables)*w)) // Laplace smoothing to avoid non-positive values
 				.toArray();
-		double accum = Arrays.stream(v).sum();
+
+		double alpha = Arrays.stream(weights)
+				.average().orElse(1.0) / 100; // pseudocount α for additive smoothing of meaning rank values
+
+		int num_variables = variables.size();
+		double[] v = Arrays.stream(weights)
+				.map(w -> w = w + alpha) // Laplace smoothing to avoid zero values
+				.toArray();
+		double accum = Arrays.stream(v).sum(); // includes pseudocounts
 		IntStream.range(0, num_variables).forEach(i -> v[i] /= accum); // normalize vector with sum of row
 
 		return v;
@@ -223,18 +227,21 @@ public class MatrixFactory
 //		long num_calculations1 = ((((long)n * (long)n) - n)  / 2) + n;
 		double[][] m = new double[n][n];
 		IntStream.range(0, n).forEach(i ->
-				IntStream.range(i, n).forEach(j ->
-				{
-					String v1 = variables.get(i);
-					String v2 = variables.get(j);
-					double sim = graph.containsEdge(v1, v2) ? 1.0 : 0.0;
+				IntStream.range(i, n)
+						.filter(j -> i != j)
+						.forEach(j ->
+						{
+							String v1 = variables.get(i);
+							String v2 = variables.get(j);
+							double sim = graph.containsEdge(v1, v2) || graph.containsEdge(v2, v1) ? 1.0 : 0.0;
 
-					m[i][j] = sim;
-					m[j][i] = sim; // symmetric matrix
+							m[i][j] = sim;
+							m[j][i] = sim; // symmetric matrix
+						}));
 
-//					if (counter.incrementAndGet() % 10000000 == 0)
-//						log.info(counter.create() + " out of " + num_calculations1);
-				}));
+		// All vertices must be touched by at least one edge -> all rows must have at least one non-zero value
+		if (Arrays.stream(m).anyMatch(row -> Arrays.stream(row).noneMatch(v -> v != 0.0)))
+			log.error("Adjacency matrix has all-zero row");
 
 		normalize(m);
 
