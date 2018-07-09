@@ -20,11 +20,14 @@ class Requirements
 		do
 		{
 			nodes = nodes.stream()
-					.map(n -> g.edgesOf(n).stream()
+					.flatMap(n -> g.edgesOf(n).stream()
 							.filter(e -> isRequired(g, n, e))
-							.map(g::getEdgeTarget)
-							.collect(toSet()))
-					.flatMap(Set::stream)
+							.map(e ->
+							{
+								String source = g.getEdgeSource(e);
+								String target = g.getEdgeTarget(e);
+								return source.equals(n) ? target : source;
+							}))
 					.peek(S::add)
 					.collect(toSet());
 		}
@@ -39,11 +42,12 @@ class Requirements
 		String target = g.getEdgeTarget(e);
 		boolean source_selected = source.equals(selected_node);
 		boolean target_selected = target.equals(selected_node);
+		assert (source_selected || target_selected);
 
 		switch(e.toString())
 		{
 			case AMRConstants.instance:
-				return source_selected; // Experimental
+				return source_selected; // should not happen if concepts have been removed
 			case AMRConstants.ARG0:
 			case AMRConstants.ARG1:
 			case AMRConstants.ARG2:

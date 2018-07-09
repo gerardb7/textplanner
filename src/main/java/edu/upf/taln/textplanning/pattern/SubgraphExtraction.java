@@ -60,14 +60,15 @@ public class SubgraphExtraction
 		Map<String, Double> w = g.getWeights();
 		String v = softMax(w);
 		Set<String> S = new HashSet<>(Requirements.determine(g, v));
-		Set<String> new_nodes = new HashSet<>(); // new vertices added at each iteration
+		Set<String> new_nodes = new HashSet<>(S); // new vertices added at each iteration
 
 		while (calculateWeight(g.vertexSet(), S, w, cost) > 0.0 && !new_nodes.isEmpty())
 		{
 			Map<String, Double> expansions = new_nodes.stream()
 					.map(neighbours::neighborsOf)
 					.flatMap(Set::stream)
-					.filter(e -> !S.contains(e))
+					.filter(n -> !S.contains(n))
+					.distinct()
 					.collect(toMap(e -> e, w::get)); // candidate expansions
 			new_nodes.clear();
 
