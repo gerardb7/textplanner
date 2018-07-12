@@ -3,20 +3,17 @@ package edu.upf.taln.textplanning.input.amr;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.structures.Meaning;
+import edu.upf.taln.textplanning.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
-import java.math.RoundingMode;
-import java.text.NumberFormat;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
 
 // Assumes unique vertex labels across graphs
@@ -26,7 +23,6 @@ public class GraphList implements Serializable
 	private final Set<String> vertices; // use to performs consistency checks
 	private final Multimap<String, Candidate> candidate_meanings = HashMultimap.create();
 	private final List<CoreferenceChain> chains = new ArrayList<>();
-	private final NumberFormat format;
 	private final static long serialVersionUID = 1L;
 	private final static Logger log = LogManager.getLogger();
 
@@ -58,11 +54,6 @@ public class GraphList implements Serializable
 				.flatMap(Collection::stream)
 				.anyMatch(v -> !vertices.contains(v)))
 			throw new RuntimeException("Invalid coreference vertex");
-
-		format = NumberFormat.getInstance();
-		format.setRoundingMode(RoundingMode.UP);
-		format.setMaximumFractionDigits(2);
-		format.setMinimumFractionDigits(2);
 	}
 
 	public List<SemanticGraph> getGraphs() { return graphs; }
@@ -84,13 +75,7 @@ public class GraphList implements Serializable
 			throw new RuntimeException("Invalid candidate vertex");
 
 		final Collection<Candidate> candidates = candidate_meanings.get(v);
-
-		log.debug(c.getMention().getSurface_form() + "\t" + c.getMeaning() +
-				"\t" + candidates.stream()
-						.filter(c2 -> c2 != c)
-						.map(Candidate::getMeaning)
-						.map(Meaning::toString)
-						.collect(joining(", ")));
+		log.debug(DebugUtils.printDisambiguation(c, candidate_meanings.get(v)));
 
 		candidates.clear();
 		candidate_meanings.put(v, c);

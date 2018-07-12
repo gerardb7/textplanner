@@ -1,7 +1,5 @@
 package edu.upf.taln.textplanning.structures;
 
-import com.google.common.collect.HashMultiset;
-import com.google.common.collect.Multiset;
 import org.jgrapht.graph.SimpleDirectedGraph;
 
 import java.util.*;
@@ -14,7 +12,6 @@ public class SemanticTree extends SimpleDirectedGraph<String, Role>
 	private static final String root_label = "root";
 	private final String root;
 	private final SemanticSubgraph subgraph;
-	private final Multiset<String> counters = HashMultiset.create();
 	private final Map<String, String> correspondences = new HashMap<>();
 
 	public SemanticTree(SemanticSubgraph subgraph)
@@ -31,16 +28,18 @@ public class SemanticTree extends SimpleDirectedGraph<String, Role>
 		});
 
 		// Replicate vertices with multiple ancestors
-		Set<String> M = vertexSet().stream()
+		Optional<String> v_multiple = vertexSet().stream()
 				.filter(v -> inDegreeOf(v) > 1)
-				.collect(toSet());
+				.findFirst();
 
-		Set<Role> E = M.stream()
-				.map(this::incomingEdgesOf)
-				.flatMap(Set::stream)
-				.collect(toSet());
+		while (v_multiple.isPresent())
+		{
+			replicate(v_multiple.get());
 
-		E.forEach(e -> edgeShift(getEdgeSource(e), getEdgeTarget(e), e));
+			v_multiple = vertexSet().stream()
+					.filter(v -> inDegreeOf(v) > 1)
+					.findFirst();
+		}
 
 		// Root the graph
 		Set<String> roots = vertexSet().stream()
@@ -105,16 +104,27 @@ public class SemanticTree extends SimpleDirectedGraph<String, Role>
 			return Optional.empty();
 	}
 
-	private void edgeShift(String x, String y, Role e)
+	private void replicate(String v)
 	{
-		counters.add(y);
-		int count = counters.count(y);
-		String y2 = String.format("%s_%d", y, count);
-		addVertex(y2);
-		addNewEdge(x, y2, e.getLabel());
-		outgoingEdgesOf(y).forEach(e2 -> addNewEdge(y2, getEdgeTarget(e2), e2.getLabel()));
-		removeVertex(y);
-		correspondences.put(y2, y);
+		final Iterator<Role> it = incomingEdgesOf(v).iterator();
+
+		for (int i = 0; i < inDegreeOf(v); i++)
+		{
+			// add replica of v for current ancestor
+			String v_replica = String.format("%s_%d", v, i);
+			addVertex(v_replica);
+
+			// add new edge from v's ancestor to the replica
+			final Role e = it.next();
+			String ancestor = getEdgeSource(e);
+			addNewEdge(ancestor, v_replica, e.getLabel());
+
+			// Link any outgoing edges of v to the replica
+			outgoingEdgesOf(v).forEach(e2 -> addNewEdge(v_replica, getEdgeTarget(e2), e2.getLabel()));
+			correspondences.put(v_replica, v);
+		}
+
+		removeVertex(v);
 	}
 
 

@@ -6,9 +6,8 @@ import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.structures.Mention;
+import edu.upf.taln.textplanning.utils.DebugUtils;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.util.Collection;
 import java.util.Comparator;
@@ -38,9 +37,6 @@ import static java.util.stream.Collectors.toList;
  */
 public class GraphRanking
 {
-	private final static Logger log = LogManager.getLogger();
-
-
 	public static void rankMeanings(Collection<Candidate> candidates, WeightingFunction weighting, SimilarityFunction similarity,
 	                                double meaning_similarity_threshold, double damping_factor_meanings)
 	{
@@ -98,14 +94,7 @@ public class GraphRanking
 				.sorted(Comparator.naturalOrder())
 				.collect(toList());
 		final List<String> labels = variables.stream() // for debugging purposes
-				.map(v -> {
-					final String meaning = graph.getMeaning(v).map(Meaning::toString).orElse("");
-					final String surface_forms = graph.getMentions(v).stream()
-							.map(Mention::getSurface_form)
-							.distinct()
-							.collect(Collectors.joining(","));
-					return v + "\t" + meaning + "\t" + surface_forms;
-				})
+				.map(v -> DebugUtils.createLabelForVariable(graph, v))
 				.collect(Collectors.toList());
 
 		if (variables.isEmpty())

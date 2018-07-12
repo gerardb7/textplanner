@@ -4,6 +4,7 @@ import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Role;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
+import edu.upf.taln.textplanning.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jgrapht.alg.util.NeighborCache;
@@ -20,7 +21,8 @@ import static java.util.stream.Collectors.toMap;
 public class SubgraphExtraction
 {
 	private final double lambda;
-	private static final int max_num_extractions = 1000;
+	private final static double temperature = 0.001;
+	private final static int max_num_extractions = 1000;
 	private final static Logger log = LogManager.getLogger();
 
 	public SubgraphExtraction(double lambda)
@@ -50,7 +52,10 @@ public class SubgraphExtraction
 				subgraphs.add(subgraph);
 		}
 
-		log.info("Subgraph extraction tool " + timer.stop());
+		log.info(subgraphs.size() + " subgraphs extracted after " + num_extractions + " iterations");
+		log.info("Subgraph extraction took " + timer.stop());
+		log.debug(DebugUtils.printSubgraphs(g, subgraphs));
+
 		return subgraphs;
 	}
 
@@ -101,6 +106,10 @@ public class SubgraphExtraction
 		return lambda*WS - CS + CV;
 	}
 
+	/**
+	 * Softmax with low temperatures boosts probabilities of nodes with high weights and produces low probabilities
+	 * for nodes with low weights. Temperature set experimentally.
+	 */
 	private static String softMax(Map<String, Double> w)
 	{
 		// Convert map to arrays
@@ -111,6 +120,7 @@ public class SubgraphExtraction
 
 		// Create distribution
 		double[] exps = Arrays.stream(values)
+				.map(v -> v / temperature)
 				.map(Math::exp)
 				.toArray();
 		double sum = Arrays.stream(exps).sum();

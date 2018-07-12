@@ -7,11 +7,15 @@ import edu.upf.taln.textplanning.input.amr.GraphList;
 import edu.upf.taln.textplanning.input.amr.SemanticGraph;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
+import edu.upf.taln.textplanning.structures.Role;
+import edu.upf.taln.textplanning.utils.DebugUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jgrapht.alg.ConnectivityInspector;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Comparator.comparingDouble;
 import static java.util.stream.Collectors.*;
@@ -30,6 +34,12 @@ public class GlobalGraphFactory
 		collapse_multiwords(graphs);
 		GlobalSemanticGraph merge = merge(graphs);
 		resolve_arguments();
+
+		// log some info
+		ConnectivityInspector<String, Role> conn = new ConnectivityInspector<>(merge);
+		final List<Set<String>> sets = conn.connectedSets();
+		log.info("Merged graph has " + sets.size() + " components");
+		log.debug(DebugUtils.printSets(merge, sets));
 
 		return merge;
 	}

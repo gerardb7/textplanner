@@ -1,26 +1,16 @@
 package edu.upf.taln.textplanning.ranking;
 
 import Jama.Matrix;
-import org.apache.commons.lang3.tuple.Pair;
+import edu.upf.taln.textplanning.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.math.RoundingMode;
-import java.text.NumberFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.stream.DoubleStream;
 
 public class JamaPowerIteration implements PowerIterationRanking
 {
-	private final static NumberFormat format = NumberFormat.getInstance();
-	static {
-		format.setRoundingMode(RoundingMode.UP);
-		format.setMaximumFractionDigits(10);
-		format.setMinimumFractionDigits(10);
-	}
 	private final static Logger log = LogManager.getLogger();
 
 	/**
@@ -70,23 +60,10 @@ public class JamaPowerIteration implements PowerIterationRanking
 		}
 		while (delta >= e); // stopping criterion: delta falls below a certain threshold
 
-		debug_rank(v, n, labels);
 		log.info("Power iteration completed after " + numIterations + " iterations");
+		log.debug("Ranking:\n" + DebugUtils.printRank(v, n, labels));
 		return v;
 	}
 
-	private static void debug_rank(Matrix v, int n, List<String> labels)
-	{
-		final List<Pair<String, Double>> sorted_items = new ArrayList<>();
-		for (int i =0; i < n; ++i)
-		{
-			final String l = labels.get(i);
-			final double v_i = v.getColumnPackedCopy()[i];
-			sorted_items.add(Pair.of(l, v_i));
-		}
-		sorted_items.sort(Comparator.comparingDouble(Pair<String, Double>::getRight).reversed());
-		log.debug("Ranked list:");
-		sorted_items.subList(0, Math.min(n, 100)).forEach(p ->
-				log.debug(format.format(p.getRight()) + "\t" + p.getLeft()));
-	}
+
 }
