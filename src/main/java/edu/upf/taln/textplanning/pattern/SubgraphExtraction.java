@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.pattern;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.Sets;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Role;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
@@ -12,8 +13,6 @@ import org.jgrapht.graph.AsSubgraph;
 
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static java.util.stream.Collectors.toMap;
 
 /**
  * Subgraph extraction strategy based on finding dense subgraphs in a global semantic graph.
@@ -45,11 +44,18 @@ public class SubgraphExtraction
 		{
 			SemanticSubgraph subgraph = extract(g, neighbours, avg_rank);
 
+			// ignore subgraphs with no edges (i.e. with just one vertex)
+			if (subgraph.edgeSet().isEmpty())
+				continue;
+
+			// ignore subgraphs which are just subgraphs of other subgraphs
 			boolean replica = subgraphs.stream()
 					.map(AsSubgraph::vertexSet)
 					.anyMatch(V -> V.containsAll(subgraph.vertexSet()));
-			if (!replica)
-				subgraphs.add(subgraph);
+			if (replica)
+				continue;
+
+			subgraphs.add(subgraph);
 		}
 
 		log.info(subgraphs.size() + " subgraphs extracted after " + num_extractions + " iterations");
@@ -61,32 +67,57 @@ public class SubgraphExtraction
 
 	private SemanticSubgraph extract(GlobalSemanticGraph g, NeighborCache<String, Role> neighbours, double cost)
 	{
-		// Sample vertex
-		Map<String, Double> w = g.getWeights();
-		String v = softMax(w);
-		Set<String> S = new HashSet<>(Requirements.determine(g, v));
-		Set<String> new_nodes = new HashSet<>(S); // new vertices added at each iteration
+		final Set<String> V = g.vertexSet();
+		final Set<String> S = new HashSet<>();
+		final Map<Set<String>, Double> candidates = new HashMap<>(); // candidates are extensions of S with new vertices
+		final Map<String, Double> w = g.getWeights(); // weights
 
-		while (calculateWeight(g.vertexSet(), S, w, cost) > 0.0 && !new_nodes.isEmpty())
+		// Sample vertex
+		String v = softMax(w);
+		S.add(v);
+		S.addAll(Requirements.determine(g, v));
+
+		// Initialise q and q'
+		double q_old = 0.0;
+		double q = calculateWeight(V, S, w, cost);
+
+		// Optimization: keep track of new vertices added at each iteration
+		Set<String> new_vertices = new HashSet<>(S);
+
+		while (q > q_old && !candidates.isEmpty())
 		{
-			Map<String, Double> expansions = new_nodes.stream()
+			// Update candidate set (optimization: only use vertices added to S in the previous iteration)
+			new_vertices.stream()
+					// find nodes in the neighbourhood of S
 					.map(neighbours::neighborsOf)
 					.flatMap(Set::stream)
-					.filter(n -> !S.contains(n))
+					.filter(n -> !S.contains(n)) // but not in S!
 					.distinct()
-					.collect(toMap(e -> e, w::get)); // candidate expansions
-			new_nodes.clear();
+					// map each neighbour to a set that includes its required nodes
+					.map(n -> Requirements.determine(g, n))
+					.map(C -> Sets.union(C, S))
+					.distinct()
+					.forEach(C -> candidates.put(C, calculateWeight(V, C, w, cost)));
+			new_vertices.clear();
 
-			if (!expansions.isEmpty())
-			{
-				// Choose expansion
-				String e = softMax(expansions);
-				S.add(e); // add to S
+			// Argmax on expansion set
+			Set<String> C_max = candidates.keySet().stream()
+					.max(Comparator.comparingDouble(candidates::get))
+					.orElse(Collections.emptySet());
 
-				// Keep new nodes
-				new_nodes = new HashSet<>(Requirements.determine(g, e));
-				new_nodes.add(e);
-			}
+			// Optimization: determine what vertices are added to S
+			new_vertices = Sets.difference(C_max, S);
+
+			// Update S
+			S.addAll(C_max);
+
+			// Update function values
+			q_old = q;
+			if (!S.isEmpty())
+				q = candidates.get(S);
+
+			// Remove C_max from candidate set
+			candidates.remove(C_max);
 		}
 
 		// return induced subgraph

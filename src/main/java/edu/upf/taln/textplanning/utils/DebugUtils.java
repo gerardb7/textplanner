@@ -76,7 +76,7 @@ public class DebugUtils
 						.mapToDouble(graph::getWeight)
 						.summaryStatistics().toString();
 
-				return "Subgraph " + i.getAndIncrement() + " " + stats + "\n" + subgraph +
+				return "Subgraph " + i.getAndIncrement() + " " + stats + "\n\t" + subgraph + "\n" +
 						subgraph.vertexSet().stream()
 								.filter(v -> graph.getMeaning(v).isPresent())
 								.map(v -> "\t" + DebugUtils.createLabelForVariable(graph, v) + "\t" + format.format(graph.getWeight(v)))
