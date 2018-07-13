@@ -48,12 +48,15 @@ public class SubgraphExtraction
 			if (subgraph.edgeSet().isEmpty())
 				continue;
 
-			// ignore subgraphs which are just subgraphs of other subgraphs
+			// ignore subgraph if it's part of an existing subgraph
 			boolean replica = subgraphs.stream()
 					.map(AsSubgraph::vertexSet)
 					.anyMatch(V -> V.containsAll(subgraph.vertexSet()));
 			if (replica)
 				continue;
+
+			// discard subgraphs subsumed by the new one
+			subgraphs.removeIf(s -> subgraph.vertexSet().containsAll(s.vertexSet()));
 
 			subgraphs.add(subgraph);
 		}
