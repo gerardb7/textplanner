@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.input.amr;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import edu.upf.taln.textplanning.structures.Mention;
 import edu.upf.taln.textplanning.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -21,6 +22,7 @@ public class GraphList implements Serializable
 {
 	private final List<SemanticGraph> graphs = new ArrayList<>();
 	private final Set<String> vertices; // use to performs consistency checks
+	private final Multimap<String, Mention> vertices2mentions = HashMultimap.create(); // single-word mentions
 	private final Multimap<String, Candidate> candidate_meanings = HashMultimap.create();
 	private final List<CoreferenceChain> chains = new ArrayList<>();
 	private final static long serialVersionUID = 1L;
@@ -28,12 +30,14 @@ public class GraphList implements Serializable
 
 
 	public GraphList(List<SemanticGraph> graphs,
+	                 Multimap<String, Mention> mentions, // single-word mentions
 	                 List<Candidate> candidates,
 	                 List<CoreferenceChain> chains)
 	{
 		super();
 		this.graphs.addAll(graphs);
 		vertices = graphs.stream().map(SemanticGraph::vertexSet).flatMap(Set::stream).collect(toSet());
+		vertices2mentions.putAll(mentions);
 
 		Map<String, SemanticGraph> graph_ids = graphs.stream()
 				.collect(Collectors.toMap(SemanticGraph::getId, Function.identity()));
@@ -57,12 +61,15 @@ public class GraphList implements Serializable
 	}
 
 	public List<SemanticGraph> getGraphs() { return graphs; }
-
+	public Collection<Mention> getMentions() { return vertices2mentions.values(); }
+	public Collection<Mention> getMentions(String v)
+	{
+		return vertices2mentions.get(v);
+	}
 	public Collection<Candidate> getCandidates()
 	{
 		return candidate_meanings.values();
 	}
-
 	public Collection<Candidate> getCandidates(String v)
 	{
 		return candidate_meanings.get(v);
@@ -83,6 +90,9 @@ public class GraphList implements Serializable
 
 	public void removeVertices(Collection<String> vertices)
 	{
+		// Remove mentions for removed vertices
+		vertices2mentions.removeAll(vertices);
+
 		// Remove candidates for removed vertices
 		this.candidate_meanings.removeAll(vertices);
 
@@ -103,8 +113,13 @@ public class GraphList implements Serializable
 		// Perform contraction on graph
 		g.vertexContraction(v, C); // this updates the alignments
 
-		// Remove candidates for contracted vertices
-		// And re-assign them to v
+		// Remove mentions for contracted vertices and re-assign them to v
+		C.stream()
+				.map(vertices2mentions::removeAll)
+				.flatMap(Collection::stream)
+				.forEach(mention -> vertices2mentions.put(v, mention));
+
+		// Remove candidates for contracted vertices and re-assign them to v
 		C.stream()
 			.map(candidate_meanings::removeAll)
 			.flatMap(Collection::stream)

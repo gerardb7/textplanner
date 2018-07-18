@@ -1,5 +1,7 @@
 package edu.upf.taln.textplanning.input;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.input.amr.Candidate.Type;
 import edu.upf.taln.textplanning.input.amr.SemanticGraph;
 import edu.upf.taln.textplanning.structures.Role;
@@ -22,7 +24,7 @@ public class GraphAlignments implements Serializable
 	private final List<String> lemma = new ArrayList<>();
 	private final List<String> pos = new ArrayList<>();
 	private final List<Type> ner = new ArrayList<>();
-	private final Map<String, Integer> alignments = new HashMap<>(); // vertices to token offsets
+	private final Multimap<String, Integer> alignments = HashMultimap.create(); // vertices to token offsets
 	private final static long serialVersionUID = 1L;
 
 	/**
@@ -75,18 +77,15 @@ public class GraphAlignments implements Serializable
 	public void setLemma(int token_index, String lemma) { this.lemma.set(token_index, lemma); }
 	public String getPOS(int token_index)	{ return pos.get(token_index); }
 	public void setPOS(int token_index, String pos) { this.pos.set(token_index, pos); }
-	public Type getNER(int token_index)	{ return ner.get(token_index); }
+	public Type getNEType(int token_index)	{ return ner.get(token_index); }
 	public void setNER(int token_index, Type ner) { this.ner.set(token_index, ner); }
 
-	public Optional<Integer> getAlignment(String vertex)
-	{
-		return Optional.ofNullable(alignments.get(vertex));
-	}
+	public Collection<Integer> getAlignments(String vertex) { return alignments.get(vertex); }
 
 	public Set<String> getAlignedVertices(int token_index)
 	{
 		return alignments.keySet().stream()
-				.filter(v -> alignments.get(v) == token_index)
+				.filter(v -> alignments.get(v).contains(token_index))
 				.collect(toSet());
 	}
 
@@ -145,66 +144,66 @@ public class GraphAlignments implements Serializable
 			return Optional.of(getLemma(span.getLeft()));
 		else
 		{
-			final Optional<String> vertex = getSpanTopVertex(span);
-			if (!vertex.isPresent())
+			final Optional<String> head = getSpanTopVertex(span);
+			if (!head.isPresent())
 				return Optional.empty();
-			Optional<Integer> head = getAlignment(vertex.get());
+			Collection<Integer> head_tokens = getAlignments(head.get());
 			String lemma = IntStream.range(span.getLeft(), span.getRight())
 					.mapToObj(i ->
 					{
-						if (head.isPresent() && i == head.get())
-							return getLemma(i);
-						else
+						if (head_tokens.contains(i))
 							return getToken(i);
+						else
+							return getLemma(i);
 					})
 					.collect(Collectors.joining(" "));
 			return Optional.of(lemma);
 		}
 	}
 
-	// The POS of a span of tokens is the POS of the token aligned with its head vertex.
+	// The POS of a span of tokens is the POS of the tokens aligned with its head vertex.
 	// If there is no top vertex or it is unaligned, then there is no POS
 	Optional<String> getPOS(Pair<Integer, Integer> span)
 	{
 		final Optional<String> vertex = getSpanTopVertex(span);
 		if (!vertex.isPresent())
 			return Optional.empty();
-		return getAlignment(vertex.get()).map(this::getPOS);
+
+		final Collection<Integer> tokens = getAlignments(vertex.get());
+		if (tokens.isEmpty())
+			return Optional.empty();
+		else // (tokens.size() >= 1)
+			return Optional.of(getPOS(tokens.iterator().next())); // assume all tokens share the same POS
 	}
 
-	// The NER of a span of tokens is the NER of the token aligned with its head vertex.
-	// If there is no top vertex or it is unaligned, then there is no NER
-	Optional<Type> getNER(Pair<Integer, Integer> span)
+	// The NE type of a span of tokens is the NE type of the tokens aligned with its head vertex.
+	// If there is no top vertex or it is unaligned, then there is no NE type
+	Optional<Type> getNEType(Pair<Integer, Integer> span)
 	{
 		final Optional<String> vertex = getSpanTopVertex(span);
 		if (!vertex.isPresent())
 			return Optional.empty();
-		return getAlignment(vertex.get()).map(this::getNER);
-	}
 
-//	boolean isNominal(String vertex)
-//	{
-//		return getAlignment(vertex).isPresent() && getPOS(getAlignment(vertex).get()).startsWith("N");
-//	}
-//
-//	boolean isConjunction(String vertex)
-//	{
-//		return getAlignment(vertex).isPresent() && getPOS(getAlignment(vertex).get()).equals("CC");
-//	}
+		final Collection<Integer> tokens = getAlignments(vertex.get());
+		if (tokens.isEmpty())
+			return Optional.empty();
+		else // (tokens.size() >= 1)
+			return Optional.of(getNEType(tokens.iterator().next())); // assume all tokens share the same NE type
+	}
 
 	public void renameVertex(String old_label, String new_label)
 	{
 		// Update all fields containing vertices
-		if (getAlignment(old_label).isPresent())
+		getAlignments(old_label).forEach(i ->
 		{
-			int a = alignments.remove(old_label);
-			alignments.put(new_label, a);
-		}
+			alignments.remove(old_label, i);
+			alignments.put(new_label, i);
+		});
 	}
 
 	public void removeVertex(String v)
 	{
 		// Update all fields containing vertices
-		alignments.remove(v);
+		getAlignments(v).forEach(i -> alignments.remove(v, i));
 	}
 }

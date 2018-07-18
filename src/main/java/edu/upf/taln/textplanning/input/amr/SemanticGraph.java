@@ -7,7 +7,6 @@ import org.jgrapht.graph.DirectedAcyclicGraph;
 
 import java.io.Serializable;
 import java.util.Collection;
-import java.util.Collections;
 
 public class SemanticGraph extends DirectedAcyclicGraph<String, Role> implements Serializable
 {
@@ -71,7 +70,7 @@ public class SemanticGraph extends DirectedAcyclicGraph<String, Role> implements
 				.forEach(e -> addNewEdge(v, getEdgeTarget(e), e.getLabel()));
 
 		removeAllVertices(C);
-		C.forEach(c -> alignments.removeVertex(c));
+		C.forEach(c -> alignments.renameVertex(c, v)); // re-assign alignments from C to v
 	}
 
 	@Override

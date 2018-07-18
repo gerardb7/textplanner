@@ -2,9 +2,9 @@ package edu.upf.taln.textplanning.input;
 
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.input.amr.Candidate;
-import edu.upf.taln.textplanning.input.amr.SemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.structures.Mention;
+import edu.upf.taln.textplanning.utils.DebugUtils;
 import it.uniroma1.lcl.babelnet.BabelSynset;
 import it.uniroma1.lcl.babelnet.BabelSynsetType;
 import it.uniroma1.lcl.jlt.util.Language;
@@ -39,27 +39,14 @@ class CandidatesCollector
 	 * Assumes unique vertex labels across graphs.
 	 */
 	@SuppressWarnings("ConstantConditions")
-	List<Candidate> getCandidateMeanings(List<SemanticGraph> graphs)
+	List<Candidate> getCandidateMeanings(Set<Mention> mentions)
 	{
 		log.info("Collecting candidate meanings");
 		Stopwatch timer = Stopwatch.createStarted();
 
-		// Collect mentions and group them by anchor (triple of surface form, lemma and POS) -> to reduce lookups
-		Map<Triple<String, String, String>, List<Mention>> anchors2Mentions = graphs.stream()
-				.map(MentionsCollector::collectMentions)
-				.flatMap(Set::stream)
-				// Label formed with the surface form and head POS of mention's head
+		// Optimization: group mentions by anchor (triple of surface form, lemma and POS) to reduce lookups
+		Map<Triple<String, String, String>, List<Mention>> anchors2Mentions = mentions.stream()
 				.collect(Collectors.groupingBy(m -> Triple.of(m.getSurface_form(), m.getLemma(), m.getPOS())));
-
-		long num_mentions = anchors2Mentions.values().stream()
-				.mapToLong(List::size)
-				.sum();
-		long num_nominal_mentions = anchors2Mentions.values().stream()
-				.flatMap(List::stream)
-				.filter(Mention::isNominal)
-				.count();
-		log.info("Collected " + num_nominal_mentions + " nominal mentions out of " + num_mentions +
-					" mentions, with " + anchors2Mentions.keySet().size() + " different anchors");
 
 		// Create a map of anchors and associated candidate synsets
 		AtomicInteger counter = new AtomicInteger(0);
@@ -81,21 +68,14 @@ class CandidatesCollector
 				.flatMap(l -> anchors2Meanings.get(l).stream() // given a label l
 						.flatMap(meaning -> anchors2Mentions.get(l).stream() // for each mention m with label l
 								.map(mention -> new Candidate(meaning, mention))))
-								//.flatMap(m -> mentions2vertices.get(m).stream() // for each vertex v with mention m
-//									.map(v -> new Candidate(meaning, m)))))
 				.collect(toList());
 
 		int num_references = candidates.stream().map(Candidate::getMeaning).map(Meaning::getReference).collect(toSet()).size();
-		final List<String> multiwords = candidates.stream()
-				.filter(c -> c.getMention().isMultiWord())
-				.map(c -> c.getMention().getSurface_form() + "\t" + c.getMeaning())
-				.collect(Collectors.toList());
-		log.info("Created " + candidates.size() + " candidates, with " + num_references +
-				" different references, and using " + BabelNetWrapper.num_queries.get() +
-				" queries.");
+		log.info("Created " + candidates.size() + " candidates with " + num_references +
+				" distinct references for " + anchors2Mentions.keySet().size() + " anchors ( " +
+				BabelNetWrapper.num_queries.get() +	" queries).");
 		log.info("Candidate meanings collected in " + timer.stop());
-		log.debug("List of multiwords:");
-		multiwords.forEach(log::debug);
+		log.debug("List of multiwords:\n" + DebugUtils.printMultiwords(candidates));
 
 		return candidates;
 	}

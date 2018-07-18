@@ -15,6 +15,7 @@ import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.utils.CMLCheckers;
 import edu.upf.taln.textplanning.utils.Serializer;
 import edu.upf.taln.textplanning.weighting.NoWeights;
+import edu.upf.taln.textplanning.weighting.NumberForms;
 import edu.upf.taln.textplanning.weighting.TFIDF;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.apache.commons.io.FileUtils;
@@ -26,7 +27,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 
 import static edu.upf.taln.textplanning.utils.VectorsTextFileUtils.Format;
@@ -61,13 +67,20 @@ public class Driver
 		Stopwatch timer = Stopwatch.createStarted();
 		GraphList graphs = (GraphList) Serializer.deserialize(graphs_file);
 
+		//Path randoma_access_vectors = Paths.get("/home/gerard/data/NASARIembed+UMBC_w2v_bin");
+		Path randoma_access_vectors = Paths.get("/home/gerard/data/sensembed-vectors-merged_bin");
+		//Path randoma_access_vectors = Paths.get("/home/gerard/data/sew-embed.nasari_bin");
+		//Path randoma_access_vectors = Paths.get("/home/gerard/data/sew-embed.w2v_bin");
 
 		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
-		WeightingFunction weighting = new NoWeights();
-		SimilarityFunction similarity = chooseSimilarityFunction(vectors, format);
+		WeightingFunction weighting = new NumberForms(r -> true);
+		//WeightingFunction weighting = new NoWeights();
+		SimilarityFunction similarity = chooseSimilarityFunction(randoma_access_vectors, format);
 		log.info("Loading resources took " + timer.stop());
 
 		TextPlanner.Options options = new TextPlanner.Options();
+		options.damping_meanings = 0.5;
+		options.sim_threshold = 0.5;
 		TextPlanner.rankMeanings(graphs.getCandidates(), weighting, similarity, options);
 		Serializer.serialize(graphs, output);
 		log.info("Ranked graphs serialized to " + output);
@@ -423,6 +436,11 @@ public class Driver
 		jc.addCommand("plan", plan);
 		jc.parse(args);
 
+		DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+		Date date = new Date();
+		log.debug(dateFormat.format(date) + " running " + jc.getParsedCommand() + " with params " + jc.getParameters());
+		log.debug("*********************************************************");
+
 		Driver driver = new Driver();
 		if (jc.getParsedCommand().equals("create_graphs"))
 			driver.create_graphs(create_graphs.inputFile, create_graphs.bnFolder, create_graphs.outputFile,
@@ -451,6 +469,8 @@ public class Driver
 					plan.outputFile);
 		else
 			jc.usage();
+
+		log.debug("\n\n");
 	}
 }
 

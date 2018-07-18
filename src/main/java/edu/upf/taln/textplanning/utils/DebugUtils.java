@@ -31,6 +31,14 @@ public class DebugUtils
 	}
 	private final static Logger log = LogManager.getLogger();
 
+	public static String printMultiwords(Collection<Candidate> canidates)
+	{
+		return canidates.stream()
+				.filter(c -> c.getMention().isMultiWord())
+				.map(c -> c.getMention().getSurface_form() + "\t" + c.getMeaning())
+				.collect(Collectors.joining("\n"));
+	}
+
 	public static String printDisambiguation(Candidate chosen, Collection<Candidate> other)
 	{
 		return chosen.getMention().getSurface_form() + "\t" + chosen.getMeaning() +
@@ -93,92 +101,5 @@ public class DebugUtils
 				.distinct()
 				.collect(Collectors.joining(","));
 		return v + "\t" + meaning + "\t" + surface_forms;
-	}
-
-	public static void reportStats(GraphList graphs, Map<String, List<Candidate>> candidates)
-	{
-		int numVertices = graphs.getGraphs().stream()
-				.map(SemanticGraph::vertexSet)
-				.mapToInt(Set::size)
-				.sum();
-		Set<String> alignedVertices = graphs.getGraphs().stream()
-				.flatMap(g -> g.vertexSet().stream()
-						.filter(v -> g.getAlignments().getAlignment(v).isPresent()))
-				.collect(toSet());
-		Set<String> nominalVertices = graphs.getGraphs().stream()
-				.flatMap(g -> g.vertexSet().stream()
-						.filter(v -> g.getAlignments().getAlignment(v).isPresent())
-						.filter(v -> g.getAlignments().getPOS(g.getAlignments().getAlignment(v).get()).startsWith("N")))
-				.collect(toSet());
-
-		long numForms = alignedVertices.stream()
-				.map(candidates::get)
-				.flatMap(List::stream)
-				.map(Candidate::getMention)
-				.map(Mention::getSurface_form)
-				.distinct()
-				.count();
-		long numNominalForms = nominalVertices.stream()
-				.map(candidates::get)
-				.flatMap(List::stream)
-				.map(Candidate::getMention)
-				.map(Mention::getSurface_form)
-				.distinct()
-				.count();
-		long numMentions = candidates.values().stream()
-				.flatMap(List::stream)
-				.map(Candidate::getMention)
-				.distinct()
-				.count();
-		long numNominalMentions = nominalVertices.stream()
-				.map(candidates::get)
-				.flatMap(List::stream)
-				.map(Candidate::getMention)
-				.distinct()
-				.count();
-		long numCandidates = candidates.values().stream()
-				.mapToLong(List::size)
-				.sum();
-		long numNominalCandidates = nominalVertices.stream()
-				.map(candidates::get)
-				.mapToLong(List::size)
-				.sum();
-		long numMeanings = candidates.values().stream()
-				.flatMap(List::stream)
-				.map(Candidate::getMeaning)
-				.map(Meaning::getReference)
-				.distinct()
-				.count();
-		long numNominalMeanings = nominalVertices.stream()
-				.map(candidates::get)
-				.flatMap(List::stream)
-				.map(Candidate::getMeaning)
-				.map(Meaning::getReference)
-				.distinct()
-				.count();
-		double candidatesPerNode = candidates.values().stream()
-				.mapToLong(List::size)
-				.average()
-				.orElse(0.0);
-		double candidatesPerNominalNode = nominalVertices.stream()
-				.map(candidates::get)
-				.mapToLong(List::size)
-				.average()
-				.orElse(0.0);
-
-//		double avgMentionsPerOtherLabel = avgMentionsPerLabel - avgMentionsPerNominalLabel;
-
-		// Set up formatting
-		NumberFormat f = NumberFormat.getInstance();
-		f.setRoundingMode(RoundingMode.UP);
-		f.setMaximumFractionDigits(2);
-		f.setMinimumFractionDigits(2);
-
-		log.info(numVertices + " vertices, " + alignedVertices.size() + " aligned (" + nominalVertices.size() + " nominal)" );
-		log.info(numForms + " forms (" + numNominalForms + " nominal) ");
-		log.info(numMentions + " mentions (" + numNominalMentions + " nominal) ");
-		log.info(numCandidates + " candidates (" + numNominalCandidates + " nominal) ");
-		log.info(numMeanings + " meanings (" + numNominalMeanings + " nominal) ");
-		log.info(f.format(candidatesPerNode) + " candidates/node (" + f.format(candidatesPerNominalNode) + " nominal) ");
 	}
 }

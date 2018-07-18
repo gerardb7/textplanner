@@ -1,16 +1,21 @@
 package edu.upf.taln.textplanning.input;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.input.amr.CoreferenceChain;
 import edu.upf.taln.textplanning.input.amr.GraphList;
 import edu.upf.taln.textplanning.input.amr.SemanticGraph;
+import edu.upf.taln.textplanning.structures.Mention;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static java.util.stream.Collectors.toList;
 
@@ -54,14 +59,28 @@ public class GraphListFactory
 		// Process with Stanford
 		List<CoreferenceChain> chains = stanford.process(graphs);
 
-		// Create dictionary of vertices to candidate meanings (assumes unique vertex labels)
-		List<Candidate> candidate_meanings = candidate_collector.getCandidateMeanings(graphs);
+		// Collect and classify mentions
+		final Multimap<String, Mention> mentions = HashMultimap.create();
+		graphs.stream()
+				.map(MentionsCollector::collectMentions)
+				.forEach(mentions::putAll);
+		final Multimap<String, Mention> singlewords = HashMultimap.create();
+		mentions.entries().stream().filter(e -> e.getValue().isMultiWord()).forEach(e -> singlewords.put(e.getKey(), e.getValue()));
+		final Multimap<String, Mention> multiwords = HashMultimap.create();
+		mentions.entries().stream().filter(e -> !e.getValue().isMultiWord()).forEach(e -> multiwords.put(e.getKey(), e.getValue()));
+		final Multimap<String, Mention> nominal_words = HashMultimap.create();
+		singlewords.entries().stream().filter(e -> e.getValue().isNominal()).forEach(e -> nominal_words.put(e.getKey(), e.getValue()));
+
+		// Collect candidates for mentions. Current behaviour is to lookup nouns and multiwords only
+		final Set<Mention> mentions_to_lookup = new HashSet<>(multiwords.values());
+		mentions_to_lookup.addAll(nominal_words.values());
+		List<Candidate> candidate_meanings = candidate_collector.getCandidateMeanings(mentions_to_lookup);
 
 		// Assign types to candidates
 		if (types_collector != null)
 			types_collector.getMeaningTypes(candidate_meanings);
 
-		final GraphList graph_list = new GraphList(graphs, candidate_meanings, chains);
+		final GraphList graph_list = new GraphList(graphs, singlewords, candidate_meanings, chains);
 		log.info("Semantic graphs created in " + timer.stop());
 		return graph_list;
 	}

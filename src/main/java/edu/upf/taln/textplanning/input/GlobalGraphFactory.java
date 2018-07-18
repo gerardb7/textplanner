@@ -15,7 +15,6 @@ import org.apache.logging.log4j.Logger;
 import org.jgrapht.alg.ConnectivityInspector;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Comparator.comparingDouble;
 import static java.util.stream.Collectors.*;
@@ -180,6 +179,9 @@ public class GlobalGraphFactory
 			String v2 = g.getEdgeTarget(e);
 			merged.addVertex(v2);
 			merged.addNewEdge(v1, v2, e.getLabel());
+
+			graphs.getMentions(v1).forEach(m -> merged.addMention(v1, m));
+			graphs.getMentions(v2).forEach(m -> merged.addMention(v2, m));
 
 			graphs.getCandidates(v1).forEach(c ->
 			{

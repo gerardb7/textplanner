@@ -132,7 +132,7 @@ class StanfordWrapper
 						{
 							String lemma_v = a.getLemma(span).orElse("");
 							String pos_v = a.getPOS(span).orElse("N"); // assume nominal
-							Type ner_v = a.getNER(span).orElse(Type.Other);
+							Type ner_v = a.getNEType(span).orElse(Type.Other);
 							Mention mention = new Mention(g.getId(), span, a.getSurfaceForm(span), lemma_v, pos_v, ner_v);
 							chain.put(top_v.get(), mention);
 						}
