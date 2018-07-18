@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
     <Appenders>
-        <File name="debug_file" fileName="textplanning.log" append="false">
+        <File name="debug_file" fileName="textplanning.log" append="true">
             <ThresholdFilter level="INFO" onMatch="DENY" onMismatch="ACCEPT"/>
             <PatternLayout pattern="%m%n"/>
         </File>
