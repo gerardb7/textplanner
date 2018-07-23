@@ -29,13 +29,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
 import static edu.upf.taln.textplanning.utils.VectorsTextFileUtils.Format;
+import static java.util.stream.Collectors.joining;
 
 @SuppressWarnings("ALL")
 public class Driver
@@ -68,14 +68,14 @@ public class Driver
 		GraphList graphs = (GraphList) Serializer.deserialize(graphs_file);
 
 		//Path randoma_access_vectors = Paths.get("/home/gerard/data/NASARIembed+UMBC_w2v_bin");
-		Path randoma_access_vectors = Paths.get("/home/gerard/data/sensembed-vectors-merged_bin");
+		//Path randoma_access_vectors = Paths.get("/home/gerard/data/sensembed-vectors-merged_bin");
 		//Path randoma_access_vectors = Paths.get("/home/gerard/data/sew-embed.nasari_bin");
 		//Path randoma_access_vectors = Paths.get("/home/gerard/data/sew-embed.w2v_bin");
 
 		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
 		WeightingFunction weighting = new NumberForms(r -> true);
 		//WeightingFunction weighting = new NoWeights();
-		SimilarityFunction similarity = chooseSimilarityFunction(randoma_access_vectors, format);
+		SimilarityFunction similarity = chooseSimilarityFunction(vectors, format);
 		log.info("Loading resources took " + timer.stop());
 
 		TextPlanner.Options options = new TextPlanner.Options();
@@ -438,7 +438,7 @@ public class Driver
 
 		DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 		Date date = new Date();
-		log.debug(dateFormat.format(date) + " running " + jc.getParsedCommand() + " with params " + jc.getParameters());
+		log.debug(dateFormat.format(date) + " running " + 	Arrays.stream(args).collect(joining(" ")));
 		log.debug("*********************************************************");
 
 		Driver driver = new Driver();

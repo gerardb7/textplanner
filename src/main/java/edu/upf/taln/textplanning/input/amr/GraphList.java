@@ -82,6 +82,11 @@ public class GraphList implements Serializable
 			throw new RuntimeException("Invalid candidate vertex");
 
 		final Collection<Candidate> candidates = candidate_meanings.get(v);
+
+//		final Candidate max = candidates.stream()
+//				.max(comparingDouble(c2 -> c2.getMeaning().getWeight())).get();
+//		final List<Candidate> sorted = candidates.stream().sorted(comparingDouble(c2 -> c2.getMeaning().getWeight())).collect(toList());
+
 		log.debug(DebugUtils.printDisambiguation(c, candidate_meanings.get(v)));
 
 		candidates.clear();

@@ -72,10 +72,9 @@ class CandidatesCollector
 
 		int num_references = candidates.stream().map(Candidate::getMeaning).map(Meaning::getReference).collect(toSet()).size();
 		log.info("Created " + candidates.size() + " candidates with " + num_references +
-				" distinct references for " + anchors2Mentions.keySet().size() + " anchors ( " +
+				" distinct references for " + anchors2Mentions.keySet().size() + " anchors (" +
 				BabelNetWrapper.num_queries.get() +	" queries).");
 		log.info("Candidate meanings collected in " + timer.stop());
-		log.debug("List of multiwords:\n" + DebugUtils.printMultiwords(candidates));
 
 		return candidates;
 	}

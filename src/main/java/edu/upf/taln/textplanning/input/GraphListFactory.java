@@ -60,14 +60,11 @@ public class GraphListFactory
 		List<CoreferenceChain> chains = stanford.process(graphs);
 
 		// Collect and classify mentions
-		final Multimap<String, Mention> mentions = HashMultimap.create();
-		graphs.stream()
-				.map(MentionsCollector::collectMentions)
-				.forEach(mentions::putAll);
+		final Multimap<String, Mention> mentions = MentionsCollector.collectMentions(graphs);
 		final Multimap<String, Mention> singlewords = HashMultimap.create();
-		mentions.entries().stream().filter(e -> e.getValue().isMultiWord()).forEach(e -> singlewords.put(e.getKey(), e.getValue()));
+		mentions.entries().stream().filter(e -> !e.getValue().isMultiWord()).forEach(e -> singlewords.put(e.getKey(), e.getValue()));
 		final Multimap<String, Mention> multiwords = HashMultimap.create();
-		mentions.entries().stream().filter(e -> !e.getValue().isMultiWord()).forEach(e -> multiwords.put(e.getKey(), e.getValue()));
+		mentions.entries().stream().filter(e -> e.getValue().isMultiWord()).forEach(e -> multiwords.put(e.getKey(), e.getValue()));
 		final Multimap<String, Mention> nominal_words = HashMultimap.create();
 		singlewords.entries().stream().filter(e -> e.getValue().isNominal()).forEach(e -> nominal_words.put(e.getKey(), e.getValue()));
 

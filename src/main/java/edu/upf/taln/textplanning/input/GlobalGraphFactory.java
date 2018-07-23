@@ -10,6 +10,7 @@ import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.structures.Role;
 import edu.upf.taln.textplanning.utils.DebugUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jgrapht.alg.ConnectivityInspector;
@@ -98,9 +99,33 @@ public class GlobalGraphFactory
 		// Use vertex weights to choose best candidate for each vertex
 		graphs.getGraphs().forEach(g ->
 				g.vertexSet().forEach(v ->
-						graphs.getCandidates(v).stream()
-								.max(comparingDouble(c -> c.getMeaning().getWeight()))
-								.ifPresent(c -> graphs.chooseCandidate(v, c))));
+				{
+					final List<Candidate> candidates = graphs.getCandidates(v).stream()
+							.sorted(comparingDouble((Candidate c) -> c.getMeaning().getWeight()).reversed())
+							.collect(toList());
+					if (!candidates.isEmpty())
+					{
+						final Candidate max = candidates.get(0);
+						final Optional<Candidate> max_multiword = candidates.stream()
+								.filter(c -> c.getMention().isMultiWord())
+								.findFirst();
+
+						// Multiwords get priority if within highest scored candidates
+						Candidate selected = max;
+						if (max_multiword.isPresent())
+						{
+							final double max_multiword_weigth = max_multiword.get().getMeaning().getWeight();
+							DescriptiveStatistics stats = new DescriptiveStatistics(candidates.stream()
+									.map(Candidate::getMeaning)
+									.mapToDouble(Meaning::getWeight)
+									.toArray());
+
+							if (max_multiword_weigth >= stats.getMean())
+								selected = max_multiword.get();
+						}
+						graphs.chooseCandidate(v, selected);
+					}
+				}));
 	}
 
 	/**

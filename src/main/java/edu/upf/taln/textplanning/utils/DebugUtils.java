@@ -2,15 +2,11 @@ package edu.upf.taln.textplanning.utils;
 
 import Jama.Matrix;
 import edu.upf.taln.textplanning.input.amr.Candidate;
-import edu.upf.taln.textplanning.input.amr.GraphList;
-import edu.upf.taln.textplanning.input.amr.SemanticGraph;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.structures.Mention;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.math.RoundingMode;
 import java.text.NumberFormat;
@@ -18,8 +14,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.*;
 
 public class DebugUtils
 {
@@ -29,24 +24,30 @@ public class DebugUtils
 		format.setMaximumFractionDigits(4);
 		format.setMinimumFractionDigits(4);
 	}
-	private final static Logger log = LogManager.getLogger();
-
-	public static String printMultiwords(Collection<Candidate> canidates)
-	{
-		return canidates.stream()
-				.filter(c -> c.getMention().isMultiWord())
-				.map(c -> c.getMention().getSurface_form() + "\t" + c.getMeaning())
-				.collect(Collectors.joining("\n"));
-	}
 
 	public static String printDisambiguation(Candidate chosen, Collection<Candidate> other)
 	{
-		return chosen.getMention().getSurface_form() + "\t" + chosen.getMeaning() +
-				"\t" + other.stream()
+		String accepted_multiword = "";
+		if (chosen.getMention().isMultiWord())
+			accepted_multiword = printCandidate(chosen);
+		final String rejected_multiwords = other.stream()
+				.filter(c -> c.getMention().isMultiWord())
+				.filter(c -> c != chosen)
+				.map(DebugUtils::printCandidate)
+				.collect(joining(", "));
+		return "Disambiguated \"" + chosen.getMention().getSurface_form() + "\" to " + chosen.getMeaning() +
+				"\t\t" + other.stream()
 				.filter(c2 -> c2 != chosen)
 				.map(Candidate::getMeaning)
 				.map(Meaning::toString)
-				.collect(joining(", "));
+				.collect(joining(", ")) +
+				(accepted_multiword.isEmpty() ? "" : "\n\tAccepted multiword " + accepted_multiword) +
+				(rejected_multiwords.isEmpty() ? "" : "\n\tRejected multiwords " + rejected_multiwords);
+	}
+
+	public static String printCandidate(Candidate c)
+	{
+		return "\"" + c.getMention().getSurface_form() + "\"\t\t" + c.getMeaning().toString();
 	}
 
 	public static String printRank(Matrix v, int n, List<String> labels)
@@ -68,7 +69,7 @@ public class DebugUtils
 	{
 		AtomicInteger i = new AtomicInteger(1);
 		return sets.stream()
-			.map(s -> "Set " + i.getAndIncrement() + s.stream()
+			.map(s -> "Global graph connected set " + i.getAndIncrement() + "\n" + s.stream()
 					.map(v -> "\t" + DebugUtils.createLabelForVariable(graph, v))
 					.collect(Collectors.joining("\n")))
 			.collect(Collectors.joining("\n"));
@@ -99,7 +100,8 @@ public class DebugUtils
 		final String surface_forms = graph.getMentions(v).stream()
 				.map(Mention::getSurface_form)
 				.distinct()
-				.collect(Collectors.joining(","));
+				.map(f -> "\"" + f + "\"")
+				.collect(Collectors.joining(", "));
 		return v + "\t" + meaning + "\t" + surface_forms;
 	}
 }
