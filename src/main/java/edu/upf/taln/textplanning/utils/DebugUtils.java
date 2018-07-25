@@ -32,7 +32,7 @@ public class DebugUtils
 			accepted_multiword = printCandidate(chosen);
 		final String rejected_multiwords = other.stream()
 				.filter(c -> c.getMention().isMultiWord())
-				.filter(c -> c != chosen)
+				.filter(c -> !c.getMention().equals(chosen.getMention()))
 				.map(DebugUtils::printCandidate)
 				.collect(joining(", "));
 		return "Disambiguated \"" + chosen.getMention().getSurface_form() + "\" to " + chosen.getMeaning() +
