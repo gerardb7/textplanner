@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.structures;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import edu.upf.taln.textplanning.input.amr.Candidate;
 import org.jgrapht.graph.SimpleDirectedGraph;
 
 import java.io.Serializable;
@@ -30,19 +31,17 @@ public class GlobalSemanticGraph extends SimpleDirectedGraph<String, Role> imple
 	 * 	    - One or more mentions (text annotations)
 	 * 	    - A weight indicating the importance or relevance of each instance
 	 */
-	public GlobalSemanticGraph(Set<String> vertices,
-	                           Map<String, Meaning> ranked_meanings,
-	                           Multimap<String, Mention> mentions,
+	public GlobalSemanticGraph(Map<String, Candidate> candidates,
 	                           BiPredicate<String, String> adjacency_function,
 	                           BinaryOperator<String> labelling_function)
 	{
 		super(Role.class);
 
-		vertices.forEach(this::addVertex);
-		this.meanings.putAll(ranked_meanings);
-		this.mentions.putAll(mentions);
-		vertices.forEach(v1 ->
-				vertices.stream()
+		candidates.keySet().forEach(this::addVertex);
+		candidates.forEach((key, value) -> meanings.put(key, value.getMeaning())); // only one meaning per key
+		candidates.forEach((key, value) -> mentions.put(key, value.getMention())); // one or more mentions per key
+		candidates.keySet().forEach(v1 ->
+				candidates.keySet().stream()
 						.filter(v2 -> adjacency_function.test(v1, v2))
 						.forEach(v2 -> addNewEdge(v1, v2, labelling_function.apply(v1, v2))));
 	}
