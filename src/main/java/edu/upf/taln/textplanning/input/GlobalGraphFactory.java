@@ -44,23 +44,11 @@ public class GlobalGraphFactory
 		return merge;
 	}
 
-	private static void remove_concepts(GraphList graphs)
-	{
-		log.info("Removing concepts");
-		final Set<String> concepts = graphs.getGraphs().stream()
-				.flatMap(g -> g.edgeSet().stream()
-						.filter(e -> e.getLabel().equals(AMRConstants.instance))
-						.map(g::getEdgeTarget))
-				.collect(toSet());
-
-		graphs.removeVertices(concepts);
-	}
-
 	/**
 	 * Given:
 	 *      (x :name (n /name (:op1 n1 .. :opN nN))) or (x /name (:op1 n1 .. :opN nN))
 	 * Removes all but x.
- 	 */
+	 */
 	private static void remove_names(GraphList graphs)
 	{
 		log.info("Removing names");

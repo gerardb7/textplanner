@@ -80,14 +80,14 @@ public class SubgraphExtraction
 		S.add(v);
 		S.addAll(Requirements.determine(g, v));
 
-		// Initialise q and q'
-		double q_old = 0.0;
+		// Declare q and q'
+		double q_old;
 		double q = calculateWeight(V, S, w, cost);
 
 		// Optimization: keep track of new vertices added at each iteration
 		Set<String> new_vertices = new HashSet<>(S);
 
-		while (q > q_old && !candidates.isEmpty())
+		do
 		{
 			// Update candidate set (optimization: only use vertices added to S in the previous iteration)
 			new_vertices.stream()
@@ -122,6 +122,7 @@ public class SubgraphExtraction
 			// Remove C_max from candidate set
 			candidates.remove(C_max);
 		}
+		while (q > q_old && !candidates.isEmpty());
 
 		// return induced subgraph
 		return new SemanticSubgraph(g, S);
