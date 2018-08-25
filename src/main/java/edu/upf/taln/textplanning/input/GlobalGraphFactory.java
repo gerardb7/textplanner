@@ -81,6 +81,18 @@ public class GlobalGraphFactory
 		graphs.removeVertices(names);
 	}
 
+	private static void remove_concepts(GraphList graphs)
+	{
+		log.info("Removing concepts");
+		final Set<String> concepts = graphs.getGraphs().stream()
+				.flatMap(g -> g.edgeSet().stream()
+						.filter(e -> e.getLabel().equals(AMRConstants.instance))
+						.map(g::getEdgeTarget))
+				.collect(toSet());
+
+		graphs.removeVertices(concepts);
+	}
+
 	private static void disambiguate_candidates(GraphList graphs)
 	{
 		log.info("Disambiguating candidates");

@@ -49,7 +49,7 @@ public class RedundancyRemover
 							}
 						}));
 
-		// Prune G
+		// Prune G by choosing pair of most similar graphs and keeping the one with highest average weight
 		Set<Integer> pruned = new HashSet<>();
 		while (G.size() > num_graphs)
 		{
@@ -63,10 +63,17 @@ public class RedundancyRemover
 						SemanticSubgraph g1 = t1.getGraph();
 						SemanticSubgraph g2 = t2.getGraph();
 
-						if (g1.vertexSet().size() <= g2.vertexSet().size())
-							pruned.add(p.getRight());
-						else
+						double avg1 = g1.vertexSet().stream()
+								.mapToDouble(v -> g1.getBase().getWeight(v))
+								.average().orElse(0.0);
+						double avg2 = g1.vertexSet().stream()
+								.mapToDouble(v -> g1.getBase().getWeight(v))
+								.average().orElse(0.0);
+
+						if (avg1 >= avg2)
 							pruned.add(p.getLeft());
+						else
+							pruned.add(p.getRight());
 					});
 		}
 

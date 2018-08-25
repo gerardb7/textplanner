@@ -73,16 +73,18 @@ public class SubgraphExtraction
 		final Set<String> V = g.vertexSet();
 		final Set<String> S = new HashSet<>();
 		final Map<Set<String>, Double> candidates = new HashMap<>(); // candidates are extensions of S with new vertices
-		final Map<String, Double> w = g.getWeights(); // weights
 
 		// Sample vertex
-		String v = softMax(w);
+		final List<String> vertices = new ArrayList<>(g.vertexSet());
+		final double[] w = vertices.stream().mapToDouble(g::getWeight).toArray();
+
+		String v = vertices.get(softMax(w));
 		S.add(v);
 		S.addAll(Requirements.determine(g, v));
 
 		// Declare q and q'
 		double q_old;
-		double q = calculateWeight(V, S, w, cost);
+		double q = calculateWeight(V, S, g.getWeights(), cost);
 
 		// Optimization: keep track of new vertices added at each iteration
 		Set<String> new_vertices = new HashSet<>(S);
@@ -100,27 +102,28 @@ public class SubgraphExtraction
 					.map(n -> Requirements.determine(g, n))
 					.map(C -> Sets.union(C, S))
 					.distinct()
-					.forEach(C -> candidates.put(C, calculateWeight(V, C, w, cost)));
+					.forEach(C -> candidates.put(C, calculateWeight(V, C, g.getWeights(), cost)));
 			new_vertices.clear();
 
-			// Argmax on expansion set
-			Set<String> C_max = candidates.keySet().stream()
-					.max(Comparator.comparingDouble(candidates::get))
-					.orElse(Collections.emptySet());
+			// Softmax on expansion set
+			final List<Set<String>> candidate_list = new ArrayList<>(candidates.keySet());
+			final double[] candidates_weights = candidate_list.stream().mapToDouble(candidates::get).toArray();
+
+			Set<String> c = candidate_list.get(softMax(candidates_weights));
 
 			// Optimization: determine what vertices are added to S
-			new_vertices = Sets.difference(C_max, S);
+			new_vertices = Sets.difference(c, S);
 
 			// Update S
-			S.addAll(C_max);
+			S.addAll(c);
 
 			// Update function values
 			q_old = q;
 			if (!S.isEmpty())
 				q = candidates.get(S);
 
-			// Remove C_max from candidate set
-			candidates.remove(C_max);
+			// Remove c from candidate set
+			candidates.remove(c);
 		}
 		while (q > q_old && !candidates.isEmpty());
 
@@ -145,16 +148,16 @@ public class SubgraphExtraction
 	 * Softmax with low temperatures boosts probabilities of nodes with high weights and produces low probabilities
 	 * for nodes with low weights. Temperature set experimentally.
 	 */
-	private static String softMax(Map<String, Double> w)
+	private static int softMax(double[] w)
 	{
 		// Convert map to arrays
-		String[] keys = w.keySet().toArray(new String[0]);
-		double[] values = Arrays.stream(keys)
-				.mapToDouble(w::get)
-				.toArray();
+//		String[] keys = w.keySet().toArray(new String[0]);
+//		double[] values = Arrays.stream(keys)
+//				.mapToDouble(w::get)
+//				.toArray();
 
 		// Create distribution
-		double[] exps = Arrays.stream(values)
+		double[] exps = Arrays.stream(w)
 				.map(v -> v / temperature)
 				.map(Math::exp)
 				.toArray();
@@ -166,13 +169,13 @@ public class SubgraphExtraction
 		// Choose key
 		double p = Math.random();
 		double cumulativeProbability = 0.0;
-		for (int i=0; i < keys.length; ++i)
+		for (int i=0; i < w.length; ++i)
 		{
 			cumulativeProbability += softmax[i];
 			if (p <= cumulativeProbability)
-				return keys[i];
+				return i;
 		}
 
-		return null; // only if w is empty
+		return -1; // only if w is empty
 	}
 }
