@@ -9,6 +9,7 @@ import edu.upf.taln.textplanning.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jgrapht.alg.util.NeighborCache;
+import org.jgrapht.alg.util.Pair;
 import org.jgrapht.graph.AsSubgraph;
 
 import java.util.*;
@@ -72,10 +73,12 @@ public class SubgraphExtraction
 	{
 		final Set<String> V = g.vertexSet();
 		final Set<String> S = new HashSet<>();
-		final Map<Set<String>, Double> candidates = new HashMap<>(); // candidates are extensions of S with new vertices
+		if (V.isEmpty())
+			return new SemanticSubgraph(g, S);
+		final List<Pair<Set<String>, Double>> candidates = new ArrayList<>(); // candidates are extensions of S with new vertices
 
 		// Sample vertex
-		final List<String> vertices = new ArrayList<>(g.vertexSet());
+		final List<String> vertices = new ArrayList<>(V);
 		final double[] w = vertices.stream().mapToDouble(g::getWeight).toArray();
 
 		String v = vertices.get(softMax(w));
@@ -83,8 +86,8 @@ public class SubgraphExtraction
 		S.addAll(Requirements.determine(g, v));
 
 		// Declare q and q'
-		double q_old;
 		double q = calculateWeight(V, S, g.getWeights(), cost);
+		double q_old = q;
 
 		// Optimization: keep track of new vertices added at each iteration
 		Set<String> new_vertices = new HashSet<>(S);
@@ -102,17 +105,19 @@ public class SubgraphExtraction
 					.map(n -> Requirements.determine(g, n))
 					.map(C -> Sets.union(C, S))
 					.distinct()
-					.forEach(C -> candidates.put(C, calculateWeight(V, C, g.getWeights(), cost)));
+					.forEach(C -> candidates.add(Pair.of(C, calculateWeight(V, C, g.getWeights(), cost))));
 			new_vertices.clear();
 
-			// Softmax on expansion set
-			final List<Set<String>> candidate_list = new ArrayList<>(candidates.keySet());
-			final double[] candidates_weights = candidate_list.stream().mapToDouble(candidates::get).toArray();
+			if (candidates.isEmpty())
+				continue;
 
-			Set<String> c = candidate_list.get(softMax(candidates_weights));
+			// Softmax on expansion set
+			final double[] candidates_weights = candidates.stream().mapToDouble(Pair::getSecond).toArray();
+			final int i = softMax(candidates_weights);
+			Set<String> c = new HashSet<>(candidates.get(i).getFirst());
 
 			// Optimization: determine what vertices are added to S
-			new_vertices = Sets.difference(c, S);
+			new_vertices.addAll(Sets.difference(c, S));
 
 			// Update S
 			S.addAll(c);
@@ -120,10 +125,10 @@ public class SubgraphExtraction
 			// Update function values
 			q_old = q;
 			if (!S.isEmpty())
-				q = candidates.get(S);
+				q = candidates_weights[i];
 
 			// Remove c from candidate set
-			candidates.remove(c);
+			candidates.remove(i);
 		}
 		while (q > q_old && !candidates.isEmpty());
 
@@ -148,28 +153,29 @@ public class SubgraphExtraction
 	 * Softmax with low temperatures boosts probabilities of nodes with high weights and produces low probabilities
 	 * for nodes with low weights. Temperature set experimentally.
 	 */
-	private static int softMax(double[] w)
+	private static int softMax(double[] weights)
 	{
-		// Convert map to arrays
-//		String[] keys = w.keySet().toArray(new String[0]);
-//		double[] values = Arrays.stream(keys)
-//				.mapToDouble(w::get)
-//				.toArray();
+		if (weights.length == 1)
+			return 0;
+
+		// Normalise weights
+		final double sum_weights = Arrays.stream(weights).sum();
+		final double[] norm_weights = Arrays.stream(weights).map(d -> d / sum_weights).toArray();
 
 		// Create distribution
-		double[] exps = Arrays.stream(w)
+		double[] exps = Arrays.stream(norm_weights)
 				.map(v -> v / temperature)
 				.map(Math::exp)
 				.toArray();
-		double sum = Arrays.stream(exps).sum();
+		double sum_exps = Arrays.stream(exps).sum();
 		double[] softmax = Arrays.stream(exps)
-				.map(e -> e / sum)
+				.map(e -> e / sum_exps)
 				.toArray();
 
 		// Choose key
 		double p = Math.random();
 		double cumulativeProbability = 0.0;
-		for (int i=0; i < w.length; ++i)
+		for (int i=0; i < norm_weights.length; ++i)
 		{
 			cumulativeProbability += softmax[i];
 			if (p <= cumulativeProbability)
