@@ -56,7 +56,8 @@ public class SemanticTree extends SimpleDirectedGraph<String, Role>
 		}
 	}
 
-	public SemanticSubgraph getGraph()
+	public String getRoot()	{ return root; }
+	public SemanticSubgraph asGraph()
 	{
 		return subgraph;
 	}
@@ -94,15 +95,39 @@ public class SemanticTree extends SimpleDirectedGraph<String, Role>
 			return incomingEdgesOf(v).iterator().next().toString();
 	}
 
+	public double getWeight(String v)
+	{
+		if (subgraph.containsVertex(v))
+			return subgraph.getBase().getWeight(v);
+		else if (correspondences.containsKey(v))
+			return subgraph.getBase().getWeight(correspondences.get(v));
+		else
+			return 0.0;
+	}
+
+
 	public Optional<Meaning> getMeaning(String v)
 	{
-		if (containsVertex(v))
+		if (subgraph.containsVertex(v))
 			return subgraph.getBase().getMeaning(v);
 		else if (correspondences.containsKey(v))
 			return subgraph.getBase().getMeaning(correspondences.get(v));
 		else
 			return Optional.empty();
 	}
+
+	public Collection<Mention> getMentions(String v)
+	{
+		if (subgraph.getBase().containsVertex(v))
+			return subgraph.getBase().getMentions(v);
+		else if (correspondences.containsKey(v))
+			return subgraph.getBase().getMentions(correspondences.get(v));
+		else
+			return Collections.emptyList();
+	}
+
+	public double getAverageWeight() { return subgraph.getAverageWeight(); }
+
 
 	private void replicate(String v)
 	{

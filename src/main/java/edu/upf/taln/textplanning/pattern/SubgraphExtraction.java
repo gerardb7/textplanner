@@ -8,6 +8,7 @@ import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.alg.util.NeighborCache;
 import org.jgrapht.alg.util.Pair;
 import org.jgrapht.graph.AsSubgraph;
@@ -49,6 +50,12 @@ public class SubgraphExtraction
 			if (subgraph.edgeSet().isEmpty())
 				continue;
 
+			if (!new ConnectivityInspector<>(subgraph).isGraphConnected())
+			{
+				log.error("Ignoring extracted unconnected subgraph");
+				continue;
+			}
+
 			// ignore subgraph if it's part of an existing subgraph
 			boolean replica = subgraphs.stream()
 					.map(AsSubgraph::vertexSet)
@@ -74,14 +81,14 @@ public class SubgraphExtraction
 		final Set<String> V = g.vertexSet();
 		final Set<String> S = new HashSet<>();
 		if (V.isEmpty())
-			return new SemanticSubgraph(g, S);
+			return new SemanticSubgraph(g, null, S);
 		final List<Pair<Set<String>, Double>> candidates = new ArrayList<>(); // candidates are extensions of S with new vertices
 
 		// Sample vertex
 		final List<String> vertices = new ArrayList<>(V);
 		final double[] w = vertices.stream().mapToDouble(g::getWeight).toArray();
 
-		String v = vertices.get(softMax(w));
+		final String v = vertices.get(softMax(w));
 		S.add(v);
 		S.addAll(Requirements.determine(g, v));
 
@@ -133,7 +140,7 @@ public class SubgraphExtraction
 		while (q > q_old && !candidates.isEmpty());
 
 		// return induced subgraph
-		return new SemanticSubgraph(g, S);
+		return new SemanticSubgraph(g, v, S);
 	}
 
 	/**

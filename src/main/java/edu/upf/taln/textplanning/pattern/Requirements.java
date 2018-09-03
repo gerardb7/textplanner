@@ -15,6 +15,7 @@ class Requirements
 	static Set<String> determine(GlobalSemanticGraph g, String v)
 	{
 		Set<String> S = new HashSet<>(); // set of semantically required nodes
+		S.add(v); // include v!
 		Set<String> nodes = new HashSet<>();
 		nodes.add(v);
 		do

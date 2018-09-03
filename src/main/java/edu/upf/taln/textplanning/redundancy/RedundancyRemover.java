@@ -60,15 +60,9 @@ public class RedundancyRemover
 					{
 						SemanticTree t1 = trees.get(p.getLeft());
 						SemanticTree t2 = trees.get(p.getRight());
-						SemanticSubgraph g1 = t1.getGraph();
-						SemanticSubgraph g2 = t2.getGraph();
 
-						double avg1 = g1.vertexSet().stream()
-								.mapToDouble(v -> g1.getBase().getWeight(v))
-								.average().orElse(0.0);
-						double avg2 = g1.vertexSet().stream()
-								.mapToDouble(v -> g1.getBase().getWeight(v))
-								.average().orElse(0.0);
+						double avg1 = t1.getAverageWeight();
+						double avg2 = t2.getAverageWeight();
 
 						if (avg1 >= avg2)
 							pruned.add(p.getLeft());
@@ -80,7 +74,7 @@ public class RedundancyRemover
 		//noinspection SuspiciousMethodCalls
 		pruned.forEach(trees::remove);
 		Set<SemanticSubgraph> selected = trees.stream()
-				.map(SemanticTree::getGraph)
+				.map(SemanticTree::asGraph)
 				.collect(toSet());
 
 		log.info("Redundancy removal took " + timer.stop());

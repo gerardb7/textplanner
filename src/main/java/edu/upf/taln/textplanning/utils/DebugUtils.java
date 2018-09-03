@@ -2,10 +2,7 @@ package edu.upf.taln.textplanning.utils;
 
 import Jama.Matrix;
 import edu.upf.taln.textplanning.input.amr.Candidate;
-import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
-import edu.upf.taln.textplanning.structures.Meaning;
-import edu.upf.taln.textplanning.structures.Mention;
-import edu.upf.taln.textplanning.structures.SemanticSubgraph;
+import edu.upf.taln.textplanning.structures.*;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.math.RoundingMode;
@@ -13,6 +10,7 @@ import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.*;
 
@@ -65,43 +63,58 @@ public class DebugUtils
 				.collect(Collectors.joining("\n"));
 	}
 
-	public static String printSets(GlobalSemanticGraph graph, List<Set<String>> sets)
+	public static String printSets(GlobalSemanticGraph g, List<Set<String>> sets)
 	{
 		AtomicInteger i = new AtomicInteger(1);
 		return sets.stream()
-			.map(s -> "Global graph connected set " + i.getAndIncrement() + "\n" + s.stream()
-					.map(v -> "\t" + DebugUtils.createLabelForVariable(graph, v))
-					.collect(Collectors.joining("\n")))
-			.collect(Collectors.joining("\n"));
+				.map(s -> "Global g connected set " + i.getAndIncrement() + "\n" + s.stream()
+						.map(v -> "\t" + DebugUtils.createLabelForVariable(v, g.getMeaning(v), g.getMentions(v)))
+						.collect(Collectors.joining("\n")))
+				.collect(Collectors.joining("\n"));
 	}
 
-	public static String printSubgraphs(GlobalSemanticGraph graph, List<SemanticSubgraph> subgraphs)
+	public static String printSubgraphs(GlobalSemanticGraph g, List<SemanticSubgraph> subgraphs)
 	{
 		AtomicInteger i = new AtomicInteger(1);
 		return subgraphs.stream()
-			.map(subgraph ->
-			{
-				String stats = subgraph.vertexSet().stream()
-						.mapToDouble(graph::getWeight)
-						.summaryStatistics().toString();
+				.sorted(Comparator.comparingDouble(SemanticSubgraph::getAverageWeight).reversed())
+				.map(s ->
+				{
+					String stats = s.vertexSet().stream()
+							.mapToDouble(g::getWeight)
+							.summaryStatistics().toString();
 
-				return "Subgraph " + i.getAndIncrement() + " " + stats + "\n\t" + subgraph + "\n" +
-						subgraph.vertexSet().stream()
-								.filter(v -> graph.getMeaning(v).isPresent())
-								.map(v -> "\t" + DebugUtils.createLabelForVariable(graph, v) + "\t" + format.format(graph.getWeight(v)))
-								.collect(Collectors.joining("\n"));
-			})
-			.collect(Collectors.joining("\n"));
+					SemanticTree t = new SemanticTree(s);
+					return "Subgraph " + i.getAndIncrement() + " " + stats + "\n\t" +
+							"center " + s.getCenter() + "\n\t" + s + "\n" +
+							printVertex(t, "root", t.getRoot(), 1);
+				})
+				.collect(Collectors.joining("\n"));
 	}
 
-	public static String createLabelForVariable(GlobalSemanticGraph graph, String v)
+
+
+	private static String printVertex(SemanticTree t, String role, String v, int depth)
 	{
-		final String meaning = graph.getMeaning(v).map(Meaning::toString).orElse("");
-		final String surface_forms = graph.getMentions(v).stream()
+		final String tabs = IntStream.range(0, depth)
+				.mapToObj(i -> "\t")
+				.collect(Collectors.joining());
+		String s = tabs + role + " -> " + DebugUtils.createLabelForVariable(v, t.getMeaning(v), t.getMentions(v)) +
+				" " + format.format(t.getWeight(v)) + "\n";
+
+		return s + t.outgoingEdgesOf(v).stream()
+				.map(e -> printVertex(t, e.getLabel(), t.getEdgeTarget(e), depth + 1))
+				.collect(Collectors.joining());
+	}
+
+	public static String createLabelForVariable(String v, Optional<Meaning> m, Collection<Mention> mentions)
+	{
+		final String meaning = m.map(Meaning::toString).orElse("");
+		final String surface_forms = mentions.stream()
 				.map(Mention::getSurface_form)
 				.distinct()
 				.map(f -> "\"" + f + "\"")
 				.collect(Collectors.joining(", "));
-		return v + "\t" + meaning + "\t" + surface_forms;
+		return v + " " + meaning + " " + surface_forms;
 	}
 }

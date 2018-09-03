@@ -47,11 +47,9 @@ public class DiscoursePlanner
 
 		// Weight graphs by averaging their node weights
 		double[] rank = Arrays.stream(trees)
-				.map(SemanticTree::getGraph)
-				.map(g -> g.vertexSet().stream()
-						.collect(Collectors.averagingDouble(v -> g.getBase().getWeight(v))))
+				.map(SemanticTree::getAverageWeight)
 				.sorted(Comparator.reverseOrder())
-				.mapToDouble(d -> d) // unboxing
+				.mapToDouble(d -> d)// unboxing
 				.toArray();
 
 		// Create graph with indexes to trees as vertices
@@ -120,7 +118,7 @@ public class DiscoursePlanner
 
 		List<SemanticSubgraph> sorted_graphs = visitedNodes.stream()
 				.map(i -> trees[i])
-				.map(SemanticTree::getGraph)
+				.map(SemanticTree::asGraph)
 				.collect(Collectors.toList());
 		log.info("Discourse planning took " + timer.stop());
 
