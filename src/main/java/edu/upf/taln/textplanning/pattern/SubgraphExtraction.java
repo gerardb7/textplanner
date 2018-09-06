@@ -1,7 +1,6 @@
 package edu.upf.taln.textplanning.pattern;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Sets;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Role;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
@@ -10,7 +9,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.alg.util.NeighborCache;
-import org.jgrapht.alg.util.Pair;
 import org.jgrapht.graph.AsSubgraph;
 
 import java.util.*;
@@ -21,13 +19,16 @@ import java.util.stream.Collectors;
  */
 public class SubgraphExtraction
 {
+	private final Explorer explorer;
+	private final Policy policy;
 	private final double lambda;
-	private final static double temperature = 0.001;
 	private final static int max_num_extractions = 1000;
 	private final static Logger log = LogManager.getLogger();
 
-	public SubgraphExtraction(double lambda)
+	public SubgraphExtraction(Explorer explorer, Policy policy, double lambda)
 	{
+		this.explorer = explorer;
+		this.policy = policy;
 		this.lambda = lambda;
 	}
 
@@ -42,105 +43,104 @@ public class SubgraphExtraction
 				.collect(Collectors.averagingDouble(d -> d));
 
 		int num_extractions = 0;
+		int num_redundant_extraction = 0;
+
 		while (subgraphs.size() < num_subgraphs && num_extractions++ < max_num_extractions)
 		{
-			SemanticSubgraph subgraph = extract(g, neighbours, avg_rank);
+			SemanticSubgraph s = extract(g, neighbours, avg_rank);
 
-			// ignore subgraphs with no edges (i.e. with just one vertex)
-			if (subgraph.edgeSet().isEmpty())
-				continue;
-
-			if (!new ConnectivityInspector<>(subgraph).isGraphConnected())
+			if (isValidSubgraph(s))
 			{
-				log.error("Ignoring extracted unconnected subgraph");
-				continue;
+				num_redundant_extraction += updateSubgraphList(s, subgraphs);
 			}
-
-			// ignore subgraph if it's part of an existing subgraph
-			boolean replica = subgraphs.stream()
-					.map(AsSubgraph::vertexSet)
-					.anyMatch(V -> V.containsAll(subgraph.vertexSet()));
-			if (replica)
-				continue;
-
-			// discard subgraphs subsumed by the new one
-			subgraphs.removeIf(s -> subgraph.vertexSet().containsAll(s.vertexSet()));
-
-			subgraphs.add(subgraph);
 		}
 
-		log.info(subgraphs.size() + " subgraphs extracted after " + num_extractions + " iterations");
+		log.info(subgraphs.size() + " subgraphs extracted after " + num_extractions + " iterations (" +
+				num_redundant_extraction + " redundant extractions)");
 		log.info("Subgraph extraction took " + timer.stop());
 		log.debug(DebugUtils.printSubgraphs(g, subgraphs));
 
 		return subgraphs;
 	}
 
+	private boolean isValidSubgraph(SemanticSubgraph s)
+	{
+		// ignore subgraphs with no edges (i.e. with just one vertex)
+		boolean is_valid =  s != null && new ConnectivityInspector<>(s).isGraphConnected();
+		if (!is_valid)
+			log.error("Ignoring malformed graph");
+
+		return is_valid;
+	}
+
+	private int updateSubgraphList(SemanticSubgraph s, List<SemanticSubgraph> subgraphs)
+	{
+		// ignore subgraph if it's part of an existing subgraph
+		boolean replica = subgraphs.stream()
+				.map(AsSubgraph::vertexSet)
+				.anyMatch(V -> V.containsAll(s.vertexSet()));
+		if (replica)
+			return 1;
+
+		final int size_1 = subgraphs.size();
+		subgraphs.removeIf(s2 -> s.vertexSet().containsAll(s2.vertexSet()));
+		final int num_redundant = subgraphs.size() - size_1;
+		subgraphs.add(s);
+
+		return num_redundant;
+	}
+
 	private SemanticSubgraph extract(GlobalSemanticGraph g, NeighborCache<String, Role> neighbours, double cost)
 	{
 		final Set<String> V = g.vertexSet();
-		final Set<String> S = new HashSet<>();
 		if (V.isEmpty())
-			return new SemanticSubgraph(g, null, S);
-		final List<Pair<Set<String>, Double>> candidates = new ArrayList<>(); // candidates are extensions of S with new vertices
+			return null;
 
-		// Sample vertex
-		final List<String> vertices = new ArrayList<>(V);
-		final double[] w = vertices.stream().mapToDouble(g::getWeight).toArray();
+		Set<String> start; // starting nodes
+		Set<String> V_selected; // keeps track of selected nodes
 
-		final String v = vertices.get(softMax(w));
-		S.add(v);
-		S.addAll(Requirements.determine(g, v));
+		// Select intitial ndoes
+		{
+			final List<Set<String>> candidates = explorer.getInitialCandidates(g, neighbours);
+			if (candidates.isEmpty())
+				return null;
+
+			final double[] candidate_weights = candidates.stream()
+					.mapToDouble(c -> calculateWeight(V, c, g.getWeights(), cost))
+					.toArray();
+			int i = policy.select(candidate_weights);
+			start = new HashSet<>(candidates.get(i));
+			V_selected = new HashSet<>(start);
+		}
 
 		// Declare q and q'
-		double q = calculateWeight(V, S, g.getWeights(), cost);
-		double q_old = q;
-
-		// Optimization: keep track of new vertices added at each iteration
-		Set<String> new_vertices = new HashSet<>(S);
+		double q = calculateWeight(V, V_selected, g.getWeights(), cost);
+		double q_old;
 
 		do
 		{
-			// Update candidate set (optimization: only use vertices added to S in the previous iteration)
-			new_vertices.stream()
-					// find nodes in the neighbourhood of S
-					.map(neighbours::neighborsOf)
-					.flatMap(Set::stream)
-					.filter(n -> !S.contains(n)) // but not in S!
-					.distinct()
-					// map each neighbour to a set that includes its required nodes
-					.map(n -> Requirements.determine(g, n))
-					.map(C -> Sets.union(C, S))
-					.distinct()
-					.forEach(C -> candidates.add(Pair.of(C, calculateWeight(V, C, g.getWeights(), cost))));
-			new_vertices.clear();
-
+			// candidate sets extending (and therefore including) V_selected
+			List<Set<String>> candidates = explorer.getNextCandidates(V_selected, g, neighbours);
 			if (candidates.isEmpty())
-				continue;
+				break;
 
-			// Softmax on expansion set
-			final double[] candidates_weights = candidates.stream().mapToDouble(Pair::getSecond).toArray();
-			final int i = softMax(candidates_weights);
-			Set<String> c = new HashSet<>(candidates.get(i).getFirst());
+			final double[] candidate_weights = candidates.stream()
+					.mapToDouble(c -> calculateWeight(V, c, g.getWeights(), cost))
+					.toArray();
+			int i = policy.select(candidate_weights);
+			Set<String> c = new HashSet<>(candidates.get(i));
 
-			// Optimization: determine what vertices are added to S
-			new_vertices.addAll(Sets.difference(c, S));
-
-			// Update S
-			S.addAll(c);
+			// Update V_selected
+			V_selected.addAll(c);
 
 			// Update function values
 			q_old = q;
-			if (!S.isEmpty())
-				q = candidates_weights[i];
-
-			// Remove c from candidate set
-			candidates.remove(i);
+			q = candidate_weights[i];
 		}
-		while (q > q_old && !candidates.isEmpty());
+		while (q > q_old);
 
 		// return induced subgraph
-		return new SemanticSubgraph(g, v, S);
+		return new SemanticSubgraph(g, start, V_selected);
 	}
 
 	/**
@@ -156,39 +156,5 @@ public class SubgraphExtraction
 		return lambda*WS - CS + CV;
 	}
 
-	/**
-	 * Softmax with low temperatures boosts probabilities of nodes with high weights and produces low probabilities
-	 * for nodes with low weights. Temperature set experimentally.
-	 */
-	private static int softMax(double[] weights)
-	{
-		if (weights.length == 1)
-			return 0;
 
-		// Normalise weights
-		final double sum_weights = Arrays.stream(weights).sum();
-		final double[] norm_weights = Arrays.stream(weights).map(d -> d / sum_weights).toArray();
-
-		// Create distribution
-		double[] exps = Arrays.stream(norm_weights)
-				.map(v -> v / temperature)
-				.map(Math::exp)
-				.toArray();
-		double sum_exps = Arrays.stream(exps).sum();
-		double[] softmax = Arrays.stream(exps)
-				.map(e -> e / sum_exps)
-				.toArray();
-
-		// Choose key
-		double p = Math.random();
-		double cumulativeProbability = 0.0;
-		for (int i=0; i < norm_weights.length; ++i)
-		{
-			cumulativeProbability += softmax[i];
-			if (p <= cumulativeProbability)
-				return i;
-		}
-
-		return -1; // only if w is empty
-	}
 }

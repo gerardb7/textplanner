@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.structures;
 
 import org.jgrapht.graph.AsSubgraph;
 
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -9,16 +10,16 @@ import java.util.Set;
  */
 public class SemanticSubgraph extends AsSubgraph<String, Role>
 {
-	private final String center;
+	private final Set<String> center = new HashSet<>();
 
-	public SemanticSubgraph(GlobalSemanticGraph base, String center, Set<String> vertexSubset)
+	public SemanticSubgraph(GlobalSemanticGraph base, Set<String> center, Set<String> vertexSubset)
 	{
 		super(base, vertexSubset);
-		this.center = center;
+		this.center.addAll(center);
 	}
 
 	public GlobalSemanticGraph getBase() { return (GlobalSemanticGraph)base; }
-	public String getCenter() { return center; }
+	public Set<String> getCenter() { return center; }
 
 	// Ignores vertices with weight set to 0 (no weight)
 	public double getAverageWeight()

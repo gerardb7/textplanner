@@ -6,13 +6,14 @@ import edu.upf.taln.textplanning.structures.Role;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import static edu.upf.taln.textplanning.input.AMRConstants.inverse_suffix;
 import static java.util.stream.Collectors.toSet;
 
 class Requirements
 {
-	static Set<String> determine(GlobalSemanticGraph g, String v)
+	static Set<String> determine(String v, GlobalSemanticGraph g, Predicate<String> filter)
 	{
 		Set<String> S = new HashSet<>(); // set of semantically required nodes
 		S.add(v); // include v!
@@ -29,6 +30,7 @@ class Requirements
 								String target = g.getEdgeTarget(e);
 								return source.equals(n) ? target : source;
 							}))
+					.filter(filter) // additional filter, e.g. same source
 					.peek(S::add)
 					.collect(toSet());
 		}

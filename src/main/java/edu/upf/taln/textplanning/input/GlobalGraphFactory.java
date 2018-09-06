@@ -201,23 +201,18 @@ public class GlobalGraphFactory
 		{
 			String v1 = g.getEdgeSource(e);
 			merged.addVertex(v1);
+			merged.addSource(v1, g.getId());
 			String v2 = g.getEdgeTarget(e);
 			merged.addVertex(v2);
+			merged.addSource(v2, g.getId());
 			merged.addNewEdge(v1, v2, e.getLabel());
 
 			graphs.getMentions(v1).forEach(m -> merged.addMention(v1, m));
 			graphs.getMentions(v2).forEach(m -> merged.addMention(v2, m));
 
-			graphs.getCandidates(v1).forEach(c ->
-			{
-				merged.setMeaning(v1, c.getMeaning());
-				merged.addMention(v1, c.getMention());
-			});
-			graphs.getCandidates(v2).forEach(c ->
-			{
-				merged.setMeaning(v2, c.getMeaning());
-				merged.addMention(v2, c.getMention());
-			});
+			// There should be just one candidate, but anyway...
+			graphs.getCandidates(v1).forEach(c -> merged.setMeaning(v1, c.getMeaning()));
+			graphs.getCandidates(v2).forEach(c -> merged.setMeaning(v2, c.getMeaning()));
 		}));
 
 		// Merge all coreferent vertices

@@ -5,7 +5,7 @@ import edu.upf.taln.textplanning.discourse.DiscoursePlanner;
 import edu.upf.taln.textplanning.input.GlobalGraphFactory;
 import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.input.amr.GraphList;
-import edu.upf.taln.textplanning.pattern.SubgraphExtraction;
+import edu.upf.taln.textplanning.pattern.*;
 import edu.upf.taln.textplanning.ranking.GraphRanking;
 import edu.upf.taln.textplanning.redundancy.RedundancyRemover;
 import edu.upf.taln.textplanning.similarity.SemanticTreeSimilarity;
@@ -140,7 +140,9 @@ public final class TextPlanner
 	{
 		log.info("***Extracting subgraphs***");
 		Stopwatch timer = Stopwatch.createStarted();
-		SubgraphExtraction extractor = new SubgraphExtraction(Math.min(num_graphs, o.pattern_lambda));
+		Explorer e = new SingleVertexExplorer(false, false);
+		Policy p = new SoftMaxPolicy();
+		SubgraphExtraction extractor = new SubgraphExtraction(e, p, Math.min(num_graphs, o.pattern_lambda));
 		Collection<SemanticSubgraph> subgraphs = extractor.multipleExtraction(graph, o.num_subgraphs);
 		log.info("Extraction done in " + timer.stop());
 

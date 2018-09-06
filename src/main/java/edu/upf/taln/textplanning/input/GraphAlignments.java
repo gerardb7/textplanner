@@ -44,7 +44,7 @@ public class GraphAlignments implements Serializable
 		this.tokens.forEach(t ->
 		{
 			this.lemma.add(t); // lemma is initially set to token
-			this.pos.add(""); // ugly
+			this.pos.add(""); // ugly_
 			this.ner.add(Type.Other);
 		});
 		

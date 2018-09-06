@@ -12,8 +12,9 @@ import java.util.function.BinaryOperator;
 
 public class GlobalSemanticGraph extends SimpleDirectedGraph<String, Role> implements Serializable
 {
-	private final Map<String, Meaning> meanings = new HashMap<>();
-	private final Multimap<String, Mention> mentions = HashMultimap.create();
+	private final Map<String, Meaning> meanings = new HashMap<>(); // from vertices to meanings
+	private final Multimap<String, Mention> mentions = HashMultimap.create(); // from vertices to mentions
+	private final Multimap<String, String> sources = HashMultimap.create(); // from vertices to sources, e.g. sentences
 	private final Map<String, Double> weights = new HashMap<>();
 	private final static long serialVersionUID = 1L;
 
@@ -70,9 +71,14 @@ public class GlobalSemanticGraph extends SimpleDirectedGraph<String, Role> imple
 		// Reassign mentions of C to v
 		C.stream()
 				.map(mentions::get)
-				.flatMap(Collection::stream)
-				.forEach(m -> mentions.put(v, m));
+				.forEach(m -> mentions.putAll(v, m));
 		C.forEach(mentions::removeAll);
+
+		// Reassign sources of C to v
+		C.stream()
+				.map(sources::get)
+				.forEach(s -> sources.putAll(v, s));
+		C.forEach(sources::removeAll);
 
 		// Remove C from graph
 		removeAllVertices(C);
@@ -88,4 +94,6 @@ public class GlobalSemanticGraph extends SimpleDirectedGraph<String, Role> imple
 	public void setMeaning(String v, Meaning m) { meanings.put(v, m); }
 	public Collection<Mention> getMentions(String v) { return mentions.get(v); }
 	public void addMention(String v, Mention m) { mentions.put(v, m); }
+	public Collection<String> getSources(String v) { return sources.get(v); }
+	public void addSource(String v, String s) { sources.put(v, s); }
 }

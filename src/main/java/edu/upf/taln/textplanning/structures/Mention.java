@@ -7,7 +7,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- * A sequence of consecutive tokens spanned over by an AMR node.
+ * A sequence of one or more consecutive tokens
  */
 public final class Mention implements Serializable
 {
@@ -37,6 +37,7 @@ public final class Mention implements Serializable
 	public String getPOS() { return pos;}
 	public Type getType() { return type; }
 	public boolean isNominal() { return pos.startsWith("N"); }
+	public boolean isFiniteVerb() {	return pos.startsWith("VB") && !pos.equals("VB"); } // very crude
 	public boolean isMultiWord() { return span.getRight() - span.getLeft() > 1; }
 
 	@Override
