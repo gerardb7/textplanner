@@ -11,15 +11,18 @@ import java.util.Set;
 public class SemanticSubgraph extends AsSubgraph<String, Role>
 {
 	private final Set<String> center = new HashSet<>();
+	private final double value;
 
-	public SemanticSubgraph(GlobalSemanticGraph base, Set<String> center, Set<String> vertexSubset)
+	public SemanticSubgraph(GlobalSemanticGraph base, Set<String> center, Set<String> vertexSubset, double value)
 	{
 		super(base, vertexSubset);
 		this.center.addAll(center);
+		this.value = value;
 	}
 
 	public GlobalSemanticGraph getBase() { return (GlobalSemanticGraph)base; }
 	public Set<String> getCenter() { return center; }
+	public double getValue() { return value; }
 
 	// Ignores vertices with weight set to 0 (no weight)
 	public double getAverageWeight()

@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.pattern;
 
 import com.google.common.base.Stopwatch;
+import edu.upf.taln.textplanning.pattern.Explorer.State;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Role;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
@@ -96,51 +97,52 @@ public class SubgraphExtraction
 		if (V.isEmpty())
 			return null;
 
-		Set<String> start; // starting nodes
-		Set<String> V_selected; // keeps track of selected nodes
+		State start_state;
+		State current_state;
 
 		// Select intitial ndoes
 		{
-			final List<Set<String>> candidates = explorer.getInitialCandidates(g, neighbours);
+			final List<State> candidates = explorer.getStartStates(g, neighbours);
 			if (candidates.isEmpty())
 				return null;
 
 			final double[] candidate_weights = candidates.stream()
-					.mapToDouble(c -> calculateWeight(V, c, g.getWeights(), cost))
+					.mapToDouble(c -> calculateWeight(V, c.vertices, g.getWeights(), cost))
 					.toArray();
 			int i = policy.select(candidate_weights);
-			start = new HashSet<>(candidates.get(i));
-			V_selected = new HashSet<>(start);
+			start_state = candidates.get(i);
+			current_state = new State(start_state.source, start_state.vertices);
 		}
 
 		// Declare q and q'
-		double q = calculateWeight(V, V_selected, g.getWeights(), cost);
-		double q_old;
+		double q = calculateWeight(V, current_state.vertices, g.getWeights(), cost);
+		double q_old = q;
 
 		do
 		{
-			// candidate sets extending (and therefore including) V_selected
-			List<Set<String>> candidates = explorer.getNextCandidates(V_selected, g, neighbours);
-			if (candidates.isEmpty())
+			// candidate sets extending (and therefore including) current_state
+			List<State> candidate_states = explorer.getNextStates(current_state, g, neighbours);
+			if (candidate_states.isEmpty())
 				break;
 
-			final double[] candidate_weights = candidates.stream()
-					.mapToDouble(c -> calculateWeight(V, c, g.getWeights(), cost))
+			final double[] candidate_weights = candidate_states.stream()
+					.mapToDouble(c -> calculateWeight(V, c.vertices, g.getWeights(), cost))
 					.toArray();
 			int i = policy.select(candidate_weights);
-			Set<String> c = new HashSet<>(candidates.get(i));
-
-			// Update V_selected
-			V_selected.addAll(c);
+			State next_state = candidate_states.get(i);
 
 			// Update function values
 			q_old = q;
 			q = candidate_weights[i];
+
+			// Update current_state if function improved by selecting candidate c
+			if (q > q_old)
+				current_state = next_state;
 		}
 		while (q > q_old);
 
 		// return induced subgraph
-		return new SemanticSubgraph(g, start, V_selected);
+		return new SemanticSubgraph(g, start_state.vertices, current_state.vertices, q_old);
 	}
 
 	/**

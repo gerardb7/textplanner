@@ -7,10 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jgrapht.alg.util.NeighborCache;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class SingleVertexExplorer extends Explorer
@@ -23,33 +20,34 @@ public class SingleVertexExplorer extends Explorer
 	}
 
 	@Override
-	public List<Set<String>> getInitialCandidates(GlobalSemanticGraph g, NeighborCache<String, Role> neighbours)
+	public List<State> getStartStates(GlobalSemanticGraph g, NeighborCache<String, Role> neighbours)
 	{
-		Collection<String> start_vertices = start_from_verbs ? getFiniteVerbalVertices(g) : g.vertexSet();
+		Set<String> start_vertices = start_from_verbs ? getFiniteVerbalVertices(g) : g.vertexSet();
 
 		return start_vertices.stream()
-				.map(Collections::singleton)
+				.flatMap(v -> g.getSources(v).stream()
+						.map(s -> new State(s, Collections.singleton(v))))
 				.collect(Collectors.toList());
 	}
 
 	@Override
-	public List<Set<String>> getNextCandidates(Set<String> vertices, GlobalSemanticGraph g,
-	                                           NeighborCache<String, Role> neighbours)
+	public List<State> getNextStates(State c, GlobalSemanticGraph g, NeighborCache<String, Role> neighbours)
 	{
-		// Used to enforce candidates from the same source(s)
-		final Collection<String> sources = vertices.stream()
-				.map(g::getSources)
-				.reduce(Collections.emptySet(), (s1, s2) -> s1.stream()
-						.filter(s2::contains)
-						.collect(Collectors.toSet()));
+		if (c.vertices.isEmpty())
+			return new ArrayList<>();
 
-		return vertices.stream()
+		return c.vertices.stream()
 				.map(neighbours::neighborsOf)
 				.flatMap(Set::stream)
-				.filter(n -> !same_sources_only || g.getSources(n).stream().anyMatch(sources::contains))
-				.map(Collections::singleton)
-				.map(n -> Sets.union(n, vertices)) // each candidate extends 'vertices'
 				.distinct()
+				.filter(n -> !same_sources_only || g.getSources(n).contains(c.source)) // exclude neighbours from different sources
+				.filter(n -> !c.vertices.contains(n))
+				/****/
+				.map(Collections::singleton)
+				/****/
+				.map(n -> Sets.union(n, c.vertices)) // each candidate extends 'vertices'
+				.distinct()
+				.map(r -> new State(c.source, r))
 				.collect(Collectors.toList());
 	}
 }

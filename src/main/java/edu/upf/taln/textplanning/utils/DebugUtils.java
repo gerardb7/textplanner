@@ -85,7 +85,7 @@ public class DebugUtils
 							.summaryStatistics().toString();
 
 					SemanticTree t = new SemanticTree(s);
-					return "Subgraph " + i.getAndIncrement() + " " + stats + "\n\t" +
+					return "Subgraph " + i.getAndIncrement() + " value=" + format.format(s.getValue()) + " " + stats + "\n\t" +
 							"center " + s.getCenter() + "\n\t" + s + "\n" +
 							printVertex(t, "root", t.getRoot(), 1);
 				})
