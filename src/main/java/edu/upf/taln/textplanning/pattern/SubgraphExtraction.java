@@ -3,16 +3,17 @@ package edu.upf.taln.textplanning.pattern;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.pattern.Explorer.State;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
-import edu.upf.taln.textplanning.structures.Role;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jgrapht.alg.ConnectivityInspector;
-import org.jgrapht.alg.util.NeighborCache;
 import org.jgrapht.graph.AsSubgraph;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -37,7 +38,6 @@ public class SubgraphExtraction
 	{
 		Stopwatch timer = Stopwatch.createStarted();
 		List<SemanticSubgraph> subgraphs = new ArrayList<>();
-		NeighborCache<String, Role> neighbours = new NeighborCache<>(g);
 
 		// Work out average variable rank to be used as cost value
 		double avg_rank = g.getWeights().values().stream()
@@ -48,7 +48,7 @@ public class SubgraphExtraction
 
 		while (subgraphs.size() < num_subgraphs && num_extractions++ < max_num_extractions)
 		{
-			SemanticSubgraph s = extract(g, neighbours, avg_rank);
+			SemanticSubgraph s = extract(g, avg_rank);
 
 			if (isValidSubgraph(s))
 			{
@@ -91,7 +91,7 @@ public class SubgraphExtraction
 		return num_redundant;
 	}
 
-	private SemanticSubgraph extract(GlobalSemanticGraph g, NeighborCache<String, Role> neighbours, double cost)
+	private SemanticSubgraph extract(GlobalSemanticGraph g, double cost)
 	{
 		final Set<String> V = g.vertexSet();
 		if (V.isEmpty())
@@ -102,7 +102,7 @@ public class SubgraphExtraction
 
 		// Select intitial ndoes
 		{
-			final List<State> candidates = explorer.getStartStates(g, neighbours);
+			final List<State> candidates = explorer.getStartStates(g);
 			if (candidates.isEmpty())
 				return null;
 
@@ -121,7 +121,7 @@ public class SubgraphExtraction
 		do
 		{
 			// candidate sets extending (and therefore including) current_state
-			List<State> candidate_states = explorer.getNextStates(current_state, g, neighbours);
+			List<State> candidate_states = explorer.getNextStates(current_state, g);
 			if (candidate_states.isEmpty())
 				break;
 

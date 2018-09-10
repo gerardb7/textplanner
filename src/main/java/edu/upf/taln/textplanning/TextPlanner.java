@@ -140,7 +140,8 @@ public final class TextPlanner
 	{
 		log.info("***Extracting subgraphs***");
 		Stopwatch timer = Stopwatch.createStarted();
-		Explorer e = new SingleVertexExplorer(false, false);
+
+		Explorer e = new SingleVertexExplorer(false, Explorer.ExpansionPolicy.Non_core_only);
 		Policy p = new SoftMaxPolicy();
 		SubgraphExtraction extractor = new SubgraphExtraction(e, p, Math.min(num_graphs, o.pattern_lambda));
 		Collection<SemanticSubgraph> subgraphs = extractor.multipleExtraction(graph, o.num_subgraphs);
