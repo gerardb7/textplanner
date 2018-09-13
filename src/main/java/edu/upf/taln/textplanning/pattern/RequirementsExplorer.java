@@ -26,10 +26,11 @@ public class RequirementsExplorer extends Explorer
 		do
 		{
 			nodes = nodes.stream()
-					.flatMap(vi -> getNeighboursAndRoles(vi, g).stream())
-					.filter(n -> isRequired(v, n, g))
-					.filter(n -> isAllowed(n, s, g))
-					.map(n -> n.vertex)
+					.flatMap(vi -> getNeighboursAndRoles(vi, g).stream()
+						.filter(n ->  !S.contains(n.vertex))
+						.filter(n -> isRequired(vi, n, g))
+						.filter(n -> isAllowed(n, s, g))
+						.map(n -> n.vertex))
 					.peek(S::add)
 					.collect(toSet());
 		}

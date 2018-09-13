@@ -100,7 +100,7 @@ public class SubgraphExtraction
 		State start_state;
 		State current_state;
 
-		// Select intitial ndoes
+		// Select intitial nodes
 		{
 			final List<State> candidates = explorer.getStartStates(g);
 			if (candidates.isEmpty())

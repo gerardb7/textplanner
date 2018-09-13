@@ -92,8 +92,6 @@ public class DebugUtils
 				.collect(Collectors.joining("\n"));
 	}
 
-
-
 	private static String printVertex(SemanticTree t, String role, String v, int depth)
 	{
 		final String tabs = IntStream.range(0, depth)
