@@ -77,7 +77,6 @@ public class GlobalGraphFactory
 						.flatMap(Set::stream))
 				.forEach(names::add);
 
-
 		graphs.removeVertices(names);
 	}
 

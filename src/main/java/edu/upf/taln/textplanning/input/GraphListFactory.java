@@ -77,7 +77,7 @@ public class GraphListFactory
 		if (types_collector != null)
 			types_collector.getMeaningTypes(candidate_meanings);
 
-		final GraphList graph_list = new GraphList(graphs, singlewords, candidate_meanings, chains);
+		final GraphList graph_list = new GraphList(graphs, mentions, candidate_meanings, chains);
 		log.info("Semantic graphs created in " + timer.stop());
 		return graph_list;
 	}

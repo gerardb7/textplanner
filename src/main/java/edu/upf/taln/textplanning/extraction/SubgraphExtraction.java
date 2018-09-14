@@ -1,7 +1,7 @@
-package edu.upf.taln.textplanning.pattern;
+package edu.upf.taln.textplanning.extraction;
 
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.pattern.Explorer.State;
+import edu.upf.taln.textplanning.extraction.Explorer.State;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.utils.DebugUtils;
@@ -44,51 +44,37 @@ public class SubgraphExtraction
 				.collect(Collectors.averagingDouble(d -> d));
 
 		int num_extractions = 0;
-		int num_redundant_extraction = 0;
 
 		while (subgraphs.size() < num_subgraphs && num_extractions++ < max_num_extractions)
 		{
 			SemanticSubgraph s = extract(g, avg_rank);
-
-			if (isValidSubgraph(s))
-			{
-				num_redundant_extraction += updateSubgraphList(s, subgraphs);
-			}
+			if (isValid(s) && !isRedundant(s, subgraphs))
+				subgraphs.add(s);
 		}
 
-		log.info(subgraphs.size() + " subgraphs extracted after " + num_extractions + " iterations (" +
-				num_redundant_extraction + " redundant extractions)");
+		log.info(subgraphs.size() + " subgraphs extracted after " + num_extractions + " iterations ");
 		log.info("Subgraph extraction took " + timer.stop());
 		log.debug(DebugUtils.printSubgraphs(g, subgraphs));
 
 		return subgraphs;
 	}
 
-	private boolean isValidSubgraph(SemanticSubgraph s)
+	private boolean isValid(SemanticSubgraph s)
 	{
-		// ignore subgraphs with no edges (i.e. with just one vertex)
+		// ignore unconnected graphs
 		boolean is_valid =  s != null && new ConnectivityInspector<>(s).isGraphConnected();
 		if (!is_valid)
 			log.error("Ignoring malformed graph");
 
+
 		return is_valid;
 	}
 
-	private int updateSubgraphList(SemanticSubgraph s, List<SemanticSubgraph> subgraphs)
+	private boolean isRedundant(SemanticSubgraph s, List<SemanticSubgraph> subgraphs)
 	{
-		// ignore subgraph if it's part of an existing subgraph
-		boolean replica = subgraphs.stream()
+		return subgraphs.stream()
 				.map(AsSubgraph::vertexSet)
-				.anyMatch(V -> V.containsAll(s.vertexSet()));
-		if (replica)
-			return 1;
-
-		final int size_1 = subgraphs.size();
-		subgraphs.removeIf(s2 -> s.vertexSet().containsAll(s2.vertexSet()));
-		final int num_redundant = subgraphs.size() - size_1;
-		subgraphs.add(s);
-
-		return num_redundant;
+				.anyMatch(V -> V.equals(s.vertexSet()));
 	}
 
 	private SemanticSubgraph extract(GlobalSemanticGraph g, double cost)

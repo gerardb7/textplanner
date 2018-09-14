@@ -11,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -72,7 +73,6 @@ public class AMRReader implements DocumentReader
 			        String amr_text = Arrays.stream(lines, start_amr, lines.length)
 					        .collect(joining("\n"));
 
-
 			        // Find root variable and create graph object
 			        Matcher matcher = pattern.matcher(lines[start_amr]);
 			        if (!matcher.find())
@@ -83,7 +83,7 @@ public class AMRReader implements DocumentReader
 			        // Parse the graph and populate graph object
 			        AMRActions actions = new AMRActions(graph, this.keep_inverse_relations, this.keep_relation_alignments);
 			        AMR.parse(amr_text, actions);
-			        final Map<String, Integer> alignments = actions.getAlignments();
+			        final Multimap<String, Integer> alignments = actions.getAlignments();
 			        // There's at least three ways in which alignments can be encoded in AMR files :-/
 			        if (actions.getAlignments().isEmpty())
 			        {
@@ -154,6 +154,11 @@ public class AMRReader implements DocumentReader
 
 	private Multimap<Integer, List<Integer>> readAlignmentsFormat2(String line)
 	{
+		Function<String, List<Integer>> address_parser = s -> Arrays.stream(s.split("\\."))
+				.map(j -> j.equalsIgnoreCase("r") ? "0" : j) // replace 'r' with '0'
+				.map(Integer::parseInt)
+				.collect(toList());
+
 		try
 		{
 			final Multimap<Integer, List<Integer>> map = HashMultimap.create();
@@ -169,33 +174,43 @@ public class AMRReader implements DocumentReader
 					String[] addresses = parts[1].split("\\+");
 					Pair<Integer, Integer> offsets = Pair.of(Integer.parseInt(token_str[0]), Integer.parseInt(token_str[1]));
 					int num_tokens = offsets.getRight() - offsets.getLeft();
-					if (num_tokens > 1)
-					{
-						if (addresses.length < num_tokens)
-							throw new Exception("Cannot parse alignment " +  item);
-
-						IntStream.range(0, num_tokens).forEach(i ->
-						{
-							String address_str = addresses[addresses.length - num_tokens + i];
-							List<Integer> address = Arrays.stream(address_str.split("\\."))
-									.map(j -> j.equalsIgnoreCase("r") ? "0" : j) // replace 'r' with '0'
-									.map(Integer::parseInt)
-									.collect(toList());
-							map.put(offsets.getLeft() + i, address);
-						});
-					}
-					else
+					if (num_tokens == 1)
 					{
 						Integer token_index = offsets.getLeft();
 						Arrays.stream(addresses).forEach(address_str ->
 						{
-							List<Integer> address = Arrays.stream(address_str.split("\\."))
-									.map(j -> j.equalsIgnoreCase("r") ? "0" : j) // replace 'r' with '0'
-									.map(Integer::parseInt)
-									.collect(toList());
+							List<Integer> address = address_parser.apply(address_str);
 							map.put(token_index, address);
 						});
 					}
+					else if (addresses.length == num_tokens + 1) // (x /name (:op1 n1 .. :opN nN))
+					{
+
+						final List<Integer> address_0 = address_parser.apply(addresses[0]);
+
+						IntStream.range(0, num_tokens).forEach(i ->
+						{
+							List<Integer> address = address_parser.apply(addresses[i + 1]);
+							map.put(offsets.getLeft() + i, address);
+							map.put(offsets.getLeft() + i, address_0); // add governor to all
+						});
+					}
+					else if (addresses.length == num_tokens + 2) // (x :name (n /name (:op1 n1 .. :opN nN)))
+					{
+						final List<Integer> address_0 = address_parser.apply(addresses[0]);
+						final List<Integer> address_1 = address_parser.apply(addresses[1]);
+
+						IntStream.range(0, num_tokens).forEach(i ->
+						{
+							List<Integer> address = address_parser.apply(addresses[i + 2]);
+							map.put(offsets.getLeft() + i, address);
+							map.put(offsets.getLeft() + i, address_0); // add governor to all
+							map.put(offsets.getLeft() + i, address_1); // add governor to all
+						});
+					}
+					else
+						log.error("Cannot parse alignment " + item);
+
 				}
 			}
 

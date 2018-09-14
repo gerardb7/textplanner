@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.pattern;
+package edu.upf.taln.textplanning.extraction;
 
 import com.google.common.collect.Sets;
 import edu.upf.taln.textplanning.input.AMRConstants;
@@ -89,7 +89,6 @@ public abstract class Explorer
 			case Same_source:
 				return allow && g.getSources(n.vertex).contains(s.source);
 			case Non_core_only:
-				boolean other_source = allow && !g.getSources(n.vertex).contains(s.source) && !isCore(n.edge.getLabel()) && g.getEdgeTarget(n.edge).equals(n.vertex);
 				return allow && (g.getSources(n.vertex).contains(s.source) ||
 						// Allow neighbours pointed by non-core relations
 						(!isCore(n.edge.getLabel()) && g.getEdgeTarget(n.edge).equals(n.vertex)));

@@ -36,7 +36,7 @@ public class DiscoursePlanner
 	 * Orders a set of graphs by taking into account both their pair-wise similarity and their average relevance
 	 * scores.
 	 */
-	public List<SemanticSubgraph> structurePatterns(Collection<SemanticSubgraph> graphs)
+	public List<SemanticSubgraph> structureSubgraphs(Collection<SemanticSubgraph> graphs)
 	{
 		Stopwatch timer = Stopwatch.createStarted();
 
@@ -70,11 +70,11 @@ public class DiscoursePlanner
 					g.setEdgeWeight(e, s);
 				}));
 
-		// Create auto-sorted list of open edges based on similarity of edges and relevance of the pattern-nodes they
+		// Create auto-sorted list of open edges based on similarity of edges and relevance of the subgraph-nodes they
 		// point to
 		Comparator<DefaultWeightedEdge> comparator = (e1, e2) -> {
 			double s1 = g.getEdgeWeight(e1); // similarity between graphs
-			double r1 = rank[g.getEdgeTarget(e1)]; // relevance of target pattern
+			double r1 = rank[g.getEdgeTarget(e1)]; // relevance of target subgraph
 			double w1 = (s1 + r1)/2.0; // final weight
 			double s2 = g.getEdgeWeight(e2);
 			double r2 = rank[g.getEdgeTarget(e2)];
@@ -84,7 +84,7 @@ public class DiscoursePlanner
 		};
 		PriorityQueue<DefaultWeightedEdge> openEdges = new PriorityQueue<>(comparator);
 
-		// start greedy exploration from highest ranked pattern
+		// start greedy exploration from highest ranked subgraph
 		List<Integer> visitedNodes = new ArrayList<>();
 		int currentNode = 0; // start with highest ranked node
 		visitedNodes.add(0);

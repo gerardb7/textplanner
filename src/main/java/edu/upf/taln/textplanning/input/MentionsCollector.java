@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.input;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import edu.upf.taln.textplanning.input.amr.AMR;
 import edu.upf.taln.textplanning.input.amr.Candidate.Type;
 import edu.upf.taln.textplanning.input.amr.SemanticGraph;
 import edu.upf.taln.textplanning.structures.Mention;
@@ -60,14 +61,23 @@ class MentionsCollector
 					.forEach(i -> IntStream.range(i + 1, min(i + max_tokens + 1, tokens.size() + 1))
 							.mapToObj(j -> Pair.of(i, j))
 							.filter(p -> p.getRight() - p.getLeft() > 1) // 2 or more tokens
-							.filter(p -> a.getSpanTopVertex(p).isPresent())
-							.filter(span ->
+							.filter(p -> a.getSpanTopVertex(p).isPresent()) // restricts multiwords to those that can be aligned with a single vertex!
+							.filter(p ->
 							{
-								final Optional<String> opos = a.getPOS(span);
+								final Optional<String> opos = a.getPOS(p);
 								if (!opos.isPresent())
 									return true; // in case of doubt, assume it's a nominal group
 								String pos = opos.get();
-								return pos.startsWith("N") || pos.endsWith("CC"); // nouns and conjunctions
+								boolean is_nominal = pos.startsWith("N") || pos.endsWith("CC");
+								boolean is_name = a.getSpanTopVertex(p).map(v ->
+										g.outgoingEdgesOf(v).stream()
+												.anyMatch(e -> e.getLabel().equals(AMRConstants.name)) ||
+										g.outgoingEdgesOf(v).stream()
+												.filter(e -> e.getLabel().equals(AMRConstants.instance))
+												.map(g::getEdgeTarget)
+												.anyMatch(c -> c.equals(AMRConstants.name_concept)))
+										.orElse(false);
+								return is_nominal || is_name; // nouns, conjunctions and names
 							})
 							.filter(span -> IntStream.range(span.getLeft(), span.getRight())
 									.mapToObj(index -> a.getTokens().get(index))

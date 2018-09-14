@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.pattern;
+package edu.upf.taln.textplanning.extraction;
 
 public interface Policy
 {

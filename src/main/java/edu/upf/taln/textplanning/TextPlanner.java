@@ -5,7 +5,7 @@ import edu.upf.taln.textplanning.discourse.DiscoursePlanner;
 import edu.upf.taln.textplanning.input.GlobalGraphFactory;
 import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.input.amr.GraphList;
-import edu.upf.taln.textplanning.pattern.*;
+import edu.upf.taln.textplanning.extraction.*;
 import edu.upf.taln.textplanning.ranking.GraphRanking;
 import edu.upf.taln.textplanning.redundancy.RedundancyRemover;
 import edu.upf.taln.textplanning.similarity.SemanticTreeSimilarity;
@@ -37,7 +37,7 @@ public final class TextPlanner
 		double sim_threshold = 0.1; // Pairs of meanings with sim below this value have their score set to 0
 		double damping_meanings = 0.2; // controls bias towards weighting function when ranking meanings
 		double damping_variables = 0.2; // controls bias towards meanings rank when ranking variables
-		double pattern_lambda = 1.0; // Controls balance between weight of nodes and cost of edges during pattern extraction
+		double extraction_lambda = 1.0; // Controls balance between weight of nodes and cost of edges during subgraph extraction
 		double tree_edit_lambda = 0.1; // Controls impact of roles when calculating similarity between semantic trees
 
 		@Override
@@ -51,7 +51,7 @@ public final class TextPlanner
 					"\n\tsim_threshold = " + f.format(sim_threshold) +
 					"\n\tdamping_meanings = " + f.format(damping_meanings) +
 					"\n\tdamping_variables = " + f.format(damping_variables) +
-					"\n\tpattern_lambda = " + f.format(pattern_lambda) +
+					"\n\textraction_lambda = " + f.format(extraction_lambda) +
 					"\n\tredundancy lambda = " + f.format(tree_edit_lambda);
 		}
 	}
@@ -143,7 +143,7 @@ public final class TextPlanner
 
 		Explorer e = new RequirementsExplorer(true, Explorer.ExpansionPolicy.Non_core_only);
 		Policy p = new SoftMaxPolicy();
-		SubgraphExtraction extractor = new SubgraphExtraction(e, p, Math.min(num_graphs, o.pattern_lambda));
+		SubgraphExtraction extractor = new SubgraphExtraction(e, p, Math.min(num_graphs, o.extraction_lambda));
 		Collection<SemanticSubgraph> subgraphs = extractor.multipleExtraction(graph, o.num_subgraphs);
 		log.info("Extraction done in " + timer.stop());
 
@@ -176,7 +176,7 @@ public final class TextPlanner
 		Stopwatch timer = Stopwatch.createStarted();
 		SemanticTreeSimilarity tsim = new SemanticTreeSimilarity(similarity, o.tree_edit_lambda);
 		DiscoursePlanner discourse = new DiscoursePlanner(tsim);
-		List<SemanticSubgraph> text_plan = discourse.structurePatterns(subgraphs);
+		List<SemanticSubgraph> text_plan = discourse.structureSubgraphs(subgraphs);
 		log.info("Sorting done in " + timer.stop());
 
 		return text_plan;
