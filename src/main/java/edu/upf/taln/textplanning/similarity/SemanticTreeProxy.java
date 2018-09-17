@@ -25,7 +25,7 @@ public final class SemanticTreeProxy implements unnonouno.treedist.Tree
 		tree = t;
 
 		// Get list of nodes in preorder
-		List<String> preorder_nodes = tree.getPreOrderLabels();
+		List<String> preorder_nodes = tree.getPreorderVertices();
 
 		ImmutableList.Builder<String> builder = ImmutableList.builder();
 		nodes = builder.addAll(preorder_nodes).build();

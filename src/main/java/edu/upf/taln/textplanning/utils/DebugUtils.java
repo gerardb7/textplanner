@@ -23,6 +23,8 @@ public class DebugUtils
 		format.setMinimumFractionDigits(4);
 	}
 
+	public static String printDouble(double w) { return format.format(w); }
+
 	public static String printDisambiguation(Candidate chosen, Collection<Candidate> other)
 	{
 		String accepted_multiword = "";
@@ -73,23 +75,26 @@ public class DebugUtils
 				.collect(Collectors.joining("\n"));
 	}
 
-	public static String printSubgraphs(GlobalSemanticGraph g, List<SemanticSubgraph> subgraphs)
+	public static String printSubgraphs(List<SemanticSubgraph> subgraphs)
 	{
 		AtomicInteger i = new AtomicInteger(1);
 		return subgraphs.stream()
 				.sorted(Comparator.comparingDouble(SemanticSubgraph::getAverageWeight).reversed())
-				.map(s ->
-				{
-					String stats = s.vertexSet().stream()
-							.mapToDouble(g::getWeight)
-							.summaryStatistics().toString();
-
-					SemanticTree t = new SemanticTree(s);
-					return "Subgraph " + i.getAndIncrement() + " value=" + format.format(s.getValue()) + " " + stats + "\n\t" +
-							"center " + s.getCenter() + "\n\t" + s + "\n" +
-							printVertex(t, "root", t.getRoot(), 1);
-				})
+				.map(SemanticTree::new)
+				.map(t -> printTree(i.getAndIncrement(), t))
 				.collect(Collectors.joining("\n"));
+	}
+
+	public static String printTree(int i, SemanticTree t)
+	{
+		final SemanticSubgraph s = t.asGraph();
+		final GlobalSemanticGraph g = s.getBase();
+		String stats = s.vertexSet().stream()
+				.mapToDouble(g::getWeight)
+				.summaryStatistics().toString();
+
+		return "Subgraph " + i + " value=" + format.format(s.getValue()) + " " + stats + "\n\t" +
+				"center " + s.getCenter() + "\n\t" + s + "\n" +	printVertex(t, "root", t.getRoot(), 1);
 	}
 
 	private static String printVertex(SemanticTree t, String role, String v, int depth)

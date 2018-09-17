@@ -54,7 +54,7 @@ public class SubgraphExtraction
 
 		log.info(subgraphs.size() + " subgraphs extracted after " + num_extractions + " iterations ");
 		log.info("Subgraph extraction took " + timer.stop());
-		log.debug(DebugUtils.printSubgraphs(g, subgraphs));
+		log.debug(DebugUtils.printSubgraphs(subgraphs));
 
 		return subgraphs;
 	}
@@ -62,12 +62,7 @@ public class SubgraphExtraction
 	private boolean isValid(SemanticSubgraph s)
 	{
 		// ignore unconnected graphs
-		boolean is_valid =  s != null && new ConnectivityInspector<>(s).isGraphConnected();
-		if (!is_valid)
-			log.error("Ignoring malformed graph");
-
-
-		return is_valid;
+		return s != null && !s.edgeSet().isEmpty() && new ConnectivityInspector<>(s).isGraphConnected();
 	}
 
 	private boolean isRedundant(SemanticSubgraph s, List<SemanticSubgraph> subgraphs)
