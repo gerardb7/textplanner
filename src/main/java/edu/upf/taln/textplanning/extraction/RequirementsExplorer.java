@@ -1,8 +1,7 @@
-package edu.upf.taln.textplanning.pattern;
+package edu.upf.taln.textplanning.extraction;
 
 import edu.upf.taln.textplanning.input.AMRConstants;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
-import edu.upf.taln.textplanning.structures.Role;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -10,24 +9,28 @@ import java.util.Set;
 import static edu.upf.taln.textplanning.input.AMRConstants.inverse_suffix;
 import static java.util.stream.Collectors.toSet;
 
-class Requirements
+public class RequirementsExplorer extends Explorer
 {
-	static Set<String> determine(GlobalSemanticGraph g, String v)
+	public RequirementsExplorer(boolean start_from_verbs, ExpansionPolicy policy)
+	{
+		super(start_from_verbs, policy);
+	}
+
+	@Override
+	protected Set<String> getRequiredVertices(String v, State s, GlobalSemanticGraph g)
 	{
 		Set<String> S = new HashSet<>(); // set of semantically required nodes
+		S.add(v); // include v!
 		Set<String> nodes = new HashSet<>();
 		nodes.add(v);
 		do
 		{
 			nodes = nodes.stream()
-					.flatMap(n -> g.edgesOf(n).stream()
-							.filter(e -> isRequired(g, n, e))
-							.map(e ->
-							{
-								String source = g.getEdgeSource(e);
-								String target = g.getEdgeTarget(e);
-								return source.equals(n) ? target : source;
-							}))
+					.flatMap(vi -> getNeighboursAndRoles(vi, g).stream()
+						.filter(n ->  !S.contains(n.vertex))
+						.filter(n -> isRequired(vi, n, g))
+						.filter(n -> isAllowed(n, s, g))
+						.map(n -> n.vertex))
 					.peek(S::add)
 					.collect(toSet());
 		}
@@ -36,15 +39,15 @@ class Requirements
 		return S;
 	}
 
-	private static boolean isRequired(GlobalSemanticGraph g, String selected_node, Role e)
+	private static boolean isRequired(String v, Neighbour n, GlobalSemanticGraph g)
 	{
-		String source = g.getEdgeSource(e);
-		String target = g.getEdgeTarget(e);
-		boolean source_selected = source.equals(selected_node);
-		boolean target_selected = target.equals(selected_node);
+		String source = g.getEdgeSource(n.edge);
+		String target = g.getEdgeTarget(n.edge);
+		boolean source_selected = source.equals(v);
+		boolean target_selected = target.equals(v);
 		assert (source_selected || target_selected);
 
-		switch(e.toString())
+		switch(n.edge.getLabel())
 		{
 			case AMRConstants.instance:
 				return source_selected; // should not happen if concepts have been removed

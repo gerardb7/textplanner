@@ -94,7 +94,7 @@ public class GraphRanking
 				.sorted(Comparator.naturalOrder())
 				.collect(toList());
 		final List<String> labels = variables.stream() // for debugging purposes
-				.map(v -> DebugUtils.createLabelForVariable(graph, v))
+				.map(v -> DebugUtils.createLabelForVariable(v, graph.getMeaning(v), graph.getMentions(v)))
 				.collect(Collectors.toList());
 
 		if (variables.isEmpty())

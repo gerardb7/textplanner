@@ -56,29 +56,26 @@ public class SemanticTree extends SimpleDirectedGraph<String, Role>
 		}
 	}
 
-	public SemanticSubgraph getGraph()
+	public String getRoot()	{ return root; }
+	public SemanticSubgraph asGraph()
 	{
 		return subgraph;
 	}
 
-	public List<String> getPreOrderLabels()
+	public List<String> getPreorderVertices()
 	{
-		List<String> preorder = new ArrayList<>();
-		preorder.add(root);
-		List<String> frontier = new ArrayList<>();
-		frontier.add(root);
+		final List<String> preorder = new ArrayList<>();
+		final Deque<String> stack = new ArrayDeque<>();
+		stack.push(root);
 
-		while(!frontier.isEmpty())
+		while(!stack.isEmpty())
 		{
-			frontier = frontier.stream()
-					.map(v -> outgoingEdgesOf(v).stream()
+			final String current = stack.pop();
+			preorder.add(current); // visit
+			outgoingEdgesOf(current).stream()
 							.map(this::getEdgeTarget)
-							.map(this::createLabel)
-							.sorted()
-							.collect(toList()))
-					.flatMap(List::stream)
-					.peek(preorder::add)
-					.collect(toList());
+							.sorted(Comparator.comparing(this::createLabel).reversed())
+							.forEach(stack::push);
 		}
 
 		return preorder;
@@ -94,15 +91,39 @@ public class SemanticTree extends SimpleDirectedGraph<String, Role>
 			return incomingEdgesOf(v).iterator().next().toString();
 	}
 
+	public double getWeight(String v)
+	{
+		if (subgraph.containsVertex(v))
+			return subgraph.getBase().getWeight(v);
+		else if (correspondences.containsKey(v))
+			return subgraph.getBase().getWeight(correspondences.get(v));
+		else
+			return 0.0;
+	}
+
+
 	public Optional<Meaning> getMeaning(String v)
 	{
-		if (containsVertex(v))
+		if (subgraph.containsVertex(v))
 			return subgraph.getBase().getMeaning(v);
 		else if (correspondences.containsKey(v))
 			return subgraph.getBase().getMeaning(correspondences.get(v));
 		else
 			return Optional.empty();
 	}
+
+	public Collection<Mention> getMentions(String v)
+	{
+		if (subgraph.getBase().containsVertex(v))
+			return subgraph.getBase().getMentions(v);
+		else if (correspondences.containsKey(v))
+			return subgraph.getBase().getMentions(correspondences.get(v));
+		else
+			return Collections.emptyList();
+	}
+
+	public double getAverageWeight() { return subgraph.getAverageWeight(); }
+
 
 	private void replicate(String v)
 	{
@@ -131,9 +152,10 @@ public class SemanticTree extends SimpleDirectedGraph<String, Role>
 	private String createLabel(String v)
 	{
 		if (this.root.equals(v))
-			return v;
+			return String.format("%s", getMeaning(v).map(Meaning::toString).orElse(v));
 		else
-			return String.format("%s_%s", getMeaning(v), incomingEdgesOf(v).iterator().next());
+			return String.format("%s_%s", getMeaning(v).map(Meaning::toString).orElse(v),
+					incomingEdgesOf(v).iterator().next());
 	}
 
 	private void addNewEdge(String source, String target, String role)

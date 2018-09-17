@@ -1,5 +1,7 @@
 package edu.upf.taln.textplanning.input;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.input.amr.Actions;
 import edu.upf.taln.textplanning.input.amr.Label;
 import edu.upf.taln.textplanning.input.amr.TreeNode;
@@ -62,8 +64,8 @@ public class AMRActions implements Actions
 	private final SemanticGraph graph;
 	private final boolean keep_inverse_relations; // AMR inverse (':*-of') relations to their non-inverted counterparts?
 	private final boolean keep_relation_alignments;
-	private final Map<String, Integer> alignments = new HashMap<>();
-	private final Set<Role> reentrant_edges = new HashSet();
+	private final Multimap<String, Integer> alignments = HashMultimap.create();
+	private final Set<Role> reentrant_edges = new HashSet<>();
 	private List<String> vertex_order = new ArrayList<>();
 
 	AMRActions(SemanticGraph graph, boolean keep_inverse_relations, boolean keep_relation_alignments)
@@ -74,7 +76,7 @@ public class AMRActions implements Actions
 	}
 
 	public List<String> getVertexOrder() { return this.vertex_order; }
-	Map<String, Integer> getAlignments() { return alignments; }
+	Multimap<String, Integer> getAlignments() { return alignments; }
 	Set<Role> getReentrantEdges() { return reentrant_edges; }
 
     @Override

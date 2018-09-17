@@ -34,17 +34,17 @@ public class GraphAlignments implements Serializable
 	 *  -> Given a set of descendants D of v and the sequence of tokens T aligned with vertices in D, v is
 	 *  associated with the span  (T_min, T_max).
 	 *
-	 *  Wrapping up: vertices are assiociated with oen or two spans, one for the optional alignment, and one for the
-	 *  descendants alignements.
+	 *  Wrapping up: vertices are associated with one or two spans, one for the optional alignment, and one for the
+	 *  descendants alignments.
 	 */
-	GraphAlignments(SemanticGraph graph, Map<String, Integer> align, List<String> tokens)
+	GraphAlignments(SemanticGraph graph, Multimap<String, Integer> align, List<String> tokens)
 	{
 		this.graph = graph;
 		this.tokens.addAll(tokens);
 		this.tokens.forEach(t ->
 		{
 			this.lemma.add(t); // lemma is initially set to token
-			this.pos.add(""); // ugly
+			this.pos.add(""); // ugly_
 			this.ner.add(Type.Other);
 		});
 		
@@ -56,7 +56,7 @@ public class GraphAlignments implements Serializable
 					{
 						if (align.containsKey(current))
 						{
-							this.alignments.put(v, align.get(current));
+							this.alignments.putAll(v, align.get(current));
 							end = true;
 						}
 						else
@@ -194,11 +194,9 @@ public class GraphAlignments implements Serializable
 	public void renameVertex(String old_label, String new_label)
 	{
 		// Update all fields containing vertices
-		getAlignments(old_label).forEach(i ->
-		{
-			alignments.remove(old_label, i);
-			alignments.put(new_label, i);
-		});
+		final Collection<Integer> a = alignments.get(old_label);
+		alignments.putAll(new_label, a);
+		alignments.removeAll(old_label);
 	}
 
 	public void removeVertex(String v)

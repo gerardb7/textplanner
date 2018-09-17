@@ -44,23 +44,11 @@ public class GlobalGraphFactory
 		return merge;
 	}
 
-	private static void remove_concepts(GraphList graphs)
-	{
-		log.info("Removing concepts");
-		final Set<String> concepts = graphs.getGraphs().stream()
-				.flatMap(g -> g.edgeSet().stream()
-						.filter(e -> e.getLabel().equals(AMRConstants.instance))
-						.map(g::getEdgeTarget))
-				.collect(toSet());
-
-		graphs.removeVertices(concepts);
-	}
-
 	/**
 	 * Given:
 	 *      (x :name (n /name (:op1 n1 .. :opN nN))) or (x /name (:op1 n1 .. :opN nN))
 	 * Removes all but x.
- 	 */
+	 */
 	private static void remove_names(GraphList graphs)
 	{
 		log.info("Removing names");
@@ -89,8 +77,19 @@ public class GlobalGraphFactory
 						.flatMap(Set::stream))
 				.forEach(names::add);
 
-
 		graphs.removeVertices(names);
+	}
+
+	private static void remove_concepts(GraphList graphs)
+	{
+		log.info("Removing concepts");
+		final Set<String> concepts = graphs.getGraphs().stream()
+				.flatMap(g -> g.edgeSet().stream()
+						.filter(e -> e.getLabel().equals(AMRConstants.instance))
+						.map(g::getEdgeTarget))
+				.collect(toSet());
+
+		graphs.removeVertices(concepts);
 	}
 
 	private static void disambiguate_candidates(GraphList graphs)
@@ -201,23 +200,18 @@ public class GlobalGraphFactory
 		{
 			String v1 = g.getEdgeSource(e);
 			merged.addVertex(v1);
+			merged.addSource(v1, g.getId());
 			String v2 = g.getEdgeTarget(e);
 			merged.addVertex(v2);
+			merged.addSource(v2, g.getId());
 			merged.addNewEdge(v1, v2, e.getLabel());
 
 			graphs.getMentions(v1).forEach(m -> merged.addMention(v1, m));
 			graphs.getMentions(v2).forEach(m -> merged.addMention(v2, m));
 
-			graphs.getCandidates(v1).forEach(c ->
-			{
-				merged.setMeaning(v1, c.getMeaning());
-				merged.addMention(v1, c.getMention());
-			});
-			graphs.getCandidates(v2).forEach(c ->
-			{
-				merged.setMeaning(v2, c.getMeaning());
-				merged.addMention(v2, c.getMention());
-			});
+			// There should be just one candidate, but anyway...
+			graphs.getCandidates(v1).forEach(c -> merged.setMeaning(v1, c.getMeaning()));
+			graphs.getCandidates(v2).forEach(c -> merged.setMeaning(v2, c.getMeaning()));
 		}));
 
 		// Merge all coreferent vertices
