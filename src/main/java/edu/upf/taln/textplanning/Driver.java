@@ -178,7 +178,7 @@ public class Driver
 		log.info("Graphs serialized to " + output_path);
 
 		TextPlanner.Options options = new TextPlanner.Options();
-		log.info("Options:\n" + options);
+		log.info("Options: " + options);
 		TextPlanner.rankMeanings(graphs.getCandidates(), weighting, similarity, options);
 
 		output_path = createOutputPath(amr_bank_file, semantic_graphs_ranked_suffix);
@@ -208,6 +208,8 @@ public class Driver
 
 		log.info("Loading resources took " + timer.stop());
 		log.info("***********************");
+		TextPlanner.Options options = new TextPlanner.Options();
+		log.info("Options: " + options);
 
 		// 1- Create semantic graphs
 		timer.reset();timer.start();
@@ -218,8 +220,6 @@ public class Driver
 		log.info("Graphs serialized to " + output_path);
 
 		// 2- Rank meanings
-		TextPlanner.Options options = new TextPlanner.Options();
-		log.info("Options:\n" + options);
 		TextPlanner.rankMeanings(graphs.getCandidates(), weighting, similarity, options);
 		output_path = createOutputPath(amr_bank_file, semantic_graphs_ranked_suffix);
 		Serializer.serialize(graphs, output_path);
@@ -269,7 +269,7 @@ public class Driver
 		log.info("Loading resources took " + timer.stop());
 
 		TextPlanner.Options options = new TextPlanner.Options();
-		log.info("Options:\n" + options);
+		log.info("Options: " + options);
 		List<SemanticSubgraph> plan = TextPlanner.plan(graphs, similarity, weighting, num_subgraphs, options);
 
 		Serializer.serialize(plan, output);
@@ -537,6 +537,7 @@ public class Driver
 
 		DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 		Date date = new Date();
+		log.info(dateFormat.format(date) + " running " + 	Arrays.stream(args).collect(joining(" ")));
 		log.debug(dateFormat.format(date) + " running " + 	Arrays.stream(args).collect(joining(" ")));
 		log.debug("*********************************************************");
 

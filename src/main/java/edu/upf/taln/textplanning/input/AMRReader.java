@@ -60,7 +60,7 @@ public class AMRReader implements DocumentReader
 					        .filter(l -> l.startsWith("# ::tok"))
 					        .findFirst()
 					        .orElseThrow(() -> new Exception("Cannot find tokens line"));
-			        String alignemnts_line = Arrays.stream(lines)
+			        String alignments_line = Arrays.stream(lines)
 					        .filter(l -> l.startsWith("# ::alignments"))
 					        .findFirst()
 					        .orElseThrow(() -> new Exception("Cannot find alignments line"));
@@ -82,17 +82,16 @@ public class AMRReader implements DocumentReader
 
 			        // Parse the graph and populate graph object
 			        AMRActions actions = new AMRActions(graph, this.keep_inverse_relations, this.keep_relation_alignments);
-			        AMR.parse(amr_text, actions);
+			        final List<String> vertex_order = ((AMRActions.LabelNode) AMR.parse(amr_text, actions)).vertex_order;
 			        final Multimap<String, Integer> alignments = actions.getAlignments();
 			        // There's at least three ways in which alignments can be encoded in AMR files :-/
 			        if (actions.getAlignments().isEmpty())
 			        {
-				        Multimap<Integer, List<Integer>> amr_alignments = readAlignmentsFormat1(alignemnts_line);
+				        Multimap<Integer, List<Integer>> amr_alignments = readAlignmentsFormat1(alignments_line);
 				        if (amr_alignments.isEmpty())
-					        amr_alignments = readAlignmentsFormat2(alignemnts_line);
+					        amr_alignments = readAlignmentsFormat2(alignments_line);
 				        if (amr_alignments.isEmpty())
 				        	throw new Exception("Cannot read alignments");
-				        List<String> vertex_order = actions.getVertexOrder();
 				        amr_alignments.forEach((t, a) ->
 					        gornAdressToVertex(graph, vertex_order, actions.getReentrantEdges(), a).ifPresent(v -> alignments.put(v, t)));
 			        }
@@ -224,22 +223,27 @@ public class AMRReader implements DocumentReader
     {
 	    try
 	    {
-		    String currentNode = graph.getRoot();
+		    String current_node = graph.getRoot();
 		    if (address.size() > 1)
 		    {
 			    for (int index : address.subList(1, address.size())) // ignore first index pointing to root
 			    {
-				    List<String> children = graph.outgoingEdgesOf(currentNode).stream()
+				    final int current_indx = vertex_order.indexOf(current_node);
+				    List<String> children = graph.outgoingEdgesOf(current_node).stream()
 						    .filter(e -> !e.toString().equals(AMRConstants.instance))
 						    .filter(e -> !reentrant_edges.contains(e))
 						    .map(graph::getEdgeTarget)
-						    .sorted(Comparator.comparingInt(vertex_order::indexOf))
+						    // leaves may occur multiple times, pick the closest one to the parent (vars are unique)
+						    .sorted(Comparator.comparingInt(v -> IntStream.range(0, vertex_order.size())
+						            .filter(i -> vertex_order.get(i).equals(v))
+						            .filter(i -> i > current_indx)
+						            .min().orElseThrow(RuntimeException::new)))
 						    .collect(Collectors.toList());
-				    currentNode = children.get(index);
+				    current_node = children.get(index);
 			    }
 		    }
 
-		    return Optional.of(currentNode);
+		    return Optional.of(current_node);
 	    }
 	    catch (Exception e)
 	    {

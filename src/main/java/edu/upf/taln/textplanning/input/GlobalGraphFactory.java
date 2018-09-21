@@ -145,7 +145,6 @@ public class GlobalGraphFactory
 						.map(v -> Pair.of(g, v)))
 				.collect(toCollection(LinkedList::new));
 
-
 		while(!subsumers.isEmpty())
 		{
 			// Pop a subsumer from the queue
@@ -183,10 +182,10 @@ public class GlobalGraphFactory
 					subsumers.add(Pair.of(p.getLeft(), v)); // subsumer node has been replaced by v
 				});
 
-				log.debug("Accepted multiword \"" + c.getMention().getSurface_form() + "\"\t" + c.getMeaning());
+				log.debug("Collapsed multiword \"" + c.getMention().getSurface_form() + "\"\t" + c.getMeaning());
 			}
 			else
-				log.debug("Rejected multiword \"" + c.getMention().getSurface_form() + "\"\t" + c.getMeaning());
+				log.debug("Kept separate words \"" + c.getMention().getSurface_form() + "\"\t" + c.getMeaning());
 		}
 	}
 

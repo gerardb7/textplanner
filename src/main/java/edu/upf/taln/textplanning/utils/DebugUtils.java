@@ -41,8 +41,8 @@ public class DebugUtils
 				.map(Candidate::getMeaning)
 				.map(Meaning::toString)
 				.collect(joining(", ")) +
-				(accepted_multiword.isEmpty() ? "" : "\n\tAccepted multiword " + accepted_multiword) +
-				(rejected_multiwords.isEmpty() ? "" : "\n\tRejected multiwords " + rejected_multiwords);
+				(accepted_multiword.isEmpty() ? "" : "\n\tDetected multiword " + accepted_multiword) +
+				(rejected_multiwords.isEmpty() ? "" : "\n\tDiscarded multiwords " + rejected_multiwords);
 	}
 
 	public static String printCandidate(Candidate c)
