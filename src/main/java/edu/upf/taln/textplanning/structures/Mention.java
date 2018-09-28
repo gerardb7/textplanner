@@ -46,6 +46,18 @@ public final class Mention implements Serializable
 		return getSurface_form();
 	}
 
+	public String toLongString()
+	{
+		return "Mention{" +
+				"sentence_id='" + sentence_id + '\'' +
+				", span=" + span +
+				", surface_form='" + surface_form + '\'' +
+				", lemma='" + lemma + '\'' +
+				", pos='" + pos + '\'' +
+				", type=" + type +
+				'}';
+	}
+
 	@Override
 	public boolean equals(Object o)
 	{

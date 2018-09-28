@@ -13,7 +13,9 @@ import edu.upf.taln.textplanning.similarity.Word2VecVectorsSimilarity;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.utils.CMLCheckers;
+import edu.upf.taln.textplanning.utils.EmpiricalStudy;
 import edu.upf.taln.textplanning.utils.Serializer;
+import edu.upf.taln.textplanning.utils.VectorsTextFileUtils;
 import edu.upf.taln.textplanning.weighting.NoWeights;
 import edu.upf.taln.textplanning.weighting.NumberForms;
 import edu.upf.taln.textplanning.weighting.TFIDF;
@@ -282,7 +284,7 @@ public class Driver
 		return input.getParent().resolve(Paths.get(baseName + suffix)).toAbsolutePath();
 	}
 
-	private SimilarityFunction chooseSimilarityFunction(Path vectors, Format format) throws Exception
+	public static SimilarityFunction chooseSimilarityFunction(Path vectors, Format format) throws Exception
 	{
 		SimilarityFunction similarity = null;
 		switch (format)
@@ -509,6 +511,27 @@ public class Driver
 		private Path outputFile;
 	}
 
+	@SuppressWarnings("unused")
+	@Parameters(commandDescription = "Run empirical study from plain text")
+	private static class GetStatsCommand
+	{
+		@Parameter(names = {"-i", "-input"}, description = "Input text-based amr file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path inputFile;
+		@Parameter(names = {"-b", "-babelconfig"}, description = "BabelNet configuration folder", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path bnFolder;
+		@Parameter(names = {"-f", "-frequencies"}, description = "Frequencies file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path freqsFile;
+		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path vectorsPath;
+		@Parameter(names = {"-vf", "-format"}, description = "Vectors format", arity = 1, required = true,
+				converter = Driver.FormatConverter.class, validateWith = Driver.FormatValidator.class)
+		private VectorsTextFileUtils.Format format = VectorsTextFileUtils.Format.Text_Glove;
+	}
+
 	public static void main(String[] args) throws Exception
 	{
 		CreateGraphsCommand create_graphs = new CreateGraphsCommand();
@@ -520,6 +543,7 @@ public class Driver
 		SortCommand sort_subgraphs = new SortCommand();
 		AMR2GlobalCommand amr2global = new AMR2GlobalCommand();
 		AMR2PlanCommand amr2plan = new AMR2PlanCommand();
+		GetStatsCommand stats = new GetStatsCommand();
 		PlanCommand plan = new PlanCommand();
 
 		JCommander jc = new JCommander();
@@ -533,6 +557,8 @@ public class Driver
 		jc.addCommand("amr2global", amr2global);
 		jc.addCommand("amr2plan", amr2plan);
 		jc.addCommand("plan", plan);
+		jc.addCommand("stats", stats);
+
 		jc.parse(args);
 
 		DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
@@ -570,6 +596,12 @@ public class Driver
 		else if (jc.getParsedCommand().equals("plan"))
 			driver.plan(plan.inputFile, plan.freqsFile, plan.vectorsPath, plan.format, plan.num_subgraphs,
 					plan.outputFile);
+		else if (jc.getParsedCommand().equals("stats"))
+		{
+			EmpiricalStudy study = new EmpiricalStudy(stats.bnFolder, stats.freqsFile, stats.vectorsPath, stats.format);
+			final String text = FileUtils.readFileToString(stats.inputFile.toFile(), StandardCharsets.UTF_8);
+			study.run(text);
+		}
 		else
 			jc.usage();
 

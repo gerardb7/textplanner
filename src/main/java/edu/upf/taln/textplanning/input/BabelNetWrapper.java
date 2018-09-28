@@ -31,7 +31,7 @@ public class BabelNetWrapper
 		bn = no_babelnet ? null : getBabelNetInstance(config_folder);
 	}
 
-	private it.uniroma1.lcl.babelnet.BabelNet getBabelNetInstance(Path config_folder)
+	public static it.uniroma1.lcl.babelnet.BabelNet getBabelNetInstance(Path config_folder)
 	{
 		log.info("Setting up BabelNet");
 		Stopwatch timer = Stopwatch.createStarted();

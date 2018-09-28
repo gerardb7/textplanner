@@ -24,12 +24,12 @@ import static java.util.stream.Collectors.*;
 /**
  * Assigns candidate meanings to graph vertices.
  */
-class CandidatesCollector
+public class CandidatesCollector
 {
 	private final BabelNetWrapper bn;
 	private final static Logger log = LogManager.getLogger();
 
-	CandidatesCollector(BabelNetWrapper babelnet)
+	public CandidatesCollector(BabelNetWrapper babelnet)
 	{
 		bn = babelnet;
 	}
@@ -39,7 +39,7 @@ class CandidatesCollector
 	 * Assumes unique vertex labels across graphs.
 	 */
 	@SuppressWarnings("ConstantConditions")
-	List<Candidate> getCandidateMeanings(Set<Mention> mentions)
+	public List<Candidate> getCandidateMeanings(Set<Mention> mentions)
 	{
 		log.info("Collecting candidate meanings");
 		Stopwatch timer = Stopwatch.createStarted();

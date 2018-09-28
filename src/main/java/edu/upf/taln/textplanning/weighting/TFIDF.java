@@ -51,7 +51,7 @@ public final class TFIDF implements WeightingFunction
 			//double tf = f; //0.5 + 0.5*(f/maxFreq); // augmented frequency
 			OptionalInt df = corpus.getMeaningDocumentCount(item);
 			int N = corpus.getNumDocs();
-			double idf = Math.log(N / df.orElse(0) + 1); // smooth all df values by adding 1
+			double idf = Math.log((double)N / df.orElse(0) + 1); // smooth all df values by adding 1
 			tfidf.put(item, tf * idf);
 
 			if (df.isPresent())
