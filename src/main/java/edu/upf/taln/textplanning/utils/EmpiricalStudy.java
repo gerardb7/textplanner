@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.utils;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Sets;
+import edu.stanford.nlp.coref.data.CorefChain;
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.pipeline.CoreDocument;
@@ -93,6 +94,9 @@ public class EmpiricalStudy
 				.collect(groupingBy(c -> c.getMention().getPOS()));
 		log.info(candidates.size() + " candidates collected in " + timer.stop());
 
+		reportNEsCoref(document);
+		log.debug("**************************");
+
 		timer.reset(); timer.start();
 		log.debug("Coverage stats for all " + candidates.size() + " candidates");
 		final Set<Integer> tokens = IntStream.range(0, num_tokens).boxed().collect(toSet());
@@ -130,6 +134,27 @@ public class EmpiricalStudy
 		log.debug("**************************");
 		log.info("Stats completed in " + timer.stop());
 
+	}
+
+	private void reportNEsCoref(CoreDocument document)
+	{
+		// Report NEs
+		final Map<String, Long> nes_by_type = document.entityMentions().stream()
+				.collect(Collectors.groupingBy(CoreEntityMention::entityType, Collectors.counting()));
+		final List<Pair<Integer, Integer>> ne_offsets = document.entityMentions().stream()
+				.map(e -> Pair.of(e.coreMap().get(CoreAnnotations.TokenBeginAnnotation.class),
+						e.coreMap().get(CoreAnnotations.TokenEndAnnotation.class)))
+				.collect(toList());
+		log.debug(ne_offsets.size() + " NEs");
+		nes_by_type.keySet().forEach(t -> log.debug("\t" + t + ": " + nes_by_type.get(t)));
+
+		final Collection<CorefChain> chains = document.corefChains().values();
+		log.debug(chains.size() + " coreference chains");
+		final double[] coref_lengths = chains.stream()
+				.map(CorefChain::getMentionsInTextualOrder)
+				.mapToDouble(List::size)
+				.toArray();
+		log.debug("\tstats: " + printStats(new DescriptiveStatistics(coref_lengths)));
 	}
 
 	private void runCandidateCoverageTest(Collection<Candidate> candidates, Set<Integer> tokens)
@@ -293,15 +318,15 @@ public class EmpiricalStudy
 	}
 
 
+
 	private Set<Mention> getMentions(CoreDocument document)
 	{
-		final List<Pair<Integer, Integer>> ne_offsets = document.sentences().stream()
-				.flatMap(s -> s.entityMentions().stream()
-						.map(e -> Pair.of(e.coreMap().get(CoreAnnotations.TokenBeginAnnotation.class),
-								e.coreMap().get(CoreAnnotations.TokenEndAnnotation.class))))
+
+		final List<Pair<Integer, Integer>> ne_offsets = document.entityMentions().stream()
+				.map(e -> Pair.of(e.coreMap().get(CoreAnnotations.TokenBeginAnnotation.class),
+						e.coreMap().get(CoreAnnotations.TokenEndAnnotation.class)))
 				.collect(toList());
-		log.debug(ne_offsets.size() + " NEs");
-//		log.debug(ne_offsets);
+
 		final List<Candidate.Type> ne_types = document.sentences().stream()
 				.flatMap(s -> s.entityMentions().stream()
 						.map(CoreEntityMention::entityType)
@@ -322,8 +347,6 @@ public class EmpiricalStudy
 				.collect(toList());
 
 		Predicate<String> is_punct = (str) -> Pattern.matches("\\p{Punct}", str);
-
-
 		final List<CoreLabel> tokens = document.tokens();
 
 		return IntStream.range(0, tokens.size())
@@ -331,17 +354,18 @@ public class EmpiricalStudy
 						.mapToObj(j -> Pair.of(i, j))
 						.filter(span ->
 						{
-							boolean is_nominal = IntStream.range(span.getLeft(), span.getRight())
+							final boolean is_single_word = span.getRight() - span.getLeft() == 1;
+							final boolean is_nominal = IntStream.range(span.getLeft(), span.getRight())
 									.mapToObj(tokens::get)
 									.map(t -> t.get(CoreAnnotations.PartOfSpeechAnnotation.class))
 									.anyMatch(pos -> pos.startsWith("N") || pos.endsWith("CC"));
-							boolean is_name = ne_offsets.contains(span);
-							boolean not_punct = IntStream.range(span.getLeft(), span.getRight())
+							final boolean is_name = ne_offsets.contains(span);
+							final boolean not_punct = IntStream.range(span.getLeft(), span.getRight())
 									.mapToObj(tokens::get)
 									.map((CoreLabel::word))
 									.noneMatch(is_punct);
 
-							return (is_nominal || is_name) && not_punct; // nouns, conjunctions and names
+							return (is_single_word || is_nominal || is_name) && not_punct; // nouns, conjunctions and names
 						})
 						.map(span ->
 						{
