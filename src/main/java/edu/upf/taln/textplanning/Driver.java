@@ -205,7 +205,8 @@ public class Driver
 		AMRReader reader = new AMRReader();
 		GraphListFactory factory = new GraphListFactory(reader, null, bn_config_folder, no_stanford, no_babelnet);
 		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
-		WeightingFunction weighting = new NoWeights();
+		WeightingFunction meanings_weighting = new NoWeights();
+		//WeightingFunction variables_weighting = new TFIDF(corpus, r -> true);
 		SimilarityFunction similarity = chooseSimilarityFunction(vectors, format);
 
 		log.info("Loading resources took " + timer.stop());
@@ -222,7 +223,7 @@ public class Driver
 		log.info("Graphs serialized to " + output_path);
 
 		// 2- Rank meanings
-		TextPlanner.rankMeanings(graphs.getCandidates(), weighting, similarity, options);
+		TextPlanner.rankMeanings(graphs.getCandidates(), meanings_weighting, similarity, options);
 		output_path = createOutputPath(amr_bank_file, semantic_graphs_ranked_suffix);
 		Serializer.serialize(graphs, output_path);
 		log.info("Ranked graphs serialized to " + output_path);

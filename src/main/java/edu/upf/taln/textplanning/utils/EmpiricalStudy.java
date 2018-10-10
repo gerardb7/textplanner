@@ -1,5 +1,6 @@
 package edu.upf.taln.textplanning.utils;
 
+import Jama.Matrix;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Sets;
 import edu.stanford.nlp.coref.data.CorefChain;
@@ -16,10 +17,14 @@ import edu.upf.taln.textplanning.input.BabelNetWrapper;
 import edu.upf.taln.textplanning.input.CandidatesCollector;
 import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.ranking.GraphRanking;
+import edu.upf.taln.textplanning.ranking.JamaPowerIteration;
 import edu.upf.taln.textplanning.ranking.MatrixFactory;
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.Meaning;
 import edu.upf.taln.textplanning.structures.Mention;
+import edu.upf.taln.textplanning.weighting.NumberForms;
+import edu.upf.taln.textplanning.weighting.TFIDF;
+import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.util.CombinatoricsUtils;
@@ -44,8 +49,9 @@ public class EmpiricalStudy
 	private final StanfordCoreNLP pipeline;
 	private final BabelNetWrapper bn;
 	private final Corpus corpus;
+	private final List<WeightingFunction> weighting_functions = new ArrayList<>();
 	private final SimilarityFunction sim;
-
+	private static final int lists_size = 25;
 	private final static Logger log = LogManager.getLogger();
 
 	public EmpiricalStudy(Path bn_config_folder, Path frequencies, Path vectors, VectorsTextFileUtils.Format format) throws Exception
@@ -53,6 +59,8 @@ public class EmpiricalStudy
 		bn = new BabelNetWrapper(bn_config_folder, false);
 
 		corpus = (CompactFrequencies)Serializer.deserialize(frequencies);
+		weighting_functions.add(new TFIDF(corpus, r -> true));
+		weighting_functions.add(new NumberForms(r -> true));
 
 		log.info("Setting up Stanford CoreNLP");
 		Properties props = new Properties();
@@ -270,14 +278,28 @@ public class EmpiricalStudy
 				final List<String> sorted_pairs = IntStream.range(0, indexes.size())
 						.boxed()
 						.sorted(Comparator.comparingDouble(i -> weights[i]))
-						.map(i -> labels.get(indexes.get(i).getLeft()) + "-" + labels.get(indexes.get(i).getRight()) + "-" + weights[i])
+						.map(i -> labels.get(indexes.get(i).getLeft()) + "-" + labels.get(indexes.get(i).getRight()) + " = " + DebugUtils.printDouble(weights[i]))
 						.collect(toList());
 
-				final String highest = IntStream.range(0, Math.min(sorted_pairs.size(), 10))
+				final String highest = IntStream.range(0, Math.min(sorted_pairs.size(), lists_size))
 						.map(i -> sorted_pairs.size() - i - 1)
 						.mapToObj(sorted_pairs::get)
 						.collect(Collectors.joining("\n\t\t", "\n\t\t", ""));
 				log.debug("\tHighest similarity pairs: " + highest);
+
+				Matrix rankingMatrix = new Matrix(M);
+				JamaPowerIteration alg = new JamaPowerIteration();
+				// Matrix finalDistribution =
+				alg.run(rankingMatrix, labels);
+				//double[] ranking = finalDistribution.getColumnPackedCopy();
+
+//				// Assign ranking values to meanings
+//				log.debug("\tTop ranked meanings based on similarity:");
+//				IntStream.range(0 , meanings.size())
+//						.mapToObj(i -> Pair.of(meanings.get(i), ranking[i]))
+//						.sorted(Comparator.comparingDouble(Pair<String, Double>::getRight).reversed())
+//						.limit(lists_size)
+//						.forEach(p -> log.debug("\t\t" + p.getLeft() + " = " + DebugUtils.printDouble(p.getRight())));
 			}
 		}
 	}
@@ -290,31 +312,74 @@ public class EmpiricalStudy
 			return;
 		}
 
-		final List<String> references = candidates.stream()
+		//
+		final List<Meaning> meanings = candidates.stream() // for debugging purposes
+				.map(Candidate::getMeaning)
+				.distinct()
+				.collect(toList());
+		final Map<String, Long> counts = candidates.stream()
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
-				.collect(toList());
-
-		final Map<String, Long> counts = references.stream()
 				.collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 		DescriptiveStatistics doc_stats = new DescriptiveStatistics(counts.values().stream().mapToDouble(l -> l).toArray());
 		log.debug("\tFrequency in document " + printStats(doc_stats));
 
-		final double[] corpus_counts = references.stream()
-				.distinct()
-				.map(corpus::getMeaningCount)
-				.mapToDouble(o -> o.orElse(0))
-				.toArray();
-		DescriptiveStatistics corpus_stats = new DescriptiveStatistics(corpus_counts);
+		List<Pair<Meaning, Long>> meanings_and_doc_counts = meanings.stream()
+				.map(m -> Pair.of(m, counts.get(m.getReference())))
+				.sorted(Comparator.comparingLong(Pair<Meaning, Long>::getRight).reversed())
+				.collect(toList());
+		meanings_and_doc_counts.stream()
+				.limit(lists_size)
+				.forEach(p -> log.debug("\t\t" + p.getLeft().toString() + "\t" + p.getRight()));
+
+		//
+		final Map<String, Long> corpus_counts = meanings.stream()
+				.map(Meaning::getReference)
+				.map(r -> Pair.of(r, corpus.getMeaningCount(r).orElse(0)))
+				.collect(Collectors.groupingBy(Pair::getLeft, Collectors.summingLong(Pair::getRight)));
+		DescriptiveStatistics corpus_stats = new DescriptiveStatistics(corpus_counts.values().stream().mapToDouble(l -> l).toArray());
 		log.debug("\tFrequency in corpus " + printStats(corpus_stats));
 
-		final double[] corpus_doc_counts = references.stream()
-				.distinct()
-				.map(corpus::getMeaningDocumentCount)
-				.mapToDouble(o -> o.orElse(0))
-				.toArray();
-		DescriptiveStatistics corpus_doc_stats = new DescriptiveStatistics(corpus_doc_counts);
+		List<Pair<Meaning, Long>> meanings_and_corpus_counts = 	meanings.stream()
+				.map(m -> Pair.of(m, corpus_counts.get(m.getReference())))
+				.sorted(Comparator.comparingLong(Pair<Meaning, Long>::getRight).reversed())
+				.collect(toList());
+		meanings_and_corpus_counts.stream()
+				.limit(lists_size)
+				.forEach(p -> log.debug("\t\t" + p.getLeft().toString() + "\t" + p.getRight()));
+		//
+		final Map<String, Long> corpus_doc_counts = meanings.stream()
+				.map(Meaning::getReference)
+				.map(r -> Pair.of(r, corpus.getMeaningDocumentCount(r).orElse(0)))
+				.collect(Collectors.groupingBy(Pair::getLeft, Collectors.summingLong(Pair::getRight)));
+		DescriptiveStatistics corpus_doc_stats = new DescriptiveStatistics(corpus_doc_counts.values().stream().mapToDouble(l -> l).toArray());
 		log.debug("\tDocument frequency in corpus " + printStats(corpus_doc_stats));
+
+		List<Pair<Meaning, Long>> meanings_and_corpus_doc_counts = 	meanings.stream()
+				.map(m -> Pair.of(m, corpus_doc_counts.get(m.getReference())))
+				.sorted(Comparator.comparingLong(Pair<Meaning, Long>::getRight).reversed())
+				.collect(toList());
+		meanings_and_corpus_doc_counts.stream()
+				.limit(lists_size)
+				.forEach(p -> log.debug("\t\t" + p.getLeft().toString() + "\t" + p.getRight()));
+
+		weighting_functions.forEach(w ->
+		{
+			w.setContents(candidates);
+			final List<Pair<Meaning, Double>> meaning_list = meanings.stream()
+					.map(m -> Pair.of(m, w.weight(m.getReference())))
+					.sorted(Comparator.comparingDouble(Pair<Meaning, Double>::getRight).reversed())
+					.collect(toList());
+			final double[] weights = meaning_list.stream()
+					.mapToDouble(Pair::getRight)
+					.toArray();
+
+			DescriptiveStatistics weight_stats = new DescriptiveStatistics(weights);
+			log.debug("\t" + w.getClass().getSimpleName() + " stats " + printStats(weight_stats));
+			meaning_list.stream()
+					.limit(lists_size)
+					.forEach(p -> log.debug("\t\t" + p.getLeft().toString() + "\t" + DebugUtils.printDouble(p.getRight())));
+		});
 	}
 
 

@@ -94,7 +94,7 @@ public class DebugUtils
 				.summaryStatistics().toString();
 
 		return "Subgraph " + i + " value=" + format.format(s.getValue()) + " " + stats + "\n\t" +
-				"center " + s.getCenter() + "\n\t" + s + "\n" +	printVertex(t, "root", t.getRoot(), 1);
+				"root node " + s.getRoot() + "\n\t" + s + "\n" +	printVertex(t, "root", t.getRoot(), 1);
 	}
 
 	private static String printVertex(SemanticTree t, String role, String v, int depth)
