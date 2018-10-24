@@ -20,12 +20,12 @@ import java.util.stream.IntStream;
 
 import static java.lang.Integer.min;
 
-class MentionsCollector
+public class MentionsCollector
 {
 	private static final int max_tokens = 5;
 	private final static Logger log = LogManager.getLogger();
 
-	static Multimap<String, Mention> collectMentions(Collection<SemanticGraph> graphs)
+	public static Multimap<String, Mention> collectMentions(Collection<SemanticGraph> graphs)
 	{
 		log.info("Collecting mentions");
 		Stopwatch timer = Stopwatch.createStarted();

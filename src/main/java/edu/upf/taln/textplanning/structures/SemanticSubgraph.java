@@ -6,22 +6,22 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * A rooted induced subgraph of a graph
+ * A subgraph of a semantic graph
  */
 public class SemanticSubgraph extends AsSubgraph<String, Role>
 {
-	private final Set<String> center = new HashSet<>();
-	private final double value;
+	private final String root;
+	private final double value; // Value assigned to this graph by the function optimized by the extraction procedure
 
-	public SemanticSubgraph(GlobalSemanticGraph base, Set<String> center, Set<String> vertexSubset, double value)
+	public SemanticSubgraph(GlobalSemanticGraph base, String root, Set<String> vertexSubset, double value)
 	{
 		super(base, vertexSubset);
-		this.center.addAll(center);
+		this.root = root;
 		this.value = value;
 	}
 
 	public GlobalSemanticGraph getBase() { return (GlobalSemanticGraph)base; }
-	public Set<String> getCenter() { return center; }
+	public String getRoot() { return root; }
 	public double getValue() { return value; }
 
 	// Ignores vertices with weight set to 0 (no weight)

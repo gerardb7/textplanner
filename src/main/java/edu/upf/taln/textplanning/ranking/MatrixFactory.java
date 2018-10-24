@@ -4,13 +4,14 @@ import edu.upf.taln.textplanning.input.amr.Candidate;
 import edu.upf.taln.textplanning.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.structures.Meaning;
-import edu.upf.taln.textplanning.structures.Role;
 import edu.upf.taln.textplanning.weighting.WeightingFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jgrapht.alg.ConnectivityInspector;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
 import java.util.stream.IntStream;
@@ -26,14 +27,15 @@ public class MatrixFactory
 	                                             SimilarityFunction sim, BiPredicate<String, String> filter,
 	                                             double sim_threshold, double d)
 	{
-		log.info("Creating meanings ranking matrix");
+		log.info("Creating ranking matrix for " + meanings.size() + " meanings");
 		int n = meanings.size();
 
 		// Create *strictly positive* bias row vector for the set of meanings
 		double[] L = createMeaningsBiasVector(meanings, weighting, true);
 
 		// Create *non-symmetric non-negative* similarity matrix
-		double[][] X = createMeaningsSimilarityMatrix(meanings, sim, filter, sim_threshold, true);
+		double[][] X = createMeaningsSimilarityMatrix(meanings, sim, filter, sim_threshold,
+				true,true, true);
 
 		// GraphRanking matrix: stochastic matrix describing probabilities of a random walk going from a type u to another
 		// type v.
@@ -60,7 +62,7 @@ public class MatrixFactory
 	 */
 	static double[][] createVariableRankingMatrix(List<String> variables, GlobalSemanticGraph graph, double d)
 	{
-		log.info("Creating variables ranking matrix");
+		log.info("Creating ranking matrix for " + variables.size() + " variables");
 		int n = variables.size();
 
 		// Get normalized *strictly positive* bias row vector for the set of variables
@@ -137,7 +139,8 @@ public class MatrixFactory
 	// Creates row-normalized symmetric non-negative similarity matrix
 	public static double[][] createMeaningsSimilarityMatrix(List<String> meanings, SimilarityFunction sim,
 	                                                        BiPredicate<String, String> filter,
-	                                                        double sim_threshold, boolean normalize)
+	                                                        double sim_threshold, boolean set_undefined_to_avg,
+	                                                        boolean normalize, boolean report_stats)
 	{
 		int n = meanings.size();
 		double[][] m = new double[n][n];
@@ -193,24 +196,32 @@ public class MatrixFactory
 						log.info(counter_pairs.get() + " out of " + total_pairs);
 				}));
 
-		// Set all 0-valued similarity values to the average of non-zero similarities
-		final OptionalDouble average = Arrays.stream(m)
-				.flatMapToDouble(Arrays::stream)
-				.filter(v -> v >= 0.0)
-				.average();
-		if (average.isPresent())
+		if (set_undefined_to_avg)
 		{
-			final double avg = average.getAsDouble();
-			IntStream.range(0, n).forEach(i ->
-					IntStream.range(0, n).forEach(j -> {
-						if (m[i][j] == 0.0)
-							m[i][j] = avg;
-					}));
+			// Set all 0-valued similarity values to the average of non-zero similarities
+			final OptionalDouble average = Arrays.stream(m)
+					.flatMapToDouble(Arrays::stream)
+					.filter(v -> v >= 0.0)
+					.average();
+			if (average.isPresent())
+			{
+				final double avg = average.getAsDouble();
+				IntStream.range(0, n).forEach(i ->
+						IntStream.range(0, n).forEach(j ->
+						{
+							if (m[i][j] == 0.0)
+								m[i][j] = avg;
+						}));
+			}
 		}
 
-		log.info("Similarity function invoked for " + num_filtered + " out of " + total_pairs);
-		log.info("Similarity function defined for " + num_defined + " out of " + num_filtered);
-		log.info("Similarity values are negative for " + num_negative.get() + " out of " + num_defined);
+		if (report_stats)
+		{
+			log.info("Similarity function invoked for " + num_filtered + " out of " + total_pairs);
+			log.info("Similarity function defined for " + num_defined + " out of " + num_filtered);
+			log.info("Similarity values are negative for " + num_negative.get() + " out of " + num_defined);
+		}
+
 		if (normalize)
 			normalize(m);
 

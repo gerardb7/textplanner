@@ -92,7 +92,7 @@ public class SubgraphExtraction
 					.toArray();
 			int i = policy.select(candidate_weights);
 			start_state = candidates.get(i);
-			current_state = new State(start_state.source, start_state.vertices);
+			current_state = new State(start_state.root, start_state.source, start_state.vertices);
 		}
 
 		// Declare q and q'
@@ -123,7 +123,7 @@ public class SubgraphExtraction
 		while (q > q_old);
 
 		// return induced subgraph
-		return new SemanticSubgraph(g, start_state.vertices, current_state.vertices, q_old);
+		return new SemanticSubgraph(g, current_state.root, current_state.vertices, q_old);
 	}
 
 	/**

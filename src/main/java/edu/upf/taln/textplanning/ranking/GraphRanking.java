@@ -37,6 +37,27 @@ import static java.util.stream.Collectors.toList;
  */
 public class GraphRanking
 {
+	// Accept references which are not candidates of exactly the same set of mentions
+	public static class DifferentMentions implements BiPredicate<String, String>
+	{
+		private final Collection<Candidate> candidates;
+		public DifferentMentions(Collection<Candidate> candidates)	{ this.candidates = candidates; }
+
+		@Override
+		public boolean test(String r1, String r2)
+		{
+			final Set<Mention> mentions_r1 = candidates.stream()
+					.filter(c -> c.getMeaning().getReference().equals(r1))
+					.map(Candidate::getMention)
+					.collect(Collectors.toSet());
+			final Set<Mention> mentions_r2 = candidates.stream()
+					.filter(c -> c.getMeaning().getReference().equals(r2))
+					.map(Candidate::getMention)
+					.collect(Collectors.toSet());
+			return !mentions_r1.equals(mentions_r2); // should differ in at least one mention
+		}
+	}
+
 	public static void rankMeanings(Collection<Candidate> candidates, WeightingFunction weighting, SimilarityFunction similarity,
 	                                double meaning_similarity_threshold, double damping_factor_meanings)
 	{
@@ -55,20 +76,7 @@ public class GraphRanking
 		if (references.isEmpty())
 			return;
 
-		// Accept references which are not candidates of exactly the same set of mentions
-		BiPredicate<String, String> filter = (r1, r2) ->
-		{
-			final Set<Mention> mentions_r1 = candidates.stream()
-					.filter(c -> c.getMeaning().getReference().equals(r1))
-					.map(Candidate::getMention)
-					.collect(Collectors.toSet());
-			final Set<Mention> mentions_r2 = candidates.stream()
-					.filter(c -> c.getMeaning().getReference().equals(r2))
-					.map(Candidate::getMention)
-					.collect(Collectors.toSet());
-			return !mentions_r1.equals(mentions_r2); // should differ in at least one mention
-		};
-
+		DifferentMentions filter = new DifferentMentions(candidates);
 		double[][] rankingArrays = MatrixFactory.createMeaningRankingMatrix(references, weighting, similarity, filter,
 				meaning_similarity_threshold, damping_factor_meanings);
 		Matrix rankingMatrix = new Matrix(rankingArrays);

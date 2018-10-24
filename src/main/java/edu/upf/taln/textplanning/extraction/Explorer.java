@@ -18,9 +18,16 @@ public abstract class Explorer
 {
 	public static class State
 	{
-		public final String source;
-		public final Set<String> vertices = new HashSet<>();
-		public State(String source, Set<String> vertices) { this.source = source; this.vertices.addAll(vertices); }
+		public final String root; // root vertex
+		public final String source; // source/sentence of the root (vertices can have multiple sources)
+		public final Set<String> vertices = new HashSet<>(); // selected vertices, including the root
+		public State(String root, String source, Set<String> vertices)
+		{
+			this.root = root;
+			this.source = source;
+			this.vertices.addAll(vertices);
+			this.vertices.add(this.root);
+		}
 	}
 
 	protected static class Neighbour
@@ -48,8 +55,8 @@ public abstract class Explorer
 
 		return start_vertices.stream()
 				.flatMap(v -> g.getSources(v).stream()
-						.map(s -> new State(s, Collections.singleton(v))) // Create initial state
-						.map(s -> new State(s.source, getRequiredVertices(v, s, g)))
+						.map(source -> new State(v, source, Collections.singleton(v))) // Create initial state
+						.map(state -> new State(state.root, state.source, getRequiredVertices(v, state, g)))
 						)
 				.distinct()
 				.collect(Collectors.toList());
@@ -64,7 +71,7 @@ public abstract class Explorer
 				.map(n -> getRequiredVertices(n.vertex, s, g))
 				.map(r -> Sets.union(r, s.vertices)) // each candidate extends 'vertices'
 				.distinct()
-				.map(r -> new State(s.source, r))
+				.map(r -> new State(s.root, s.source, r))
 				.collect(Collectors.toList());
 	}
 

@@ -16,14 +16,16 @@ import java.util.stream.Stream;
 
 public class AMRActions implements Actions
 {
-    private class  LabelNode extends TreeNode
+    public class  LabelNode extends TreeNode
     {
         final String label;
 	    final boolean is_reentrant;
-	    LabelNode(String label, boolean is_reentrant)
+	    final List<String> vertex_order;
+	    LabelNode(String label, boolean is_reentrant, List<String> order)
 	    {
 	    	this.label = label;
 		    this.is_reentrant = is_reentrant;
+		    this.vertex_order = order;
 	    }
     }
 
@@ -48,15 +50,13 @@ public class AMRActions implements Actions
     private class DescendentNode extends TreeNode
     {
         final String label;
-        final String range;
+        final LabelNode range;
         final boolean is_inverse;
-        final boolean is_reentrant;
-        DescendentNode(String label, String range, boolean is_inverse, boolean is_reentrant)
+        DescendentNode(String label, LabelNode range, boolean is_inverse)
         {
             this.label = label;
             this.range = range;
             this.is_inverse = is_inverse;
-	        this.is_reentrant = is_reentrant;
         }
     }
 
@@ -66,7 +66,6 @@ public class AMRActions implements Actions
 	private final boolean keep_relation_alignments;
 	private final Multimap<String, Integer> alignments = HashMultimap.create();
 	private final Set<Role> reentrant_edges = new HashSet<>();
-	private List<String> vertex_order = new ArrayList<>();
 
 	AMRActions(SemanticGraph graph, boolean keep_inverse_relations, boolean keep_relation_alignments)
 	{
@@ -75,7 +74,6 @@ public class AMRActions implements Actions
 		this.keep_relation_alignments = keep_relation_alignments;
 	}
 
-	public List<String> getVertexOrder() { return this.vertex_order; }
 	Multimap<String, Integer> getAlignments() { return alignments; }
 	Set<Role> getReentrantEdges() { return reentrant_edges; }
 
@@ -86,13 +84,11 @@ public class AMRActions implements Actions
         TreeNode var_node = elements.get(2);
         String label = var_node.text;
         boolean reentrant = graph.containsVertex(label);
-        LabelNode var = new LabelNode(label, reentrant);
         graph.addVertex(label);
-	    vertex_order.add(label);
 
         // Add "instance" edge from var to concept
         ConceptNode concept = (ConceptNode)elements.get(6);
-        try { graph.addEdge(var.label, concept.label, Role.create(AMRConstants.instance)); }
+        try { graph.addEdge(label, concept.label, Role.create(AMRConstants.instance)); }
         catch (Exception e)
         {
             throw new RuntimeException("Cannot create edge: " + e);
@@ -100,21 +96,27 @@ public class AMRActions implements Actions
 
         // Store alignment of var
         if (concept.index != unaligned)
-            alignments.put(var.label, concept.index);
+            alignments.put(label, concept.index);
+
+        // Prepare updated sequence of vertices
+	    List<String> order = new ArrayList<>();
+	    order.add(label);
+	    order.add(concept.label);
 
         // Add edge indicated by rel
         TreeNode relations = elements.get(7);
         for (TreeNode descendent_node : relations.elements)
         {
             DescendentNode descendent = (DescendentNode)descendent_node.get(Label.desc);
+            order.addAll(descendent.range.vertex_order);
             try
             {
 	            Role role = Role.create(descendent.label);
 	            if (descendent.is_inverse && !keep_inverse_relations)
-                    graph.addEdge(descendent.range, var.label, role);
+                    graph.addEdge(descendent.range.label, label, role);
                 else
-                    graph.addEdge(var.label, descendent.range, role);
-                if (descendent.is_reentrant)
+                    graph.addEdge(label, descendent.range.label, role);
+                if (descendent.range.is_reentrant)
                 	reentrant_edges.add(role);
             }
             catch (Exception e)
@@ -123,7 +125,7 @@ public class AMRActions implements Actions
             }
         }
 
-        return var;
+	    return new LabelNode(label, reentrant, order);
     }
 
     @Override
@@ -158,7 +160,7 @@ public class AMRActions implements Actions
 		    		alignments.put(var.label, a.index);
 		    }
 
-		    return new DescendentNode(relation, var.label, is_inverse, var.is_reentrant);
+		    return new DescendentNode(relation, var, is_inverse);
 	    }
 	    catch (Exception e)
 	    {
@@ -173,7 +175,6 @@ public class AMRActions implements Actions
 	    {
 		    TreeNode node = elements.get(0);
 		    graph.addVertex(node.text);
-		    vertex_order.add(node.text);
 
 		    int index = unaligned;
 		    TreeNode alignment = elements.get(1);
@@ -237,7 +238,6 @@ public class AMRActions implements Actions
 		    TreeNode node = elements.get(0);
 		    boolean reentrant = is_var && graph.containsVertex(node.text);
 		    graph.addVertex(node.text);
-		    vertex_order.add(node.text);
 
 		    TreeNode alignment = elements.get(1);
 		    if (alignment instanceof AlignmentNode)
@@ -245,7 +245,7 @@ public class AMRActions implements Actions
 			    alignments.put(node.text, ((AlignmentNode) alignment).index);
 		    }
 
-		    return new LabelNode(node.text, reentrant);
+		    return new LabelNode(node.text, reentrant, Collections.singletonList(node.text));
 	    }
 	    catch (Exception e)
 	    {

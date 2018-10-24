@@ -47,12 +47,12 @@ public final class TextPlanner
 			f.setRoundingMode(RoundingMode.UP);
 			//f.setMaximumFractionDigits(10);
 			f.setMinimumFractionDigits(3);
-			return  "\tnum_subgraphs = " + num_subgraphs +
-					"\n\tsim_threshold = " + f.format(sim_threshold) +
-					"\n\tdamping_meanings = " + f.format(damping_meanings) +
-					"\n\tdamping_variables = " + f.format(damping_variables) +
-					"\n\textraction_lambda = " + f.format(extraction_lambda) +
-					"\n\tredundancy lambda = " + f.format(tree_edit_lambda);
+			return  "num_subgraphs = " + num_subgraphs +
+					" sim_threshold = " + f.format(sim_threshold) +
+					" damping_meanings = " + f.format(damping_meanings) +
+					" damping_variables = " + f.format(damping_variables) +
+					" extraction_lambda = " + f.format(extraction_lambda) +
+					" redundancy lambda = " + f.format(tree_edit_lambda);
 		}
 	}
 

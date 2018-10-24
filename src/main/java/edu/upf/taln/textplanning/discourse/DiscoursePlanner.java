@@ -4,6 +4,7 @@ import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.similarity.SemanticTreeSimilarity;
 import edu.upf.taln.textplanning.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.structures.SemanticTree;
+import edu.upf.taln.textplanning.utils.DebugUtils;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
 import org.apache.logging.log4j.Logger;
@@ -43,7 +44,7 @@ public class DiscoursePlanner
 		// Convert graphs to lists
 		SemanticTree[] trees = graphs.stream()
 				.map(SemanticTree::new)
-				.toArray(t -> new SemanticTree[0]);
+				.toArray(t -> new SemanticTree[graphs.size()]);
 
 		// Weight graphs by averaging their node weights
 		double[] rank = Arrays.stream(trees)
@@ -112,15 +113,13 @@ public class DiscoursePlanner
 		}
 
 		if (visitedNodes.size() != g.vertexSet().size())
-		{
-			throw new RuntimeException("Exploration failed to visit all nodes in structuring graph");
-		}
+			log.error("Exploration failed to visit all nodes in structuring graph");
 
 		List<SemanticSubgraph> sorted_graphs = visitedNodes.stream()
 				.map(i -> trees[i])
 				.map(SemanticTree::asGraph)
 				.collect(Collectors.toList());
-		log.info("Discourse planning took " + timer.stop());
+		log.debug("Sorted graphs:\n" + DebugUtils.printSubgraphs(sorted_graphs));
 
 		return sorted_graphs;
 	}

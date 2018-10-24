@@ -52,7 +52,7 @@ public class Coherence implements Function
 
 		// Don't normalize matrix, normalization is part of the optimizable softmax function
 		semantic_similarity = MatrixFactory.createMeaningsSimilarityMatrix(meanings, similarity, filter, lower_bound,
-				false);
+				true, false, true);
 	}
 
 	@Override

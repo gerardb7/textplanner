@@ -202,6 +202,6 @@ public class GraphAlignments implements Serializable
 	public void removeVertex(String v)
 	{
 		// Update all fields containing vertices
-		getAlignments(v).forEach(i -> alignments.remove(v, i));
+		alignments.removeAll(v);
 	}
 }
