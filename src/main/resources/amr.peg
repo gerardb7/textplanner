@@ -1,0 +1,18 @@
+grammar AMR
+x 			<-  "(" os var s "/" s aconcept (s desc)* os ")" %make_ancestor
+desc 		<- 	rel alignment? s y %make_descendent
+rel 		<-	":" [^ \t\n\r]+
+y 			<- 	x / anamedconst / avar / astr / anum
+avar 		<- 	var alignment? %make_var
+var 		<-	[a-z]+ [0-9]* 
+anamedconst <- 	namedconst alignment? %make_constant
+namedconst	<-	[a-z] [a-z]+ [ \t\n\r] / [+-] ![0-9] 
+astr 		<- 	str alignment? %make_str
+str			<-	"\"" ([^\"\s] [^\"\n\r]* [^\"\s]?)? "\""
+anum 		<- 	num alignment? %make_num
+num 		<- 	[+-]? [0-9]+ ("\." [0-9]+)? 
+aconcept 	<- 	concept alignment? %make_concept
+concept		<-	[^) \t\n\r]+
+alignment <- "~" [A-Za-z0-9.,]+ %make_alignment
+s <- [ \t]* [\n\r] [ \t]* / [ \t]+
+os <- [ \t]* [\n\r]? [ \t]*
