@@ -1,0 +1,115 @@
+# ::source 44
+# ::snt @highlight
+# ::tok @highlight
+# ::alignments 0-1|0 ::annotator Aligner v.03 ::date 2018-05-09T16:34:33.924
+(x1 / @highlight)
+
+# ::source 45
+# ::snt Defence Minister David Johnston said his 'I wouldn't trust them to build a canoe' outburst against Australian Submarine Corporation (ASC) was a 'rhetorical flourish'
+# ::tok Defence Minister David Johnston said his ' I would n't trust them to build a canoe ' outburst against Australian Submarine Corporation -LRB- ASC -RRB- was a ` rhetorical flourish '
+# ::alignments 3-4|0.0+0.0.0+0.0.0.0 2-3|0.0.3+0.0.3.0+0.0.3.0.0 21-24|0.1.0.1+0.1.0.1.0+0.1.0.1.0.0+0.1.0.1.0.1+0.1.0.1.0.2 20-21|0.1.0.1.2+0.1.0.1.2.0+0.1.0.1.2.0.0 4-5|0 28-29|0.1 29-30|0.1.1 17-18|0.1.0 10-11|0.1.0.0 13-14|0.1.0.0.0 15-16|0.1.0.0.0.0 1-2|0.0.2+0.0.2.0 19-20|0.1.0.1.1 ::annotator Aligner v.03 ::date 2018-05-09T16:34:33.954
+(x5 / say-01
+	:ARG0 (x4 / person
+		:name (n / name
+			:op1 "Johnston")
+		:null_edge (x1 / null_tag)
+		:null_edge (x2 / have-org-edge-91
+			:ARG2 (m / minister))
+		:null_edge (x3 / person
+			:name (n1 / name
+				:op1 "David")))
+	:ARG1 (x29 / rhetorical
+		:domain (x18 / outburst
+			:ARG1 (x11 / trust-01
+				:ARG1 (x14 / build-01
+					:ARG1 (x16 / canoe)))
+			:ARG1 (x22 / organization
+				:name (n2 / name
+					:op1 "Corporation"
+					:op2 "-LRB-"
+					:op3 "ASC")
+				:mod "Australia"
+				:mod (x21 / organization
+					:name (n3 / name
+						:op1 "Submarine"))))
+		:ARG1 (x30 / flourish-01)))
+
+# ::source 46
+# ::snt @highlight
+# ::tok @highlight
+# ::alignments 0-1|0 ::annotator Aligner v.03 ::date 2018-05-09T16:34:33.956
+(x1 / @highlight)
+
+# ::source 47
+# ::snt Prime Minister Abbott effectively cut loose his Minister, defending the ASC and claiming it played a vital edge in supporting the navy
+# ::tok Prime Minister Abbott effectively cut loose his Minister , defending the ASC and claiming it played a vital edge in supporting the navy
+# ::alignments 2-3|0.0+0.0.0+0.0.0.0 11-12|0.3.0.0+0.3.0.0.0+0.3.0.0.0.0 4-5|0 1-2|0.4+0.4.0+0.4.0.0 12-13|0.3 13-14|0.3.1 15-16|0.3.1.0 20-21|0.3.1.0.1 22-23|0.3.1.0.1.0 18-19|0.3.1.0.0 17-18|0.3.1.0.0.0 9-10|0.3.0 5-6|0.2 7-8|0.0.1+0.0.1.0 0-1|0.0.1.1 3-4|0.1 ::annotator Aligner v.03 ::date 2018-05-09T16:34:33.972
+(x5 / cut-02
+	:ARG0 (x3 / company
+		:name (n / name
+			:op1 "Abbott")
+		:ARG0-of (x2 / have-org-edge-91
+			:ARG2 (m / minister)
+			:mod (x1 / prime)))
+	:ARG1-of (x4 / effective-04)
+	:ARG1-of (x6 / loose-04)
+	:time (x13 / and
+		:op1 (x10 / defend-01
+			:ARG1 (x12 / government-organization
+				:name (n1 / name
+					:op1 "ASC")))
+		:op2 (x14 / claim-01
+			:ARG1 (x16 / play-02
+				:ARG1 (x19 / edge
+					:mod (x18 / vital))
+				:manner (x21 / support-01
+					:ARG1 (x23 / navy)))))
+	:ARG0 (xap0 / person
+		:ARG0-of (x8 / have-org-edge-91
+			:ARG2 (m1 / minister))))
+
+# ::source 48
+# ::snt @highlight
+# ::tok @highlight
+# ::alignments 0-1|0 ::annotator Aligner v.03 ::date 2018-05-09T16:34:33.974
+(x1 / @highlight)
+
+# ::source 49
+# ::snt Opposition Leader Bill Shorten has called for Mr Johnston's sacking
+# ::tok Opposition Leader Bill Shorten has called for Mr Johnston 's sacking
+# ::alignments 2-4|0.0+0.0.0+0.0.0.0+0.0.0.1 8-9|0.1.0+0.1.0.0+0.1.0.0.0 5-6|0 10-11|0.1 1-2|0.0.1 0-1|0.0.2.0 ::annotator Aligner v.03 ::date 2018-05-09T16:34:33.982
+(x6 / call-01
+	:ARG0 (x3 / person
+		:name (n / name
+			:op1 "Bill"
+			:op2 "Shorten")
+		:ARG0-of (x2 / lead-02)
+		:ARG0-of (xap0 / political-party
+			:ARG0-of (x1 / oppose-01)))
+	:ARG1 (x11 / sack
+		:ARG1 (x9 / person
+			:name (n1 / name
+				:op1 "Johnston"))))
+
+# ::source 50
+# ::snt @highlight
+# ::tok @highlight
+# ::alignments 0-1|0 ::annotator Aligner v.03 ::date 2018-05-09T16:34:33.984
+(x1 / @highlight)
+
+# ::source 51
+# ::snt There are fears the $40 billion program will be taken away from South Australia and submarines bought from overseas
+# ::tok There are fears the $ 40 billion program will be taken away from South Australia and submarines bought from overseas
+# ::alignments 14-15|0.0.1.0+0.0.1.0.0+0.0.1.0.0.0 2-3|0 10-11|0.0 15-16|0.0.1 16-17|0.0.1.1 17-18|0.0.1.1.0 19-20|0.0.1.1.0.0 7-8|0.0.0 ::annotator Aligner v.03 ::date 2018-05-09T16:34:33.995
+(x3 / fear-01
+	:ARG1 (x11 / take-01
+		:ARG1 (x8 / program)
+		:ARG2 (x16 / and
+			:op1 (x15 / country
+				:name (n / name
+					:op1 "Australia")
+				:null_edge (x14 / null_tag))
+			:op2 (x17 / submarine
+				:ARG1-of (x18 / buy-01
+					:ARG2 (x20 / overseas))))))
+

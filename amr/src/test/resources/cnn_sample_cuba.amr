@@ -1,0 +1,446 @@
+# ::source 33
+# ::snt the sector of a country's economy that isn't run by its government
+# ::tok the sector of a country 's economy that is n't run by its government
+# ::alignments 1-2|0 6-7|0.0 10-11|0.0.1 4-5|0.0.0 13-1|40.0.1.0+0.0.1.0.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.206
+(x2 / sector
+	:part-of (x7 / economy
+		:poss (x5 / country)
+		:ARG1-of (x11 / run-01
+			:ARG0 (x14 / government-organization
+				:ARG0-of (g / govern-01)))))
+
+# ::source 34
+# ::snt PRIVATE SECTOR
+# ::tok PRIVATE SECTOR
+# ::alignments 1-2|0 0-1|0.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.208
+(x2 / sector
+	:ARG1-of (x1 / private-03))
+
+# ::source 35
+# ::snt That's the word!
+# ::tok That 's the word !
+# ::alignments 3-4|0 0-1|0.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.212
+(x4 / word
+	:domain (x1 / that))
+
+# ::source 36
+# ::snt Cuban Economy
+# ::tok Cuban Economy
+# ::alignments 0-1|0.0+0.0.0+0.0.0.0 1-2|0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.216
+(x2 / economy
+	:mod (x1 / country
+		:name (n / name
+			:op1 "Cuban")))
+
+# ::source 37
+# ::snt AZUZ: Running a business in the private sector means risks and rewards.
+# ::tok AZUZ : Running a business in the private sector means risks and rewards .
+# ::alignments 0-1|0 1-2|0.0 11-12|0.0.1 12-13|0.0.1.1 10-11|0.0.1.0 2-3|0.0.0 8-9|0.0.0.1 7-8|0.0.0.1.0 4-5|0.0.0.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.231
+(x1 / azuz
+	:ARG1-of (x10 / mean-01
+		:ARG2 (x3 / run-02
+			:ARG1 (x5 / business)
+			:location (x9 / sector
+				:ARG1-of (x8 / private-03)))
+		:ARG2 (x12 / and
+			:op1 (x11 / risk-01)
+			:op2 (x13 / reward-01))))
+
+# ::source 38
+# ::snt You can set your own prices, but there's no one to really fall back on if things don't go so well.
+# ::tok You can set your own prices , but there 's no one to really fall back on if things do n't go so well .
+# ::alignments 7-8|0 1-2|0.0 2-3|0.0.0 17-18|0.0.0.2 14-15|0.0.0.2.0 21-22|0.0.0.2.0.3 23-24|0.0.0.2.0.3.1 22-23|0.0.0.2.0.3.1.0 18-19|0.0.0.2.0.3.0 15-16|0.0.0.2.0.2 13-14|0.0.0.2.0.1 5-6|0.0.0.1 0-1|0.0.0.0 10-11|0.0.0.2.0.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.264
+(x8 / contrast-01
+	:ARG1 (x2 / possible-01
+		:ARG1 (x3 / set-02
+			:ARG0 (x1 / you)
+			:ARG1 (x6 / price-01)
+			:ARG1-of (xap0 / cause-01
+				:ARG1 (x15 / fall-01
+					:polarity -
+					:mod (x14 / really)
+					:ARG4 (x16 / back)
+					:condition (x22 / go-02
+						:ARG1 (x19 / thing)
+						:manner (x24 / well
+							:degree (x23 / so))))))))
+
+# ::source 39
+# ::snt Shasta Darlington looks at what's in store for thousands of Cubans who are about to lose their government jobs and make the shift into the private sector.
+# ::tok Shasta Darlington looks at what 's in store for thousands of Cubans who are about to lose their government jobs and make the shift into the private sector .
+# ::alignments 1-2|0.0+0.0.0+0.0.0.0 0-1|0.0.1+0.0.1.0 2-3|0 7-8|0.1 20-21|0.1.0 21-22|0.1.0.1 27-28|0.1.0.1.1 26-27|0.1.0.1.1.0 23-24|0.1.0.1.0 16-17|0.1.0.0 19-20|0.1.0.0.0 18-19|0.1.0.0.0.0+0.1.0.0.0.0.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.295
+(x3 / look-02
+	:ARG0 (x2 / person
+		:name (n / name
+			:op1 "Darlington")
+		:name (x1 / name
+			:op1 "Shasta"))
+	:ARG1 (x8 / store
+		:topic (x21 / and
+			:op1 (x17 / lose-02
+				:ARG1 (x20 / job
+					:mod (x19 / government-organization
+						:ARG0-of (g / govern-01))))
+			:op2 (x22 / make-02
+				:ARG1 (x24 / shift-01)
+				:ARG2 (x28 / sector
+					:ARG1-of (x27 / private-03))))))
+
+# ::source 40
+# ::snt (BEGIN VIDEO)
+# ::tok -LRB- BEGIN VIDEO -RRB-
+# ::alignments 2-3|0 1-2|0.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.299
+(x3 / video
+	:null_edge (x2 / begin))
+
+# ::source 41
+# ::snt SHASTA DARLINGTON, CNN CORRESPONDENT, HAVANA: A tall order in communist Cuba: finding jobs for half a million laid-off workers in the private sector.
+# ::tok SHASTA DARLINGTON , CNN CORRESPONDENT , HAVANA : A tall order in communist Cuba : finding jobs for half a million laid-off workers in the private sector .
+# ::alignments 3-4|0.1+0.1.0+0.1.0.0 6-7|0.2+0.2.0+0.2.0.0 13-14|0.5+0.5.0+0.5.0.0 10-11|0 15-16|0.6 16-17|0.6.0 22-23|0.6.0.0+0.6.0.0.0 26-27|0.6.0.0.1 25-26|0.6.0.0.1.0 9-10|0.4 8-9|0.3 0-1|0.0 12-13|0.5.1 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.326
+(x11 / order-02
+	:null_edge (x1 / shasta)
+	:ARG0 (x4 / company
+		:name (n / name
+			:op1 "CNN"))
+	:null_edge (x7 / country
+		:name (n1 / name
+			:op1 "HAVANA"))
+	:mod (x9 / a)
+	:mod (x10 / tall)
+	:location (x14 / country
+		:name (n2 / name
+			:op1 "Cuba")
+		:mod (x13 / communism))
+	:mod (x16 / find-01
+		:ARG1 (x17 / job
+			:poss (x23 / person
+				:ARG0-of (w / work-01)
+				:ARG2 (x27 / sector
+					:ARG1-of (x26 / private-03))))))
+
+# ::source 42
+# ::snt Here in Old Havana, not everyone is celebrating this capitalist notion.
+# ::tok Here in Old Havana , not everyone is celebrating this capitalist notion .
+# ::alignments 3-4|0.0+0.0.0+0.0.0.0 8-9|0 11-12|0.2 10-11|0.2.1 9-10|0.2.0 6-7|0.1 2-3|0.0.1+0.0.1.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.355
+(x9 / celebrate-02
+	:ARG1 (x4 / government-organization
+		:name (n / name
+			:op1 "Havana")
+		:null_edge (x3 / person
+			:mod (o / old)))
+	:ARG0 (x7 / everyone)
+	:ARG1 (x12 / notion
+		:mod (x10 / this)
+		:mod (x11 / capitalist)))
+
+# ::source 43
+# ::snt Like it or not, employees at this barbershop around the corner are being pushed off the state payroll and handed the shop.
+# ::tok Like it or not , employees at this barbershop around the corner are being pushed off the state payroll and handed the shop .
+# ::alignments 19-20|0 22-23|0.1.0 14-15|0.0 18-19|0.0.2 17-18|0.0.2.0 8-9|0.0.1.1 9-10|0.0.1.1.1 11-12|0.0.1.1.1.0 7-8|0.0.1.1.0 2-3|0.0.0 20-21|0.1 5-6|0.0.1+0.0.1.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.372
+(x20 / and
+	:op1 (x15 / push-01
+		:null_edge (x3 / or)
+		:ARG1 (x6 / person
+			:ARG1-of (e / employ-01)
+			:location (x9 / barbershop
+				:mod (x8 / this)
+				:location (x10 / around
+					:op1 (x12 / corner))))
+		:ARG2 (x19 / payroll
+			:mod (x18 / state)))
+	:op2 (x21 / hand-over-02
+		:ARG0 x6
+		:ARG1 (x23 / shop)))
+
+# ::source 44
+# ::snt They'll be able to set prices and keep earnings, but they'll now have to pay taxes and rent, and there's no longer the guarantee of a fixed income.
+# ::tok They 'll be able to set prices and keep earnings , but they 'll now have to pay taxes and rent , and there 's no longer the guarantee of a fixed income .
+# ::alignments 11-12|0 28-29|0.2 32-33|0.2.1.0 31-32|0.2.1.0.0 7-8|0.1 3-4|0.0 15-16|0.0.1 17-18|0.0.1.1 19-20|0.0.1.1.0 20-21|0.0.1.1.0.1 18-19|0.0.1.1.0.0+0.0.1.1.0.0.0 14-15|0.0.1.0 22-23|0.0.0 8-9|0.0.0.1 5-6|0.0.0.0 6-7|0.0.0.0.1 0-1|0.0.0.0.0 9-10|0.0.0.1.0 25-26|0.2.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.396
+(x12 / contrast-01
+	:ARG1 (x4 / possible-01
+		:ARG1 (x8 / and
+			:op1 (x6 / set-02
+				:ARG0 (x1 / they)
+				:ARG1 (x7 / price-01))
+			:op2 (x9 / keep-04
+				:ARG1 (x10 / earn-01)))
+		:ARG1 (xap0 / obligate-01
+			:time (x15 / now)
+			:ARG2 (x18 / pay-01
+				:ARG3 (x20 / and
+					:op1 (x19 / thing
+						:ARG1-of (t / tax-01))
+					:op2 (x21 / rent-01)))))
+	:ARG2 (x23 / and)
+	:ARG2 (x29 / guarantee-01
+		:polarity -
+		:ARG1 (xap1 / product-of
+			:ARG1 (x33 / income
+				:ARG1-of (x32 / fix-03)))))
+
+# ::source 45
+# ::snt GERARDO, HAVANA BARBER [TRANSLATED]: "I've been working for the state for years now and I'm not interested in going private," says Gerardo.
+# ::tok GERARDO , HAVANA BARBER -LSB- TRANSLATED -RSB- : `` I 've been working for the state for years now and I 'm not interested in going private , '' says Gerardo .
+# ::alignments 0-1|0.1+0.1.0+0.1.0.0 29-30|0 19-20|0.0 23-24|0.0.1 26-27|0.0.1.1 9-10|0.0.1.0 12-13|0.0.0 17-18|0.0.0.3.0+0.0.0.3.0.0 18-19|0.0.0.2 15-16|0.0.0.1 20-21|0.0.0.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.416
+(x30 / say-01
+	:ARG1 (x20 / and
+		:op2 (x13 / work-01
+			:ARG0 (x10 / i)
+			:ARG1 (x16 / state)
+			:time (x19 / now)
+			:duration (xap0 / multiple
+				:op1 (x18 / temporal-quantity
+					:unit (y / year))))
+		:op2 (x24 / interest-01
+			:ARG1 x10
+			:ARG1 (x21 / i)
+			:ARG2 (x27 / private-03)))
+	:ARG0 (x31 / person
+		:name (n / name
+			:op1 "Gerardo")))
+
+# ::source 46
+# ::snt "I want to keep working for the state."
+# ::tok `` I want to keep working for the state . ''
+# ::alignments 2-3|0 4-5|0.1 5-6|0.1.0 8-9|0.1.0.0 1-2|0.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.433
+(x3 / want-01
+	:ARG0 (x2 / i)
+	:ARG1 (x5 / keep-02
+		:ARG0 x2
+		:ARG1 (x6 / work-01
+			:ARG1 (x9 / state))))
+
+# ::source 47
+# ::snt DARLINGTON: Cuba plans to shed ten percent of public sector jobs over the next six months and allow more private enterprise to absorb the unemployed.
+# ::tok DARLINGTON : Cuba plans to shed ten percent of public sector jobs over the next six months and allow more private enterprise to absorb the unemployed .
+# ::alignments 0-1|0+0.0+0.0.0 2-3|0.1.0+0.1.0.0+0.1.0.0.0 3-4|0.1 17-18|0.1.2 18-19|0.1.2.1 23-24|0.1.2.1.1 21-22|0.1.2.1.0 20-21|0.1.2.1.0.1 19-20|0.1.2.1.0.0 5-6|0.1.2.0 16-17|0.1.2.0.1+0.1.2.0.1.0 15-16|0.1.2.0.1.1 11-12|0.1.1 10-11|0.1.1.0 9-10|0.1.1.0.0 25-26|0.1.2.1.1.0+0.1.2.1.1.0.0 7-8|0.1.2.0.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.509
+(x1 / country
+	:name (n / name
+		:op1 "DARLINGTON")
+	:null_edge (x4 / plan-01
+		:ARG0 (x3 / country
+			:name (n1 / name
+				:op1 "Cuba"))
+		:ARG1 (x12 / job
+			:poss (x11 / sector
+				:ARG1-of (x10 / public)))
+		:ARG1 (x18 / and
+			:op1 (x6 / shed-01
+				:ARG1 (x8 / percentage-entity)
+				:duration (x17 / temporal-quantity
+					:unit (m / month)
+					:quant 6))
+			:op2 (x19 / allow-01
+				:ARG1 (x22 / enterprise
+					:quant (x20 / more)
+					:ARG1-of (x21 / private-03))
+				:ARG1 (x24 / absorb-01
+					:ARG1 (x26 / employ-01
+						:polarity -))))))
+
+# ::source 48
+# ::snt A dramatic attempt by President Raul Castro to reshape the sputtering economy.
+# ::tok A dramatic attempt by President Raul Castro to reshape the sputtering economy .
+# ::alignments 6-7|0.0.1+0.0.1.0+0.0.1.0.0 5-6|0.0.1.2+0.0.1.2.0+0.0.1.2.0.0 8-9|0 11-12|0.1 10-11|0.1.0 2-3|0.0 4-5|0.0.1.1+0.0.1.1.0 1-2|0.0.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.525
+(x9 / reshape
+	:ARG0 (x3 / attempt-01
+		:mod (x2 / dramatic)
+		:ARG0 (x7 / person
+			:name (n / name
+				:op1 "Castro")
+			:null_edge (x5 / have-org-edge-91
+				:ARG2 (p / president))
+			:null_edge (x6 / person
+				:name (n1 / name
+					:op1 "Raul"))))
+	:ARG1 (x12 / economy
+		:ARG1-of (x11 / sputter)))
+
+# ::source 49
+# ::snt He says the state simply can't afford a bloated and unproductive workforce.
+# ::tok He says the state simply ca n't afford a bloated and unproductive workforce .
+# ::alignments 1-2|0 7-8|0.1 10-11|0.1.2.0 11-12|0.1.2.0.1 9-10|0.1.2.0.0 3-4|0.1.0 0-1|0.0 12-13|0.1.2 4-5|0.1.1 6-7|0.1.2.0.1.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.557
+(x2 / say-01
+	:ARG0 (x1 / he)
+	:ARG1 (x8 / afford-01
+		:ARG0 (x4 / state)
+		:mod (x5 / simple)
+		:null_edge (x13 / work-0
+1			:ARG1 (x11 / and
+				:op1 (x10 / bloated)
+				:op2 (x12 / productive-03
+					:polarity -)))))
+
+# ::source 50
+# ::snt But don't expect American-style big business.
+# ::tok But do n't expect American-style big business .
+# ::alignments 4-5|0.0.0.0+0.0.0.0.0+0.0.0.0.0.0 0-1|0 3-4|0.0 6-7|0.0.0 5-6|0.0.0.1 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.565
+(x1 / contrast-01
+	:ARG2 (x4 / expect-01
+		:ARG1 (x7 / business
+			:mod (x5 / organization
+				:name (n / name
+					:op1 "American-style"))
+			:mod (x6 / big))))
+
+# ::source 51
+# ::snt Cuba's new entrepreneurs will be encouraged to start small operations, maybe driving taxis, laying bricks or perhaps repairing toys.
+# ::tok Cuba 's new entrepreneurs will be encouraged to start small operations , maybe driving taxis , laying bricks or perhaps repairing toys .
+# ::alignments 0-1|0.0.0+0.0.0.0+0.0.0.0.0 6-7|0 18-19|0.2 20-21|0.2.2 21-22|0.2.2.0 16-17|0.2.1 17-18|0.2.1.0 13-14|0.2.0 14-15|0.2.0.0 8-9|0.1 10-11|0.1.0 9-10|0.1.0.0 3-4|0.0 2-3|0.0.1 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.583
+(x7 / encourage-01
+	:ARG1 (x4 / entrepreneur
+		:poss (x1 / country
+			:name (n / name
+				:op1 "Cuba"))
+		:mod (x3 / new))
+	:ARG2 (x9 / start-01
+		:ARG0 x4
+		:ARG1 (x11 / operation
+			:mod (x10 / small)))
+	:ARG2 (x19 / or
+		:op1 (x14 / drive-02
+			:ARG1 (x15 / taxi))
+		:op2 (x17 / lay-01
+			:ARG1 (x18 / brick))
+		:op2 (x21 / repair-01
+			:ARG1 (x22 / toy))))
+
+# ::source 52
+# ::snt Now, to get an idea of what's in store for them, we're talking to some of the people already working in the country's miniscule private sector.
+# ::tok Now , to get an idea of what 's in store for them , we 're talking to some of the people already working in the country 's miniscule private sector .
+# ::alignments 16-17|0 23-24|0.3 30-31|0.3.2 29-30|0.3.2.2 28-29|0.3.2.1 26-27|0.3.2.0 22-23|0.3.1 18-19|0.3.0 14-15|0.2 3-4|0.1 5-6|0.1.0 10-11|0.1.0.0 0-1|0.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.609
+(x17 / talk-01
+	:time (x1 / now)
+	:purpose (x4 / get-01
+		:ARG1 (x6 / idea
+			:topic (x11 / store)))
+	:ARG0 (x15 / we)
+	:ARG1 (x24 / work-01
+		:location (x19 / some)
+		:time (x23 / already)
+		:location (x31 / sector
+			:poss (x27 / country)
+			:ARG1-of (x29 / miniscule)
+			:ARG1-of (x30 / private-03))))
+
+# ::source 53
+# ::snt Emilio Mendoza was laid off during Cuba's last major economic crisis in the '90s.
+# ::tok Emilio Mendoza was laid off during Cuba 's last major economic crisis in the '90s .
+# ::alignments 0-2|0.0+0.0.0+0.0.1 6-7|0.1.0+0.1.0.0+0.1.0.0.0 3-4|0 11-12|0.1 9-10|0.1.2 8-9|0.1.1 10-11|0.1.3 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.623
+(x4 / lay-01
+	:ARG1 (x1 / name
+		:op1 "Emilio"
+		:op2 "Mendoza")
+	:time (x12 / crisis
+		:poss (x7 / country
+			:name (n / name
+				:op1 "Cuba"))
+		:mod (x9 / last)
+		:ARG1-of (x10 / major-02)
+		:mod (x11 / economy)
+		:time (x15 / date-entity)))
+
+# ::source 54
+# ::snt He bought a government license and set up a cobbler's shop in his driveway.
+# ::tok He bought a government license and set up a cobbler 's shop in his driveway .
+# ::alignments 5-6|0 6-7|0.1 11-12|0.1.0 14-15|0.1.0.1 9-10|0.1.0.0 1-2|0.0 4-5|0.0.1 0-1|0.0.0 3-4|0.0.1.0+0.0.1.0.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.635
+(x6 / and
+	:op1 (x2 / buy-01
+		:ARG0 (x1 / he)
+		:ARG1 (x5 / license-01
+			:mod (x4 / government-organization
+				:ARG0-of (g / govern-01))))
+	:op2 (x7 / set-02
+		:null_edge (x12 / shop
+			:poss (x10 / cobbler)
+			:location (x15 / driveway))))
+
+# ::source 55
+# ::snt He says Cubans should see this as an opportunity.
+# ::tok He says Cubans should see this as an opportunity .
+# ::alignments 2-3|0.1.0.0+0.1.0.0.0+0.1.0.0.0.0 1-2|0 3-4|0.1 4-5|0.1.0 8-9|0.1.0.2 5-6|0.1.0.1 0-1|0.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.644
+(x2 / say-01
+	:ARG0 (x1 / he)
+	:ARG1 (x4 / recommend-01
+		:ARG1 (x5 / see-01
+			:ARG0 (x3 / newspaper
+				:name (n / name
+					:op1 "Cubans"))
+			:ARG1 (x6 / this)
+			:ARG2 (x9 / opportunity))))
+
+# ::source 56
+# ::snt Isidro, a taxi driver, says it depends on how much the state charges its new entrepreneurs in taxes and licensing fees.
+# ::tok Isidro , a taxi driver , says it depends on how much the state charges its new entrepreneurs in taxes and licensing fees .
+# ::alignments 0-1|0.0+0.0.0+0.0.0.0 6-7|0 8-9|0.1 14-15|0.1.0 20-21|0.1.0.3 22-23|0.1.0.3.1 21-22|0.1.0.3.1.0 19-20|0.1.0.3.0 17-18|0.1.0.2 16-17|0.1.0.2.0 13-14|0.1.0.1 11-12|0.1.0.0 4-5|0.0.1+0.0.1.0 3-4|0.0.1.1 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.662
+(x7 / say-01
+	:ARG0 (x1 / person
+		:name (n / name
+			:op1 "Isidro")
+		:null_edge (x5 / person
+			:ARG0-of (d / drive-01)
+			:ARG1 (x4 / taxi)))
+	:ARG1 (x9 / depend-01
+		:ARG2 (x15 / charge-05
+			:quant (x12 / much)
+			:ARG0 (x14 / state)
+			:ARG1 (x18 / entrepreneur
+				:mod (x17 / new))
+			:ARG2 (x21 / and
+				:op1 (x20 / tax-01)
+				:op2 (x23 / fee
+					:mod (x22 / license-01))))))
+
+# ::source 57
+# ::snt They all agree, the days of getting paid by the government, whether you work or lounge about, are over.
+# ::tok They all agree , the days of getting paid by the government , whether you work or lounge about , are over .
+# ::alignments 2-3|0 16-17|0.1 17-18|0.1.2 15-16|0.1.1 14-15|0.1.1.0 8-9|0.1.0 5-6|0.1.0.0+0.1.0.0.0 0-1|0.0 1-2|0.0.0 11-12|0.1.0.1+0.1.0.1.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.680
+(x3 / agree-01
+	:ARG0 (x1 / they
+		:quant (x2 / all))
+	:ARG1 (x17 / or
+		:op1 (x9 / pay-01
+			:ARG3 (x6 / temporal-quantity
+				:unit (d / day))
+			:ARG0 (x12 / government-organization
+				:ARG0-of (g / govern-01)))
+		:op1 (x16 / work-01
+			:ARG0 (x15 / you))
+		:op2 (x18 / lounge)))
+
+# ::source 58
+# ::snt Still, the state controls about 90 percent of the economy.
+# ::tok Still , the state controls about 90 percent of the economy .
+# ::alignments 4-5|0 5-6|0.1.0 6-7|0.1.0.0 10-11|0.1.1 3-4|0.0 0-1|0.0.0 7-8|0.1 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.687
+(x5 / control-01
+	:ARG0 (x4 / state
+		:mod (x1 / still))
+	:ARG1 (x8 / percentage-entity
+		:null_edge (x6 / about
+			:null_edge 90)
+		:poss (x11 / economy)))
+
+# ::source 59
+# ::snt These modest proposals aren't likely to radically shift that balance, but they will give life to a new class of small businesses that could change the face of Cuba.
+# ::tok These modest proposals are n't likely to radically shift that balance , but they will give life to a new class of small businesses that could change the face of Cuba .
+# ::alignments 30-31|0.2.1.1.1.1.0+0.2.1.1.1.1.0.0+0.2.1.1.1.1.0.0.0 5-6|0 15-16|0.2 20-21|0.2.1 23-24|0.2.1.1 26-27|0.2.1.1.1 28-29|0.2.1.1.1.1 25-26|0.2.1.1.1.0 22-23|0.2.1.1.0 19-20|0.2.1.0 16-17|0.2.0 8-9|0.1 10-11|0.1.1 9-10|0.1.1.0 1-2|0.0.1 7-8|0.1.0 2-3|0.0+0.0.0 ::annotator Aligner v.03 ::date 2018-05-09T16:28:05.709
+(x6 / likely-01
+	:ARG1 (x3 / thing
+		:ARG1-of (p / propose-01)
+		:mod (x2 / modest))
+	:ARG1 (x9 / shift-01
+		:manner (x8 / radical)
+		:ARG1 (x11 / balance-01
+			:mod (x10 / that)))
+	:null_edge (x16 / give-01
+		:ARG1 (x17 / life)
+		:ARG2 (x21 / class
+			:mod (x20 / new)
+			:poss (x24 / business
+				:mod (x23 / small)
+				:ARG0-of (x27 / change-01
+					:ARG1-of (x26 / possible-01)
+					:ARG1 (x29 / face
+						:ARG1 (x31 / country
+							:name (n / name
+								:op1 "Cuba"))))))))
