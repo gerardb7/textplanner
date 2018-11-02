@@ -8,24 +8,22 @@ import java.util.Map;
 
 public class TreeNode implements Iterable<TreeNode> {
     public String text;
-    public int offset;
-    public List<TreeNode> elements;
+	public List<TreeNode> elements;
 
     Map<Label, TreeNode> labelled;
 
-    public TreeNode() {
-        this("", -1, new ArrayList<TreeNode>(0));
+    protected TreeNode() {
+        this("", -1, new ArrayList<>(0));
     }
 
-    public TreeNode(String text, int offset) {
-        this(text, offset, new ArrayList<TreeNode>(0));
+    TreeNode(String text, int offset) {
+        this(text, offset, new ArrayList<>(0));
     }
 
-    public TreeNode(String text, int offset, List<TreeNode> elements) {
+    TreeNode(String text, int offset, List<TreeNode> elements) {
         this.text = text;
-        this.offset = offset;
-        this.elements = elements;
-        this.labelled = new EnumMap<Label, TreeNode>(Label.class);
+	    this.elements = elements;
+        this.labelled = new EnumMap<>(Label.class);
     }
 
     public TreeNode get(Label key) {

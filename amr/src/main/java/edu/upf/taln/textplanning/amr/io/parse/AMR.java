@@ -11,9 +11,9 @@ public class AMR extends Grammar {
         this.inputSize = input.length();
         this.actions = actions;
         this.offset = 0;
-        this.cache = new EnumMap<Label, Map<Integer, CacheRecord>>(Label.class);
+        this.cache = new EnumMap<>(Label.class);
         this.failure = 0;
-        this.expected = new ArrayList<String>();
+        this.expected = new ArrayList<>();
     }
 
     public static TreeNode parse(String input, Actions actions) throws ParseError {
@@ -32,12 +32,12 @@ public class AMR extends Grammar {
             position += lines[lineNo].length() + 1;
             lineNo += 1;
         }
-        String message = "Line " + lineNo + ": expected " + expected + "\n";
+        StringBuilder message = new StringBuilder("Line " + lineNo + ": expected " + expected + "\n");
         String line = lines[lineNo - 1];
-        message += line + "\n";
+        message.append(line).append("\n");
         position -= line.length() + 1;
         while (position < offset) {
-            message += " ";
+            message.append(" ");
             position += 1;
         }
         return message + "^";
