@@ -2,140 +2,23 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>edu.upf.taln</groupId>
-	<artifactId>textplanning</artifactId>
-    <packaging>jar</packaging>
-	<version>1.0-SNAPSHOT</version>
+    <artifactId>textplanning</artifactId>
+    <groupId>du.upf.taln</groupId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
 
-	<name>Text planning</name>
+    <name>Text planning</name>
 	<description>Implementation of a text planning module</description>
+    <organization>
+        <name>Universitat Pompeu Fabra</name>
+        <url>upf.edu</url>
+    </organization>
 
-	<organization>
-		<name>Universitat Pompeu Fabra</name>
-		<url>upf.edu</url>
-	</organization>
-
-	<dependencies>
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.12</version>
-			<scope>test</scope>
-		</dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>2.11.0</version>
-        </dependency>
-		<dependency>
-			<groupId>commons-logging</groupId>
-			<artifactId>commons-logging</artifactId>
-			<version>1.2</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-collections4</artifactId>
-			<version>4.1</version>
-		</dependency>
-		<dependency>
-			<groupId>commons-io</groupId>
-			<artifactId>commons-io</artifactId>
-			<version>2.5</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-lang3</artifactId>
-			<version>3.4</version>
-		</dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-math3</artifactId>
-            <version>3.6.1</version>
-        </dependency>
-        <dependency>
-			<groupId>com.google.guava</groupId>
-			<artifactId>guava</artifactId>
-			<version>24.1-jre</version>
-		</dependency>
-		<dependency>
-			<groupId>com.beust</groupId>
-			<artifactId>jcommander</artifactId>
-			<version>1.58</version>
-		</dependency>
-		<dependency>
-			<groupId>gov.nist.math</groupId>
-			<artifactId>jama</artifactId>
-			<version>1.0.3</version>
-		</dependency>
-		<dependency>
-			<groupId>org.jgrapht</groupId>
-			<artifactId>jgrapht-core</artifactId>
-			<version>1.1.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.jgrapht</groupId>
-			<artifactId>jgrapht-ext</artifactId>
-			<version>1.1.0</version>
-		</dependency>
-        <dependency>
-            <groupId>net.sf.trove4j</groupId>
-            <artifactId>trove4j</artifactId>
-            <version>3.0.3</version>
-        </dependency>
-		<dependency>
-			<groupId>it.uniroma1.lcl.babelnet</groupId>
-			<artifactId>babelnet-api</artifactId>
-			<version>3.7</version>
-		</dependency>
-		<dependency>
-			<groupId>cc.mallet</groupId>
-			<artifactId>mallet</artifactId>
-			<version>2.0.8</version>
-		</dependency>
-		<dependency>
-			<groupId>org.eclipse.rdf4j</groupId>
-			<artifactId>rdf4j-repository-sparql</artifactId>
-			<version>2.2.2</version>
-		</dependency>
-		<dependency>
-			<groupId>org.json</groupId>
-			<artifactId>json</artifactId>
-			<version>20170516</version>
-		</dependency>
-		<dependency>
-			<groupId>com.google.code.gson</groupId>
-			<artifactId>gson</artifactId>
-			<version>2.8.1</version>
-		</dependency>
-		<dependency>
-			<groupId>edu.stanford.nlp</groupId>
-			<artifactId>stanford-corenlp</artifactId>
-			<version>3.9.1</version>
-		</dependency>
-        <dependency>
-            <groupId>edu.stanford.nlp</groupId>
-            <artifactId>stanford-corenlp</artifactId>
-            <version>3.9.1</version>
-            <classifier>models</classifier>
-        </dependency>
-        <dependency>
-            <groupId>de.jungblut.glove</groupId>
-            <artifactId>glove</artifactId>
-            <version>0.3</version>
-        </dependency>
-
-        <!-- Core DL4J functionality -->
-        <dependency>
-            <groupId>org.nd4j</groupId>
-            <artifactId>nd4j-native-platform</artifactId>
-            <version>1.0.0-beta</version>
-        </dependency>
-        <dependency>
-            <groupId>org.deeplearning4j</groupId>
-            <artifactId>deeplearning4j-nlp</artifactId>
-            <version>1.0.0-beta</version>
-        </dependency>
-	</dependencies>
+    <modules>
+        <module>core</module>
+        <module>amr</module>
+        <module>treeeditdistance</module>
+    </modules>
 
 	<distributionManagement>
 		<repository>
