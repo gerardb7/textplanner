@@ -10,7 +10,6 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
     <artifactId>amr</artifactId>
-    <packaging>jar</packaging>
 
     <dependencies>
         <dependency>
