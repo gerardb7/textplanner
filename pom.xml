@@ -17,7 +17,6 @@
     <modules>
         <module>core</module>
         <module>amr</module>
-        <module>treeeditdistance</module>
     </modules>
 
 	<distributionManagement>

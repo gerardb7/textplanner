@@ -1,7 +1,6 @@
 package edu.upf.taln.textplanning.core.similarity;
 
-
-import edu.upf.taln.textplanning.treeeditdistance.EditScore;
+import treedist.EditScore;
 
 import java.util.Optional;
 

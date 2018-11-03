@@ -1,8 +1,9 @@
 package edu.upf.taln.textplanning.core.similarity;
 
 import edu.upf.taln.textplanning.core.structures.SemanticTree;
-import edu.upf.taln.textplanning.treeeditdistance.EditScore;
-import edu.upf.taln.textplanning.treeeditdistance.TreeEditDistance;
+import treedist.EditScore;
+import treedist.TreeEditDistance;
+
 
 /**
  * Semantic similarity between pairs of semantic trees, or more generally, labelled ordered trees.

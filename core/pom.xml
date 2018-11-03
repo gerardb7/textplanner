@@ -13,9 +13,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>treeeditdistance</artifactId>
-            <version>${project.version}</version>
+            <groupId>treedist</groupId>
+            <artifactId>treedist</artifactId>
+            <version>1.0</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

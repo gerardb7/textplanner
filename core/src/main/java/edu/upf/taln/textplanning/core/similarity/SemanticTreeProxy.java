@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.SemanticTree;
-import edu.upf.taln.textplanning.treeeditdistance.Tree;
+import treedist.Tree;
 
 import java.util.*;
 import java.util.stream.Collectors;
