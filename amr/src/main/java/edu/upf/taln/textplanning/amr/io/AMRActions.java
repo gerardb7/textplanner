@@ -67,6 +67,7 @@ public class AMRActions implements Actions
 	private final boolean keep_relation_alignments;
 	private final Multimap<String, Integer> alignments = HashMultimap.create();
 	private final Set<Role> reentrant_edges = new HashSet<>();
+	private final Map<String, Integer> vertex_counts = new HashMap<>(); // keep track of duplicated nodes
 
 	AMRActions(SemanticGraph graph, boolean keep_inverse_relations, boolean keep_relation_alignments)
 	{
@@ -84,7 +85,11 @@ public class AMRActions implements Actions
         // Create node for var
         TreeNode var_node = elements.get(2);
         String label = var_node.text;
-        boolean reentrant = graph.containsVertex(label);
+	    // The first check should is prob redundant: ancestors cannot be names
+	    // An ancestor will be reentrant if for some reason one of its subsequent mentions in the AMR file has already
+	    // been visited and added to the graph
+	    boolean reentrant = !AMRSemantics.isName(label) && graph.containsVertex(label);
+
         graph.addVertex(label);
 
         // Add "instance" edge from var to concept
@@ -237,16 +242,28 @@ public class AMRActions implements Actions
     	try
 	    {
 		    TreeNode node = elements.get(0);
-		    boolean reentrant = is_var && graph.containsVertex(node.text);
-		    graph.addVertex(node.text);
+		    String label = node.text;
+		    if (!is_var && !label.startsWith("\""))
+		    	label = "\"" + label + "\"";
+
+		    boolean duplicated = !is_var && graph.containsVertex(label);
+		    boolean reentrant = is_var && graph.containsVertex(label);
+
+		    if (duplicated)
+		    {
+			    vertex_counts.merge(label, 1, (c1, c2) -> c1 + c2);
+			    label += "_" + vertex_counts.get(label);
+		    }
+
+	    	graph.addVertex(label);
 
 		    TreeNode alignment = elements.get(1);
 		    if (alignment instanceof AlignmentNode)
 		    {
-			    alignments.put(node.text, ((AlignmentNode) alignment).index);
+			    alignments.put(label, ((AlignmentNode) alignment).index);
 		    }
 
-		    return new LabelNode(node.text, reentrant, Collections.singletonList(node.text));
+		    return new LabelNode(label, reentrant, Collections.singletonList(label));
 	    }
 	    catch (Exception e)
 	    {

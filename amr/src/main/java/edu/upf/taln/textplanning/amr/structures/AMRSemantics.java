@@ -90,6 +90,11 @@ public class AMRSemantics implements GraphSemantics
 	public static final String either = "either";
 	public static final String neither = "neither";
 
+	public static boolean isName(String label)
+	{
+		return label.startsWith("\"") && label.endsWith("\""); // names in AMR start and end with quotes
+	}
+
 	public boolean isCore(String role)
 	{
 		switch (role)
@@ -132,10 +137,10 @@ public class AMRSemantics implements GraphSemantics
 		}
 	}
 
-	public boolean isRequired(String v, String source, String target, String role, GlobalSemanticGraph g)
+	public boolean isRequired(String label, String source, String target, String role, GlobalSemanticGraph g)
 	{
-		boolean source_selected = source.equals(v);
-		boolean target_selected = target.equals(v);
+		boolean source_selected = source.equals(label);
+		boolean target_selected = target.equals(label);
 		assert (source_selected || target_selected);
 
 		switch (role)
