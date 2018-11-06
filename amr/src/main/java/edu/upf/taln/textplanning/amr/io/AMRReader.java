@@ -210,6 +210,20 @@ public class AMRReader implements DocumentReader
 							map.put(offsets.getLeft() + i, address_1); // add governor to all
 						});
 					}
+					else if (addresses.length > num_tokens + 2) // e.g. (x1 / person :ARG1 (x2 / thing :name (n1 / name (:op1 n1 .. :opN nN)))
+					{
+						final int num_non_leaf_addresses = addresses.length - num_tokens;
+						final List<List<Integer>> non_leaf_addresses = IntStream.range(0, num_non_leaf_addresses)
+								.mapToObj(i -> address_parser.apply(addresses[i]))
+								.collect(toList());
+
+						IntStream.range(0, num_tokens).forEach(i ->
+						{
+							List<Integer> address = address_parser.apply(addresses[i + num_non_leaf_addresses]);
+							map.put(offsets.getLeft() + i, address);
+							non_leaf_addresses.forEach(a -> map.put(offsets.getLeft() + i, a)); // add governors to all
+						});
+					}
 					else
 						log.error("Cannot parse alignment " + item);
 
