@@ -3,13 +3,15 @@ package edu.upf.taln.textplanning.amr;
 import com.beust.jcommander.*;
 import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.amr.structures.AMRSemantics;
-import edu.upf.taln.textplanning.amr.structures.GraphList;
-import edu.upf.taln.textplanning.amr.utils.EmpiricalStudy;
-import edu.upf.taln.textplanning.amr.io.AMRReader;
-import edu.upf.taln.textplanning.amr.io.AMRWriter;
 import edu.upf.taln.textplanning.amr.input.GlobalGraphFactory;
 import edu.upf.taln.textplanning.amr.input.GraphListFactory;
+import edu.upf.taln.textplanning.amr.io.AMRReader;
+import edu.upf.taln.textplanning.amr.io.AMRWriter;
+import edu.upf.taln.textplanning.amr.structures.AMRSemantics;
+import edu.upf.taln.textplanning.amr.structures.GraphList;
+import edu.upf.taln.textplanning.amr.utils.CMLCheckers;
+import edu.upf.taln.textplanning.amr.utils.EmpiricalStudy;
+import edu.upf.taln.textplanning.amr.utils.Serializer;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.corpora.CompactFrequencies;
 import edu.upf.taln.textplanning.core.similarity.RandomAccessVectorsSimilarity;
@@ -19,41 +21,40 @@ import edu.upf.taln.textplanning.core.similarity.VectorsTypes.Format;
 import edu.upf.taln.textplanning.core.similarity.Word2VecVectorsSimilarity;
 import edu.upf.taln.textplanning.core.structures.GlobalSemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
-import edu.upf.taln.textplanning.amr.utils.CMLCheckers;
-import edu.upf.taln.textplanning.amr.utils.Serializer;
 import edu.upf.taln.textplanning.core.weighting.NoWeights;
 import edu.upf.taln.textplanning.core.weighting.NumberForms;
 import edu.upf.taln.textplanning.core.weighting.WeightingFunction;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 @SuppressWarnings("ALL")
 public class Driver
 {
-	private final static String process_suffix = "_processed.bin";
-	private final static String semantic_graphs_suffix = "_graphs.bin";
-	private final static String semantic_graphs_ranked_suffix = "_graphs_ranked.bin";
-	private final static String global_graph_suffix = "_global.bin";
-	private final static String global_graph_ranked_suffix = "_global_ranked.bin";
-	private final static String subgraphs_suffix = "_subgraphs.bin";
-	private final static String non_redundant_suffix = "_non_redundant.bin";
-	private final static String sorted_suffix = "_sorted.bin";
-	private final static String plan_suffix = "_plan.amr";
+	private final static String process_suffix = ".processed.bin";
+	private final static String graphs_suffix = ".graphs.bin";
+	private final static String graphs_ranked_suffix = ".graphs_ranked.bin";
+	private final static String global_suffix = ".global.bin";
+	private final static String global_ranked_suffix = ".global_ranked.bin";
+	private final static String subgraphs_suffix = ".subgraphs.bin";
+	private final static String non_redundant_suffix = ".non_redundant.bin";
+	private final static String sorted_suffix = ".sorted.bin";
+	private final static String plan_suffix = ".plan.amr";
+	private final static List<String> suffixes = Arrays.asList(process_suffix, graphs_suffix, graphs_ranked_suffix,
+			global_suffix, global_ranked_suffix, subgraphs_suffix, non_redundant_suffix, sorted_suffix, plan_suffix);
 
 	private final static Logger log = LogManager.getLogger();
 
@@ -67,7 +68,7 @@ public class Driver
 		GraphListFactory factory = new GraphListFactory(reader, null, bn_config_folder, no_stanford, no_babelnet);
 		GraphList graphs = factory.getGraphs(amr_bank);
 
-		Path output = createOutputPath(amr_bank_file, semantic_graphs_suffix);
+		Path output = createOutputPath(amr_bank_file, graphs_suffix);
 		Serializer.serialize(graphs, output);
 		log.info("Graphs serialized to " + output);
 	}
@@ -87,7 +88,7 @@ public class Driver
 		options.sim_threshold = 0.5;
 		TextPlanner.rankMeanings(graphs.getCandidates(), weighting, similarity, options);
 
-		Path output = createOutputPath(graphs_file, semantic_graphs_ranked_suffix);
+		Path output = createOutputPath(graphs_file, graphs_ranked_suffix);
 		Serializer.serialize(graphs, output);
 		log.info("Ranked graphs serialized to " + output);
 	}
@@ -99,7 +100,7 @@ public class Driver
 
 		GlobalSemanticGraph graph = GlobalGraphFactory.create(graphs);
 
-		Path output = createOutputPath(graphs_file, global_graph_suffix);
+		Path output = createOutputPath(graphs_file, global_suffix);
 		Serializer.serialize(graph, output);
 		log.info("Global semantic graph serialized to " + output);
 	}
@@ -112,7 +113,7 @@ public class Driver
 		TextPlanner.Options options = new TextPlanner.Options();
 		TextPlanner.rankVariables(graph, options);
 
-		Path output = createOutputPath(graph_file, global_graph_ranked_suffix);
+		Path output = createOutputPath(graph_file, global_ranked_suffix);
 		Serializer.serialize(graph, output);
 		log.info("Ranked global semantic graph serialized to " + output);
 	}
@@ -171,13 +172,14 @@ public class Driver
 		log.info("AMR plan writen to " + output);
 	}
 
-	private void amr2plan(Path amr_bank_file, Path bn_config_folder, Path freqs, Path vectors, Format format,
+	private void amr2plan(Path amr_bank, Path bn_config_folder, Path freqs, Path vectors, Format format,
 	                        boolean no_stanford, boolean no_babelnet, int num_subgraphs_extract, int num_subgraphs) throws Exception
 	{
-		log.info("Running from " + amr_bank_file);
+		log.info("Running from " + amr_bank);
 		Stopwatch timer = Stopwatch.createStarted();
 
-		// 0- Set up
+		// Set up
+		log.info("Setting up planner");
 		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
 		AMRReader reader = new AMRReader();
 		GraphListFactory factory = new GraphListFactory(reader, null, bn_config_folder, no_stanford, no_babelnet);
@@ -186,68 +188,121 @@ public class Driver
 		//WeightingFunction variables_weighting = new TFIDF(corpus, r -> true);
 		SimilarityFunction similarity = chooseSimilarityFunction(vectors, format);
 
-		log.info("Loading resources took " + timer.stop());
-		log.info("***********************");
 		TextPlanner.Options options = new TextPlanner.Options();
 		log.info("Options: " + options);
+		log.info("Set up took " + timer.stop());
+		log.info("**********");
 
-		// 1- Create semantic graphs
-		timer.reset();timer.start();
-		String amr_bank = FileUtils.readFileToString(amr_bank_file.toFile(), StandardCharsets.UTF_8);
-		GraphList graphs = factory.getGraphs(amr_bank);
-		Path output_path = createOutputPath(amr_bank_file, semantic_graphs_suffix);
-		Serializer.serialize(graphs, output_path);
-		log.info("Graphs serialized to " + output_path);
+		if (Files.isDirectory(amr_bank))
+		{
+			final List<Path> files = Files.list(amr_bank)
+					.filter(Files::isRegularFile)
+					.collect(Collectors.toList());
+			log.info("Processing " + files.size() + " files in " + amr_bank);
 
-		// 2- Rank meanings
-		TextPlanner.rankMeanings(graphs.getCandidates(), meanings_weighting, similarity, options);
-		output_path = createOutputPath(amr_bank_file, semantic_graphs_ranked_suffix);
-		Serializer.serialize(graphs, output_path);
-		log.info("Ranked graphs serialized to " + output_path);
+			final List<Path> failed_files = files.stream()
+					.filter(f -> !planFile(f, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs))
+					.collect(toList());
+			final int num_success = files.size() - failed_files.size();
+			log.info("Successfully planned " + num_success + " files out of " + files.size());
+			if (!failed_files.isEmpty())
+				log.info("Failed files: " +  failed_files.stream().map(Path::getFileName).map(Path::toString).collect(joining(",")));
+		}
+		else if (Files.isRegularFile(amr_bank))
+		{
+			planFile(amr_bank, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs);
+		}
+		else
+			log.error("Cannot open " + amr_bank + ", aborting.");
 
-		// 3- Create global graph
-		GlobalSemanticGraph graph = GlobalGraphFactory.create(graphs);
-		output_path = createOutputPath(amr_bank_file, global_graph_suffix);
-		Serializer.serialize(graph, output_path);
-		log.info("Global semantic graph serialized to " + output_path);
-
-		// 4- Rank variables
-		TextPlanner.rankVariables(graph, options);
-		output_path = createOutputPath(amr_bank_file, global_graph_ranked_suffix);
-		Serializer.serialize(graph, output_path);
-		log.info("Ranked global graph serialized to " + output_path);
-
-		// 5- Extract subgraphs
-		Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(graph, new AMRSemantics(), num_subgraphs_extract, options);
-		output_path = createOutputPath(amr_bank_file, subgraphs_suffix);
-		Serializer.serialize(subgraphs, output_path);
-		log.info("Subgraphs serialized to " + output_path);
-
-		// 6- Remove redundancy
-		subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, num_subgraphs, similarity, options);
-		output_path = createOutputPath(amr_bank_file, non_redundant_suffix);
-		Serializer.serialize(subgraphs, output_path);
-		log.info("Non-redundant subgraphs serialized to " + output_path);
-
-		// 6- sort subgraphs
-		List<SemanticSubgraph> sorted_subgraphs = TextPlanner.sortSubgraphs(subgraphs, similarity, options);
-		output_path = createOutputPath(amr_bank_file, sorted_suffix);
-		Serializer.serialize(sorted_subgraphs, output_path);
-		log.info("Sorted subgraphs serialized to " + output_path);
-
-		AMRWriter writer = new AMRWriter();
-		final String out_amr = writer.write(sorted_subgraphs);
-		output_path = createOutputPath(amr_bank_file, plan_suffix);
-		FileUtils.writeStringToFile(output_path.toFile(), out_amr, Charsets.UTF_8);
-		log.info("AMR plan writen to " + output_path);
-
-		log.info("Planning took " + timer.stop());
+		log.info("Processing took " + timer.stop());
+		log.info("**********");
 	}
+
+	private boolean planFile(Path amr_bank_file, AMRReader reader, GraphListFactory factory, WeightingFunction weight,
+	                      SimilarityFunction similarity, TextPlanner.Options options, int num_subgraphs_extract,
+	                      int num_subgraphs)
+	{
+		try
+		{
+			Stopwatch timer = Stopwatch.createStarted();
+			log.info("*****");
+			log.info("Planning from " + amr_bank_file.getFileName());
+
+			// 1- Create semantic graphs
+			String amr_bank = FileUtils.readFileToString(amr_bank_file.toFile(), StandardCharsets.UTF_8);
+			GraphList graphs = factory.getGraphs(amr_bank);
+			Path output_path = createOutputPath(amr_bank_file, graphs_suffix);
+			Serializer.serialize(graphs, output_path);
+			log.info("*");
+
+			// 2- Rank meanings
+			TextPlanner.rankMeanings(graphs.getCandidates(), weight, similarity, options);
+			output_path = createOutputPath(amr_bank_file, graphs_ranked_suffix);
+			Serializer.serialize(graphs, output_path);
+			log.info("*");
+
+			// 3- Create global graph
+			GlobalSemanticGraph graph = GlobalGraphFactory.create(graphs);
+			output_path = createOutputPath(amr_bank_file, global_suffix);
+			Serializer.serialize(graph, output_path);
+			log.info("*");
+
+			// 4- Rank variables
+			TextPlanner.rankVariables(graph, options);
+			output_path = createOutputPath(amr_bank_file, global_ranked_suffix);
+			Serializer.serialize(graph, output_path);
+			log.info("*");
+
+			// 5- Extract subgraphs
+			Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(graph, new AMRSemantics(), num_subgraphs_extract, options);
+			output_path = createOutputPath(amr_bank_file, subgraphs_suffix);
+			Serializer.serialize(subgraphs, output_path);
+			log.info("*");
+
+			// 6- Remove redundancy
+			subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, num_subgraphs, similarity, options);
+			output_path = createOutputPath(amr_bank_file, non_redundant_suffix);
+			Serializer.serialize(subgraphs, output_path);
+			log.info("*");
+
+			// 6- sort subgraphs
+			List<SemanticSubgraph> sorted_subgraphs = TextPlanner.sortSubgraphs(subgraphs, similarity, options);
+			output_path = createOutputPath(amr_bank_file, sorted_suffix);
+			Serializer.serialize(sorted_subgraphs, output_path);
+			log.info("*");
+
+			AMRWriter writer = new AMRWriter();
+			final String out_amr = writer.write(sorted_subgraphs);
+			output_path = createOutputPath(amr_bank_file, plan_suffix);
+			FileUtils.writeStringToFile(output_path.toFile(), out_amr, Charsets.UTF_8);
+			log.info("AMR plan writen to " + output_path.toString());
+
+			log.info("Planning took " + timer.stop());
+			log.info("*****");
+			return true;
+		}
+		catch (Exception e)
+		{
+			log.error("Planning failed " + e);
+			log.info("*****");
+			return false;
+		}
+	}
+
+
 
 	private static Path createOutputPath(Path input, String suffix)
 	{
-		String baseName = FilenameUtils.getBaseName(input.toAbsolutePath().toString());
-		return input.getParent().resolve(Paths.get(baseName + suffix)).toAbsolutePath();
+		//String baseName = FilenameUtils.getBaseName(input.toAbsolutePath().toString());
+		String basename = input.toAbsolutePath().toString();
+		final String new_name = suffixes.stream()
+				.filter(basename::endsWith)
+				.findFirst()
+				.map(s -> basename.substring(0, basename.length() - s.length()))
+				.orElse(basename) + suffix;
+
+		return input.getParent().resolve(Paths.get(new_name)).toAbsolutePath();
 	}
 
 	public static SimilarityFunction chooseSimilarityFunction(Path vectors, Format format) throws Exception
@@ -390,9 +445,9 @@ public class Driver
 	@Parameters(commandDescription = "Plan from an AMR bank")
 	private static class AMR2PlanCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Input text-based AMR file", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path inputFile;
+		@Parameter(names = {"-i", "-input"}, description = "Input file or folder containing text-based AMRs", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path input;
 		@Parameter(names = {"-b", "-babelconfig"}, description = "BabelNet configuration folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
 		private Path bnFolder;
@@ -505,7 +560,7 @@ public class Driver
 		else if (jc.getParsedCommand().equals("write_amr"))
 			driver.write_amr(write_amr.inputFile);
 		else if (jc.getParsedCommand().equals("amr2plan"))
-			driver.amr2plan(amr2plan.inputFile, amr2plan.bnFolder, amr2plan.freqsFile, amr2plan.vectorsPath,
+			driver.amr2plan(amr2plan.input, amr2plan.bnFolder, amr2plan.freqsFile, amr2plan.vectorsPath,
 					amr2plan.format, amr2plan.no_stanford, amr2plan.no_babelnet, amr2plan.num_extract, amr2plan.num_subgraphs);
 		else if (jc.getParsedCommand().equals("process"))
 		{

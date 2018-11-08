@@ -1,5 +1,6 @@
 package edu.upf.taln.textplanning.amr.input;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.amr.structures.AMRSemantics;
@@ -29,6 +30,9 @@ public class GlobalGraphFactory
 
 	public static GlobalSemanticGraph create(GraphList graphs)
 	{
+		Stopwatch timer = Stopwatch.createStarted();
+		log.info("***Creating semantic graphs***");
+
 		remove_names(graphs); // <- won't work unless executed before remove_concepts
 		Map<String, String> concepts = remove_concepts(graphs);
 		disambiguate_candidates(graphs);
@@ -42,6 +46,7 @@ public class GlobalGraphFactory
 		log.info("Merged graph has " + sets.size() + " components");
 		log.debug(DebugUtils.printSets(merge, sets));
 
+		log.info("Semantic graphs created in " + timer.stop());
 		return merge;
 	}
 
