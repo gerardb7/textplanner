@@ -24,18 +24,27 @@ import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.core.weighting.NoWeights;
 import edu.upf.taln.textplanning.core.weighting.NumberForms;
 import edu.upf.taln.textplanning.core.weighting.WeightingFunction;
+import main.AmrMain;
+import misc.Debugger;
+import net.sf.extjwnl.JWNLException;
 import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.joining;
@@ -44,6 +53,7 @@ import static java.util.stream.Collectors.toList;
 @SuppressWarnings("ALL")
 public class Driver
 {
+	private final static String output_folder = "out/";
 	private final static String process_suffix = ".processed.bin";
 	private final static String graphs_suffix = ".graphs.bin";
 	private final static String graphs_ranked_suffix = ".graphs_ranked.bin";
@@ -53,10 +63,23 @@ public class Driver
 	private final static String non_redundant_suffix = ".non_redundant.bin";
 	private final static String sorted_suffix = ".sorted.bin";
 	private final static String plan_suffix = ".plan.amr";
+	private final static String summary_suffix = ".summary.txt";
 	private final static List<String> suffixes = Arrays.asList(process_suffix, graphs_suffix, graphs_ranked_suffix,
 			global_suffix, global_ranked_suffix, subgraphs_suffix, non_redundant_suffix, sorted_suffix, plan_suffix);
 
 	private final static Logger log = LogManager.getLogger();
+	private static final String create_graphs_command = "create_graphs";
+	private static final String rank_meanings_command = "rank_meanings";
+	private static final String create_global_command = "create_global";
+	private static final String rank_variables_command = "rank_variables";
+	private static final String extract_subgraphs_command = "extract_subgraphs";
+	private static final String remove_redundancy_command = "remove_redundancy";
+	private static final String sort_subgraphs_command = "sort_subgraphs";
+	private static final String write_amr_command = "write_amr";
+	private static final String generate_command = "generate";
+	private static final String amr2plan_command = "amr2plan";
+	private static final String process_command = "process";
+	private static final String stats_command = "stats";
 
 	private void create_graphs(Path amr_bank_file, Path bn_config_folder, boolean no_stanford, boolean no_babelnet)
 			throws IOException
@@ -172,14 +195,35 @@ public class Driver
 		log.info("AMR plan writen to " + output);
 	}
 
-	private void amr2plan(Path amr_bank, Path bn_config_folder, Path freqs, Path vectors, Format format,
-	                        boolean no_stanford, boolean no_babelnet, int num_subgraphs_extract, int num_subgraphs) throws Exception
+
+	private void generate(Path amr_file, Path resources) throws IOException, JWNLException
 	{
-		log.info("Running from " + amr_bank);
+		log.info("Running from " + amr_file);
+		final String amr = FileUtils.readFileToString(amr_file.toFile(), Charsets.UTF_8);
+
+		PrintStream out = System.out;
+		PrintStream err= System.err;
+		System.setOut(new PrintStream(new OutputStream() { public void write(int b) {} }));
+		System.setErr(new PrintStream(new OutputStream() { public void write(int b) {} }));
+		AmrMain generator = new AmrMain(resources);
+		System.setErr(err);
+		String text = generator.generate(amr);
+		System.setOut(out);
+
+		Path output = createOutputPath(amr_file, summary_suffix);
+		FileUtils.writeStringToFile(output.toFile(), text, Charsets.UTF_8);
+		log.info("Summary text writen to " + output);
+	}
+
+	private void amr2plan(Path amr_bank, Path bn_config_folder, Path freqs, Path vectors, Format format,
+	                        boolean no_stanford, boolean no_babelnet, int num_subgraphs_extract, int num_subgraphs,
+	                      Path generation_resources) throws Exception
+	{
+		log.info("*****Running from " + amr_bank + "*****");
 		Stopwatch timer = Stopwatch.createStarted();
 
 		// Set up
-		log.info("Setting up planner");
+		log.info("*****Setting up planner*****");
 		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
 		AMRReader reader = new AMRReader();
 		GraphListFactory factory = new GraphListFactory(reader, null, bn_config_folder, no_stanford, no_babelnet);
@@ -188,20 +232,24 @@ public class Driver
 		//WeightingFunction variables_weighting = new TFIDF(corpus, r -> true);
 		SimilarityFunction similarity = chooseSimilarityFunction(vectors, format);
 
+		Debugger.PRINT_DEBUG_INFORMATION = false;
+		Configurator.setLevel("edu.stanford.nlp.tagger.maxent.MaxentTagger", Level.OFF);
+		AmrMain generator = new AmrMain(generation_resources);
+
 		TextPlanner.Options options = new TextPlanner.Options();
 		log.info("Options: " + options);
-		log.info("Set up took " + timer.stop());
-		log.info("**********");
+		log.info("*****Set up took " + timer.stop() + "*****");
+		timer.reset(); timer.start();
 
 		if (Files.isDirectory(amr_bank))
 		{
 			final List<Path> files = Files.list(amr_bank)
 					.filter(Files::isRegularFile)
 					.collect(Collectors.toList());
-			log.info("Processing " + files.size() + " files in " + amr_bank);
+			log.info("*****Processing " + files.size() + " files in " + amr_bank + "*****");
 
 			final List<Path> failed_files = files.stream()
-					.filter(f -> !planFile(f, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs))
+					.filter(f -> !planFile(f, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator))
 					.collect(toList());
 			final int num_success = files.size() - failed_files.size();
 			log.info("Successfully planned " + num_success + " files out of " + files.size());
@@ -210,99 +258,100 @@ public class Driver
 		}
 		else if (Files.isRegularFile(amr_bank))
 		{
-			planFile(amr_bank, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs);
+			log.info("*****Begin processing*****");
+			planFile(amr_bank, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator);
 		}
 		else
-			log.error("Cannot open " + amr_bank + ", aborting.");
+			log.error("*****Cannot open " + amr_bank + ", aborting*****");
 
-		log.info("Processing took " + timer.stop());
-		log.info("**********");
+		log.info("*****Processing took " + timer.stop() + "******");
 	}
 
 	private boolean planFile(Path amr_bank_file, AMRReader reader, GraphListFactory factory, WeightingFunction weight,
 	                      SimilarityFunction similarity, TextPlanner.Options options, int num_subgraphs_extract,
-	                      int num_subgraphs)
+	                      int num_subgraphs, AmrMain generator)
 	{
 		try
 		{
 			Stopwatch timer = Stopwatch.createStarted();
-			log.info("*****");
-			log.info("Planning from " + amr_bank_file.getFileName());
+			log.info("***Planning from " + amr_bank_file.getFileName() + "***");
 
 			// 1- Create semantic graphs
 			String amr_bank = FileUtils.readFileToString(amr_bank_file.toFile(), StandardCharsets.UTF_8);
 			GraphList graphs = factory.getGraphs(amr_bank);
 			Path output_path = createOutputPath(amr_bank_file, graphs_suffix);
 			Serializer.serialize(graphs, output_path);
-			log.info("*");
 
 			// 2- Rank meanings
 			TextPlanner.rankMeanings(graphs.getCandidates(), weight, similarity, options);
 			output_path = createOutputPath(amr_bank_file, graphs_ranked_suffix);
 			Serializer.serialize(graphs, output_path);
-			log.info("*");
 
 			// 3- Create global graph
 			GlobalSemanticGraph graph = GlobalGraphFactory.create(graphs);
 			output_path = createOutputPath(amr_bank_file, global_suffix);
 			Serializer.serialize(graph, output_path);
-			log.info("*");
 
 			// 4- Rank variables
 			TextPlanner.rankVariables(graph, options);
 			output_path = createOutputPath(amr_bank_file, global_ranked_suffix);
 			Serializer.serialize(graph, output_path);
-			log.info("*");
 
 			// 5- Extract subgraphs
 			Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(graph, new AMRSemantics(), num_subgraphs_extract, options);
 			output_path = createOutputPath(amr_bank_file, subgraphs_suffix);
 			Serializer.serialize(subgraphs, output_path);
-			log.info("*");
 
 			// 6- Remove redundancy
 			subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, num_subgraphs, similarity, options);
 			output_path = createOutputPath(amr_bank_file, non_redundant_suffix);
 			Serializer.serialize(subgraphs, output_path);
-			log.info("*");
 
 			// 6- sort subgraphs
 			List<SemanticSubgraph> sorted_subgraphs = TextPlanner.sortSubgraphs(subgraphs, similarity, options);
 			output_path = createOutputPath(amr_bank_file, sorted_suffix);
 			Serializer.serialize(sorted_subgraphs, output_path);
-			log.info("*");
 
+			// 7- create AMR plan
+			log.info("*Writing AMR*");
 			AMRWriter writer = new AMRWriter();
 			final String out_amr = writer.write(sorted_subgraphs);
 			output_path = createOutputPath(amr_bank_file, plan_suffix);
 			FileUtils.writeStringToFile(output_path.toFile(), out_amr, Charsets.UTF_8);
-			log.info("AMR plan writen to " + output_path.toString());
+			log.info("Plan serialized as AMR");
 
-			log.info("Planning took " + timer.stop());
-			log.info("*****");
+			// 8- generate text
+			log.info("*Generating text*");
+			Stopwatch gen_timer = Stopwatch.createStarted();
+			String text = generator.generate(out_amr);
+			log.info("*Generation completed in " + gen_timer.stop() + "*");
+
+			log.info("***Planning took " + timer.stop() +"***");
 			return true;
 		}
 		catch (Exception e)
 		{
-			log.error("Planning failed " + e);
-			log.info("*****");
+			log.error("***Planning failed " + e + "***");
 			return false;
 		}
 	}
 
 
 
-	private static Path createOutputPath(Path input, String suffix)
+	private static Path createOutputPath(Path input, String suffix) throws IOException
 	{
-		//String baseName = FilenameUtils.getBaseName(input.toAbsolutePath().toString());
-		String basename = input.toAbsolutePath().toString();
+		final Path out = input.getParent().resolve(output_folder);
+		if (!Files.exists(out))
+			Files.createDirectories(out);
+
+		String basename = input.getFileName().toString();
 		final String new_name = suffixes.stream()
 				.filter(basename::endsWith)
 				.findFirst()
 				.map(s -> basename.substring(0, basename.length() - s.length()))
 				.orElse(basename) + suffix;
 
-		return input.getParent().resolve(Paths.get(new_name)).toAbsolutePath();
+		return out.resolve(new_name);
 	}
 
 	public static SimilarityFunction chooseSimilarityFunction(Path vectors, Format format) throws Exception
@@ -442,16 +491,27 @@ public class Driver
 		private Path inputFile;
 	}
 
+	@Parameters(commandDescription = "Generate text from AMR")
+	private static class GenerateCommand
+	{
+		@Parameter(names = {"-i", "-input"}, description = "Path to input AMR text file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path inputFile;
+		@Parameter(names = {"-g", "-generation"}, description = "Path to generation resources folder", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path generation_resources;
+	}
+
 	@Parameters(commandDescription = "Plan from an AMR bank")
 	private static class AMR2PlanCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Input file or folder containing text-based AMRs", arity = 1, required = true,
+		@Parameter(names = {"-i", "-input"}, description = "Path to input file or folder containing text-based AMRs", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path input;
-		@Parameter(names = {"-b", "-babelconfig"}, description = "BabelNet configuration folder", arity = 1, required = true,
+		@Parameter(names = {"-b", "-babelconfig"}, description = "Path to BabelNet configuration folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
 		private Path bnFolder;
-		@Parameter(names = {"-f", "-frequencies"}, description = "Frequencies file", arity = 1, required = true,
+		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
 		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
@@ -470,6 +530,9 @@ public class Driver
 		@Parameter(names = {"-n", "-number_subgraphs"}, description = "Final number of subgraphs in plan", arity = 1, required = true,
 				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
 		private int num_subgraphs;
+		@Parameter(names = {"-g", "-generation"}, description = "Path to generation resources folder", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path generation_resources;
 	}
 
 	@SuppressWarnings("unused")
@@ -514,22 +577,26 @@ public class Driver
 		RemoveRedundancyCommand remove_redundancy = new RemoveRedundancyCommand();
 		SortCommand sort_subgraphs = new SortCommand();
 		WriteAMRCommand write_amr = new WriteAMRCommand();
+		GenerateCommand generateCommand = new GenerateCommand();
+		/* --- */
 		AMR2PlanCommand amr2plan = new AMR2PlanCommand();
 		ProcessFileCommand process = new ProcessFileCommand();
 		GetStatsCommand stats = new GetStatsCommand();
 
 		JCommander jc = new JCommander();
-		jc.addCommand("create_graphs", create_graphs);
-		jc.addCommand("rank_meanings", rank_meanings);
-		jc.addCommand("create_global", create_global);
-		jc.addCommand("rank_variables", rank_variables);
-		jc.addCommand("extract_subgraphs", extract_subgraphs);
-		jc.addCommand("remove_redundancy", remove_redundancy);
-		jc.addCommand("sort_subgraphs", sort_subgraphs);
-		jc.addCommand("write_amr", write_amr);
-		jc.addCommand("amr2plan", amr2plan);
-		jc.addCommand("process", process);
-		jc.addCommand("stats", stats);
+		jc.addCommand(create_graphs_command, create_graphs);
+		jc.addCommand(rank_meanings_command, rank_meanings);
+		jc.addCommand(create_global_command, create_global);
+		jc.addCommand(rank_variables_command, rank_variables);
+		jc.addCommand(extract_subgraphs_command, extract_subgraphs);
+		jc.addCommand(remove_redundancy_command, remove_redundancy);
+		jc.addCommand(sort_subgraphs_command, sort_subgraphs);
+		jc.addCommand(write_amr_command, write_amr);
+		jc.addCommand(generate_command, generateCommand);
+		/* --- */
+		jc.addCommand(amr2plan_command, amr2plan);
+		jc.addCommand(process_command, process);
+		jc.addCommand(stats_command, stats);
 
 		jc.parse(args);
 
@@ -540,36 +607,40 @@ public class Driver
 		log.debug("*********************************************************");
 
 		Driver driver = new Driver();
-		if (jc.getParsedCommand().equals("create_graphs"))
+		if (jc.getParsedCommand().equals(create_graphs_command))
 			driver.create_graphs(create_graphs.inputFile, create_graphs.bnFolder, create_graphs.no_stanford,
 					create_graphs.no_babelnet);
-		else if (jc.getParsedCommand().equals("rank_meanings"))
+		else if (jc.getParsedCommand().equals(rank_meanings_command))
 			driver.rank_meanings(rank_meanings.inputFile, rank_meanings.freqsFile, rank_meanings.vectorsPath,
 					rank_meanings.format);
-		else if (jc.getParsedCommand().equals("create_global"))
+		else if (jc.getParsedCommand().equals(create_global_command))
 			driver.create_global(create_global.inputFile);
-		else if (jc.getParsedCommand().equals("rank_variables"))
+		else if (jc.getParsedCommand().equals(rank_variables_command))
 			driver.rank_variables(rank_variables.inputFile);
-		else if (jc.getParsedCommand().equals("extract_subgraphs"))
+		else if (jc.getParsedCommand().equals(extract_subgraphs_command))
 			driver.extract_subgraphs(extract_subgraphs.inputFile, extract_subgraphs.num_subgraphs);
-		else if (jc.getParsedCommand().equals("remove_redundancy"))
+		else if (jc.getParsedCommand().equals(remove_redundancy_command))
 			driver.remove_redundancy(remove_redundancy.inputFile, remove_redundancy.num_subgraphs,
 					remove_redundancy.vectorsPath, remove_redundancy.format);
-		else if (jc.getParsedCommand().equals("sort_subgraphs"))
+		else if (jc.getParsedCommand().equals(sort_subgraphs_command))
 			driver.sort_subgraphs(sort_subgraphs.inputFile, sort_subgraphs.vectorsPath, sort_subgraphs.format);
-		else if (jc.getParsedCommand().equals("write_amr"))
+		else if (jc.getParsedCommand().equals(write_amr_command))
 			driver.write_amr(write_amr.inputFile);
-		else if (jc.getParsedCommand().equals("amr2plan"))
+		else if (jc.getParsedCommand().equals(generate_command))
+			driver.generate(generateCommand.inputFile, generateCommand.generation_resources);
+		/* --- */
+		else if (jc.getParsedCommand().equals(amr2plan_command))
 			driver.amr2plan(amr2plan.input, amr2plan.bnFolder, amr2plan.freqsFile, amr2plan.vectorsPath,
-					amr2plan.format, amr2plan.no_stanford, amr2plan.no_babelnet, amr2plan.num_extract, amr2plan.num_subgraphs);
-		else if (jc.getParsedCommand().equals("process"))
+					amr2plan.format, amr2plan.no_stanford, amr2plan.no_babelnet, amr2plan.num_extract,
+					amr2plan.num_subgraphs, amr2plan.generation_resources);
+		else if (jc.getParsedCommand().equals(process_command))
 		{
 			final String text = FileUtils.readFileToString(process.inputFile.toFile(), StandardCharsets.UTF_8);
 
 			final Path output = createOutputPath(process.inputFile, process_suffix);
 			EmpiricalStudy.processText(text, output, process.bnFolder);
 		}
-		else if (jc.getParsedCommand().equals("stats"))
+		else if (jc.getParsedCommand().equals(stats_command))
 		{
 			EmpiricalStudy.calculateStats(stats.inputFile, stats.freqsFile, stats.vectorsPath, stats.format, stats.do_pairwise_similarity);
 		}

@@ -66,6 +66,7 @@ public class AMRSemantics implements GraphSemantics
 	public static final String weekday = ":weekday";
 	public static final String year = ":year";
 	public static final String year2 = ":year2";
+	public static final String op = ":op";
 	public static final String op1 = ":op1";
 	public static final String op2 = ":op2";
 	public static final String op3 = ":op3";

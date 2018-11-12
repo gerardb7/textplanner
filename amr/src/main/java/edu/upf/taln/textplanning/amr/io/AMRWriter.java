@@ -139,9 +139,9 @@ public class AMRWriter
 
 		final String[] tokens = m.getSurface_form().split(" ");
 		final String names = IntStream.range(0, tokens.length)
-				.mapToObj(i -> tabs + "op" + (i + 1) + " \"" + tokens[i] + "\"")
+				.mapToObj(i -> tabs + AMRSemantics.op + (i + 1) + " \"" + tokens[i] + "\"")
 				.collect(Collectors.joining("\n"));
 
-		return ":name (n" +  name_index + " / name\n" + names + ")";
+		return AMRSemantics.name + " (n" +  name_index + " / " + AMRSemantics.name_concept + "\n" + names + ")";
 	}
 }

@@ -7,7 +7,7 @@
         </File>
         <Console name="console" target="SYSTEM_OUT">
             <ThresholdFilter level="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
-            <PatternLayout pattern="%p] %c{1} – %m%n"/>
+            <PatternLayout pattern="[%p] – %m%n"/>
         </Console>
     </Appenders>
     <Loggers>

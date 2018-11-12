@@ -63,7 +63,7 @@ public final class TextPlanner
 	{
 		try
 		{
-			log.info("***Planning started***");
+			log.info("*Planning started*");
 			Stopwatch timer = Stopwatch.createStarted();
 
 			// 1- Rank variables
@@ -95,7 +95,7 @@ public final class TextPlanner
 	public static void rankMeanings(Collection<Candidate> candidates, WeightingFunction weighting, SimilarityFunction similarity,
 	                                Options o)
 	{
-		log.info("***Ranking meanings***");
+		log.info("*Ranking meanings*");
 		Stopwatch timer = Stopwatch.createStarted();
 
 		GraphRanking.rankMeanings(candidates, weighting, similarity, o.sim_threshold, o.damping_meanings);
@@ -108,7 +108,7 @@ public final class TextPlanner
 	 */
 	public static void rankVariables(GlobalSemanticGraph graph, Options o)
 	{
-		log.info("***Ranking variables***");
+		log.info("*Ranking variables*");
 		Stopwatch timer = Stopwatch.createStarted();
 		GraphRanking.rankVariables(graph, o.damping_variables);
 		log.info("Ranking completed in " + timer.stop());
@@ -120,7 +120,7 @@ public final class TextPlanner
 	public static Collection<SemanticSubgraph> extractSubgraphs(GlobalSemanticGraph graph, GraphSemantics semantics,
 	                                                            int num_graphs, Options o)
 	{
-		log.info("***Extracting subgraphs***");
+		log.info("*Extracting subgraphs*");
 		Stopwatch timer = Stopwatch.createStarted();
 
 		Explorer e = new RequirementsExplorer(semantics, true, Explorer.ExpansionPolicy.Non_core_only);
@@ -138,7 +138,7 @@ public final class TextPlanner
 	public static Collection<SemanticSubgraph> removeRedundantSubgraphs(Collection<SemanticSubgraph> subgraphs, int num_graphs,
 	                                                     SimilarityFunction similarity, Options o)
 	{
-		log.info("***Removing redundant subgraphs***");
+		log.info("*Removing redundant subgraphs*");
 		Stopwatch timer = Stopwatch.createStarted();
 		SemanticTreeSimilarity tsim = new SemanticTreeSimilarity(similarity, o.tree_edit_lambda);
 		RedundancyRemover remover = new RedundancyRemover(tsim);
@@ -154,7 +154,7 @@ public final class TextPlanner
 	public static List<SemanticSubgraph> sortSubgraphs(Collection<SemanticSubgraph> subgraphs, SimilarityFunction similarity,
 	                                            Options o)
 	{
-		log.info("***Sorting subgraphs***");
+		log.info("*Sorting subgraphs*");
 		Stopwatch timer = Stopwatch.createStarted();
 		SemanticTreeSimilarity tsim = new SemanticTreeSimilarity(similarity, o.tree_edit_lambda);
 		DiscoursePlanner discourse = new DiscoursePlanner(tsim);
