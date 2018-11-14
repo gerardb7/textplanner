@@ -25,17 +25,12 @@ import edu.upf.taln.textplanning.core.weighting.NoWeights;
 import edu.upf.taln.textplanning.core.weighting.NumberForms;
 import edu.upf.taln.textplanning.core.weighting.WeightingFunction;
 import main.AmrMain;
-import misc.Debugger;
 import net.sf.extjwnl.JWNLException;
 import org.apache.commons.io.FileUtils;
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.config.Configurator;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -77,7 +72,7 @@ public class Driver
 	private static final String sort_subgraphs_command = "sort_subgraphs";
 	private static final String write_amr_command = "write_amr";
 	private static final String generate_command = "generate";
-	private static final String amr2plan_command = "amr2plan";
+	private static final String summarize_command = "summarize";
 	private static final String process_command = "process";
 	private static final String stats_command = "stats";
 
@@ -201,23 +196,17 @@ public class Driver
 		log.info("Running from " + amr_file);
 		final String amr = FileUtils.readFileToString(amr_file.toFile(), Charsets.UTF_8);
 
-		PrintStream out = System.out;
-		PrintStream err= System.err;
-		System.setOut(new PrintStream(new OutputStream() { public void write(int b) {} }));
-		System.setErr(new PrintStream(new OutputStream() { public void write(int b) {} }));
 		AmrMain generator = new AmrMain(resources);
-		System.setErr(err);
 		String text = generator.generate(amr);
-		System.setOut(out);
 
 		Path output = createOutputPath(amr_file, summary_suffix);
 		FileUtils.writeStringToFile(output.toFile(), text, Charsets.UTF_8);
 		log.info("Summary text writen to " + output);
 	}
 
-	private void amr2plan(Path amr_bank, Path bn_config_folder, Path freqs, Path vectors, Format format,
-	                        boolean no_stanford, boolean no_babelnet, int num_subgraphs_extract, int num_subgraphs,
-	                      Path generation_resources) throws Exception
+	private void summarize(Path amr_bank, Path bn_config_folder, Path freqs, Path vectors, Format format,
+	                       boolean no_stanford, boolean no_babelnet, int num_subgraphs_extract, int num_subgraphs,
+	                       Path generation_resources) throws Exception
 	{
 		log.info("*****Running from " + amr_bank + "*****");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -231,9 +220,6 @@ public class Driver
 		WeightingFunction meanings_weighting = new NoWeights();
 		//WeightingFunction variables_weighting = new TFIDF(corpus, r -> true);
 		SimilarityFunction similarity = chooseSimilarityFunction(vectors, format);
-
-		Debugger.PRINT_DEBUG_INFORMATION = false;
-		Configurator.setLevel("edu.stanford.nlp.tagger.maxent.MaxentTagger", Level.OFF);
 		AmrMain generator = new AmrMain(generation_resources);
 
 		TextPlanner.Options options = new TextPlanner.Options();
@@ -245,11 +231,12 @@ public class Driver
 		{
 			final List<Path> files = Files.list(amr_bank)
 					.filter(Files::isRegularFile)
+					.filter(p -> p.endsWith(".amr"))
 					.collect(Collectors.toList());
 			log.info("*****Processing " + files.size() + " files in " + amr_bank + "*****");
 
 			final List<Path> failed_files = files.stream()
-					.filter(f -> !planFile(f, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator))
+					.filter(f -> !summarizeAMRFile(f, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator))
 					.collect(toList());
 			final int num_success = files.size() - failed_files.size();
 			log.info("Successfully planned " + num_success + " files out of " + files.size());
@@ -259,7 +246,7 @@ public class Driver
 		else if (Files.isRegularFile(amr_bank))
 		{
 			log.info("*****Begin processing*****");
-			planFile(amr_bank, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator);
+			summarizeAMRFile(amr_bank, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator);
 		}
 		else
 			log.error("*****Cannot open " + amr_bank + ", aborting*****");
@@ -267,9 +254,9 @@ public class Driver
 		log.info("*****Processing took " + timer.stop() + "******");
 	}
 
-	private boolean planFile(Path amr_bank_file, AMRReader reader, GraphListFactory factory, WeightingFunction weight,
-	                      SimilarityFunction similarity, TextPlanner.Options options, int num_subgraphs_extract,
-	                      int num_subgraphs, AmrMain generator)
+	private boolean summarizeAMRFile(Path amr_bank_file, AMRReader reader, GraphListFactory factory, WeightingFunction weight,
+	                                 SimilarityFunction similarity, TextPlanner.Options options, int num_subgraphs_extract,
+	                                 int num_subgraphs, AmrMain generator)
 	{
 		try
 		{
@@ -502,8 +489,8 @@ public class Driver
 		private Path generation_resources;
 	}
 
-	@Parameters(commandDescription = "Plan from an AMR bank")
-	private static class AMR2PlanCommand
+	@Parameters(commandDescription = "Generate summaries from an AMR bank")
+	private static class SummarizeCommand
 	{
 		@Parameter(names = {"-i", "-input"}, description = "Path to input file or folder containing text-based AMRs", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
@@ -579,7 +566,7 @@ public class Driver
 		WriteAMRCommand write_amr = new WriteAMRCommand();
 		GenerateCommand generateCommand = new GenerateCommand();
 		/* --- */
-		AMR2PlanCommand amr2plan = new AMR2PlanCommand();
+		SummarizeCommand summarize = new SummarizeCommand();
 		ProcessFileCommand process = new ProcessFileCommand();
 		GetStatsCommand stats = new GetStatsCommand();
 
@@ -594,7 +581,7 @@ public class Driver
 		jc.addCommand(write_amr_command, write_amr);
 		jc.addCommand(generate_command, generateCommand);
 		/* --- */
-		jc.addCommand(amr2plan_command, amr2plan);
+		jc.addCommand(summarize_command, summarize);
 		jc.addCommand(process_command, process);
 		jc.addCommand(stats_command, stats);
 
@@ -629,10 +616,10 @@ public class Driver
 		else if (jc.getParsedCommand().equals(generate_command))
 			driver.generate(generateCommand.inputFile, generateCommand.generation_resources);
 		/* --- */
-		else if (jc.getParsedCommand().equals(amr2plan_command))
-			driver.amr2plan(amr2plan.input, amr2plan.bnFolder, amr2plan.freqsFile, amr2plan.vectorsPath,
-					amr2plan.format, amr2plan.no_stanford, amr2plan.no_babelnet, amr2plan.num_extract,
-					amr2plan.num_subgraphs, amr2plan.generation_resources);
+		else if (jc.getParsedCommand().equals(summarize_command))
+			driver.summarize(summarize.input, summarize.bnFolder, summarize.freqsFile, summarize.vectorsPath,
+					summarize.format, summarize.no_stanford, summarize.no_babelnet, summarize.num_extract,
+					summarize.num_subgraphs, summarize.generation_resources);
 		else if (jc.getParsedCommand().equals(process_command))
 		{
 			final String text = FileUtils.readFileToString(process.inputFile.toFile(), StandardCharsets.UTF_8);
