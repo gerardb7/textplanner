@@ -42,7 +42,7 @@ public class GraphListFactory
 	public GraphList getGraphs(String graph_bank)
 	{
 		Stopwatch timer = Stopwatch.createStarted();
-		log.info("***Creating semantic graphs***");
+		log.info("*Creating semantic graphs*");
 
 		// Read graphs from file
 		List<SemanticGraph> graphs = reader.read(graph_bank);

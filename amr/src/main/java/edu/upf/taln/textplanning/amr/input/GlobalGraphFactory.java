@@ -31,7 +31,7 @@ public class GlobalGraphFactory
 	public static GlobalSemanticGraph create(GraphList graphs)
 	{
 		Stopwatch timer = Stopwatch.createStarted();
-		log.info("***Creating semantic graphs***");
+		log.info("*Creating global graphs*");
 
 		remove_names(graphs); // <- won't work unless executed before remove_concepts
 		Map<String, String> concepts = remove_concepts(graphs);
@@ -46,7 +46,7 @@ public class GlobalGraphFactory
 		log.info("Merged graph has " + sets.size() + " components");
 		log.debug(DebugUtils.printSets(merge, sets));
 
-		log.info("Semantic graphs created in " + timer.stop());
+		log.info("Global graphs created in " + timer.stop());
 		return merge;
 	}
 
@@ -59,31 +59,36 @@ public class GlobalGraphFactory
 	{
 		log.info("Removing names");
 
-		// (x :name (n /name (:op1 n1 .. :opN nN)))
+		// (x :name (n /name (:op1 n1 .. :opN nN))) -> remove n, n1, .. ,nN
+		// (x /name (:op1 n1 .. :opN nN)) -> remove n1, .., nN
 		final Set<String> names = graphs.getGraphs().stream()
 				.flatMap(g -> g.edgeSet().stream()
 						.filter(e -> e.getLabel().equals(AMRSemantics.name))
 						.map(g::getEdgeTarget) // n
-						.map(name -> {
-							final Set<String> descendants = g.getDescendants(name); // adds n1..nN
-							descendants.add(name); // adds n
-							return descendants;
+						.map(n -> {
+							final Set<String> n_names = getOpVertices(n, g); // adds n1..nN
+							final Set<Role> edges = g.outgoingEdgesOf(n);
+
+							// Remove n if it has no outgoing edges other than /name and :op
+							if (edges.stream()
+									.map(Role::getLabel)
+									.noneMatch(r -> !r.equals(AMRSemantics.instance) && !AMRSemantics.isOpRole(r)))
+								n_names.add(n); // adds n
+							return n_names;
 						})
 						.flatMap(Set::stream))
 				.collect(toSet());
 
-		// (x /name (:op1 n1 .. :opN nN))
-		graphs.getGraphs().stream()
-				.flatMap(g -> g.edgeSet().stream()
-						.filter(e -> e.getLabel().equals(AMRSemantics.instance))
-						.filter(e -> g.getEdgeTarget(e).equals(AMRSemantics.name_concept))
-						.map(g::getEdgeSource) // x
-						.filter(x -> !names.contains(x))
-						.map(g::getDescendants) // adds n1..nN
-						.flatMap(Set::stream))
-				.forEach(names::add);
-
 		graphs.removeVertices(names);
+	}
+
+	private static Set<String> getOpVertices(String v, SemanticGraph g)
+	{
+		return g.outgoingEdgesOf(v).stream()
+				.filter(e -> AMRSemantics.isOpRole(e.getLabel()))
+				.map(g::getEdgeTarget)
+				.collect(toSet());
+
 	}
 
 	private static Map<String, String> remove_concepts(GraphList graphs)

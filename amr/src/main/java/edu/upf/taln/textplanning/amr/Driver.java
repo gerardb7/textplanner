@@ -231,12 +231,12 @@ public class Driver
 		{
 			final List<Path> files = Files.list(amr_bank)
 					.filter(Files::isRegularFile)
-					.filter(p -> p.endsWith(".amr"))
+					.filter(p -> p.toString().endsWith(".amr"))
 					.collect(Collectors.toList());
 			log.info("*****Processing " + files.size() + " files in " + amr_bank + "*****");
 
 			final List<Path> failed_files = files.stream()
-					.filter(f -> !summarizeAMRFile(f, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator))
+					.filter(f -> !summarizeFile(f, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator))
 					.collect(toList());
 			final int num_success = files.size() - failed_files.size();
 			log.info("Successfully planned " + num_success + " files out of " + files.size());
@@ -246,7 +246,7 @@ public class Driver
 		else if (Files.isRegularFile(amr_bank))
 		{
 			log.info("*****Begin processing*****");
-			summarizeAMRFile(amr_bank, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator);
+			summarizeFile(amr_bank, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator);
 		}
 		else
 			log.error("*****Cannot open " + amr_bank + ", aborting*****");
@@ -254,9 +254,9 @@ public class Driver
 		log.info("*****Processing took " + timer.stop() + "******");
 	}
 
-	private boolean summarizeAMRFile(Path amr_bank_file, AMRReader reader, GraphListFactory factory, WeightingFunction weight,
-	                                 SimilarityFunction similarity, TextPlanner.Options options, int num_subgraphs_extract,
-	                                 int num_subgraphs, AmrMain generator)
+	private boolean summarizeFile(Path amr_bank_file, AMRReader reader, GraphListFactory factory, WeightingFunction weight,
+	                              SimilarityFunction similarity, TextPlanner.Options options, int num_subgraphs_extract,
+	                              int num_subgraphs, AmrMain generator)
 	{
 		try
 		{

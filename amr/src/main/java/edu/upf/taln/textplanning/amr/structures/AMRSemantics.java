@@ -233,4 +233,10 @@ public class AMRSemantics implements GraphSemantics
 			}
 		}
 	}
+
+	public static boolean isOpRole(String role)
+	{
+		return role.equals(op1) || role.equals(op2) || role.equals(op3) || role.equals(op4) || role.equals(op5) ||
+				role.equals(op6) || role.equals(op7) || role.equals(op8) || role.equals(op9) || role.equals(op10);
+	}
 }
