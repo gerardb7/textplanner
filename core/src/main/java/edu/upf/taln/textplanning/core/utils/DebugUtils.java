@@ -43,11 +43,12 @@ public class DebugUtils
 				.filter(c -> !c.getMention().equals(chosen.getMention()))
 				.map(DebugUtils::printCandidate)
 				.collect(joining(", "));
-		return "Disambiguated \"" + chosen.getMention().getSurface_form() + "\" to " + chosen.getMeaning() +
+		return "Disambiguated \"" + chosen.getMention().getSurface_form() +
+				"\" to " + chosen.getMeaning() + " " + printDouble(chosen.getMeaning().getWeight()) +
 				"\t\t" + other.stream()
 				.filter(c2 -> c2 != chosen)
 				.map(Candidate::getMeaning)
-				.map(Meaning::toString)
+				.map(m -> m.toString()  + " " + printDouble(chosen.getMeaning().getWeight()))
 				.collect(joining(", ")) +
 				(accepted_multiword.isEmpty() ? "" : "\n\tDetected multiword " + accepted_multiword) +
 				(rejected_multiwords.isEmpty() ? "" : "\n\tDiscarded multiwords " + rejected_multiwords);
@@ -56,6 +57,12 @@ public class DebugUtils
 	public static String printCandidate(Candidate c)
 	{
 		return "\"" + c.getMention().getSurface_form() + "\"\t\t" + c.getMeaning().toString();
+	}
+
+	public static String printCorefMerge(String v, Collection<String> C, GlobalSemanticGraph g)
+	{
+		return "Coreferent vertices in chain " + C + " merged to " +
+				DebugUtils.createLabelForVariable(v, g.getMeaning(v), g.getMentions(v));
 	}
 
 	public static String printRank(Matrix v, int n, List<String> labels)

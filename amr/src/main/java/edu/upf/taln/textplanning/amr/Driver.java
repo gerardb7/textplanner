@@ -59,6 +59,7 @@ public class Driver
 	private final static String sorted_suffix = ".sorted.bin";
 	private final static String plan_suffix = ".plan.amr";
 	private final static String summary_suffix = ".summary.txt";
+	private final static String truncated_summary_suffix = ".trunc_summary.txt";
 	private final static List<String> suffixes = Arrays.asList(process_suffix, graphs_suffix, graphs_ranked_suffix,
 			global_suffix, global_ranked_suffix, subgraphs_suffix, non_redundant_suffix, sorted_suffix, plan_suffix);
 
@@ -86,7 +87,7 @@ public class Driver
 		GraphListFactory factory = new GraphListFactory(reader, null, bn_config_folder, no_stanford, no_babelnet);
 		GraphList graphs = factory.getGraphs(amr_bank);
 
-		Path output = createOutputPath(amr_bank_file, graphs_suffix);
+		Path output = createOutputPath(amr_bank_file, graphs_suffix, false);
 		Serializer.serialize(graphs, output);
 		log.info("Graphs serialized to " + output);
 	}
@@ -106,7 +107,7 @@ public class Driver
 		options.sim_threshold = 0.5;
 		TextPlanner.rankMeanings(graphs.getCandidates(), weighting, similarity, options);
 
-		Path output = createOutputPath(graphs_file, graphs_ranked_suffix);
+		Path output = createOutputPath(graphs_file, graphs_ranked_suffix, false);
 		Serializer.serialize(graphs, output);
 		log.info("Ranked graphs serialized to " + output);
 	}
@@ -118,7 +119,7 @@ public class Driver
 
 		GlobalSemanticGraph graph = GlobalGraphFactory.create(graphs);
 
-		Path output = createOutputPath(graphs_file, global_suffix);
+		Path output = createOutputPath(graphs_file, global_suffix, false);
 		Serializer.serialize(graph, output);
 		log.info("Global semantic graph serialized to " + output);
 	}
@@ -131,7 +132,7 @@ public class Driver
 		TextPlanner.Options options = new TextPlanner.Options();
 		TextPlanner.rankVariables(graph, options);
 
-		Path output = createOutputPath(graph_file, global_ranked_suffix);
+		Path output = createOutputPath(graph_file, global_ranked_suffix, false);
 		Serializer.serialize(graph, output);
 		log.info("Ranked global semantic graph serialized to " + output);
 	}
@@ -144,7 +145,7 @@ public class Driver
 		TextPlanner.Options options = new TextPlanner.Options();
 		final Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(graph, new AMRSemantics(), num_subgraphs, options);
 
-		Path output = createOutputPath(graph_file, subgraphs_suffix);
+		Path output = createOutputPath(graph_file, subgraphs_suffix, false);
 		Serializer.serialize(subgraphs, output);
 		log.info("Subgraphs serialized to " + output);
 	}
@@ -158,7 +159,7 @@ public class Driver
 		TextPlanner.Options options = new TextPlanner.Options();
 		subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, num_subgraphs, similarity, options);
 
-		Path output = createOutputPath(subgraphs_file, non_redundant_suffix);
+		Path output = createOutputPath(subgraphs_file, non_redundant_suffix, false);
 		Serializer.serialize(subgraphs, output);
 		log.info("Non-redundant subgraphs serialized to " + output);
 	}
@@ -172,7 +173,7 @@ public class Driver
 		TextPlanner.Options options = new TextPlanner.Options();
 		final List<SemanticSubgraph> plan = TextPlanner.sortSubgraphs(subgraphs, similarity, options);
 
-		Path output = createOutputPath(subgraphs_file, subgraphs_suffix);
+		Path output = createOutputPath(subgraphs_file, subgraphs_suffix, false);
 		Serializer.serialize(plan, output);
 		log.info("Text plan serialized to " + output);
 	}
@@ -185,7 +186,7 @@ public class Driver
 		AMRWriter writer = new AMRWriter();
 		final String out_amr = writer.write(subgraphs);
 
-		Path output = createOutputPath(subgraphs_file, plan_suffix);
+		Path output = createOutputPath(subgraphs_file, plan_suffix, false);
 		FileUtils.writeStringToFile(output.toFile(), out_amr, Charsets.UTF_8);
 		log.info("AMR plan writen to " + output);
 	}
@@ -200,13 +201,13 @@ public class Driver
 		String text = generator.generate(amr);
 
 		Path output = createOutputPath(amr_file, summary_suffix);
-		FileUtils.writeStringToFile(output.toFile(), text, Charsets.UTF_8);
+		FileUtils.writeStringToFile(output.toFile(), text, Charsets.UTF_8, false);
 		log.info("Summary text writen to " + output);
 	}
 
 	private void summarize(Path amr_bank, Path bn_config_folder, Path freqs, Path vectors, Format format,
 	                       boolean no_stanford, boolean no_babelnet, int num_subgraphs_extract, int num_subgraphs,
-	                       Path generation_resources) throws Exception
+	                       Path generation_resources, int max_words) throws Exception
 	{
 		log.info("*****Running from " + amr_bank + "*****");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -236,7 +237,7 @@ public class Driver
 			log.info("*****Processing " + files.size() + " files in " + amr_bank + "*****");
 
 			final List<Path> failed_files = files.stream()
-					.filter(f -> !summarizeFile(f, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator))
+					.filter(f -> !summarizeFile(f, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator, max_words))
 					.collect(toList());
 			final int num_success = files.size() - failed_files.size();
 			log.info("Successfully planned " + num_success + " files out of " + files.size());
@@ -246,7 +247,7 @@ public class Driver
 		else if (Files.isRegularFile(amr_bank))
 		{
 			log.info("*****Begin processing*****");
-			summarizeFile(amr_bank, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator);
+			summarizeFile(amr_bank, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator, max_words);
 		}
 		else
 			log.error("*****Cannot open " + amr_bank + ", aborting*****");
@@ -256,7 +257,7 @@ public class Driver
 
 	private boolean summarizeFile(Path amr_bank_file, AMRReader reader, GraphListFactory factory, WeightingFunction weight,
 	                              SimilarityFunction similarity, TextPlanner.Options options, int num_subgraphs_extract,
-	                              int num_subgraphs, AmrMain generator)
+	                              int num_subgraphs, AmrMain generator, int max_words)
 	{
 		try
 		{
@@ -311,6 +312,15 @@ public class Driver
 			log.info("*Generating text*");
 			Stopwatch gen_timer = Stopwatch.createStarted();
 			String text = generator.generate(out_amr);
+			String truncated_text = Arrays.stream(text.split(" "))
+					.limit(max_words)
+					.collect(joining(" "));
+
+			Path output = createOutputPath(amr_bank_file, summary_suffix);
+			FileUtils.writeStringToFile(output.toFile(), text, Charsets.UTF_8, false);
+			output = createOutputPath(amr_bank_file, truncated_summary_suffix);
+			FileUtils.writeStringToFile(output.toFile(), truncated_text, Charsets.UTF_8, false);
+
 			log.info("*Generation completed in " + gen_timer.stop() + "*");
 
 			log.info("***Planning took " + timer.stop() +"***");
@@ -324,10 +334,13 @@ public class Driver
 	}
 
 
-
 	private static Path createOutputPath(Path input, String suffix) throws IOException
 	{
-		final Path out = input.getParent().resolve(output_folder);
+		return createOutputPath(input, suffix, true);
+	}
+	private static Path createOutputPath(Path input, String suffix, boolean useOutputFolder) throws IOException
+	{
+		final Path out = useOutputFolder ? input.getParent().resolve(output_folder) : input.getParent();
 		if (!Files.exists(out))
 			Files.createDirectories(out);
 
@@ -514,9 +527,12 @@ public class Driver
 		@Parameter(names = {"-ne", "-number_extract"}, description = "Number of subgraphs to extract", arity = 1, required = true,
 				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
 		private int num_extract;
-		@Parameter(names = {"-n", "-number_subgraphs"}, description = "Final number of subgraphs in plan", arity = 1, required = true,
+		@Parameter(names = {"-n", "-number_subgraphs"}, description = "Number of subgraphs in plan", arity = 1, required = true,
 				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
 		private int num_subgraphs;
+		@Parameter(names = {"-w", "-max_words"}, description = "Maximum number of words in summary", arity = 1, required = true,
+				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
+		private int max_words;
 		@Parameter(names = {"-g", "-generation"}, description = "Path to generation resources folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
 		private Path generation_resources;
@@ -619,7 +635,7 @@ public class Driver
 		else if (jc.getParsedCommand().equals(summarize_command))
 			driver.summarize(summarize.input, summarize.bnFolder, summarize.freqsFile, summarize.vectorsPath,
 					summarize.format, summarize.no_stanford, summarize.no_babelnet, summarize.num_extract,
-					summarize.num_subgraphs, summarize.generation_resources);
+					summarize.num_subgraphs, summarize.generation_resources, summarize.max_words);
 		else if (jc.getParsedCommand().equals(process_command))
 		{
 			final String text = FileUtils.readFileToString(process.inputFile.toFile(), StandardCharsets.UTF_8);

@@ -131,12 +131,9 @@ class StanfordWrapper
 						SemanticGraph g = graphs.get(m.sentNum-1);
 						GraphAlignments a = g.getAlignments();
 
-						final edu.stanford.nlp.coref.data.Mention corenlp_m = corenlp_mentions.get(m.mentionID);
-						final int start = document.tokens().indexOf(corenlp_m.originalSpan.get(0));
-						final int end = document.tokens().indexOf(corenlp_m.originalSpan.get(corenlp_m.originalSpan.size() - 1));
-						Pair<Integer, Integer> span = Pair.of(start, end);
-
+						Pair<Integer, Integer> span = Pair.of(m.startIndex-1, m.endIndex-1);
 						final Optional<String> top_v = a.getSpanTopVertex(span);
+
 						if (top_v.isPresent())
 						{
 							final String v = top_v.get();
@@ -148,6 +145,9 @@ class StanfordWrapper
 							chain.put(v, mention);
 						}
 					});
+
+					log.info("Stanford chain of size " + c.getMentionsInTextualOrder().size() + ": " + c.getMentionsInTextualOrder());
+					log.info(chain);
 
 					return chain;
 				})

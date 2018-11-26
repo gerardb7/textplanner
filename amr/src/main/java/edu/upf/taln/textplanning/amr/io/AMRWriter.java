@@ -3,6 +3,8 @@ package edu.upf.taln.textplanning.amr.io;
 import edu.upf.taln.textplanning.amr.structures.AMRSemantics;
 import edu.upf.taln.textplanning.amr.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -11,6 +13,8 @@ import java.util.stream.IntStream;
 
 public class AMRWriter
 {
+	private final static Logger log = LogManager.getLogger();
+
 	public String write(List<SemanticSubgraph> subgraphs)
 	{
 		if (subgraphs.isEmpty())
@@ -29,7 +33,14 @@ public class AMRWriter
 						final Role e2 = Role.create(e.getLabel());
 						final String source = s.getEdgeSource(e);
 						final String target = s.getEdgeTarget(e);
-						dag.addEdge(source, target, e2);
+						try
+						{
+							dag.addEdge(source, target, e2);
+						}
+						catch (IllegalArgumentException ex)
+						{
+							log.warn("Ignoring cycle-inducing edge " + source + "-" + e2 + "-" + target);
+						}
 					});
 					return dag;
 				})
@@ -43,7 +54,7 @@ public class AMRWriter
 				.collect(Collectors.joining("\n\n"));
 	}
 
-	String printVertex(String v, int depth, Set<String> visited, SemanticGraph g, GlobalSemanticGraph base)
+	private String printVertex(String v, int depth, Set<String> visited, SemanticGraph g, GlobalSemanticGraph base)
 	{
 		if (visited.contains(v))
 			return v;
