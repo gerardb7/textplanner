@@ -17,6 +17,7 @@
     <modules>
         <module>core</module>
         <module>amr</module>
+        <module>uima</module>
     </modules>
 
     <dependencies>
