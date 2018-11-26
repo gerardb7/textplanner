@@ -11,7 +11,7 @@ import edu.upf.taln.textplanning.amr.structures.AMRSemantics;
 import edu.upf.taln.textplanning.amr.structures.GraphList;
 import edu.upf.taln.textplanning.amr.utils.CMLCheckers;
 import edu.upf.taln.textplanning.amr.utils.EmpiricalStudy;
-import edu.upf.taln.textplanning.amr.utils.Serializer;
+import edu.upf.taln.textplanning.core.utils.Serializer;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.corpora.CompactFrequencies;
 import edu.upf.taln.textplanning.core.similarity.RandomAccessVectorsSimilarity;

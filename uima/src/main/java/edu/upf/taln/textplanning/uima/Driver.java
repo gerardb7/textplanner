@@ -27,11 +27,11 @@ import java.util.ArrayList;
 
 public class Driver
 {
-	public void doit() throws UIMAException
+	public static void doit() throws UIMAException
 	{
-		String babelnetConfig = "/home/ivan/misc/BabelNet-3.7/config";
-		String reqFile = "/home/ivan/misc/tensor/resources/freqs.bin";
-		String similFile = "/home/ivan/misc/tensor/resources/sensembed-vectors-merged_bin";
+		String babelnetConfig = "/home/gerard/data/babelconfig";
+		String reqFile = "/home/gerard/data/freqs.bin";
+		String similFile = "/home/gerard/data/sew-embed.nasari_bin";
 
 
 		ArrayList<AnalysisEngineDescription> components = new ArrayList<>();
@@ -87,5 +87,10 @@ public class Driver
 		AnalysisEngineDescription all = createEngineDescription(componentArray);
 		AnalysisEngine ae = createEngine(all);
 		ae.process(jCas);
+	}
+
+	public static void main(String[] args) throws UIMAException
+	{
+		Driver.doit();
 	}
 }

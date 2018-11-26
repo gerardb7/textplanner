@@ -146,8 +146,8 @@ class StanfordWrapper
 						}
 					});
 
-					log.info("Stanford chain of size " + c.getMentionsInTextualOrder().size() + ": " + c.getMentionsInTextualOrder());
-					log.info(chain);
+					log.debug("Stanford chain of size " + c.getMentionsInTextualOrder().size() + ": " + c.getMentionsInTextualOrder());
+					log.debug(chain);
 
 					return chain;
 				})

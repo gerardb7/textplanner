@@ -23,6 +23,7 @@ import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
+import edu.upf.taln.textplanning.core.utils.Serializer;
 import edu.upf.taln.textplanning.core.weighting.NumberForms;
 import edu.upf.taln.textplanning.core.weighting.TFIDF;
 import edu.upf.taln.textplanning.core.weighting.WeightingFunction;

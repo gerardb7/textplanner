@@ -10,6 +10,7 @@ import edu.upf.taln.textplanning.core.similarity.TextVectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.VectorsTypes.Format;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
+import edu.upf.taln.textplanning.core.utils.Serializer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
