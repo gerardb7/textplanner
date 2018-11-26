@@ -241,7 +241,7 @@ public class GlobalGraphFactory
 					String v = C.stream()
 							.max(comparingDouble(n -> merged.getMeaning(n).map(Meaning::getWeight).orElse(0.0))).orElse(null);
 					C.remove(v);
-					DebugUtils.printCorefMerge(v, C, merged);
+					log.debug(DebugUtils.printCorefMerge(v, C, merged));
 
 					merged.vertexContraction(v, C);
 				});
