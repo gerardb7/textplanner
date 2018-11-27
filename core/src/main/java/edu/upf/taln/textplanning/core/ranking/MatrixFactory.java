@@ -33,7 +33,7 @@ public class MatrixFactory
 		// Create *strictly positive* bias row vector for the set of meanings
 		double[] L = createMeaningsBiasVector(meanings, weighting, true);
 
-		// Create *non-symmetric non-negative* similarity matrix
+		// Create *symmetric non-negative* similarity matrix
 		double[][] X = createMeaningsSimilarityMatrix(meanings, sim, filter, sim_threshold,
 				true,true, true);
 
@@ -68,7 +68,7 @@ public class MatrixFactory
 		// Get normalized *strictly positive* bias row vector for the set of variables
 		double[] T = createVariablesBiasVector(variables, graph);
 
-		// Get normalized symmetric non-negative adjacency matrix
+		// Get normalized *symmetric non-negative* adjacency matrix
 		double[][] Y = createVariablesAdjacencyMatrix(variables, graph);
 
 		// GraphRanking matrix: stochastic matrix describing probabilities of a random walk going from a variable u to another
