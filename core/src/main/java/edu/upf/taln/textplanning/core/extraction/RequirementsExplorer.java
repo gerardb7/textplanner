@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning.core.extraction;
 
 import edu.upf.taln.textplanning.core.structures.GlobalSemanticGraph;
-import edu.upf.taln.textplanning.core.structures.GraphSemantics;
+import edu.upf.taln.textplanning.core.io.GraphSemantics;
 
 import java.util.HashSet;
 import java.util.Set;

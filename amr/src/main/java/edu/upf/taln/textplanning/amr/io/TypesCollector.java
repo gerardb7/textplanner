@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.amr.input;
+package edu.upf.taln.textplanning.amr.io;
 
 import com.google.common.base.Stopwatch;
 import com.google.gson.Gson;

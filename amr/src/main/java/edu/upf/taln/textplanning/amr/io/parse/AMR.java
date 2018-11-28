@@ -3,7 +3,6 @@ package edu.upf.taln.textplanning.amr.io.parse;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
 
 public class AMR extends Grammar {
     public AMR(String input, Actions actions) {

@@ -9,7 +9,7 @@ import edu.upf.taln.textplanning.core.similarity.SemanticTreeSimilarity;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.GlobalSemanticGraph;
-import edu.upf.taln.textplanning.core.structures.GraphSemantics;
+import edu.upf.taln.textplanning.core.io.GraphSemantics;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.core.weighting.WeightingFunction;
 import org.apache.logging.log4j.LogManager;

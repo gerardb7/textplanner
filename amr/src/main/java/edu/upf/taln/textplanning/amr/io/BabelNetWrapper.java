@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.amr.input;
+package edu.upf.taln.textplanning.amr.io;
 
 import com.google.common.base.Stopwatch;
 import it.uniroma1.lcl.babelnet.BabelNetConfiguration;
@@ -18,7 +18,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static edu.upf.taln.textplanning.amr.input.POSConverter.BN_POS_EN;
+import static edu.upf.taln.textplanning.amr.io.POSConverter.BN_POS_EN;
 
 public class BabelNetWrapper
 {

@@ -1,9 +1,8 @@
-package edu.upf.taln.textplanning.amr.input;
+package edu.upf.taln.textplanning.amr.io;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.amr.io.AMRSemantics;
 
 import edu.upf.taln.textplanning.core.structures.GraphAlignments;
 import edu.upf.taln.textplanning.core.structures.Mention;

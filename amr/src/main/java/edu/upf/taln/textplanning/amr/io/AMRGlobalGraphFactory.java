@@ -1,9 +1,9 @@
-package edu.upf.taln.textplanning.amr.input;
+package edu.upf.taln.textplanning.amr.io;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.amr.io.AMRSemantics;
+import edu.upf.taln.textplanning.core.io.GlobalGraphFactory;
 import edu.upf.taln.textplanning.core.structures.GraphList;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.Candidate;
@@ -23,12 +23,12 @@ import static java.util.Comparator.comparingDouble;
 import static java.util.stream.Collectors.*;
 
 // Creates global semantic graphs from a lists of AMR-like semantic graphs
-public class GlobalGraphFactory
+public class AMRGlobalGraphFactory implements GlobalGraphFactory
 {
 	private final static Logger log = LogManager.getLogger();
 
 
-	public static GlobalSemanticGraph create(GraphList graphs)
+	public GlobalSemanticGraph create(GraphList graphs)
 	{
 		Stopwatch timer = Stopwatch.createStarted();
 		log.info("*Creating global graphs*");

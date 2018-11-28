@@ -3,8 +3,8 @@ package edu.upf.taln.textplanning.amr;
 import com.beust.jcommander.*;
 import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.amr.input.GlobalGraphFactory;
-import edu.upf.taln.textplanning.amr.input.GraphListFactory;
+import edu.upf.taln.textplanning.amr.io.AMRGlobalGraphFactory;
+import edu.upf.taln.textplanning.amr.io.AMRGraphListFactory;
 import edu.upf.taln.textplanning.amr.io.AMRReader;
 import edu.upf.taln.textplanning.amr.io.AMRWriter;
 import edu.upf.taln.textplanning.amr.io.AMRSemantics;
@@ -84,8 +84,8 @@ public class Driver
 		String amr_bank = FileUtils.readFileToString(amr_bank_file.toFile(), StandardCharsets.UTF_8);
 
 		AMRReader reader = new AMRReader();
-		GraphListFactory factory = new GraphListFactory(reader, null, bn_config_folder, no_stanford, no_babelnet);
-		GraphList graphs = factory.getGraphs(amr_bank);
+		AMRGraphListFactory factory = new AMRGraphListFactory(reader, null, bn_config_folder, no_stanford, no_babelnet);
+		GraphList graphs = factory.create(amr_bank);
 
 		Path output = createOutputPath(amr_bank_file, graphs_suffix, false);
 		Serializer.serialize(graphs, output);
@@ -117,7 +117,8 @@ public class Driver
 		log.info("Running from " + graphs_file);
 		GraphList graphs = (GraphList) Serializer.deserialize(graphs_file);
 
-		GlobalSemanticGraph graph = GlobalGraphFactory.create(graphs);
+		AMRGlobalGraphFactory factory = new AMRGlobalGraphFactory();
+		GlobalSemanticGraph graph = factory.create(graphs);
 
 		Path output = createOutputPath(graphs_file, global_suffix, false);
 		Serializer.serialize(graph, output);
@@ -216,7 +217,9 @@ public class Driver
 		log.info("*****Setting up planner*****");
 		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
 		AMRReader reader = new AMRReader();
-		GraphListFactory factory = new GraphListFactory(reader, null, bn_config_folder, no_stanford, no_babelnet);
+		AMRGraphListFactory factory = new AMRGraphListFactory(reader, null, bn_config_folder, no_stanford, no_babelnet);
+		AMRGlobalGraphFactory globalFactory = new AMRGlobalGraphFactory();
+
 
 		WeightingFunction meanings_weighting = new NoWeights();
 		//WeightingFunction variables_weighting = new TFIDF(corpus, r -> true);
@@ -237,7 +240,7 @@ public class Driver
 			log.info("*****Processing " + files.size() + " files in " + amr_bank + "*****");
 
 			final List<Path> failed_files = files.stream()
-					.filter(f -> !summarizeFile(f, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator, max_words))
+					.filter(f -> !summarizeFile(f, reader, factory, globalFactory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator, max_words))
 					.collect(toList());
 			final int num_success = files.size() - failed_files.size();
 			log.info("Successfully planned " + num_success + " files out of " + files.size());
@@ -247,7 +250,7 @@ public class Driver
 		else if (Files.isRegularFile(amr_bank))
 		{
 			log.info("*****Begin processing*****");
-			summarizeFile(amr_bank, reader, factory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator, max_words);
+			summarizeFile(amr_bank, reader, factory, globalFactory, meanings_weighting, similarity, options, num_subgraphs_extract, num_subgraphs, generator, max_words);
 		}
 		else
 			log.error("*****Cannot open " + amr_bank + ", aborting*****");
@@ -255,7 +258,8 @@ public class Driver
 		log.info("*****Processing took " + timer.stop() + "******");
 	}
 
-	private boolean summarizeFile(Path amr_bank_file, AMRReader reader, GraphListFactory factory, WeightingFunction weight,
+	private boolean summarizeFile(Path amr_bank_file, AMRReader reader, AMRGraphListFactory graphListFactory,
+	                              AMRGlobalGraphFactory globalGraphFactory, WeightingFunction weight,
 	                              SimilarityFunction similarity, TextPlanner.Options options, int num_subgraphs_extract,
 	                              int num_subgraphs, AmrMain generator, int max_words)
 	{
@@ -266,7 +270,7 @@ public class Driver
 
 			// 1- Create semantic graphs
 			String amr_bank = FileUtils.readFileToString(amr_bank_file.toFile(), StandardCharsets.UTF_8);
-			GraphList graphs = factory.getGraphs(amr_bank);
+			GraphList graphs = graphListFactory.create(amr_bank);
 			Path output_path = createOutputPath(amr_bank_file, graphs_suffix);
 			Serializer.serialize(graphs, output_path);
 
@@ -276,7 +280,7 @@ public class Driver
 			Serializer.serialize(graphs, output_path);
 
 			// 3- Create global graph
-			GlobalSemanticGraph graph = GlobalGraphFactory.create(graphs);
+			GlobalSemanticGraph graph = globalGraphFactory.create(graphs);
 			output_path = createOutputPath(amr_bank_file, global_suffix);
 			Serializer.serialize(graph, output_path);
 
@@ -396,7 +400,7 @@ public class Driver
 	@Parameters(commandDescription = "Create semantic graphs from an AMR bank")
 	private static class CreateGraphsCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Input text-based AMR file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-io"}, description = "Input text-based AMR file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-b", "-babelconfig"}, description = "BabelNet configuration folder", arity = 1, required = true,
@@ -411,7 +415,7 @@ public class Driver
 	@Parameters(commandDescription = "Rank meanings in a collection of semantic graphs")
 	private static class RankMeaningsCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Input binary graphs file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-io"}, description = "Input binary graphs file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-f", "-frequencies"}, description = "Frequencies file", arity = 1, required = true,
@@ -428,7 +432,7 @@ public class Driver
 	@Parameters(commandDescription = "Create global semantic graph from a list of semantic graphs")
 	private static class CreateGlobalCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Input binary graphs file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-io"}, description = "Input binary graphs file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 	}
@@ -436,7 +440,7 @@ public class Driver
 	@Parameters(commandDescription = "Rank vertices in a global semantic graph")
 	private static class RankVariablesCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Input binary global graph file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-io"}, description = "Input binary global graph file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 	}
@@ -444,7 +448,7 @@ public class Driver
 	@Parameters(commandDescription = "Extract subgraphs from a global semantic graph")
 	private static class ExtractCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Input binary global graph file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-io"}, description = "Input binary global graph file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-n", "-number"}, description = "Number of subgraphs to extract", arity = 1, required = true,
@@ -455,7 +459,7 @@ public class Driver
 	@Parameters(commandDescription = "Remove redundant subgraphs")
 	private static class RemoveRedundancyCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Input binary subgraphs file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-io"}, description = "Input binary subgraphs file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-n", "-number"}, description = "Number of subgraphs to extract", arity = 1, required = true,
@@ -472,7 +476,7 @@ public class Driver
 	@Parameters(commandDescription = "Sort subgraphs")
 	private static class SortCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Input binary subgraphs file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-io"}, description = "Input binary subgraphs file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
@@ -486,7 +490,7 @@ public class Driver
 	@Parameters(commandDescription = "Serialize plan as AMR")
 	private static class WriteAMRCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Input binary plan file containing sorted subgraphs", arity = 1, required = true,
+		@Parameter(names = {"-i", "-io"}, description = "Input binary plan file containing sorted subgraphs", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 	}
@@ -494,7 +498,7 @@ public class Driver
 	@Parameters(commandDescription = "Generate text from AMR")
 	private static class GenerateCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Path to input AMR text file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-io"}, description = "Path to io AMR text file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-g", "-generation"}, description = "Path to generation resources folder", arity = 1, required = true,
@@ -505,7 +509,7 @@ public class Driver
 	@Parameters(commandDescription = "Generate summaries from an AMR bank")
 	private static class SummarizeCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Path to input file or folder containing text-based AMRs", arity = 1, required = true,
+		@Parameter(names = {"-i", "-io"}, description = "Path to io file or folder containing text-based AMRs", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path input;
 		@Parameter(names = {"-b", "-babelconfig"}, description = "Path to BabelNet configuration folder", arity = 1, required = true,
@@ -542,7 +546,7 @@ public class Driver
 	@Parameters(commandDescription = "Process plain text file with CoreNLP and BabelNet")
 	private static class ProcessFileCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Input text file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-io"}, description = "Input text file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-b", "-babelconfig"}, description = "BabelNet configuration folder", arity = 1, required = true,
@@ -554,7 +558,7 @@ public class Driver
 	@Parameters(commandDescription = "Run empirical study from serialized file")
 	private static class GetStatsCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Input binary file containing results of processing text", arity = 1, required = true,
+		@Parameter(names = {"-i", "-io"}, description = "Input binary file containing results of processing text", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-f", "-frequencies"}, description = "Frequencies file", arity = 1, required = true,

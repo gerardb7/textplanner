@@ -6,7 +6,7 @@ import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.amr.io.parse.AMR;
 import edu.upf.taln.textplanning.core.structures.GraphAlignments;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
-import edu.upf.taln.textplanning.core.input.DocumentReader;
+import edu.upf.taln.textplanning.core.io.DocumentReader;
 import edu.upf.taln.textplanning.core.structures.Role;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;

@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning.amr.io;
 
 import edu.upf.taln.textplanning.core.structures.GlobalSemanticGraph;
-import edu.upf.taln.textplanning.core.structures.GraphSemantics;
+import edu.upf.taln.textplanning.core.io.GraphSemantics;
 
 @SuppressWarnings("unused")
 public class AMRSemantics implements GraphSemantics

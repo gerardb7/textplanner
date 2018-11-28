@@ -1,4 +1,6 @@
-package edu.upf.taln.textplanning.core.structures;
+package edu.upf.taln.textplanning.core.io;
+
+import edu.upf.taln.textplanning.core.structures.GlobalSemanticGraph;
 
 public interface GraphSemantics
 {

@@ -1,10 +1,10 @@
-package edu.upf.taln.textplanning.amr.input;
+package edu.upf.taln.textplanning.amr.io;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.amr.io.AMRSemantics;
-import edu.upf.taln.textplanning.core.input.DocumentReader;
+import edu.upf.taln.textplanning.core.io.DocumentReader;
+import edu.upf.taln.textplanning.core.io.GraphListFactory;
 import edu.upf.taln.textplanning.core.structures.CoreferenceChain;
 import edu.upf.taln.textplanning.core.structures.GraphList;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
@@ -22,7 +22,7 @@ import java.util.Set;
 import static java.util.stream.Collectors.toList;
 
 // Reads an AMR Bank into a set of graph objects, which are then decorated with NER, Coreference and BabelNet annotations.
-public class GraphListFactory
+public class AMRGraphListFactory implements GraphListFactory
 {
 	private final DocumentReader reader;
 	private final StanfordWrapper stanford;
@@ -30,8 +30,8 @@ public class GraphListFactory
 	private final TypesCollector types_collector;
 	private final static Logger log = LogManager.getLogger();
 
-	public GraphListFactory(DocumentReader reader, Path types_file, Path bn_config_folder, boolean no_stanford,
-	                        boolean no_babelnet) throws IOException
+	public AMRGraphListFactory(DocumentReader reader, Path types_file, Path bn_config_folder, boolean no_stanford,
+	                           boolean no_babelnet) throws IOException
 	{
 		this.reader = reader;
 		stanford = new StanfordWrapper(no_stanford);
@@ -40,7 +40,7 @@ public class GraphListFactory
 		this.types_collector = (types_file != null) ? new TypesCollector(types_file, babelnet) : null;
 	}
 
-	public GraphList getGraphs(String graph_bank)
+	public GraphList create(String graph_bank)
 	{
 		Stopwatch timer = Stopwatch.createStarted();
 		log.info("*Creating semantic graphs*");

@@ -3,8 +3,8 @@ package edu.upf.taln.textplanning.amr.utils;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.google.gson.Gson;
-import edu.upf.taln.textplanning.amr.input.DBPediaType;
-import edu.upf.taln.textplanning.amr.input.GraphListFactory;
+import edu.upf.taln.textplanning.amr.io.DBPediaType;
+import edu.upf.taln.textplanning.amr.io.AMRGraphListFactory;
 import edu.upf.taln.textplanning.amr.io.AMRReader;
 import edu.upf.taln.textplanning.core.structures.GraphList;
 import edu.upf.taln.textplanning.core.structures.Candidate;
@@ -39,7 +39,7 @@ public class DBPediaTypeUtils
 	private static void getTypes(Path amrPath, String extension, Path o, Path babel_config) throws IOException
 	{
 		log.info("Reading structures");
-		GraphListFactory factory = new GraphListFactory(new AMRReader(), null, babel_config, false, false);
+		AMRGraphListFactory factory = new AMRGraphListFactory(new AMRReader(), null, babel_config, false, false);
 		List<GraphList> graphs = Files.walk(amrPath.toAbsolutePath())
 				.filter(Files::isRegularFile)
 				.filter(p -> p.toString().endsWith(extension))
@@ -54,7 +54,7 @@ public class DBPediaTypeUtils
 						throw new RuntimeException(e);
 					}
 				})
-				.map(factory::getGraphs) // includes NER+Coref processing with stanford
+				.map(factory::create) // includes NER+Coref processing with stanford
 				.collect(Collectors.toList());
 
 		log.info("Collecting meanings");

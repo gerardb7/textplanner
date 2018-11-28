@@ -1,5 +1,6 @@
 package edu.upf.taln.textplanning.amr.io;
 
+import edu.upf.taln.textplanning.core.io.DocumentWriter;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.*;
 import org.apache.logging.log4j.LogManager;
@@ -10,7 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class AMRWriter
+public class AMRWriter implements DocumentWriter
 {
 	private final static Logger log = LogManager.getLogger();
 

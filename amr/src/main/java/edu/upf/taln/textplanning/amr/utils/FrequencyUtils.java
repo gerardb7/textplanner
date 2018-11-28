@@ -7,7 +7,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.core.structures.GraphList;
 import edu.upf.taln.textplanning.core.structures.GraphAlignments;
-import edu.upf.taln.textplanning.amr.input.GraphListFactory;
+import edu.upf.taln.textplanning.amr.io.AMRGraphListFactory;
 import edu.upf.taln.textplanning.amr.io.AMRReader;
 import edu.upf.taln.textplanning.core.corpora.CompactFrequencies;
 import edu.upf.taln.textplanning.core.corpora.FreqsFile;
@@ -230,9 +230,9 @@ public class FrequencyUtils
 	private static void getStats(Path amr_bank, Path freqs_file, Path babel_config) throws IOException, ClassNotFoundException
 	{
 		AMRReader reader = new AMRReader();
-		GraphListFactory factory = new GraphListFactory(reader, null, babel_config, false, false);
+		AMRGraphListFactory factory = new AMRGraphListFactory(reader, null, babel_config, false, false);
 		String contents = FileUtils.readFileToString(amr_bank.toFile(), Charsets.UTF_8);
-		GraphList graphs = factory.getGraphs(contents);
+		GraphList graphs = factory.create(contents);
 
 		long num_tokens = graphs.getGraphs().stream()
 				.mapToLong(g ->
