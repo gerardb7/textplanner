@@ -5,7 +5,7 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
-import edu.upf.taln.textplanning.amr.structures.GraphList;
+import edu.upf.taln.textplanning.core.structures.GraphList;
 import edu.upf.taln.textplanning.core.similarity.TextVectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.VectorsTypes.Format;
 import edu.upf.taln.textplanning.core.structures.Candidate;

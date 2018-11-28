@@ -1,7 +1,5 @@
-package edu.upf.taln.textplanning.amr.structures;
+package edu.upf.taln.textplanning.core.structures;
 
-import edu.upf.taln.textplanning.amr.input.GraphAlignments;
-import edu.upf.taln.textplanning.core.structures.Role;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.jgrapht.graph.DirectedAcyclicGraph;
 

@@ -5,15 +5,14 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.amr.structures.GraphList;
-import edu.upf.taln.textplanning.amr.input.GraphAlignments;
+import edu.upf.taln.textplanning.core.structures.GraphList;
+import edu.upf.taln.textplanning.core.structures.GraphAlignments;
 import edu.upf.taln.textplanning.amr.input.GraphListFactory;
 import edu.upf.taln.textplanning.amr.io.AMRReader;
 import edu.upf.taln.textplanning.core.corpora.CompactFrequencies;
 import edu.upf.taln.textplanning.core.corpora.FreqsFile;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.amr.utils.CMLCheckers.PathConverter;
 import edu.upf.taln.textplanning.core.utils.Serializer;
 import edu.upf.taln.textplanning.core.weighting.TFIDF;
 import org.apache.commons.io.FileUtils;
@@ -319,10 +318,10 @@ public class FrequencyUtils
 	@Parameters(commandDescription = "Obtain frequencies from SEW")
 	private static class GetFrequenciesCommand
 	{
-		@Parameter(names = {"-s", "-sew"}, description = "Folder containing SEW files", arity = 1, required = true, converter = PathConverter.class,
+		@Parameter(names = {"-s", "-sew"}, description = "Folder containing SEW files", arity = 1, required = true, converter = CMLCheckers.PathConverter.class,
 				validateWith = CMLCheckers.PathToExistingFolder.class)
 		private Path sewFolder;
-		@Parameter(names = {"-o", "-outputFile"}, description = "Output binary file", arity = 1, required = true, converter = PathConverter.class,
+		@Parameter(names = {"-o", "-outputFile"}, description = "Output binary file", arity = 1, required = true, converter = CMLCheckers.PathConverter.class,
 				validateWith = CMLCheckers.ValidPathToFile.class)
 		private Path outputFile;
 	}
@@ -330,13 +329,13 @@ public class FrequencyUtils
 	@Parameters(commandDescription = "Create a subset of a JSON frequencies file based on a file containing graphs")
 	private static class SubsetCommand
 	{
-		@Parameter(names = {"-g", "-graphsFile"}, description = "Graphs file", arity = 1, required = true, converter = PathConverter.class,
+		@Parameter(names = {"-g", "-graphsFile"}, description = "Graphs file", arity = 1, required = true, converter = CMLCheckers.PathConverter.class,
 				validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path graphs;
-		@Parameter(names = {"-i", "-inputFile"}, description = "Input frequencies file", arity = 1, required = true, converter = PathConverter.class,
+		@Parameter(names = {"-i", "-inputFile"}, description = "Input frequencies file", arity = 1, required = true, converter = CMLCheckers.PathConverter.class,
 				validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
-		@Parameter(names = {"-o", "-outputFile"}, description = "Output frequencies file", arity = 1, required = true, converter = PathConverter.class,
+		@Parameter(names = {"-o", "-outputFile"}, description = "Output frequencies file", arity = 1, required = true, converter = CMLCheckers.PathConverter.class,
 				validateWith = CMLCheckers.ValidPathToFile.class)
 		private Path outputFile;
 	}

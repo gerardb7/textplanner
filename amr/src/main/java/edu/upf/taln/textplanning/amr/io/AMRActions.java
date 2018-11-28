@@ -2,8 +2,7 @@ package edu.upf.taln.textplanning.amr.io;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.amr.structures.AMRSemantics;
-import edu.upf.taln.textplanning.amr.structures.SemanticGraph;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.amr.io.parse.Actions;
 import edu.upf.taln.textplanning.amr.io.parse.Label;
 import edu.upf.taln.textplanning.amr.io.parse.TreeNode;

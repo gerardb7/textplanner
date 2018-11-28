@@ -18,6 +18,7 @@
         <module>core</module>
         <module>amr</module>
         <module>uima</module>
+        <module>dsynt</module>
     </modules>
 
     <dependencies>

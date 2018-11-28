@@ -6,7 +6,7 @@ import com.google.gson.Gson;
 import edu.upf.taln.textplanning.amr.input.DBPediaType;
 import edu.upf.taln.textplanning.amr.input.GraphListFactory;
 import edu.upf.taln.textplanning.amr.io.AMRReader;
-import edu.upf.taln.textplanning.amr.structures.GraphList;
+import edu.upf.taln.textplanning.core.structures.GraphList;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import it.uniroma1.lcl.babelnet.BabelNet;

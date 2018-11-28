@@ -1,7 +1,6 @@
 package edu.upf.taln.textplanning.amr.io;
 
-import edu.upf.taln.textplanning.amr.structures.AMRSemantics;
-import edu.upf.taln.textplanning.amr.structures.SemanticGraph;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

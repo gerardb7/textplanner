@@ -11,8 +11,9 @@ import edu.stanford.nlp.pipeline.CoreSentence;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.util.CoreMap;
 import edu.stanford.nlp.util.logging.RedwoodConfiguration;
-import edu.upf.taln.textplanning.amr.structures.CoreferenceChain;
-import edu.upf.taln.textplanning.amr.structures.SemanticGraph;
+import edu.upf.taln.textplanning.core.structures.CoreferenceChain;
+import edu.upf.taln.textplanning.core.structures.GraphAlignments;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.Candidate.Type;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import org.apache.commons.lang3.tuple.Pair;
@@ -27,12 +28,12 @@ import java.util.stream.IntStream;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
-class StanfordWrapper
+public class StanfordWrapper
 {
 	private final StanfordCoreNLP pipeline;
 	private final static Logger log = LogManager.getLogger();
 
-	StanfordWrapper(boolean no_stanford)
+	public StanfordWrapper(boolean no_stanford)
 	{
 		log.info("Setting up Stanford CoreNLP");
 		Properties props = new Properties();
@@ -48,7 +49,7 @@ class StanfordWrapper
 		log.info("CoreNLP pipeline created in " + timer.stop());
 	}
 
-	List<CoreferenceChain> process(List<SemanticGraph> graphs)
+	public List<CoreferenceChain> process(List<SemanticGraph> graphs)
 	{
 		if (pipeline == null)
 			return Collections.emptyList();

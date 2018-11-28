@@ -1,6 +1,6 @@
-package edu.upf.taln.textplanning.amr.input;
+package edu.upf.taln.textplanning.core.input;
 
-import edu.upf.taln.textplanning.amr.structures.SemanticGraph;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 
 import java.util.List;
 

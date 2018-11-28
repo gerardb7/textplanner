@@ -3,9 +3,11 @@ package edu.upf.taln.textplanning.amr.input;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.amr.structures.AMRSemantics;
-import edu.upf.taln.textplanning.amr.structures.SemanticGraph;
+import edu.upf.taln.textplanning.amr.io.AMRSemantics;
+
+import edu.upf.taln.textplanning.core.structures.GraphAlignments;
 import edu.upf.taln.textplanning.core.structures.Mention;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

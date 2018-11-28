@@ -1,7 +1,6 @@
-package edu.upf.taln.textplanning.amr.structures;
+package edu.upf.taln.textplanning.core.structures;
 
 import com.google.common.collect.HashMultimap;
-import edu.upf.taln.textplanning.core.structures.Mention;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -30,7 +29,6 @@ public class CoreferenceChain implements Serializable
 
 	public String toString()
 	{
-		StringBuilder s = new StringBuilder();
 		return "Chain of size " + getSize() + ": " + coreferents.values().stream()
 				.sorted(Comparator.comparing(Mention::getSentenceId))
 				.map(m ->  m + " in sentence " + m.getSentenceId())

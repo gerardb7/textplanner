@@ -1,10 +1,8 @@
-package edu.upf.taln.textplanning.amr.input;
+package edu.upf.taln.textplanning.core.structures;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.amr.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.Candidate.Type;
-import edu.upf.taln.textplanning.core.structures.Role;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.graph.AsSubgraph;
@@ -137,7 +135,7 @@ public class GraphAlignments implements Serializable
 
 	// The lemma of a multi-word span corresponds to a whitespace-separated sequence of tokens where the head token
 	// has been replaced with its lemma, e.g. [cyber,attacks]" -> "cyber attack"
-	Optional<String> getLemma(Pair<Integer, Integer> span)
+	public Optional<String> getLemma(Pair<Integer, Integer> span)
 	{
 
 		if (span.getRight() - span.getLeft() == 1)
@@ -163,7 +161,7 @@ public class GraphAlignments implements Serializable
 
 	// The POS of a span of tokens is the POS of the tokens aligned with its head vertex.
 	// If there is no top vertex or it is unaligned, then there is no POS
-	Optional<String> getPOS(Pair<Integer, Integer> span)
+	public Optional<String> getPOS(Pair<Integer, Integer> span)
 	{
 		final Optional<String> vertex = getSpanTopVertex(span);
 		if (!vertex.isPresent())
@@ -178,7 +176,7 @@ public class GraphAlignments implements Serializable
 
 	// The NE type of a span of tokens is the NE type of the tokens aligned with its head vertex.
 	// If there is no top vertex or it is unaligned, then there is no NE type
-	Optional<Type> getNEType(Pair<Integer, Integer> span)
+	public Optional<Type> getNEType(Pair<Integer, Integer> span)
 	{
 		final Optional<String> vertex = getSpanTopVertex(span);
 		if (!vertex.isPresent())
