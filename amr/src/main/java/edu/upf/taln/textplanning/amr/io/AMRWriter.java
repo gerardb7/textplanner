@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning.amr.io;
 
 import edu.upf.taln.textplanning.core.io.DocumentWriter;
-import edu.upf.taln.textplanning.core.structures.SemanticGraph;
+import edu.upf.taln.textplanning.amr.structures.AMRGraph;
 import edu.upf.taln.textplanning.core.structures.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,13 +20,13 @@ public class AMRWriter implements DocumentWriter
 		if (subgraphs.isEmpty())
 			return "";
 
-		final GlobalSemanticGraph base = subgraphs.get(0).getBase();
+		final SemanticGraph base = subgraphs.get(0).getBase();
 
 		AtomicInteger counter = new AtomicInteger();
-		final List<SemanticGraph> dags = subgraphs.stream()
+		final List<AMRGraph> dags = subgraphs.stream()
 				.map(s ->
 				{
-					SemanticGraph dag = new SemanticGraph(Integer.toString(counter.incrementAndGet()), s.getRoot());
+					AMRGraph dag = new AMRGraph(Integer.toString(counter.incrementAndGet()), s.getRoot());
 					s.vertexSet().forEach(dag::addVertex);
 					s.edgeSet().forEach(e ->
 					{
@@ -54,7 +54,7 @@ public class AMRWriter implements DocumentWriter
 				.collect(Collectors.joining("\n\n"));
 	}
 
-	private String printVertex(String v, int depth, Set<String> visited, SemanticGraph g, GlobalSemanticGraph base)
+	private String printVertex(String v, int depth, Set<String> visited, AMRGraph g, SemanticGraph base)
 	{
 		if (visited.contains(v))
 			return v;
@@ -95,7 +95,7 @@ public class AMRWriter implements DocumentWriter
 	}
 
 	// Reverses out edges of source nodes until the only source is the root
-	private void rootGraph(SemanticGraph g)
+	private void rootGraph(AMRGraph g)
 	{
 		Set<String> sources = g.vertexSet().stream()
 				.filter(v -> g.inDegreeOf(v) == 0)
@@ -122,7 +122,7 @@ public class AMRWriter implements DocumentWriter
 
 	}
 
-	private void reverseEdge(Role e, SemanticGraph g)
+	private void reverseEdge(Role e, AMRGraph g)
 	{
 		final String source = g.getEdgeSource(e);
 		final String target = g.getEdgeTarget(e);
@@ -136,7 +136,7 @@ public class AMRWriter implements DocumentWriter
 		g.addEdge(target, source, new_e);
 	}
 
-	private String addNames(Mention m, int depth, SemanticGraph g)
+	private String addNames(Mention m, int depth, AMRGraph g)
 	{
 		final int name_index = g.vertexSet().stream()
 				.filter(n -> n.matches("n\\d"))

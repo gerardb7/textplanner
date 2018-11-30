@@ -3,11 +3,9 @@ package edu.upf.taln.textplanning.amr.io;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.core.io.DocumentReader;
-import edu.upf.taln.textplanning.core.io.GraphListFactory;
-import edu.upf.taln.textplanning.core.structures.CoreferenceChain;
-import edu.upf.taln.textplanning.core.structures.GraphList;
-import edu.upf.taln.textplanning.core.structures.SemanticGraph;
+import edu.upf.taln.textplanning.amr.structures.CoreferenceChain;
+import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
+import edu.upf.taln.textplanning.amr.structures.AMRGraph;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import org.apache.logging.log4j.LogManager;
@@ -22,15 +20,15 @@ import java.util.Set;
 import static java.util.stream.Collectors.toList;
 
 // Reads an AMR Bank into a set of graph objects, which are then decorated with NER, Coreference and BabelNet annotations.
-public class AMRGraphListFactory implements GraphListFactory
+public class AMRGraphListFactory
 {
-	private final DocumentReader reader;
+	private final AMRReader reader;
 	private final StanfordWrapper stanford;
 	private final CandidatesCollector candidate_collector;
 	private final TypesCollector types_collector;
 	private final static Logger log = LogManager.getLogger();
 
-	public AMRGraphListFactory(DocumentReader reader, Path types_file, Path bn_config_folder, boolean no_stanford,
+	public AMRGraphListFactory(AMRReader reader, Path types_file, Path bn_config_folder, boolean no_stanford,
 	                           boolean no_babelnet) throws IOException
 	{
 		this.reader = reader;
@@ -40,16 +38,16 @@ public class AMRGraphListFactory implements GraphListFactory
 		this.types_collector = (types_file != null) ? new TypesCollector(types_file, babelnet) : null;
 	}
 
-	public GraphList create(String graph_bank)
+	public AMRGraphList create(String graph_bank)
 	{
 		Stopwatch timer = Stopwatch.createStarted();
 		log.info("*Creating semantic graphs*");
 
 		// Read graphs from file
-		List<SemanticGraph> graphs = reader.read(graph_bank);
+		List<AMRGraph> graphs = reader.read(graph_bank);
 
 		// Make variable ids unique across graphs
-		for (SemanticGraph g : graphs)
+		for (AMRGraph g : graphs)
 		{
 			String prefix = g.getSource() + "_";
 			List<String> nodes_to_rename = g.vertexSet().stream()
@@ -79,7 +77,7 @@ public class AMRGraphListFactory implements GraphListFactory
 		if (types_collector != null)
 			types_collector.getMeaningTypes(candidate_meanings);
 
-		final GraphList graph_list = new GraphList(graphs, mentions, candidate_meanings, chains);
+		final AMRGraphList graph_list = new AMRGraphList(graphs, mentions, candidate_meanings, chains);
 		log.info("Semantic graphs created in " + timer.stop());
 		return graph_list;
 	}

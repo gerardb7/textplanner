@@ -4,9 +4,8 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.amr.io.parse.AMR;
-import edu.upf.taln.textplanning.core.structures.GraphAlignments;
-import edu.upf.taln.textplanning.core.structures.SemanticGraph;
-import edu.upf.taln.textplanning.core.io.DocumentReader;
+import edu.upf.taln.textplanning.amr.structures.AMRAlignments;
+import edu.upf.taln.textplanning.amr.structures.AMRGraph;
 import edu.upf.taln.textplanning.core.structures.Role;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -23,7 +22,7 @@ import java.util.stream.Stream;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
-public class AMRReader implements DocumentReader
+public class AMRReader
 {
 	private final boolean keep_inverse_relations; // If false -> convert ':*-of' relations to their non-inverted counterparts
 	private final boolean keep_relation_alignments; // If true -> move relation alignments to their target variables
@@ -37,11 +36,11 @@ public class AMRReader implements DocumentReader
 		this.keep_relation_alignments = keep_relation_alignments;
 	}
 
-    public List<SemanticGraph> read(String amrBank)
+    public List<AMRGraph> read(String amrBank)
     {
 	    log.info("Reading AMR graphs");
 	    Stopwatch timer = Stopwatch.createStarted();
-    	List<SemanticGraph> graphs = new ArrayList<>();
+    	List<AMRGraph> graphs = new ArrayList<>();
 	    final String regex = "\\(([a-z]+[0-9]*)\\s";
 	    Pattern pattern = Pattern.compile(regex);
 
@@ -80,7 +79,7 @@ public class AMRReader implements DocumentReader
 			        if (!matcher.find())
 			        	throw new Exception("Cannot find root in line " + lines[start_amr]);
 			        String root = matcher.group(1);
-			        SemanticGraph graph = new SemanticGraph(id, root);
+			        AMRGraph graph = new AMRGraph(id, root);
 
 			        // Parse the graph and populate graph object
 			        AMRActions actions = new AMRActions(graph, this.keep_inverse_relations, this.keep_relation_alignments);
@@ -97,7 +96,7 @@ public class AMRReader implements DocumentReader
 				        amr_alignments.forEach((t, a) ->
 					        gornAdressToVertex(graph, vertex_order, actions.getReentrantEdges(), a).ifPresent(v -> alignments.put(v, t)));
 			        }
-			        GraphAlignments graph_alignments = new GraphAlignments(graph, alignments, tokens);
+			        AMRAlignments graph_alignments = new AMRAlignments(graph, alignments, tokens);
 			        graph.setAlignments(graph_alignments);
 			        graphs.add(graph);
 		        }
@@ -234,7 +233,7 @@ public class AMRReader implements DocumentReader
 		catch (Exception ignored) { return HashMultimap.create(); }
 	}
 
-    private static Optional<String> gornAdressToVertex(SemanticGraph graph, List<String> vertex_order,
+    private static Optional<String> gornAdressToVertex(AMRGraph graph, List<String> vertex_order,
                                                        Set<Role> reentrant_edges, List<Integer> address)
     {
 	    try

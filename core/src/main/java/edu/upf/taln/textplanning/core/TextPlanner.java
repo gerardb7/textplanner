@@ -8,7 +8,7 @@ import edu.upf.taln.textplanning.core.redundancy.RedundancyRemover;
 import edu.upf.taln.textplanning.core.similarity.SemanticTreeSimilarity;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.structures.GlobalSemanticGraph;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.io.GraphSemantics;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.core.weighting.WeightingFunction;
@@ -58,7 +58,7 @@ public final class TextPlanner
 	/**
 	 * Generates a text plan from a global semantic graph
 	 */
-	public static List<SemanticSubgraph> plan(GlobalSemanticGraph graph, GraphSemantics semantics,
+	public static List<SemanticSubgraph> plan(SemanticGraph graph, GraphSemantics semantics,
 	                                          SimilarityFunction similarity, int num_graphs, Options o)
 	{
 		try
@@ -106,7 +106,7 @@ public final class TextPlanner
 	/**
 	 * 	Ranks variables in a global planning graph
 	 */
-	public static void rankVariables(GlobalSemanticGraph graph, Options o)
+	public static void rankVariables(SemanticGraph graph, Options o)
 	{
 		log.info("*Ranking variables*");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -117,7 +117,7 @@ public final class TextPlanner
 	/**
 	 * 	Extract subgraphs from a global planning graph
 	 */
-	public static Collection<SemanticSubgraph> extractSubgraphs(GlobalSemanticGraph graph, GraphSemantics semantics,
+	public static Collection<SemanticSubgraph> extractSubgraphs(SemanticGraph graph, GraphSemantics semantics,
 	                                                            int num_graphs, Options o)
 	{
 		log.info("*Extracting subgraphs*");

@@ -4,9 +4,9 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
-import edu.upf.taln.textplanning.core.structures.GraphAlignments;
+import edu.upf.taln.textplanning.amr.structures.AMRAlignments;
 import edu.upf.taln.textplanning.core.structures.Mention;
-import edu.upf.taln.textplanning.core.structures.SemanticGraph;
+import edu.upf.taln.textplanning.amr.structures.AMRGraph;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -24,7 +24,7 @@ public class MentionsCollector
 	private static final int max_tokens = 5;
 	private final static Logger log = LogManager.getLogger();
 
-	public static Multimap<String, Mention> collectMentions(Collection<SemanticGraph> graphs)
+	public static Multimap<String, Mention> collectMentions(Collection<AMRGraph> graphs)
 	{
 		log.info("Collecting mentions");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -46,12 +46,12 @@ public class MentionsCollector
 	 * in the graph spanning over it.
 	 */
 	@SuppressWarnings("ConstantConditions")
-	private static Multimap<String, Mention> collectMultiwordMentions(Collection<SemanticGraph> graphs)
+	private static Multimap<String, Mention> collectMultiwordMentions(Collection<AMRGraph> graphs)
 	{
 		Multimap<String, Mention> vertices2Mentions = HashMultimap.create();
 		graphs.forEach(g ->
 		{
-			GraphAlignments a = g.getAlignments();
+			AMRAlignments a = g.getAlignments();
 			List<String> tokens = a.getTokens();
 
 			Predicate<String> is_punct = (str) -> Pattern.matches("\\p{Punct}", str);
@@ -81,12 +81,12 @@ public class MentionsCollector
 	/**
 	 * Returns a mention for every individual token
 	 */
-	private static Multimap<String, Mention> collectoSingleWordMentions(Collection<SemanticGraph> graphs)
+	private static Multimap<String, Mention> collectoSingleWordMentions(Collection<AMRGraph> graphs)
 	{
 		Multimap<String, Mention> vertices2Mentions = HashMultimap.create();
 		graphs.forEach(g ->
 		{
-			GraphAlignments a = g.getAlignments();
+			AMRAlignments a = g.getAlignments();
 
 			g.vertexSet().forEach(v -> a.getAlignments(v).stream()
 					.distinct()
@@ -102,12 +102,12 @@ public class MentionsCollector
 	}
 
 	// in case of doubt, assume it's a nominal group
-	private static boolean isNominal(Pair<Integer, Integer> span, SemanticGraph g)
+	private static boolean isNominal(Pair<Integer, Integer> span, AMRGraph g)
 	{
 		return g.getAlignments().getPOS(span).map(pos -> pos.startsWith("N") || pos.endsWith("CC")).orElse(true);
 	}
 
-	public static boolean isName(Pair<Integer, Integer> span, SemanticGraph g)
+	public static boolean isName(Pair<Integer, Integer> span, AMRGraph g)
 	{
 		return g.getAlignments().getSpanTopVertex(span).map(v -> g.outgoingEdgesOf(v).stream()
 					.anyMatch(e -> e.getLabel().equals(AMRSemantics.name)) || g.outgoingEdgesOf(v).stream()
@@ -117,7 +117,7 @@ public class MentionsCollector
 					.orElse(false);
 	}
 
-	public static String getType(Pair<Integer, Integer> span, SemanticGraph g)
+	public static String getType(Pair<Integer, Integer> span, AMRGraph g)
 	{
 		return g.getAlignments().getSpanTopVertex(span).flatMap(v -> g.outgoingEdgesOf(v).stream()
 				.filter(e -> e.getLabel().equals(AMRSemantics.instance))

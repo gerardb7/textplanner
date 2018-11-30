@@ -1,6 +1,6 @@
 package edu.upf.taln.textplanning.amr.io;
 
-import edu.upf.taln.textplanning.core.structures.GlobalSemanticGraph;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.io.GraphSemantics;
 
 @SuppressWarnings("unused")
@@ -138,7 +138,7 @@ public class AMRSemantics implements GraphSemantics
 		}
 	}
 
-	public boolean isRequired(String label, String source, String target, String role, GlobalSemanticGraph g)
+	public boolean isRequired(String label, String source, String target, String role, SemanticGraph g)
 	{
 		boolean source_selected = source.equals(label);
 		boolean target_selected = target.equals(label);

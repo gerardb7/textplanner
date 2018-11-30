@@ -11,9 +11,9 @@ import edu.stanford.nlp.pipeline.CoreSentence;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.util.CoreMap;
 import edu.stanford.nlp.util.logging.RedwoodConfiguration;
-import edu.upf.taln.textplanning.core.structures.CoreferenceChain;
-import edu.upf.taln.textplanning.core.structures.GraphAlignments;
-import edu.upf.taln.textplanning.core.structures.SemanticGraph;
+import edu.upf.taln.textplanning.amr.structures.CoreferenceChain;
+import edu.upf.taln.textplanning.amr.structures.AMRAlignments;
+import edu.upf.taln.textplanning.amr.structures.AMRGraph;
 import edu.upf.taln.textplanning.core.structures.Candidate.Type;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import org.apache.commons.lang3.tuple.Pair;
@@ -49,7 +49,7 @@ public class StanfordWrapper
 		log.info("CoreNLP pipeline created in " + timer.stop());
 	}
 
-	public List<CoreferenceChain> process(List<SemanticGraph> graphs)
+	public List<CoreferenceChain> process(List<AMRGraph> graphs)
 	{
 		if (pipeline == null)
 			return Collections.emptyList();
@@ -58,8 +58,8 @@ public class StanfordWrapper
 		Stopwatch timer = Stopwatch.createStarted();
 
 		List<List<String>> tokens = graphs.stream()
-				.map(SemanticGraph::getAlignments)
-				.map(GraphAlignments::getTokens)
+				.map(AMRGraph::getAlignments)
+				.map(AMRAlignments::getTokens)
 				.collect(toList());
 
 		String text = tokens.stream()
@@ -110,7 +110,7 @@ public class StanfordWrapper
 			List<Type> ner_i = ner.get(i);
 			IntStream.range(0, pos_i.size()).forEach(j ->
 			{
-				GraphAlignments align = graphs.get(i).getAlignments();
+				AMRAlignments align = graphs.get(i).getAlignments();
 
 				align.setLemma(j, lemma_i.get(j));
 				align.setPOS(j, pos_i.get(j));
@@ -129,8 +129,8 @@ public class StanfordWrapper
 					CoreferenceChain chain = new CoreferenceChain();
 					c.getMentionsInTextualOrder().forEach(m ->
 					{
-						SemanticGraph g = graphs.get(m.sentNum-1);
-						GraphAlignments a = g.getAlignments();
+						AMRGraph g = graphs.get(m.sentNum-1);
+						AMRAlignments a = g.getAlignments();
 
 						Pair<Integer, Integer> span = Pair.of(m.startIndex-1, m.endIndex-1);
 						final Optional<String> top_v = a.getSpanTopVertex(span);

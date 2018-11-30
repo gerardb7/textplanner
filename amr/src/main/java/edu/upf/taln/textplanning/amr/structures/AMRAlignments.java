@@ -1,8 +1,9 @@
-package edu.upf.taln.textplanning.core.structures;
+package edu.upf.taln.textplanning.amr.structures;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.core.structures.Candidate.Type;
+import edu.upf.taln.textplanning.core.structures.Role;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.graph.AsSubgraph;
@@ -15,9 +16,9 @@ import java.util.stream.IntStream;
 import static java.util.stream.Collectors.toSet;
 
 // Maps vertices in semantic graphs to tokens and their linguistic annotations
-public class GraphAlignments implements Serializable
+public class AMRAlignments implements Serializable
 {
-	private final SemanticGraph graph;
+	private final AMRGraph graph;
 	private final List<String> tokens = new ArrayList<>();
 	private final List<String> lemma = new ArrayList<>();
 	private final List<String> pos = new ArrayList<>();
@@ -35,7 +36,7 @@ public class GraphAlignments implements Serializable
 	 *  Wrapping up: vertices are associated with one or two spans, one for the optional alignment, and one for the
 	 *  descendants alignments.
 	 */
-	public GraphAlignments(SemanticGraph graph, Multimap<String, Integer> align, List<String> tokens)
+	public AMRAlignments(AMRGraph graph, Multimap<String, Integer> align, List<String> tokens)
 	{
 		this.graph = graph;
 		this.tokens.addAll(tokens);

@@ -59,7 +59,7 @@ public class DebugUtils
 		return "\"" + c.getMention().getSurface_form() + "\"\t\t" + c.getMeaning().toString();
 	}
 
-	public static String printCorefMerge(String v, Collection<String> C, GlobalSemanticGraph g)
+	public static String printCorefMerge(String v, Collection<String> C, SemanticGraph g)
 	{
 		return "Coreferent vertices in chain " + C + " merged to " +
 				DebugUtils.createLabelForVariable(v, g.getMeaning(v), g.getMentions(v));
@@ -80,7 +80,7 @@ public class DebugUtils
 				.collect(Collectors.joining("\n"));
 	}
 
-	public static String printSets(GlobalSemanticGraph g, List<Set<String>> sets)
+	public static String printSets(SemanticGraph g, List<Set<String>> sets)
 	{
 		AtomicInteger i = new AtomicInteger(1);
 		return sets.stream()
@@ -103,7 +103,7 @@ public class DebugUtils
 	public static String printTree(int i, SemanticTree t)
 	{
 		final SemanticSubgraph s = t.asGraph();
-		final GlobalSemanticGraph g = s.getBase();
+		final SemanticGraph g = s.getBase();
 		String stats = s.vertexSet().stream()
 				.mapToDouble(g::getWeight)
 				.summaryStatistics().toString();

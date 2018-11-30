@@ -12,14 +12,14 @@ public class SemanticSubgraph extends AsSubgraph<String, Role>
 	private final String root;
 	private final double value; // Value assigned to this graph by the function optimized by the extraction procedure
 
-	public SemanticSubgraph(GlobalSemanticGraph base, String root, Set<String> vertexSubset, double value)
+	public SemanticSubgraph(SemanticGraph base, String root, Set<String> vertexSubset, double value)
 	{
 		super(base, vertexSubset);
 		this.root = root;
 		this.value = value;
 	}
 
-	public GlobalSemanticGraph getBase() { return (GlobalSemanticGraph)base; }
+	public SemanticGraph getBase() { return (SemanticGraph)base; }
 	public String getRoot() { return root; }
 	public double getValue() { return value; }
 

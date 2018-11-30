@@ -95,6 +95,11 @@
             </artifactId>
             <version>20130117.1</version>
         </dependency>
+        <dependency>
+            <groupId>edu.upf.taln.parser</groupId>
+            <artifactId>deep-parser-uima</artifactId>
+            <version>1.0.1</version>
+        </dependency>
     </dependencies>
 
 </project>

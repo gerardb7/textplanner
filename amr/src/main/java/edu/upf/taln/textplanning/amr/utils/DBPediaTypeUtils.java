@@ -6,7 +6,7 @@ import com.google.gson.Gson;
 import edu.upf.taln.textplanning.amr.io.DBPediaType;
 import edu.upf.taln.textplanning.amr.io.AMRGraphListFactory;
 import edu.upf.taln.textplanning.amr.io.AMRReader;
-import edu.upf.taln.textplanning.core.structures.GraphList;
+import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import it.uniroma1.lcl.babelnet.BabelNet;
@@ -40,7 +40,7 @@ public class DBPediaTypeUtils
 	{
 		log.info("Reading structures");
 		AMRGraphListFactory factory = new AMRGraphListFactory(new AMRReader(), null, babel_config, false, false);
-		List<GraphList> graphs = Files.walk(amrPath.toAbsolutePath())
+		List<AMRGraphList> graphs = Files.walk(amrPath.toAbsolutePath())
 				.filter(Files::isRegularFile)
 				.filter(p -> p.toString().endsWith(extension))
 				.map(p ->
@@ -59,7 +59,7 @@ public class DBPediaTypeUtils
 
 		log.info("Collecting meanings");
 		List<String> meanings = graphs.stream()
-				.map(GraphList::getCandidates)
+				.map(AMRGraphList::getCandidates)
 				.flatMap(Collection::stream)
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)

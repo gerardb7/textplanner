@@ -2,7 +2,7 @@ package edu.upf.taln.textplanning.core.ranking;
 
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
-import edu.upf.taln.textplanning.core.structures.GlobalSemanticGraph;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.weighting.WeightingFunction;
 import org.apache.logging.log4j.LogManager;
@@ -60,7 +60,7 @@ public class MatrixFactory
 	/**
 	 * Creates a row-stochastic matrix to rank a set of variables in a graph.
 	 */
-	static double[][] createVariableRankingMatrix(List<String> variables, GlobalSemanticGraph graph, double d)
+	static double[][] createVariableRankingMatrix(List<String> variables, SemanticGraph graph, double d)
 	{
 		log.info("Creating ranking matrix for " + variables.size() + " variables");
 		int n = variables.size();
@@ -116,7 +116,7 @@ public class MatrixFactory
 	}
 
 	// Creates normalized *strictly positive* bias row vector for variables from the rankings of their meanings
-	private static double[] createVariablesBiasVector(List<String> variables, GlobalSemanticGraph graph)
+	private static double[] createVariablesBiasVector(List<String> variables, SemanticGraph graph)
 	{
 		final double[] weights = variables.stream()
 				.map(graph::getMeaning)
@@ -229,7 +229,7 @@ public class MatrixFactory
 	}
 
 	// Creates row-normalized symmetric non-negative adjacency matrix
-	private static double[][] createVariablesAdjacencyMatrix(List<String> variables, GlobalSemanticGraph graph)
+	private static double[][] createVariablesAdjacencyMatrix(List<String> variables, SemanticGraph graph)
 	{
 		int n = variables.size();
 

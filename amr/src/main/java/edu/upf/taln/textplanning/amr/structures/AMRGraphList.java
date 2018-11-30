@@ -1,8 +1,10 @@
-package edu.upf.taln.textplanning.core.structures;
+package edu.upf.taln.textplanning.amr.structures;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -17,9 +19,9 @@ import java.util.stream.Collectors;
 import static java.util.stream.Collectors.toSet;
 
 // Assumes unique vertex labels across graphs
-public class GraphList implements Serializable
+public class AMRGraphList implements Serializable
 {
-	private final List<SemanticGraph> graphs = new ArrayList<>();
+	private final List<AMRGraph> graphs = new ArrayList<>();
 	private final Set<String> vertices; // use to performs consistency checks
 	private final Multimap<String, Mention> vertices2mentions = HashMultimap.create(); // single-word mentions
 	private final Multimap<String, Candidate> candidate_meanings = HashMultimap.create();
@@ -28,21 +30,21 @@ public class GraphList implements Serializable
 	private final static Logger log = LogManager.getLogger();
 
 
-	public GraphList(List<SemanticGraph> graphs,
-	                 Multimap<String, Mention> mentions, // single-word mentions
-	                 List<Candidate> candidates,
-	                 List<CoreferenceChain> chains)
+	public AMRGraphList(List<AMRGraph> graphs,
+	                    Multimap<String, Mention> mentions, // single-word mentions
+	                    List<Candidate> candidates,
+	                    List<CoreferenceChain> chains)
 	{
 		super();
 		this.graphs.addAll(graphs);
-		vertices = graphs.stream().map(SemanticGraph::vertexSet).flatMap(Set::stream).collect(toSet());
+		vertices = graphs.stream().map(AMRGraph::vertexSet).flatMap(Set::stream).collect(toSet());
 		vertices2mentions.putAll(mentions);
 
-		Map<String, SemanticGraph> graph_ids = graphs.stream()
-				.collect(Collectors.toMap(SemanticGraph::getSource, Function.identity()));
+		Map<String, AMRGraph> graph_ids = graphs.stream()
+				.collect(Collectors.toMap(AMRGraph::getSource, Function.identity()));
 		candidates.forEach(c ->
 		{
-			final SemanticGraph g = graph_ids.get(c.getMention().getSentenceId());
+			final AMRGraph g = graph_ids.get(c.getMention().getSentenceId());
 			final Optional<String> ov = g.getAlignments().getSpanTopVertex(c.getMention().getSpan());
 			ov.ifPresent(v -> 	candidate_meanings.put(v, c));
 			if (!ov.isPresent())
@@ -59,7 +61,7 @@ public class GraphList implements Serializable
 			throw new RuntimeException("Invalid coreference vertex");
 	}
 
-	public List<SemanticGraph> getGraphs() { return graphs; }
+	public List<AMRGraph> getGraphs() { return graphs; }
 	public Collection<Mention> getMentions() { return vertices2mentions.values(); }
 	public Collection<Mention> getMentions(String v)
 	{
@@ -104,7 +106,7 @@ public class GraphList implements Serializable
 		graphs.forEach(g -> g.removeAllVertices(vertices)); // this updates the alignments
 	}
 
-	public void vertexContraction(SemanticGraph g, String v, Collection<String> C)
+	public void vertexContraction(AMRGraph g, String v, Collection<String> C)
 	{
 		if (!vertices.contains(v) || !vertices.containsAll(C) || C.contains(v))
 			throw new RuntimeException("Invalid contraction vertices");

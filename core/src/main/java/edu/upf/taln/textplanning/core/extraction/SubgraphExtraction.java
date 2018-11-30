@@ -2,7 +2,7 @@ package edu.upf.taln.textplanning.core.extraction;
 
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.core.extraction.Explorer.State;
-import edu.upf.taln.textplanning.core.structures.GlobalSemanticGraph;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
@@ -34,7 +34,7 @@ public class SubgraphExtraction
 		this.lambda = lambda;
 	}
 
-	public List<SemanticSubgraph> multipleExtraction(GlobalSemanticGraph g, int num_subgraphs)
+	public List<SemanticSubgraph> multipleExtraction(SemanticGraph g, int num_subgraphs)
 	{
 		Stopwatch timer = Stopwatch.createStarted();
 		List<SemanticSubgraph> subgraphs = new ArrayList<>();
@@ -72,7 +72,7 @@ public class SubgraphExtraction
 				.anyMatch(V -> V.equals(s.vertexSet()));
 	}
 
-	private SemanticSubgraph extract(GlobalSemanticGraph g, double cost)
+	private SemanticSubgraph extract(SemanticGraph g, double cost)
 	{
 		final Set<String> V = g.vertexSet();
 		if (V.isEmpty())

@@ -3,11 +3,11 @@ package edu.upf.taln.textplanning.amr.io;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.core.io.GlobalGraphFactory;
-import edu.upf.taln.textplanning.core.structures.GraphList;
-import edu.upf.taln.textplanning.core.structures.SemanticGraph;
+import edu.upf.taln.textplanning.core.io.SemanticGraphFactory;
+import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
+import edu.upf.taln.textplanning.amr.structures.AMRGraph;
 import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.structures.GlobalSemanticGraph;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Role;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
@@ -23,12 +23,11 @@ import static java.util.Comparator.comparingDouble;
 import static java.util.stream.Collectors.*;
 
 // Creates global semantic graphs from a lists of AMR-like semantic graphs
-public class AMRGlobalGraphFactory implements GlobalGraphFactory
+public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphList>
 {
 	private final static Logger log = LogManager.getLogger();
 
-
-	public GlobalSemanticGraph create(GraphList graphs)
+	public SemanticGraph create(AMRGraphList graphs)
 	{
 		Stopwatch timer = Stopwatch.createStarted();
 		log.info("*Creating global graphs*");
@@ -37,7 +36,7 @@ public class AMRGlobalGraphFactory implements GlobalGraphFactory
 		Map<String, String> concepts = remove_concepts(graphs);
 		disambiguate_candidates(graphs);
 		collapse_multiwords(graphs);
-		GlobalSemanticGraph merge = merge(graphs, concepts);
+		SemanticGraph merge = merge(graphs, concepts);
 		resolve_arguments();
 
 		// log some info
@@ -55,7 +54,7 @@ public class AMRGlobalGraphFactory implements GlobalGraphFactory
 	 *      (x :name (n /name (:op1 n1 .. :opN nN))) or (x /name (:op1 n1 .. :opN nN))
 	 * Removes all but x.
 	 */
-	private static void remove_names(GraphList graphs)
+	private static void remove_names(AMRGraphList graphs)
 	{
 		log.info("Removing names");
 
@@ -82,7 +81,7 @@ public class AMRGlobalGraphFactory implements GlobalGraphFactory
 		graphs.removeVertices(names);
 	}
 
-	private static Set<String> getOpVertices(String v, SemanticGraph g)
+	private static Set<String> getOpVertices(String v, AMRGraph g)
 	{
 		return g.outgoingEdgesOf(v).stream()
 				.filter(e -> AMRSemantics.isOpRole(e.getLabel()))
@@ -91,7 +90,7 @@ public class AMRGlobalGraphFactory implements GlobalGraphFactory
 
 	}
 
-	private static Map<String, String> remove_concepts(GraphList graphs)
+	private static Map<String, String> remove_concepts(AMRGraphList graphs)
 	{
 		log.info("Removing concepts");
 		final Map<String, String> concepts = graphs.getGraphs().stream()
@@ -104,7 +103,7 @@ public class AMRGlobalGraphFactory implements GlobalGraphFactory
 		return concepts;
 	}
 
-	private static void disambiguate_candidates(GraphList graphs)
+	private static void disambiguate_candidates(AMRGraphList graphs)
 	{
 		log.info("Disambiguating candidates");
 		// Use vertex weights to choose best candidate for each vertex
@@ -146,10 +145,10 @@ public class AMRGlobalGraphFactory implements GlobalGraphFactory
 	 * 	              - after disambiguation each vertex has a single candidate
 	 * 	              - multiword candidates subsume all descendants of the vertex they're associated with
 	 */
-	private static void collapse_multiwords(GraphList graphs)
+	private static void collapse_multiwords(AMRGraphList graphs)
 	{
 		log.info("Collapsing multiwords");
-		LinkedList<Pair<SemanticGraph, String>> subsumers = graphs.getGraphs().stream()
+		LinkedList<Pair<AMRGraph, String>> subsumers = graphs.getGraphs().stream()
 				.flatMap(g -> g.vertexSet().stream()
 						.filter(v -> !graphs.getCandidates(v).isEmpty())
 						.filter(v -> graphs.getCandidates(v).iterator().next().getMention().isMultiWord())
@@ -160,8 +159,8 @@ public class AMRGlobalGraphFactory implements GlobalGraphFactory
 		while(!subsumers.isEmpty())
 		{
 			// Pop a subsumer from the queue
-			final Pair<SemanticGraph, String> subsumer = subsumers.pop();
-			final SemanticGraph g = subsumer.getLeft();
+			final Pair<AMRGraph, String> subsumer = subsumers.pop();
+			final AMRGraph g = subsumer.getLeft();
 			final String v = subsumer.getRight();
 
 			Candidate c = graphs.getCandidates(v).iterator().next();
@@ -185,7 +184,7 @@ public class AMRGlobalGraphFactory implements GlobalGraphFactory
 				graphs.vertexContraction(g, v, subsumed);
 
 				// Update remaining subsumers affected by this contraction
-				final List<Pair<SemanticGraph, String>> renamed_multiwords = subsumers.stream()
+				final List<Pair<AMRGraph, String>> renamed_multiwords = subsumers.stream()
 						.filter(p -> subsumed.contains(p.getRight()))
 						.collect(toList());
 				renamed_multiwords.forEach(p ->
@@ -201,12 +200,12 @@ public class AMRGlobalGraphFactory implements GlobalGraphFactory
 		}
 	}
 
-	private static GlobalSemanticGraph merge(GraphList graphs, Map<String, String> concepts)
+	private static SemanticGraph merge(AMRGraphList graphs, Map<String, String> concepts)
 	{
 		log.info("Merging graphs");
 
 		// Create merged (disconnected) graph
-		GlobalSemanticGraph merged = new GlobalSemanticGraph();
+		SemanticGraph merged = new SemanticGraph();
 		graphs.getGraphs().forEach(g -> g.edgeSet().forEach(e ->
 		{
 			String v1 = g.getEdgeSource(e);

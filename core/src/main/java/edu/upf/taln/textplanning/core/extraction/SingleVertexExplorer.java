@@ -1,6 +1,6 @@
 package edu.upf.taln.textplanning.core.extraction;
 
-import edu.upf.taln.textplanning.core.structures.GlobalSemanticGraph;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.io.GraphSemantics;
 
 import java.util.Collections;
@@ -14,7 +14,7 @@ public class SingleVertexExplorer extends Explorer
 	}
 
 	@Override
-	protected Set<String> getRequiredVertices(String v, State s, GlobalSemanticGraph g)
+	protected Set<String> getRequiredVertices(String v, State s, SemanticGraph g)
 	{
 		return Collections.singleton(v);
 	}

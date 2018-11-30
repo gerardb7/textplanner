@@ -2,7 +2,7 @@ package edu.upf.taln.textplanning.amr.io;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.core.structures.SemanticGraph;
+import edu.upf.taln.textplanning.amr.structures.AMRGraph;
 import edu.upf.taln.textplanning.amr.io.parse.Actions;
 import edu.upf.taln.textplanning.amr.io.parse.Label;
 import edu.upf.taln.textplanning.amr.io.parse.TreeNode;
@@ -61,14 +61,14 @@ public class AMRActions implements Actions
     }
 
 	public static final int unaligned = -1;
-	private final SemanticGraph graph;
+	private final AMRGraph graph;
 	private final boolean keep_inverse_relations; // AMR inverse (':*-of') relations to their non-inverted counterparts?
 	private final boolean keep_relation_alignments;
 	private final Multimap<String, Integer> alignments = HashMultimap.create();
 	private final Set<Role> reentrant_edges = new HashSet<>();
 	private final Map<String, Integer> vertex_counts = new HashMap<>(); // keep track of duplicated nodes
 
-	AMRActions(SemanticGraph graph, boolean keep_inverse_relations, boolean keep_relation_alignments)
+	AMRActions(AMRGraph graph, boolean keep_inverse_relations, boolean keep_relation_alignments)
 	{
 		this.graph = graph;
 		this.keep_inverse_relations = keep_inverse_relations;

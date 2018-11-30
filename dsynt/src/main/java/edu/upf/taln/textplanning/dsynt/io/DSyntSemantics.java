@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning.dsynt.io;
 
 import edu.upf.taln.textplanning.core.io.GraphSemantics;
-import edu.upf.taln.textplanning.core.structures.GlobalSemanticGraph;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 
 public class DSyntSemantics implements GraphSemantics
 {
@@ -12,7 +12,7 @@ public class DSyntSemantics implements GraphSemantics
 	}
 
 	@Override
-	public boolean isRequired(String v, String source, String target, String role, GlobalSemanticGraph g)
+	public boolean isRequired(String v, String source, String target, String role, SemanticGraph g)
 	{
 		return false;
 	}

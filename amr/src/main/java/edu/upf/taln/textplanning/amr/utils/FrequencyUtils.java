@@ -5,8 +5,8 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.core.structures.GraphList;
-import edu.upf.taln.textplanning.core.structures.GraphAlignments;
+import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
+import edu.upf.taln.textplanning.amr.structures.AMRAlignments;
 import edu.upf.taln.textplanning.amr.io.AMRGraphListFactory;
 import edu.upf.taln.textplanning.amr.io.AMRReader;
 import edu.upf.taln.textplanning.core.corpora.CompactFrequencies;
@@ -157,7 +157,7 @@ public class FrequencyUtils
 	private static void getFrequenciesSubset(Path graphs_file, Path inputFile, Path outputFile) throws IOException, ClassNotFoundException
 	{
 		log.info("Reading graphs");
-		GraphList graphs = (GraphList) Serializer.deserialize(graphs_file);
+		AMRGraphList graphs = (AMRGraphList) Serializer.deserialize(graphs_file);
 
 		Map<String, Set<String>> forms = graphs.getCandidates().stream()
 				.collect(groupingBy(c -> c.getMention().getSurface_form(),
@@ -232,12 +232,12 @@ public class FrequencyUtils
 		AMRReader reader = new AMRReader();
 		AMRGraphListFactory factory = new AMRGraphListFactory(reader, null, babel_config, false, false);
 		String contents = FileUtils.readFileToString(amr_bank.toFile(), Charsets.UTF_8);
-		GraphList graphs = factory.create(contents);
+		AMRGraphList graphs = factory.create(contents);
 
 		long num_tokens = graphs.getGraphs().stream()
 				.mapToLong(g ->
 				{
-					GraphAlignments a = g.getAlignments();
+					AMRAlignments a = g.getAlignments();
 					List<String> tokens = a.getTokens();
 					return tokens.size();
 				})
@@ -246,7 +246,7 @@ public class FrequencyUtils
 		long num_aligned_tokens = graphs.getGraphs().stream()
 				.mapToLong(g ->
 				{
-					GraphAlignments a = g.getAlignments();
+					AMRAlignments a = g.getAlignments();
 					List<String> tokens = a.getTokens();
 					return IntStream.range(0, tokens.size())
 							.mapToObj(a::getAlignedVertices)
@@ -258,7 +258,7 @@ public class FrequencyUtils
 		long num_tokens_with_meaning = graphs.getGraphs().stream()
 				.mapToLong(g ->
 				{
-					GraphAlignments a = g.getAlignments();
+					AMRAlignments a = g.getAlignments();
 					List<String> tokens = a.getTokens();
 					return IntStream.range(0, tokens.size())
 							.mapToObj(a::getAlignedVertices)
@@ -280,7 +280,7 @@ public class FrequencyUtils
 		Map<String, Long> lemma_freqs = graphs.getGraphs().stream()
 				.map(g ->
 				{
-					GraphAlignments a = g.getAlignments();
+					AMRAlignments a = g.getAlignments();
 					List<String> tokens = a.getTokens();
 					return IntStream.range(0, tokens.size())
 							.mapToObj(a::getLemma)

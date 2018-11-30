@@ -1,6 +1,7 @@
-package edu.upf.taln.textplanning.core.structures;
+package edu.upf.taln.textplanning.amr.structures;
 
 import com.google.common.collect.HashMultimap;
+import edu.upf.taln.textplanning.core.structures.Mention;
 
 import java.io.Serializable;
 import java.util.Collection;

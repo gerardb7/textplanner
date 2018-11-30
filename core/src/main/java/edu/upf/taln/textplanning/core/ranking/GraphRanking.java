@@ -4,7 +4,7 @@ import Jama.Matrix;
 
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.structures.GlobalSemanticGraph;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
@@ -97,7 +97,7 @@ public class GraphRanking
 				});
 	}
 
-	public static void rankVariables(GlobalSemanticGraph graph, double damping_factor_variables)
+	public static void rankVariables(SemanticGraph graph, double damping_factor_variables)
 	{
 		List<String> variables = graph.vertexSet().stream()
 				.sorted(Comparator.naturalOrder())

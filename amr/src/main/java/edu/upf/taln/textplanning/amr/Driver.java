@@ -3,12 +3,12 @@ package edu.upf.taln.textplanning.amr;
 import com.beust.jcommander.*;
 import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.amr.io.AMRGlobalGraphFactory;
+import edu.upf.taln.textplanning.amr.io.AMRSemanticGraphFactory;
 import edu.upf.taln.textplanning.amr.io.AMRGraphListFactory;
 import edu.upf.taln.textplanning.amr.io.AMRReader;
 import edu.upf.taln.textplanning.amr.io.AMRWriter;
 import edu.upf.taln.textplanning.amr.io.AMRSemantics;
-import edu.upf.taln.textplanning.core.structures.GraphList;
+import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.amr.utils.CMLCheckers;
 import edu.upf.taln.textplanning.amr.utils.EmpiricalStudy;
 import edu.upf.taln.textplanning.core.utils.Serializer;
@@ -19,7 +19,7 @@ import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.similarity.TextVectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.VectorsTypes.Format;
 import edu.upf.taln.textplanning.core.similarity.Word2VecVectorsSimilarity;
-import edu.upf.taln.textplanning.core.structures.GlobalSemanticGraph;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.core.weighting.NoWeights;
 import edu.upf.taln.textplanning.core.weighting.NumberForms;
@@ -85,7 +85,7 @@ public class Driver
 
 		AMRReader reader = new AMRReader();
 		AMRGraphListFactory factory = new AMRGraphListFactory(reader, null, bn_config_folder, no_stanford, no_babelnet);
-		GraphList graphs = factory.create(amr_bank);
+		AMRGraphList graphs = factory.create(amr_bank);
 
 		Path output = createOutputPath(amr_bank_file, graphs_suffix, false);
 		Serializer.serialize(graphs, output);
@@ -95,7 +95,7 @@ public class Driver
 	private void rank_meanings(Path graphs_file, Path freqs, Path vectors, Format format) throws Exception
 	{
 		log.info("Running from " + graphs_file);
-		GraphList graphs = (GraphList) Serializer.deserialize(graphs_file);
+		AMRGraphList graphs = (AMRGraphList) Serializer.deserialize(graphs_file);
 
 		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
 		WeightingFunction weighting = new NumberForms(r -> true);
@@ -115,10 +115,10 @@ public class Driver
 	private void create_global(Path graphs_file) throws IOException, ClassNotFoundException
 	{
 		log.info("Running from " + graphs_file);
-		GraphList graphs = (GraphList) Serializer.deserialize(graphs_file);
+		AMRGraphList graphs = (AMRGraphList) Serializer.deserialize(graphs_file);
 
-		AMRGlobalGraphFactory factory = new AMRGlobalGraphFactory();
-		GlobalSemanticGraph graph = factory.create(graphs);
+		AMRSemanticGraphFactory factory = new AMRSemanticGraphFactory();
+		SemanticGraph graph = factory.create(graphs);
 
 		Path output = createOutputPath(graphs_file, global_suffix, false);
 		Serializer.serialize(graph, output);
@@ -128,7 +128,7 @@ public class Driver
 	private void rank_variables(Path graph_file) throws IOException, ClassNotFoundException
 	{
 		log.info("Running from " + graph_file);
-		GlobalSemanticGraph graph = (GlobalSemanticGraph) Serializer.deserialize(graph_file);
+		SemanticGraph graph = (SemanticGraph) Serializer.deserialize(graph_file);
 
 		TextPlanner.Options options = new TextPlanner.Options();
 		TextPlanner.rankVariables(graph, options);
@@ -141,7 +141,7 @@ public class Driver
 	private void extract_subgraphs(Path graph_file, int num_subgraphs) throws IOException, ClassNotFoundException
 	{
 		log.info("Running from " + graph_file);
-		GlobalSemanticGraph graph = (GlobalSemanticGraph) Serializer.deserialize(graph_file);
+		SemanticGraph graph = (SemanticGraph) Serializer.deserialize(graph_file);
 
 		TextPlanner.Options options = new TextPlanner.Options();
 		final Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(graph, new AMRSemantics(), num_subgraphs, options);
@@ -218,7 +218,7 @@ public class Driver
 		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
 		AMRReader reader = new AMRReader();
 		AMRGraphListFactory factory = new AMRGraphListFactory(reader, null, bn_config_folder, no_stanford, no_babelnet);
-		AMRGlobalGraphFactory globalFactory = new AMRGlobalGraphFactory();
+		AMRSemanticGraphFactory globalFactory = new AMRSemanticGraphFactory();
 
 
 		WeightingFunction meanings_weighting = new NoWeights();
@@ -259,7 +259,7 @@ public class Driver
 	}
 
 	private boolean summarizeFile(Path amr_bank_file, AMRReader reader, AMRGraphListFactory graphListFactory,
-	                              AMRGlobalGraphFactory globalGraphFactory, WeightingFunction weight,
+	                              AMRSemanticGraphFactory globalGraphFactory, WeightingFunction weight,
 	                              SimilarityFunction similarity, TextPlanner.Options options, int num_subgraphs_extract,
 	                              int num_subgraphs, AmrMain generator, int max_words)
 	{
@@ -270,7 +270,7 @@ public class Driver
 
 			// 1- Create semantic graphs
 			String amr_bank = FileUtils.readFileToString(amr_bank_file.toFile(), StandardCharsets.UTF_8);
-			GraphList graphs = graphListFactory.create(amr_bank);
+			AMRGraphList graphs = graphListFactory.create(amr_bank);
 			Path output_path = createOutputPath(amr_bank_file, graphs_suffix);
 			Serializer.serialize(graphs, output_path);
 
@@ -280,7 +280,7 @@ public class Driver
 			Serializer.serialize(graphs, output_path);
 
 			// 3- Create global graph
-			GlobalSemanticGraph graph = globalGraphFactory.create(graphs);
+			SemanticGraph graph = globalGraphFactory.create(graphs);
 			output_path = createOutputPath(amr_bank_file, global_suffix);
 			Serializer.serialize(graph, output_path);
 

@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning.core.extraction;
 
 import com.google.common.collect.Sets;
-import edu.upf.taln.textplanning.core.structures.GlobalSemanticGraph;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.io.GraphSemantics;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.Role;
@@ -49,7 +49,7 @@ public abstract class Explorer
 		this.policy = policy;
 	}
 
-	public List<State> getStartStates(GlobalSemanticGraph g)
+	public List<State> getStartStates(SemanticGraph g)
 	{
 		Set<String> start_vertices = start_from_verbs ? getFiniteVerbalVertices(g) : g.vertexSet();
 
@@ -62,7 +62,7 @@ public abstract class Explorer
 				.collect(Collectors.toList());
 	}
 
-	public List<State> getNextStates(State s, GlobalSemanticGraph g)
+	public List<State> getNextStates(State s, SemanticGraph g)
 	{
 		return s.vertices.stream()
 				.map(v -> getNeighboursAndRoles(v, g))
@@ -75,7 +75,7 @@ public abstract class Explorer
 				.collect(Collectors.toList());
 	}
 
-	protected Set<Neighbour> getNeighboursAndRoles(String v, GlobalSemanticGraph g)
+	protected Set<Neighbour> getNeighboursAndRoles(String v, SemanticGraph g)
 	{
 		return g.edgesOf(v).stream()
 				.map(e ->
@@ -88,7 +88,7 @@ public abstract class Explorer
 				.collect(Collectors.toSet());
 	}
 
-	protected boolean isAllowed(Neighbour n, State s, GlobalSemanticGraph g)
+	protected boolean isAllowed(Neighbour n, State s, SemanticGraph g)
 	{
 		boolean allow = !s.vertices.contains(n.vertex);
 		switch (policy)
@@ -105,10 +105,10 @@ public abstract class Explorer
 		}
 	}
 
-	protected abstract Set<String> getRequiredVertices(String v, State s, GlobalSemanticGraph g);
+	protected abstract Set<String> getRequiredVertices(String v, State s, SemanticGraph g);
 
 	// returns list of finite verbal vertices sorted by weight
-	private static Set<String> getFiniteVerbalVertices(GlobalSemanticGraph g)
+	private static Set<String> getFiniteVerbalVertices(SemanticGraph g)
 	{
 		return g.vertexSet().stream()
 				.filter(v -> g.getMentions(v).stream()
