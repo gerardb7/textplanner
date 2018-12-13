@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.amr.io;
+package edu.upf.taln.textplanning.common;
 
 import it.uniroma1.lcl.babelnet.data.BabelPOS;
 

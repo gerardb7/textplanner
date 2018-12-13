@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.dsynt.io;
+package edu.upf.taln.textplanning.uima;
 
 import edu.upf.taln.textplanning.core.io.DocumentWriter;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;

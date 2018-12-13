@@ -17,7 +17,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Subgraph extraction strategy based on finding dense subgraphs in a global semantic graph.
+ * Subgraph extraction strategy based on finding dense subgraphs in a semantic graph.
  */
 public class SubgraphExtraction
 {

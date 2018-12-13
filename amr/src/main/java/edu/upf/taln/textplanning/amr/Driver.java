@@ -9,7 +9,7 @@ import edu.upf.taln.textplanning.amr.io.AMRReader;
 import edu.upf.taln.textplanning.amr.io.AMRWriter;
 import edu.upf.taln.textplanning.amr.io.AMRSemantics;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
-import edu.upf.taln.textplanning.amr.utils.CMLCheckers;
+import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.amr.utils.EmpiricalStudy;
 import edu.upf.taln.textplanning.core.utils.Serializer;
 import edu.upf.taln.textplanning.core.TextPlanner;
@@ -131,7 +131,7 @@ public class Driver
 		SemanticGraph graph = (SemanticGraph) Serializer.deserialize(graph_file);
 
 		TextPlanner.Options options = new TextPlanner.Options();
-		TextPlanner.rankVariables(graph, options);
+		TextPlanner.rankVertices(graph, options);
 
 		Path output = createOutputPath(graph_file, global_ranked_suffix, false);
 		Serializer.serialize(graph, output);
@@ -285,7 +285,7 @@ public class Driver
 			Serializer.serialize(graph, output_path);
 
 			// 4- Rank variables
-			TextPlanner.rankVariables(graph, options);
+			TextPlanner.rankVertices(graph, options);
 			output_path = createOutputPath(amr_bank_file, global_ranked_suffix);
 			Serializer.serialize(graph, output_path);
 
@@ -400,7 +400,7 @@ public class Driver
 	@Parameters(commandDescription = "Create semantic graphs from an AMR bank")
 	private static class CreateGraphsCommand
 	{
-		@Parameter(names = {"-i", "-io"}, description = "Input text-based AMR file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-input"}, description = "Input text-based AMR file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-b", "-babelconfig"}, description = "BabelNet configuration folder", arity = 1, required = true,
@@ -415,7 +415,7 @@ public class Driver
 	@Parameters(commandDescription = "Rank meanings in a collection of semantic graphs")
 	private static class RankMeaningsCommand
 	{
-		@Parameter(names = {"-i", "-io"}, description = "Input binary graphs file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-input"}, description = "Input binary graphs file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-f", "-frequencies"}, description = "Frequencies file", arity = 1, required = true,
@@ -432,7 +432,7 @@ public class Driver
 	@Parameters(commandDescription = "Create global semantic graph from a list of semantic graphs")
 	private static class CreateGlobalCommand
 	{
-		@Parameter(names = {"-i", "-io"}, description = "Input binary graphs file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-input"}, description = "Input binary graphs file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 	}
@@ -440,7 +440,7 @@ public class Driver
 	@Parameters(commandDescription = "Rank vertices in a global semantic graph")
 	private static class RankVariablesCommand
 	{
-		@Parameter(names = {"-i", "-io"}, description = "Input binary global graph file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-input"}, description = "Input binary global graph file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 	}
@@ -448,7 +448,7 @@ public class Driver
 	@Parameters(commandDescription = "Extract subgraphs from a global semantic graph")
 	private static class ExtractCommand
 	{
-		@Parameter(names = {"-i", "-io"}, description = "Input binary global graph file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-input"}, description = "Input binary global graph file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-n", "-number"}, description = "Number of subgraphs to extract", arity = 1, required = true,
@@ -459,7 +459,7 @@ public class Driver
 	@Parameters(commandDescription = "Remove redundant subgraphs")
 	private static class RemoveRedundancyCommand
 	{
-		@Parameter(names = {"-i", "-io"}, description = "Input binary subgraphs file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-input"}, description = "Input binary subgraphs file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-n", "-number"}, description = "Number of subgraphs to extract", arity = 1, required = true,
@@ -476,7 +476,7 @@ public class Driver
 	@Parameters(commandDescription = "Sort subgraphs")
 	private static class SortCommand
 	{
-		@Parameter(names = {"-i", "-io"}, description = "Input binary subgraphs file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-input"}, description = "Input binary subgraphs file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
@@ -490,7 +490,7 @@ public class Driver
 	@Parameters(commandDescription = "Serialize plan as AMR")
 	private static class WriteAMRCommand
 	{
-		@Parameter(names = {"-i", "-io"}, description = "Input binary plan file containing sorted subgraphs", arity = 1, required = true,
+		@Parameter(names = {"-i", "-input"}, description = "Input binary plan file containing sorted subgraphs", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 	}
@@ -498,7 +498,7 @@ public class Driver
 	@Parameters(commandDescription = "Generate text from AMR")
 	private static class GenerateCommand
 	{
-		@Parameter(names = {"-i", "-io"}, description = "Path to io AMR text file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-input"}, description = "Path to input AMR text file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-g", "-generation"}, description = "Path to generation resources folder", arity = 1, required = true,
@@ -509,7 +509,7 @@ public class Driver
 	@Parameters(commandDescription = "Generate summaries from an AMR bank")
 	private static class SummarizeCommand
 	{
-		@Parameter(names = {"-i", "-io"}, description = "Path to io file or folder containing text-based AMRs", arity = 1, required = true,
+		@Parameter(names = {"-i", "-input"}, description = "Path to input file or folder containing text-based AMRs", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path input;
 		@Parameter(names = {"-b", "-babelconfig"}, description = "Path to BabelNet configuration folder", arity = 1, required = true,
@@ -546,7 +546,7 @@ public class Driver
 	@Parameters(commandDescription = "Process plain text file with CoreNLP and BabelNet")
 	private static class ProcessFileCommand
 	{
-		@Parameter(names = {"-i", "-io"}, description = "Input text file", arity = 1, required = true,
+		@Parameter(names = {"-i", "-input"}, description = "Input text file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-b", "-babelconfig"}, description = "BabelNet configuration folder", arity = 1, required = true,
@@ -558,7 +558,7 @@ public class Driver
 	@Parameters(commandDescription = "Run empirical study from serialized file")
 	private static class GetStatsCommand
 	{
-		@Parameter(names = {"-i", "-io"}, description = "Input binary file containing results of processing text", arity = 1, required = true,
+		@Parameter(names = {"-i", "-input"}, description = "Input binary file containing results of processing text", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-f", "-frequencies"}, description = "Frequencies file", arity = 1, required = true,

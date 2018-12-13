@@ -138,10 +138,10 @@ public class AMRSemantics implements GraphSemantics
 		}
 	}
 
-	public boolean isRequired(String label, String source, String target, String role, SemanticGraph g)
+	public boolean isRequired(String v, String source, String target, String role, SemanticGraph g)
 	{
-		boolean source_selected = source.equals(label);
-		boolean target_selected = target.equals(label);
+		boolean source_selected = source.equals(v);
+		boolean target_selected = target.equals(v);
 		assert (source_selected || target_selected);
 
 		switch (role)

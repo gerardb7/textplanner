@@ -1,9 +1,7 @@
-package edu.upf.taln.textplanning.amr.io;
+package edu.upf.taln.textplanning.common;
 
 import com.google.common.base.Stopwatch;
-import it.uniroma1.lcl.babelnet.BabelNetConfiguration;
-import it.uniroma1.lcl.babelnet.BabelSynset;
-import it.uniroma1.lcl.babelnet.BabelSynsetID;
+import it.uniroma1.lcl.babelnet.*;
 import it.uniroma1.lcl.babelnet.data.BabelPOS;
 import it.uniroma1.lcl.jlt.Configuration;
 import it.uniroma1.lcl.jlt.util.Language;
@@ -16,22 +14,29 @@ import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
-import static edu.upf.taln.textplanning.amr.io.POSConverter.BN_POS_EN;
+import static edu.upf.taln.textplanning.common.POSConverter.BN_POS_EN;
 
 public class BabelNetWrapper
 {
 	private final it.uniroma1.lcl.babelnet.BabelNet bn;
-	static final AtomicLong num_queries = new AtomicLong();
+	public static final AtomicLong num_queries = new AtomicLong();
 	private final static Logger log = LogManager.getLogger();
+
+	public BabelNetWrapper(Path config_folder)
+	{
+		this(config_folder, false);
+	}
 
 	public BabelNetWrapper(Path config_folder, boolean no_babelnet)
 	{
 		bn = no_babelnet ? null : getBabelNetInstance(config_folder);
 	}
 
-	public static it.uniroma1.lcl.babelnet.BabelNet getBabelNetInstance(Path config_folder)
+	private static it.uniroma1.lcl.babelnet.BabelNet getBabelNetInstance(Path config_folder)
 	{
 		log.info("Setting up BabelNet");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -69,7 +74,7 @@ public class BabelNetWrapper
 	}
 
 	@SuppressWarnings("unused")
-	public List<BabelSynset> getSynsets(String form)
+	public List<String> getSynsets(String form)
 	{
 		if (bn == null)
 			return Collections.emptyList();
@@ -78,7 +83,10 @@ public class BabelNetWrapper
 		try
 		{
 			num_queries.getAndIncrement();
-			return bn.getSynsets(form, Language.EN);
+			return bn.getSynsets(form, Language.EN).stream()
+					.map(BabelSynset::getId)
+					.map(BabelSynsetID::getID)
+					.collect(Collectors.toList());
 		}
 		catch (IOException e)
 		{
@@ -87,7 +95,7 @@ public class BabelNetWrapper
 		}
 	}
 
-	List<BabelSynset> getSynsets(String form, String pos)
+	public List<String> getSynsets(String form, String pos)
 	{
 		if (bn == null)
 			return Collections.emptyList();
@@ -97,7 +105,10 @@ public class BabelNetWrapper
 		{
 			BabelPOS bnPOS = BN_POS_EN.get(pos);
 			num_queries.getAndIncrement();
-			return bn.getSynsets(form, Language.EN, bnPOS);
+			return bn.getSynsets(form, Language.EN, bnPOS).stream()
+					.map(BabelSynset::getId)
+					.map(BabelSynsetID::getID)
+					.collect(Collectors.toList());
 		}
 		catch (Exception e)
 		{
@@ -106,12 +117,78 @@ public class BabelNetWrapper
 		}
 	}
 
-	BabelSynset getSynset(BabelSynsetID id) throws IOException
+	public boolean isValid(String id)
 	{
 		if (bn == null)
-			return null;
+			return false;
 
-		num_queries.getAndIncrement();
-		return bn.getSynset(id);
+		try
+		{
+			num_queries.getAndIncrement();
+			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
+			return synset != null;
+		}
+		catch (InvalidBabelSynsetIDException | IOException e)
+		{
+			return false;
+		}
+	}
+
+	public Optional<String> getLabel(String id)
+	{
+		if (bn == null)
+			return Optional.empty();
+
+		try
+		{
+			num_queries.getAndIncrement();
+			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
+			if (synset == null)
+				return Optional.empty();
+			return Optional.of(synset.getSenses(Language.EN).iterator().next().toString());
+		}
+		catch (InvalidBabelSynsetIDException | IOException e)
+		{
+			return Optional.empty();
+		}
+	}
+
+	public Optional<Boolean> isNE(String id)
+	{
+		if (bn == null)
+			return Optional.empty();
+
+		try
+		{
+			num_queries.getAndIncrement();
+			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
+			if (synset == null)
+				return Optional.empty();
+			return Optional.of(synset.getSynsetType() == BabelSynsetType.NAMED_ENTITY);
+		}
+		catch (InvalidBabelSynsetIDException | IOException e)
+		{
+			return Optional.empty();
+		}
+	}
+
+	public List<String> getdbPediaURIs(String id)
+	{
+		if (bn == null)
+			return Collections.emptyList();
+
+		try
+		{
+			num_queries.getAndIncrement();
+			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
+			if (synset == null)
+				return Collections.emptyList();
+			return synset.getDBPediaURIs(Language.EN);
+		}
+		catch (InvalidBabelSynsetIDException | IOException e)
+		{
+			return Collections.emptyList();
+		}
+
 	}
 }

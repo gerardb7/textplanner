@@ -9,6 +9,7 @@ import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.amr.structures.AMRAlignments;
 import edu.upf.taln.textplanning.amr.io.AMRGraphListFactory;
 import edu.upf.taln.textplanning.amr.io.AMRReader;
+import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.core.corpora.CompactFrequencies;
 import edu.upf.taln.textplanning.core.corpora.FreqsFile;
 import edu.upf.taln.textplanning.core.structures.Meaning;

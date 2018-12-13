@@ -12,8 +12,8 @@ import edu.stanford.nlp.pipeline.CoreEntityMention;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.util.logging.RedwoodConfiguration;
 import edu.upf.taln.textplanning.amr.io.CandidatesCollector;
-import edu.upf.taln.textplanning.amr.io.BabelNetWrapper;
 import edu.upf.taln.textplanning.amr.Driver;
+import edu.upf.taln.textplanning.common.BabelNetWrapper;
 import edu.upf.taln.textplanning.core.corpora.CompactFrequencies;
 import edu.upf.taln.textplanning.core.similarity.VectorsTypes.Format;
 import edu.upf.taln.textplanning.core.structures.Candidate;
@@ -68,33 +68,33 @@ public class EmpiricalStudy
 
 	private static class CorpusInfo implements Serializable
 	{
-		int num_docs = 0;
-		final Map<String, Long> tokens_counts_total = new HashMap<>();
-		final List<Map<String, List<Integer>>> tokens_per_doc = new ArrayList<>();
-		final List<Map<String, List<Candidate>>> candidates_pee_doc = new ArrayList<>();
-		final List<Annotation> annotation = new ArrayList<>();
+		private int num_docs = 0;
+		private final Map<String, Long> tokens_counts_total = new HashMap<>();
+		private final List<Map<String, List<Integer>>> tokens_per_doc = new ArrayList<>();
+		private final List<Map<String, List<Candidate>>> candidates_pee_doc = new ArrayList<>();
+		private final List<Annotation> annotation = new ArrayList<>();
 		private final static long serialVersionUID = 1L;
 	}
 
 	private static class NECorefStats
 	{
-		final int num_tokens;
-		final Map<String, Long> nes = new HashMap<>();
-		final Map<String, Long> nes_tokens = new HashMap<>();
-		final Map<String, Long> nes_tokens_no_meaning = new HashMap<>();
-		final List<Double> coref_lengths = new ArrayList<>();
-		final int num_coref_tokens;
-		final int num_coref_tokens_no_meaning;
+		private final int num_tokens;
+		private final Map<String, Long> nes = new HashMap<>();
+		private final Map<String, Long> nes_tokens = new HashMap<>();
+		private final Map<String, Long> nes_tokens_no_meaning = new HashMap<>();
+		private final List<Double> coref_lengths = new ArrayList<>();
+		private final int num_coref_tokens;
+		private final int num_coref_tokens_no_meaning;
 
-		public NECorefStats()
+		private NECorefStats()
 		{
 			num_tokens = 0;
 			num_coref_tokens = 0;
 			num_coref_tokens_no_meaning = 0;
 		}
 
-		NECorefStats(int num_tokens, Map<String, Long> nes, Map<String, Long> nes_tokens, Map<String, Long> nes_tokens_no_meaning,
-		             List<Double> coref_lengths, int num_coref_tokens, int num_coref_tokens_no_meaning)
+		private NECorefStats(int num_tokens, Map<String, Long> nes, Map<String, Long> nes_tokens, Map<String, Long> nes_tokens_no_meaning,
+		                     List<Double> coref_lengths, int num_coref_tokens, int num_coref_tokens_no_meaning)
 		{
 			this.num_tokens = num_tokens;
 			this.nes.putAll(nes);
@@ -136,7 +136,7 @@ public class EmpiricalStudy
 			return out;
 		}
 
-		static NECorefStats combine(NECorefStats s1, NECorefStats s2)
+		private static NECorefStats combine(NECorefStats s1, NECorefStats s2)
 		{
 			final Map<String, Long> nes = Stream.concat(s1.nes.entrySet().stream(), s2.nes.entrySet().stream())
 					.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, Long::sum));
@@ -158,17 +158,17 @@ public class EmpiricalStudy
 
 	private static class CoverageStats
 	{
-		final List<Double> avg_polysemy = new ArrayList<>();
-		final int num_tokens;
-		final int num_covered_tokens;
-		final int num_multiword_covered_tokens;
+		private final List<Double> avg_polysemy = new ArrayList<>();
+		private final int num_tokens;
+		private final int num_covered_tokens;
+		private final int num_multiword_covered_tokens;
 
-		CoverageStats()
+		private CoverageStats()
 		{
 			num_tokens = 0; num_covered_tokens = 0; num_multiword_covered_tokens = 0;
 		}
 
-		CoverageStats(List<Double> avg_polysemy, int num_tokens, int num_covered_tokens, int num_multiword_covered_tokens)
+		private CoverageStats(List<Double> avg_polysemy, int num_tokens, int num_covered_tokens, int num_multiword_covered_tokens)
 		{
 			this.avg_polysemy.addAll(avg_polysemy);
 			this.num_tokens = num_tokens;
@@ -189,7 +189,7 @@ public class EmpiricalStudy
 					"\n\t" + num_multiword_covered_tokens + " tokens in multiwords";
 		}
 
-		static CoverageStats combine(CoverageStats s1, CoverageStats s2)
+		private static CoverageStats combine(CoverageStats s1, CoverageStats s2)
 		{
 			return new CoverageStats(
 					Stream.concat(s1.avg_polysemy.stream(), s2.avg_polysemy.stream()).collect(toList()),
@@ -201,14 +201,14 @@ public class EmpiricalStudy
 
 	private static class SimilarityStats
 	{
-		final int num_meanings;
-		final long num_meanings_defined;
-		final long num_pairs;
-		final long num_valid_pairs;
-		final long num_pairs_meanings_defined;
-		final List<Double> weights = new ArrayList<>();
+		private final int num_meanings;
+		private final long num_meanings_defined;
+		private final long num_pairs;
+		private final long num_valid_pairs;
+		private final long num_pairs_meanings_defined;
+		private final List<Double> weights = new ArrayList<>();
 
-		public SimilarityStats(int num_meanings, long num_meanings_defined, long num_pairs, long num_valid_pairs, long num_pairs_meanings_defined, List<Double> weights)
+		private SimilarityStats(int num_meanings, long num_meanings_defined, long num_pairs, long num_valid_pairs, long num_pairs_meanings_defined, List<Double> weights)
 		{
 			this.num_meanings = num_meanings;
 			this.num_meanings_defined = num_meanings_defined;
@@ -218,7 +218,7 @@ public class EmpiricalStudy
 			this.weights.addAll(weights);
 		}
 
-		public SimilarityStats()
+		private SimilarityStats()
 		{
 			num_meanings = 0; num_meanings_defined = 0; num_pairs = 0; num_valid_pairs = 0; num_pairs_meanings_defined = 0;
 		}
@@ -235,7 +235,7 @@ public class EmpiricalStudy
 					"\n\t" + printStats(new DescriptiveStatistics(doubles));
 		}
 
-		static SimilarityStats combine(SimilarityStats s1, SimilarityStats s2)
+		private static SimilarityStats combine(SimilarityStats s1, SimilarityStats s2)
 		{
 			return new SimilarityStats(
 					s1.num_meanings + s2.num_meanings,
@@ -249,16 +249,16 @@ public class EmpiricalStudy
 
 	private static class FrequencyStats
 	{
-		final int num_meanings;
-		final Map<String, Long> counts = new HashMap<>();
-		final Map<String, Long> doc_counts = new HashMap<>();
-		final Map<String, Long> corpus_counts = new HashMap<>();
-		final Map<String, Long> doc_corpus_counts = new HashMap<>();
-		final Map<String, List<Double>> functions_weights = new HashMap<>();
+		private final int num_meanings;
+		private final Map<String, Long> counts = new HashMap<>();
+		private final Map<String, Long> doc_counts = new HashMap<>();
+		private final Map<String, Long> corpus_counts = new HashMap<>();
+		private final Map<String, Long> doc_corpus_counts = new HashMap<>();
+		private final Map<String, List<Double>> functions_weights = new HashMap<>();
 
-		FrequencyStats(int num_meanings, Map<String, Long> counts, Map<String, Long>doc_counts,
-		               Map<String, Long>corpus_counts, Map<String, Long> doc_corpus_counts,
-		               Map<String, List<Double>> functions_weights)
+		private FrequencyStats(int num_meanings, Map<String, Long> counts, Map<String, Long> doc_counts,
+		                       Map<String, Long> corpus_counts, Map<String, Long> doc_corpus_counts,
+		                       Map<String, List<Double>> functions_weights)
 
 		{
 			this.num_meanings = num_meanings;
@@ -269,7 +269,7 @@ public class EmpiricalStudy
 			this.functions_weights.putAll(functions_weights);
 		}
 
-		FrequencyStats()
+		private FrequencyStats()
 		{
 			this.num_meanings = 0;
 		}
@@ -286,7 +286,7 @@ public class EmpiricalStudy
 							.collect(joining());
 		}
 
-		static FrequencyStats combine(FrequencyStats s1, FrequencyStats s2)
+		private static FrequencyStats combine(FrequencyStats s1, FrequencyStats s2)
 		{
 			final Map<String, Long> counts = Stream.concat(s1.counts.entrySet().stream(), s2.counts.entrySet().stream())
 					.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, Long::sum));

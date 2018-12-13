@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.amr.utils;
+package edu.upf.taln.textplanning.common;
 
 import com.beust.jcommander.IParameterValidator;
 import com.beust.jcommander.IStringConverter;
@@ -34,6 +34,19 @@ public class CMLCheckers
 			if ((Files.exists(path) && Files.isDirectory(path)) || !Files.exists(path.getParent()))
 			{
 				throw new ParameterException("Cannot write to file " + name + " = " + value);
+			}
+		}
+	}
+
+	public static class ValidPathToFolder implements IParameterValidator
+	{
+		@Override
+		public void validate(String name, String value) throws ParameterException
+		{
+			Path path = Paths.get(value);
+			if ((Files.exists(path) && Files.isRegularFile(path)) || !Files.exists(path.getParent()))
+			{
+				throw new ParameterException("Cannot use output folder " + name + " = " + value);
 			}
 		}
 	}

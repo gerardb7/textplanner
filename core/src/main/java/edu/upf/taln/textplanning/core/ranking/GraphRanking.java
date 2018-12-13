@@ -78,13 +78,13 @@ public class GraphRanking
 			return;
 
 		DifferentMentions filter = new DifferentMentions(candidates);
-		double[][] rankingArrays = MatrixFactory.createMeaningRankingMatrix(references, weighting, similarity, filter,
+		double[][] ranking_arrays = MatrixFactory.createMeaningRankingMatrix(references, weighting, similarity, filter,
 				meaning_similarity_threshold, damping_factor_meanings);
-		Matrix rankingMatrix = new Matrix(rankingArrays);
+		Matrix ranking_matrix = new Matrix(ranking_arrays);
 
 		JamaPowerIteration alg = new JamaPowerIteration();
-		Matrix finalDistribution = alg.run(rankingMatrix, labels);
-		double[] ranking = finalDistribution.getColumnPackedCopy();
+		Matrix final_distribution = alg.run(ranking_matrix, labels);
+		double[] ranking = final_distribution.getColumnPackedCopy();
 
 		// Assign ranking values to meanings
 		candidates.stream()

@@ -1,12 +1,10 @@
 package edu.upf.taln.textplanning.amr.io;
 
 import com.google.common.base.Stopwatch;
+import edu.upf.taln.textplanning.common.BabelNetWrapper;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
-import it.uniroma1.lcl.babelnet.BabelSynset;
-import it.uniroma1.lcl.babelnet.BabelSynsetType;
-import it.uniroma1.lcl.jlt.util.Language;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -49,7 +47,7 @@ public class CandidatesCollector
 
 		// Create a map of anchors and associated candidate synsets
 		AtomicInteger counter = new AtomicInteger(0);
-		Map<Triple<String, String, String>, Set<BabelSynset>> anchorsSynsets = anchors2Mentions.keySet().stream()
+		Map<Triple<String, String, String>, Set<String>> anchorsSynsets = anchors2Mentions.keySet().stream()
 				.peek(l -> {
 					if (counter.incrementAndGet() % 1000 == 0)
 						log.info("Queried synsets for " + counter.get() + " labels out of " + anchors2Mentions.keySet().size());
@@ -78,27 +76,24 @@ public class CandidatesCollector
 		return candidates;
 	}
 
-	private Set<BabelSynset> getSynsets(Triple<String, String, String> s)
+	private Set<String> getSynsets(Triple<String, String, String> mention)
 	{
 		// Use surface form of mention as label
-		String form = s.getLeft();
-		String lemma = s.getMiddle();
-		String pos = s.getRight();
-		Set<BabelSynset> synsets = new HashSet<>(bn.getSynsets(form, pos));
+		String form = mention.getLeft();
+		String lemma = mention.getMiddle();
+		String pos = mention.getRight();
+		Set<String> synset_set = new HashSet<>(bn.getSynsets(form, pos));
 		if (!lemma.equalsIgnoreCase(form))
 		{
-			List<BabelSynset> lemma_synsets = bn.getSynsets(lemma, pos);
-			synsets.addAll(lemma_synsets);
+			List<String> lemma_synsets = bn.getSynsets(lemma, pos);
+			synset_set.addAll(lemma_synsets);
 		}
 
-		return synsets;
+		return synset_set;
 	}
 
-	private Meaning createMeaning(BabelSynset s)
+	private Meaning createMeaning(String synset)
 	{
-		String reference = s.getId().getID();
-		String label = s.getSenses(Language.EN).iterator().next().toString();
-		boolean is_NE = s.getSynsetType() == BabelSynsetType.NAMED_ENTITY;
-		return Meaning.get(reference, label, is_NE);
+		return Meaning.get(synset, bn.getLabel(synset).orElse(""), bn.isNE(synset).orElse(false));
 	}
 }

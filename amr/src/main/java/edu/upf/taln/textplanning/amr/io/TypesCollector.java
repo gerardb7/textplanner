@@ -3,11 +3,9 @@ package edu.upf.taln.textplanning.amr.io;
 import com.google.common.base.Stopwatch;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import edu.upf.taln.textplanning.common.BabelNetWrapper;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
-import it.uniroma1.lcl.babelnet.BabelSynset;
-import it.uniroma1.lcl.babelnet.BabelSynsetID;
-import it.uniroma1.lcl.jlt.util.Language;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -68,21 +66,15 @@ class TypesCollector
 		refs2query.forEach(r -> {
 			try
 			{
-				BabelSynset synset = babelnet.getSynset(new BabelSynsetID(r));
-				if (synset != null)
+				List<String> dbPediaURIs  = babelnet.getdbPediaURIs(r);
+				Candidate.Type t = Candidate.Type.Other;
+				if (!dbPediaURIs.isEmpty())
 				{
-					List<String> dbPediaURIs = synset.getDBPediaURIs(Language.EN);
-					Candidate.Type t = Candidate.Type.Other;
-					if (!dbPediaURIs.isEmpty())
-					{
-						t = dbpedia.getType(dbPediaURIs.get(0));
-					}
-					types.put(r, t);
-
-					if (counter.incrementAndGet() % 1000 == 0)
-						log.info(counter.get() + " types queried");
+					t = dbpedia.getType(dbPediaURIs.get(0));
 				}
-
+				types.put(r, t);
+				if (counter.incrementAndGet() % 1000 == 0)
+					log.info(counter.get() + " types queried");
 			}
 			catch (Exception e) { throw new RuntimeException(e); }
 		});

@@ -23,7 +23,7 @@ public class MatrixFactory
 	/**
 	 * Creates a row-stochastic matrix to rank a set of meanings
 	 */
-	static double[][] createMeaningRankingMatrix(List<String> meanings, WeightingFunction weighting,
+	public static double[][] createMeaningRankingMatrix(List<String> meanings, WeightingFunction weighting,
 	                                             SimilarityFunction sim, BiPredicate<String, String> filter,
 	                                             double sim_threshold, double d)
 	{
@@ -60,7 +60,7 @@ public class MatrixFactory
 	/**
 	 * Creates a row-stochastic matrix to rank a set of variables in a graph.
 	 */
-	static double[][] createVariableRankingMatrix(List<String> variables, SemanticGraph graph, double d)
+	public static double[][] createVariableRankingMatrix(List<String> variables, SemanticGraph graph, double d)
 	{
 		log.info("Creating ranking matrix for " + variables.size() + " variables");
 		int n = variables.size();

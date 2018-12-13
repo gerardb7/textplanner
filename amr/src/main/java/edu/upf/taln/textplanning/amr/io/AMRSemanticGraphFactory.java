@@ -22,7 +22,7 @@ import java.util.*;
 import static java.util.Comparator.comparingDouble;
 import static java.util.stream.Collectors.*;
 
-// Creates global semantic graphs from a lists of AMR-like semantic graphs
+// Creates a single semantic graph from a lists of AMR-like semantic graphs
 public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphList>
 {
 	private final static Logger log = LogManager.getLogger();
@@ -30,7 +30,7 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 	public SemanticGraph create(AMRGraphList graphs)
 	{
 		Stopwatch timer = Stopwatch.createStarted();
-		log.info("*Creating global graphs*");
+		log.info("*Creating semantic graph*");
 
 		remove_names(graphs); // <- won't work unless executed before remove_concepts
 		Map<String, String> concepts = remove_concepts(graphs);
@@ -45,7 +45,7 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 		log.info("Merged graph has " + sets.size() + " components");
 		log.debug(DebugUtils.printSets(merge, sets));
 
-		log.info("Global graphs created in " + timer.stop());
+		log.info("Semantic graph created in " + timer.stop());
 		return merge;
 	}
 

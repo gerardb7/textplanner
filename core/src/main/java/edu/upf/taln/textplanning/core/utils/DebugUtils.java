@@ -84,7 +84,7 @@ public class DebugUtils
 	{
 		AtomicInteger i = new AtomicInteger(1);
 		return sets.stream()
-				.map(s -> "Global g connected set " + i.getAndIncrement() + "\n" + s.stream()
+				.map(s -> "Connected set " + i.getAndIncrement() + " of semantic graph\n" + s.stream()
 						.map(v -> "\t" + DebugUtils.createLabelForVariable(v, g.getMeaning(v), g.getMentions(v)))
 						.collect(Collectors.joining("\n")))
 				.collect(Collectors.joining("\n"));

@@ -93,8 +93,9 @@ public class AMRReader
 					        amr_alignments = readAlignmentsFormat2(alignments_line);
 				        if (amr_alignments.isEmpty())
 				        	throw new Exception("Cannot read alignments");
-				        amr_alignments.forEach((t, a) ->
-					        gornAdressToVertex(graph, vertex_order, actions.getReentrantEdges(), a).ifPresent(v -> alignments.put(v, t)));
+
+				        amr_alignments.entries().forEach(e ->
+					        gornAdressToVertex(graph, vertex_order, actions.getReentrantEdges(), e.getValue()).ifPresent(v -> alignments.put(v, e.getKey())));
 			        }
 			        AMRAlignments graph_alignments = new AMRAlignments(graph, alignments, tokens);
 			        graph.setAlignments(graph_alignments);

@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>uima</artifactId>
+    <artifactId>uima-dsynt</artifactId>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -36,6 +36,11 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.uima</groupId>
             <artifactId>uimaj-core</artifactId>
             <version>2.10.2</version>
@@ -51,11 +56,10 @@
             <version>${dkpro.version}</version>
             <type>pom</type>
         </dependency>
-
         <dependency>
             <groupId>edu.upf.taln.uima.wsd</groupId>
             <artifactId>edu.upf.taln.uima.wsd.si.babelnet</artifactId>
-            <version>0.1.1</version>
+            <version>0.2.0</version>
         </dependency>
         <dependency>
             <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
@@ -99,6 +103,16 @@
             <groupId>edu.upf.taln.parser</groupId>
             <artifactId>deep-parser-uima</artifactId>
             <version>1.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
+            <artifactId>de.tudarmstadt.ukp.dkpro.core.ngrams-asl</artifactId>
+            <version>1.9.1</version>
+        </dependency>
+        <dependency>
+            <groupId>edu.upf.taln.uima</groupId>
+            <artifactId>flask_wrapper</artifactId>
+            <version>0.1.0</version>
         </dependency>
     </dependencies>
 

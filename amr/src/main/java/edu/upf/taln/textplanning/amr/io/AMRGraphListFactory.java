@@ -6,6 +6,7 @@ import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.amr.structures.CoreferenceChain;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.amr.structures.AMRGraph;
+import edu.upf.taln.textplanning.common.BabelNetWrapper;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import org.apache.logging.log4j.LogManager;

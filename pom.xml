@@ -17,8 +17,8 @@
     <modules>
         <module>core</module>
         <module>amr</module>
-        <module>uima</module>
-        <module>dsynt</module>
+        <module>uima-dsynt</module>
+        <module>common</module>
     </modules>
 
     <dependencies>
@@ -31,6 +31,11 @@
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
             <version>2.11.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>25.0-jre</version>
         </dependency>
     </dependencies>
 

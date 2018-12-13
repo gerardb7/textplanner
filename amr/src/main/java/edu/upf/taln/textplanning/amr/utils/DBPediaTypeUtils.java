@@ -7,6 +7,7 @@ import edu.upf.taln.textplanning.amr.io.DBPediaType;
 import edu.upf.taln.textplanning.amr.io.AMRGraphListFactory;
 import edu.upf.taln.textplanning.amr.io.AMRReader;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
+import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import it.uniroma1.lcl.babelnet.BabelNet;

@@ -56,7 +56,7 @@ public final class TextPlanner
 	}
 
 	/**
-	 * Generates a text plan from a global semantic graph
+	 * Generates a text plan from a semantic graph
 	 */
 	public static List<SemanticSubgraph> plan(SemanticGraph graph, GraphSemantics semantics,
 	                                          SimilarityFunction similarity, int num_graphs, Options o)
@@ -66,8 +66,8 @@ public final class TextPlanner
 			log.info("*Planning started*");
 			Stopwatch timer = Stopwatch.createStarted();
 
-			// 1- Rank variables
-			rankVariables(graph, o);
+			// 1- Rank vertices
+			rankVertices(graph, o);
 
 			// 2- Extract subgraphs from graph
 			Collection<SemanticSubgraph> subgraphs = extractSubgraphs(graph, semantics, num_graphs, o);
@@ -104,18 +104,18 @@ public final class TextPlanner
 
 
 	/**
-	 * 	Ranks variables in a global planning graph
+	 * 	Ranks variables in a semantic graph
 	 */
-	public static void rankVariables(SemanticGraph graph, Options o)
+	public static void rankVertices(SemanticGraph graph, Options o)
 	{
-		log.info("*Ranking variables*");
+		log.info("*Ranking vertices*");
 		Stopwatch timer = Stopwatch.createStarted();
 		GraphRanking.rankVariables(graph, o.damping_variables);
 		log.info("Ranking completed in " + timer.stop());
 	}
 
 	/**
-	 * 	Extract subgraphs from a global planning graph
+	 * 	Extract subgraphs from a semantic graph
 	 */
 	public static Collection<SemanticSubgraph> extractSubgraphs(SemanticGraph graph, GraphSemantics semantics,
 	                                                            int num_graphs, Options o)
