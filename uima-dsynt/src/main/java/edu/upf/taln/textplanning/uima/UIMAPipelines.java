@@ -18,6 +18,7 @@ import edu.upf.taln.textplanning.common.BabelNetWrapper;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
+import edu.upf.taln.textplanning.uima.types.ConceptRelevance;
 import edu.upf.taln.uima.flask_wrapper.ConceptExtractorAnnotator;
 import edu.upf.taln.uima.wsd.annotation_extender.core.WSDResultExtender;
 import edu.upf.taln.uima.wsd.candidateDetection.BabelNetCandidateIdentification;
@@ -42,6 +43,8 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngine;
 
 public class UIMAPipelines
@@ -179,7 +182,7 @@ public class UIMAPipelines
 								final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
 								final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1)) + 1;
 								final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
-								final Mention mention = new Mention("s" + sentences.indexOf(sentence), offsets, surface_form, lemma, pos, false, "");
+								final Mention mention = Mention.get("s" + sentences.indexOf(sentence), offsets, surface_form, lemma, pos, false, "");
 
 								return bn.getSynsets(surface_form, pos).stream()
 										.filter(bn::isValid)
@@ -188,8 +191,8 @@ public class UIMAPipelines
 										.collect(Collectors.toSet());
 							})
 							.filter(l -> !l.isEmpty())
-							.collect(Collectors.toList()))
-					.collect(Collectors.toList());
+							.collect(toList()))
+					.collect(toList());
 		}
 		catch (UIMAException e)
 		{
@@ -198,7 +201,7 @@ public class UIMAPipelines
 		}
 	}
 
-	public List<List<Set<Candidate>>> getDisambiguatedCandidates(String text)
+	public List<List<Map<Candidate, Double>>> getDisambiguatedCandidates(String text)
 	{
 		if (text.isEmpty())
 			return Collections.emptyList();
@@ -225,18 +228,22 @@ public class UIMAPipelines
 								final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
 								final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1));
 								final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
-								final Mention mention = new Mention("s" + sentences.indexOf(sentence), offsets, surface_form, lemma, pos, false, "");
+								final Mention mention = Mention.get("s" + sentences.indexOf(sentence), offsets, surface_form, lemma, pos, false, "");
 
 								return JCasUtil.selectAt(doc, WSDResult.class, span.getBegin(), span.getEnd()).stream()
-										.map(WSDResult::getBestSense)
-										.map(s -> (BabelNetSense) s)
-										.map(s -> Meaning.get(s.getId(), s.getLabel(), s.getNameEntity()))
-										.map(meaning -> new Candidate(meaning, mention))
-										.collect(Collectors.toSet());
+										.map(a ->
+										{
+											final BabelNetSense s = (BabelNetSense) a.getBestSense();
+											final Meaning meaning = Meaning.get(s.getId(), s.getLabel(), s.getNameEntity());
+											final Candidate c = new Candidate(meaning, mention);
+											final double rank = JCasUtil.selectAt(doc, ConceptRelevance.class, a.getBegin(), a.getEnd()).get(0).getDomainRelevance();
+											return Pair.of(c, rank);
+										})
+										.collect(toMap(Pair::getLeft, Pair::getRight));
 							})
 							.filter(l -> !l.isEmpty())
-							.collect(Collectors.toList()))
-					.collect(Collectors.toList());
+							.collect(toList()))
+					.collect(toList());
 		}
 		catch (UIMAException e)
 		{

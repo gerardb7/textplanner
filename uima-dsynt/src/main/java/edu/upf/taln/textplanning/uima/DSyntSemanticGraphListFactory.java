@@ -93,7 +93,7 @@ public class DSyntSemanticGraphListFactory implements SemanticGraphFactory<JCas>
 		final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1));
 		final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
 
-		return new Mention(sentence.getId(), offsets, surface_form, lemma, pos, false, "");
+		return Mention.get(sentence.getId(), offsets, surface_form, lemma, pos, false, "");
 	}
 
 	private static Optional<Meaning> createMeaning(JCas jcas, DeepToken deep_token)
