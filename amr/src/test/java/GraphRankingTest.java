@@ -1,12 +1,12 @@
 import edu.upf.taln.textplanning.common.BabelNetWrapper;
+import edu.upf.taln.textplanning.common.VisualizationUtils;
 import edu.upf.taln.textplanning.core.TextPlanner;
-import edu.upf.taln.textplanning.core.similarity.RandomAccessVectorsSimilarity;
-import edu.upf.taln.textplanning.core.utils.VisualizationUtils;
+import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
+import edu.upf.taln.textplanning.core.similarity.vectors.SimilarityFunctionFactory;
 import edu.upf.taln.textplanning.core.weighting.NoWeights;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -120,7 +120,7 @@ public class GraphRankingTest
 
 	private final static Logger log = LogManager.getLogger();
 
-	private void rankMeanings() throws IOException
+	private void rankMeanings() throws Exception
 	{
 		final Path babel_config_path = Paths.get("/home/gerard/data/babelconfig/");
 		//final Path vectors_path = Paths.get("/home/gerard/data/sensembed-vectors-merged_bin");
@@ -128,9 +128,7 @@ public class GraphRankingTest
 		final Path vectors_path = Paths.get("/home/gerard/data/NASARIembed+UMBC_w2v_bin");
 		BabelNetWrapper bn = new BabelNetWrapper(babel_config_path, false);
 		GloveKeysReader reader = new GloveKeysReader(vectors_path);
-		RandomAccessVectorsSimilarity sim = RandomAccessVectorsSimilarity.create(vectors_path);
-		if (sim == null)
-			System.exit(1);
+		final SimilarityFunction sim = SimilarityFunctionFactory.get(vectors_path, SimilarityFunctionFactory.Format.Binary_RandomAccess);
 
 		music.keySet().stream()
 				.filter(s -> !sim.isDefinedFor(s))
@@ -197,7 +195,7 @@ public class GraphRankingTest
 	}
 
 
-	public static void main(String[] args) throws IOException
+	public static void main(String[] args) throws Exception
 	{
 		GraphRankingTest test = new GraphRankingTest();
 		test.rankMeanings();

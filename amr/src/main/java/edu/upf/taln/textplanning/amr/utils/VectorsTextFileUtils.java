@@ -7,11 +7,11 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.common.CMLCheckers;
-import edu.upf.taln.textplanning.core.similarity.TextVectorsSimilarity;
-import edu.upf.taln.textplanning.core.similarity.VectorsTypes.Format;
+import edu.upf.taln.textplanning.core.similarity.vectors.TextVectors;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
-import edu.upf.taln.textplanning.core.utils.Serializer;
+import edu.upf.taln.textplanning.core.similarity.vectors.SimilarityFunctionFactory.Format;
+import edu.upf.taln.textplanning.common.Serializer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -41,7 +41,7 @@ public class VectorsTextFileUtils
 	private static void mergeVectors(Function<String, String> key_reducer, Path vectors_path, Format format, Path out_path) throws Exception
 	{
 
-		Map<String, double[]> vectors = TextVectorsSimilarity.readVectorsFromFile(vectors_path, format);
+		Map<String, double[]> vectors = TextVectors.readVectorsFromFile(vectors_path, format);
 		Map<String, List<double[]>> groupedVectors = vectors.keySet().stream()
 				.collect(groupingBy(key_reducer, mapping(vectors::get, toList())));
 		Map<String, double[]> meanVectors = averageVectors(groupedVectors);
@@ -50,7 +50,7 @@ public class VectorsTextFileUtils
 
 	private static void subsetVectors(Path vectors_path, Format format, Path graphs_file, Path outPath) throws Exception
 	{
-		Map<String, double[]> vectors = TextVectorsSimilarity.readVectorsFromFile(vectors_path, format);
+		Map<String, double[]> vectors = TextVectors.readVectorsFromFile(vectors_path, format);
 		log.info("Calculating subset");
 		Stopwatch timer = Stopwatch.createStarted();
 		log.info("Reading graphs");

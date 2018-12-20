@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.core.utils;
+package edu.upf.taln.textplanning.common;
 
 import java.io.*;
 import java.nio.file.Path;

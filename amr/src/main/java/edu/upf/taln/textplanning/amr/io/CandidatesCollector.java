@@ -35,7 +35,6 @@ public class CandidatesCollector
 	 * Assigns candidate entities to nodes (tokens) of a given set of structures.
 	 * Assumes unique vertex labels across graphs.
 	 */
-	@SuppressWarnings("ConstantConditions")
 	public List<Candidate> getCandidateMeanings(Set<Mention> mentions)
 	{
 		log.info("Collecting candidate meanings");

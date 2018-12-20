@@ -6,7 +6,8 @@ import com.beust.jcommander.Parameters;
 import com.google.common.base.Charsets;
 import edu.upf.taln.textplanning.common.BabelNetWrapper;
 import edu.upf.taln.textplanning.common.CMLCheckers;
-import edu.upf.taln.textplanning.core.similarity.RandomAccessVectorsSimilarity;
+import edu.upf.taln.textplanning.core.similarity.VectorsCosineSimilarity;
+import edu.upf.taln.textplanning.core.similarity.vectors.RandomAccessVectors;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.common.VisualizationUtils;
@@ -14,7 +15,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.uima.analysis_engine.AnalysisEngine;
 
 import java.io.File;
 import java.io.IOException;
@@ -124,7 +124,8 @@ public class Driver
 				});
 	}
 
-	private static void visualize(Path gold_folder, Path gold_candidates_folder, Path system_folder, Path candidates_folder, Path freqs_file, Path vectors)
+	private static void visualize(Path gold_folder, Path gold_candidates_folder, Path system_folder, Path candidates_folder,
+	                              Path freqs_file, Path vectors_path)
 	{
 		log.info("Loading files");
 		final File[] gold_files = getFilesInFolder(gold_folder, gold_suffix);
@@ -194,7 +195,16 @@ public class Driver
 //			final List<String> cws_labels = candidates_with_system.stream()
 //					.map(Pair::getRight)
 //					.collect(Collectors.toList());
-			RandomAccessVectorsSimilarity sim = RandomAccessVectorsSimilarity.create(vectors);
+			VectorsCosineSimilarity sim = null;
+			try
+			{
+				RandomAccessVectors vectors = new RandomAccessVectors(vectors_path);
+				sim = new VectorsCosineSimilarity(vectors);
+			}
+			catch (Exception e)
+			{
+				throw new RuntimeException(e);
+			}
 //			VisualizationUtils.visualizeSimilarityMatrix("Candidate and system meanings", cws_meanings, cws_labels, sim);
 
 			List<Pair<String, String>> gold_and_candidates = new ArrayList<>(gold_meanings);
@@ -376,7 +386,7 @@ public class Driver
 //		final List<String> cws_labels = candidates_with_system.stream()
 //				.map(Pair::getRight)
 //				.collect(Collectors.toList());
-//		RandomAccessVectorsSimilarity sim = RandomAccessVectorsSimilarity.create(vectors);
+//		VectorsCosineSimilarity sim = VectorsCosineSimilarity.create(vectors);
 //		VisualizationUtils.visualizeSimilarityMatrix("Candidate and system meanings", cws_meanings, cws_labels, sim);
 //
 //		List<Pair<String, String>> candidates_with_gold = new ArrayList<>(candidates);

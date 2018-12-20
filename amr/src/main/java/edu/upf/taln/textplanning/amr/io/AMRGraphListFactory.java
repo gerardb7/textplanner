@@ -61,7 +61,7 @@ public class AMRGraphListFactory
 		List<CoreferenceChain> chains = stanford.process(graphs);
 
 		// Collect and classify mentions
-		final Multimap<String, Mention> mentions = MentionsCollector.collectMentions(graphs);
+		final Multimap<String, Mention> mentions = AMRMentionsCollector.collectMentions(graphs);
 		final Multimap<String, Mention> singlewords = HashMultimap.create();
 		mentions.entries().stream().filter(e -> !e.getValue().isMultiWord()).forEach(e -> singlewords.put(e.getKey(), e.getValue()));
 		final Multimap<String, Mention> multiwords = HashMultimap.create();

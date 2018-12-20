@@ -14,7 +14,7 @@ import edu.upf.taln.textplanning.core.corpora.CompactFrequencies;
 import edu.upf.taln.textplanning.core.corpora.FreqsFile;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.utils.Serializer;
+import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.weighting.TFIDF;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;

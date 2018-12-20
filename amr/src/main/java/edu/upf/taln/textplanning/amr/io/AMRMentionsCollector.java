@@ -3,10 +3,9 @@ package edu.upf.taln.textplanning.amr.io;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-
 import edu.upf.taln.textplanning.amr.structures.AMRAlignments;
-import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.amr.structures.AMRGraph;
+import edu.upf.taln.textplanning.core.structures.Mention;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,7 +18,7 @@ import java.util.stream.IntStream;
 
 import static java.lang.Integer.min;
 
-public class MentionsCollector
+public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRGraph>>
 {
 	private static final int max_tokens = 5;
 	private final static Logger log = LogManager.getLogger();
@@ -45,7 +44,6 @@ public class MentionsCollector
 	 * Returns a mention for each sequence of up to 2 to max_tokens, provided there is a node
 	 * in the graph spanning over it.
 	 */
-	@SuppressWarnings("ConstantConditions")
 	private static Multimap<String, Mention> collectMultiwordMentions(Collection<AMRGraph> graphs)
 	{
 		Multimap<String, Mention> vertices2Mentions = HashMultimap.create();
@@ -65,7 +63,7 @@ public class MentionsCollector
 							.filter(span -> IntStream.range(span.getLeft(), span.getRight())
 									.mapToObj(index -> a.getTokens().get(index))
 									.noneMatch(is_punct)) // no punctuation marks please
-							.map(span -> new Mention(
+							.map(span -> Mention.get(
 									g.getSource(),
 									span,
 									a.getSurfaceForm(span),
@@ -93,7 +91,7 @@ public class MentionsCollector
 					.map(i ->
 					{
 						Pair<Integer, Integer> span = Pair.of(i, i + 1);
-						return new Mention(g.getSource(), span, a.getSurfaceForm(span), a.getLemma(i), a.getPOS(i),
+						return Mention.get(g.getSource(), span, a.getSurfaceForm(span), a.getLemma(i), a.getPOS(i),
 								isName(span, g), getType(span, g));
 					})
 					.forEach(m -> vertices2Mentions.put(v, m)));

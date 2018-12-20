@@ -3,6 +3,8 @@ package edu.upf.taln.textplanning.core.structures;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -17,9 +19,23 @@ public final class Mention implements Serializable
 	private final String pos; // POS tag
 	private final boolean isNE; // is NE
 	private final String type; // e.g. AMR concept label
+	private static final Map<String, Mention> mentions = new HashMap<>(); // to ensure unique Mention objects
 	private final static long serialVersionUID = 1L;
 
-	public Mention(String sentence_id, Pair<Integer, Integer> tokens_span, String surface_form, String lemma,
+	// Factory method
+	public static Mention get(String sentence_id, Pair<Integer, Integer> tokens_span, String surface_form, String lemma,
+	                          String POS, boolean isNE, String type)
+	{
+		final String id = sentence_id + tokens_span.toString();
+		if (mentions.containsKey(id))
+			return mentions.get(id);
+
+		Mention m = new Mention(sentence_id, tokens_span, surface_form, lemma, POS, isNE, type);
+		mentions.put(id, m);
+		return m;
+	}
+
+	private Mention(String sentence_id, Pair<Integer, Integer> tokens_span, String surface_form, String lemma,
 	               String POS, boolean isNE, String type)
 	{
 		this.sentence_id = sentence_id;
@@ -48,33 +64,6 @@ public final class Mention implements Serializable
 		return getSurface_form();
 	}
 
-	public String toLongString()
-	{
-		return "Mention{" +
-				"sentence_id='" + sentence_id + '\'' +
-				", span=" + span +
-				", surface_form='" + surface_form + '\'' +
-				", lemma='" + lemma + '\'' +
-				", pos='" + pos + '\'' +
-				", type=" + type +
-				'}';
-	}
-
-	@Override
-	public boolean equals(Object o)
-	{
-		if (this == o)
-		{
-			return true;
-		}
-		if (o == null || getClass() != o.getClass())
-		{
-			return false;
-		}
-
-		Mention mention = (Mention) o;
-		return sentence_id.equals(mention.sentence_id) && span.equals(mention.span);
-	}
 
 	@Override
 	public int hashCode()

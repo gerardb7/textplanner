@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.core.utils;
+package edu.upf.taln.textplanning.common;
 
 import Jama.Matrix;
 import edu.upf.taln.textplanning.core.ranking.JamaPowerIteration;
@@ -11,10 +11,8 @@ import org.apache.logging.log4j.Logger;
 import org.ujmp.core.doublematrix.DoubleMatrix2D;
 import org.ujmp.core.doublematrix.impl.DefaultDenseDoubleMatrix2D;
 
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -25,34 +23,26 @@ public class VisualizationUtils
 
 	public static void visualizeSimilarityMatrix(String label, List<String> items, List<String> labels, SimilarityFunction sim)
 	{
-		int n = items.size();
-		DoubleMatrix2D m = new DefaultDenseDoubleMatrix2D(n, n);
+
+		final List<String> defined_items = items.stream()
+				.filter(sim::isDefinedFor)
+				.collect(Collectors.toList());
+		int n = defined_items.size();
+		log.info(n + " defined items out of " + items.size());
+
+		// create vectors
+		final double[][] sim_matrix = MatrixFactory.createMeaningsSimilarityMatrix(defined_items, sim, (a, b) -> true, 0.0, false, false, true);
+		final double[] values = Arrays.stream(sim_matrix)
+				.flatMapToDouble(Arrays::stream)
+				.toArray();
+
+		// prepare visualuzation matrix
+		DoubleMatrix2D m = new DefaultDenseDoubleMatrix2D(values, n, n);
 		IntStream.range(0, n).forEach(i ->
 		{
 			m.setColumnLabel(i, labels.get(i));
 			m.setRowLabel(i, labels.get(i));
 		});
-
-		IntStream.range(0, n).forEach(i ->
-				IntStream.range(i, n).forEach(j ->
-				{
-					double simij;
-					if (i == j)
-						simij = 1.0;
-					else
-					{
-						String e1 = items.get(i);
-						String e2 = items.get(j);
-						final Optional<Double> osim = sim.getSimilarity(e1, e2);
-						if (!osim.isPresent())
-							log.warn("Vectors not defined for " + e1 + " and " + e2);
-
-						simij = osim.orElse(0.0);
-					}
-
-					m.setDouble(simij, i, j);
-					m.setDouble(simij, j, i); // symmetric matrix
-				}));
 		m.setLabel(label);
 		m.showGUI();
 	}

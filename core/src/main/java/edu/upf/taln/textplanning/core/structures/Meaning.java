@@ -49,14 +49,5 @@ public final class Meaning implements Serializable
 	public String toString() { return reference + "-" + this.label; }
 
 	@Override
-	public boolean equals(Object o)
-	{
-		if (this == o) return true;
-		if (o == null || getClass() != o.getClass()) return false;
-		Meaning meaning = (Meaning) o;
-		return Objects.equals(reference, meaning.reference);
-	}
-
-	@Override
 	public int hashCode() { return Objects.hash(reference);	}
 }

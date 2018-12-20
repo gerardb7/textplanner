@@ -12,18 +12,18 @@ import edu.stanford.nlp.pipeline.CoreEntityMention;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.util.logging.RedwoodConfiguration;
 import edu.upf.taln.textplanning.amr.io.CandidatesCollector;
-import edu.upf.taln.textplanning.amr.Driver;
 import edu.upf.taln.textplanning.common.BabelNetWrapper;
+import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.corpora.CompactFrequencies;
-import edu.upf.taln.textplanning.core.similarity.VectorsTypes.Format;
-import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.ranking.GraphRanking;
 import edu.upf.taln.textplanning.core.ranking.MatrixFactory;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
+import edu.upf.taln.textplanning.core.similarity.vectors.SimilarityFunctionFactory;
+import edu.upf.taln.textplanning.core.similarity.vectors.SimilarityFunctionFactory.Format;
+import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
-import edu.upf.taln.textplanning.core.utils.Serializer;
 import edu.upf.taln.textplanning.core.weighting.NumberForms;
 import edu.upf.taln.textplanning.core.weighting.TFIDF;
 import edu.upf.taln.textplanning.core.weighting.WeightingFunction;
@@ -390,7 +390,7 @@ public class EmpiricalStudy
 		CompactFrequencies freqs = (CompactFrequencies)Serializer.deserialize(frequencies);
 		weighting_functions.add(new TFIDF(freqs, r -> true));
 		weighting_functions.add(new NumberForms(r -> true));
-		final SimilarityFunction sim = Driver.chooseSimilarityFunction(vectors, format);
+		final SimilarityFunction sim = SimilarityFunctionFactory.get(vectors, format);
 
 		Stopwatch gtimer = Stopwatch.createStarted();
 		final CorpusInfo corpus = (CorpusInfo) Serializer.deserialize(input);
@@ -920,7 +920,7 @@ public class EmpiricalStudy
 							final Candidate.Type ne = ne_offsets.contains(span) ?
 									ne_types.get(ne_offsets.indexOf(span)) : Candidate.Type.Other;
 
-							return new Mention(
+							return Mention.get(
 									tokens.get(span.getRight() - 1).sentIndex() + "-" + span,
 									span,
 									span_text,

@@ -9,16 +9,14 @@ import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.core.weighting.WeightingFunction;
+import org.apache.commons.lang3.tuple.Pair;
 
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.*;
 
 /**
  * GraphRanking class offers methods to rank items in semantic graphs, i.e. meanings and variables.
@@ -41,21 +39,24 @@ public class GraphRanking
 	// Accept references which are not candidates of exactly the same set of mentions
 	public static class DifferentMentions implements BiPredicate<String, String>
 	{
-		private final Collection<Candidate> candidates;
-		public DifferentMentions(Collection<Candidate> candidates)	{ this.candidates = candidates; }
+
+		private final Set<Pair<String, String>> different_mention_pairs;
+		public DifferentMentions(Collection<Candidate> candidates)
+		{
+			final Map<String, List<Mention>> references2mentions = candidates.stream()
+					.collect(Collectors.groupingBy(c -> c.getMeaning().getReference(), mapping(Candidate::getMention, toList())));
+
+			different_mention_pairs = references2mentions.keySet().stream()
+					.flatMap(r1 -> references2mentions.keySet().stream()
+							.filter(r2 -> !references2mentions.get(r1).equals(references2mentions.get(r2)))
+							.map(r2 -> Pair.of(r1, r2)))
+					.collect(toSet());
+		}
 
 		@Override
 		public boolean test(String r1, String r2)
 		{
-			final Set<Mention> mentions_r1 = candidates.stream()
-					.filter(c -> c.getMeaning().getReference().equals(r1))
-					.map(Candidate::getMention)
-					.collect(Collectors.toSet());
-			final Set<Mention> mentions_r2 = candidates.stream()
-					.filter(c -> c.getMeaning().getReference().equals(r2))
-					.map(Candidate::getMention)
-					.collect(Collectors.toSet());
-			return !mentions_r1.equals(mentions_r2); // should differ in at least one mention
+			return different_mention_pairs.contains(Pair.of(r1, r2)); // should differ in at least one mention
 		}
 	}
 

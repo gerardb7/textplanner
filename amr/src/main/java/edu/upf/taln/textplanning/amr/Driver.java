@@ -11,14 +11,12 @@ import edu.upf.taln.textplanning.amr.io.AMRSemantics;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.amr.utils.EmpiricalStudy;
-import edu.upf.taln.textplanning.core.utils.Serializer;
+import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.corpora.CompactFrequencies;
-import edu.upf.taln.textplanning.core.similarity.RandomAccessVectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
-import edu.upf.taln.textplanning.core.similarity.TextVectorsSimilarity;
-import edu.upf.taln.textplanning.core.similarity.VectorsTypes.Format;
-import edu.upf.taln.textplanning.core.similarity.Word2VecVectorsSimilarity;
+import edu.upf.taln.textplanning.core.similarity.vectors.SimilarityFunctionFactory.Format;
+import edu.upf.taln.textplanning.core.similarity.vectors.*;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.core.weighting.NoWeights;
@@ -100,7 +98,7 @@ public class Driver
 		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
 		WeightingFunction weighting = new NumberForms(r -> true);
 		//WeightingFunction weighting = new NoWeights();
-		SimilarityFunction similarity = chooseSimilarityFunction(vectors, format);
+		SimilarityFunction similarity = SimilarityFunctionFactory.get(vectors, format);
 
 		TextPlanner.Options options = new TextPlanner.Options();
 		options.damping_meanings = 0.5;
@@ -155,7 +153,7 @@ public class Driver
 	{
 		log.info("Running from " + subgraphs_file);
 		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
-		SimilarityFunction similarity = chooseSimilarityFunction(vectors, format);
+		SimilarityFunction similarity = SimilarityFunctionFactory.get(vectors, format);
 
 		TextPlanner.Options options = new TextPlanner.Options();
 		subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, num_subgraphs, similarity, options);
@@ -169,7 +167,7 @@ public class Driver
 	{
 		log.info("Running from " + subgraphs_file);
 		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
-		SimilarityFunction similarity = chooseSimilarityFunction(vectors, format);
+		SimilarityFunction similarity = SimilarityFunctionFactory.get(vectors, format);
 
 		TextPlanner.Options options = new TextPlanner.Options();
 		final List<SemanticSubgraph> plan = TextPlanner.sortSubgraphs(subgraphs, similarity, options);
@@ -223,7 +221,7 @@ public class Driver
 
 		WeightingFunction meanings_weighting = new NoWeights();
 		//WeightingFunction variables_weighting = new TFIDF(corpus, r -> true);
-		SimilarityFunction similarity = chooseSimilarityFunction(vectors, format);
+		SimilarityFunction similarity = SimilarityFunctionFactory.get(vectors, format);
 		AmrMain generator = new AmrMain(generation_resources);
 
 		TextPlanner.Options options = new TextPlanner.Options();
@@ -358,24 +356,7 @@ public class Driver
 		return out.resolve(new_name);
 	}
 
-	public static SimilarityFunction chooseSimilarityFunction(Path vectors, Format format) throws Exception
-	{
-		SimilarityFunction similarity = null;
-		switch (format)
-		{
-			case Text_Glove:
-			case Text_Word2vec:
-				return TextVectorsSimilarity.create(vectors, format);
-			case Binary_Word2vec:
-				return Word2VecVectorsSimilarity.create(vectors);
-			case Binary_RandomAccess:
-				return RandomAccessVectorsSimilarity.create(vectors);
-		}
-
-		return null;
-	}
-
-	public static class FormatConverter implements IStringConverter<Format>
+	public static class FormatConverter implements IStringConverter<SimilarityFunctionFactory.Format>
 	{
 		@Override
 		public Format convert(String value)
