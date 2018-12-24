@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.core.corpora;
+package edu.upf.taln.textplanning.core.weighting.corpora;
 
 import java.util.OptionalInt;
 

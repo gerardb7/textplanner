@@ -2,7 +2,7 @@ import edu.upf.taln.textplanning.common.BabelNetWrapper;
 import edu.upf.taln.textplanning.common.VisualizationUtils;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
-import edu.upf.taln.textplanning.core.similarity.vectors.SimilarityFunctionFactory;
+import edu.upf.taln.textplanning.core.similarity.SimilarityFunctionFactory;
 import edu.upf.taln.textplanning.core.weighting.NoWeights;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -128,7 +128,8 @@ public class GraphRankingTest
 		final Path vectors_path = Paths.get("/home/gerard/data/NASARIembed+UMBC_w2v_bin");
 		BabelNetWrapper bn = new BabelNetWrapper(babel_config_path, false);
 		GloveKeysReader reader = new GloveKeysReader(vectors_path);
-		final SimilarityFunction sim = SimilarityFunctionFactory.get(vectors_path, SimilarityFunctionFactory.Format.Binary_RandomAccess);
+		final SimilarityFunction sim = SimilarityFunctionFactory.get(SimilarityFunctionFactory.FunctionType.Cosine,
+				vectors_path, SimilarityFunctionFactory.VectorType.Binary_RandomAccess);
 
 		music.keySet().stream()
 				.filter(s -> !sim.isDefinedFor(s))

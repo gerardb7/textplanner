@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.core.similarity.vectors;
 
 import com.google.common.base.Stopwatch;
+import edu.upf.taln.textplanning.core.similarity.SimilarityFunctionFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -9,17 +10,18 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public class TextVectors implements Vectors
 {
 	private final Map<String, double[]> vectors;
 	private final static Logger log = LogManager.getLogger();
 
-	public TextVectors(Path vectors_path, SimilarityFunctionFactory.Format format) throws Exception
+	public TextVectors(Path vectors_path, SimilarityFunctionFactory.VectorType vectorType) throws Exception
 	{
 		log.info("Loading vectors from " + vectors_path);
 		Stopwatch timer = Stopwatch.createStarted();
-		vectors = readVectorsFromFile(vectors_path, format);
+		vectors = readVectorsFromFile(vectors_path, vectorType);
 		log.info("Loading took " + timer.stop());
 	}
 
@@ -30,18 +32,24 @@ public class TextVectors implements Vectors
 	}
 
 	@Override
-	public double[] getVector(String item)
+	public Optional<double[]> getVector(String item)
 	{
-		return vectors.get(item);
+		return Optional.ofNullable(vectors.get(item));
+	}
+
+	@Override
+	public int getNumDimensions()
+	{
+		return vectors.values().iterator().next().length;
 	}
 
 	/**
 	 * Reads a text file containing distributional vectors.
 	 */
-	public static Map<String, double[]> readVectorsFromFile(Path vectors_file, SimilarityFunctionFactory.Format format) throws Exception
+	public static Map<String, double[]> readVectorsFromFile(Path vectors_file, SimilarityFunctionFactory.VectorType vectorType) throws Exception
 	{
-		if (format != SimilarityFunctionFactory.Format.Text_Glove && format != SimilarityFunctionFactory.Format.Text_Word2vec)
-			throw new Exception("Format " + format + " not supported");
+		if (vectorType != SimilarityFunctionFactory.VectorType.Text_Glove && vectorType != SimilarityFunctionFactory.VectorType.Text_Word2vec)
+			throw new Exception("VectorType " + vectorType + " not supported");
 
 		int num_lines = 0;
 		int num_dimensions = 0;
@@ -63,7 +71,7 @@ public class TextVectors implements Vectors
 				String[] columns = line.split(" ");
 				if (first_line)
 				{
-					if (format == SimilarityFunctionFactory.Format.Text_Glove)
+					if (vectorType == SimilarityFunctionFactory.VectorType.Text_Glove)
 					{
 						num_lines = Integer.parseInt(columns[0]);
 						num_dimensions = Integer.parseInt(columns[1]);
@@ -75,7 +83,7 @@ public class TextVectors implements Vectors
 						columns = line.split(" ");
 						++line_counter;
 					}
-					else // if (format == Format.Text_Word2vec)
+					else // if (vectorType == VectorType.Text_Word2vec)
 					{
 						try (LineNumberReader count = new LineNumberReader(new FileReader(vectors_file.toFile())))
 						{

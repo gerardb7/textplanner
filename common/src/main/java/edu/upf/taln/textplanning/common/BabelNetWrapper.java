@@ -1,7 +1,9 @@
 package edu.upf.taln.textplanning.common;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.Iterators;
 import it.uniroma1.lcl.babelnet.*;
+import it.uniroma1.lcl.babelnet.data.BabelGloss;
 import it.uniroma1.lcl.babelnet.data.BabelPOS;
 import it.uniroma1.lcl.jlt.Configuration;
 import it.uniroma1.lcl.jlt.util.Language;
@@ -13,6 +15,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -71,6 +74,12 @@ public class BabelNetWrapper
 
 		log.info("BabelNet set up in " + timer.stop());
 		return instance;
+	}
+
+	public Iterator<String> getSynsetIterator()
+	{
+		return Iterators.transform(bn.getSynsetIterator(), s -> s.getId().getID());
+
 	}
 
 	@SuppressWarnings("unused")
@@ -184,6 +193,25 @@ public class BabelNetWrapper
 			if (synset == null)
 				return Collections.emptyList();
 			return synset.getDBPediaURIs(Language.EN);
+		}
+		catch (InvalidBabelSynsetIDException | IOException e)
+		{
+			return Collections.emptyList();
+		}
+	}
+
+	public List<String> getGlosses(String id)
+	{
+		if (bn == null)
+			return Collections.emptyList();
+
+		try
+		{
+			num_queries.getAndIncrement();
+			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
+			if (synset == null)
+				return Collections.emptyList();
+			return synset.getGlosses(Language.EN).stream().map(BabelGloss::getGloss).collect(Collectors.toList());
 		}
 		catch (InvalidBabelSynsetIDException | IOException e)
 		{

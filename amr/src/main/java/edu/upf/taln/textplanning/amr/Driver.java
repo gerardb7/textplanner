@@ -1,35 +1,30 @@
 package edu.upf.taln.textplanning.amr;
 
 import com.beust.jcommander.*;
-import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.amr.io.AMRSemanticGraphFactory;
-import edu.upf.taln.textplanning.amr.io.AMRGraphListFactory;
-import edu.upf.taln.textplanning.amr.io.AMRReader;
-import edu.upf.taln.textplanning.amr.io.AMRWriter;
-import edu.upf.taln.textplanning.amr.io.AMRSemantics;
+import edu.upf.taln.textplanning.amr.io.*;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
-import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.amr.utils.EmpiricalStudy;
+import edu.upf.taln.textplanning.common.CMLCheckers;
+import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.TextPlanner;
-import edu.upf.taln.textplanning.core.corpora.CompactFrequencies;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
-import edu.upf.taln.textplanning.core.similarity.vectors.SimilarityFunctionFactory.Format;
-import edu.upf.taln.textplanning.core.similarity.vectors.*;
+import edu.upf.taln.textplanning.core.similarity.SimilarityFunctionFactory;
+import edu.upf.taln.textplanning.core.similarity.SimilarityFunctionFactory.VectorType;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.core.weighting.NoWeights;
 import edu.upf.taln.textplanning.core.weighting.NumberForms;
 import edu.upf.taln.textplanning.core.weighting.WeightingFunction;
+import edu.upf.taln.textplanning.core.weighting.corpora.CompactFrequencies;
 import main.AmrMain;
 import net.sf.extjwnl.JWNLException;
-import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DateFormat;
@@ -79,18 +74,19 @@ public class Driver
 			throws IOException
 	{
 		log.info("Running from " + amr_bank_file);
-		String amr_bank = FileUtils.readFileToString(amr_bank_file.toFile(), StandardCharsets.UTF_8);
+		String amr_bank = FileUtils.readTextFile(amr_bank_file);
 
 		AMRReader reader = new AMRReader();
 		AMRGraphListFactory factory = new AMRGraphListFactory(reader, null, bn_config_folder, no_stanford, no_babelnet);
 		AMRGraphList graphs = factory.create(amr_bank);
 
-		Path output = createOutputPath(amr_bank_file, graphs_suffix, false);
+		Path output = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
+				FilenameUtils.getExtension(amr_bank_file.toFile().getName()), graphs_suffix);
 		Serializer.serialize(graphs, output);
 		log.info("Graphs serialized to " + output);
 	}
 
-	private void rank_meanings(Path graphs_file, Path freqs, Path vectors, Format format) throws Exception
+	private void rank_meanings(Path graphs_file, Path freqs, Path vectors, VectorType vectorType) throws Exception
 	{
 		log.info("Running from " + graphs_file);
 		AMRGraphList graphs = (AMRGraphList) Serializer.deserialize(graphs_file);
@@ -98,14 +94,15 @@ public class Driver
 		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
 		WeightingFunction weighting = new NumberForms(r -> true);
 		//WeightingFunction weighting = new NoWeights();
-		SimilarityFunction similarity = SimilarityFunctionFactory.get(vectors, format);
+		SimilarityFunction similarity = SimilarityFunctionFactory.get(SimilarityFunctionFactory.FunctionType.Cosine, vectors, vectorType);
 
 		TextPlanner.Options options = new TextPlanner.Options();
 		options.damping_meanings = 0.5;
 		options.sim_threshold = 0.5;
 		TextPlanner.rankMeanings(graphs.getCandidates(), weighting, similarity, options);
 
-		Path output = createOutputPath(graphs_file, graphs_ranked_suffix, false);
+		Path output = FileUtils.createOutputPath(graphs_file, graphs_file.getParent(),
+				FilenameUtils.getExtension(graphs_file.toFile().getName()), graphs_ranked_suffix);
 		Serializer.serialize(graphs, output);
 		log.info("Ranked graphs serialized to " + output);
 	}
@@ -118,7 +115,8 @@ public class Driver
 		AMRSemanticGraphFactory factory = new AMRSemanticGraphFactory();
 		SemanticGraph graph = factory.create(graphs);
 
-		Path output = createOutputPath(graphs_file, global_suffix, false);
+		Path output = FileUtils.createOutputPath(graphs_file, graphs_file.getParent(),
+				FilenameUtils.getExtension(graphs_file.toFile().getName()), global_suffix);
 		Serializer.serialize(graph, output);
 		log.info("Global semantic graph serialized to " + output);
 	}
@@ -131,7 +129,8 @@ public class Driver
 		TextPlanner.Options options = new TextPlanner.Options();
 		TextPlanner.rankVertices(graph, options);
 
-		Path output = createOutputPath(graph_file, global_ranked_suffix, false);
+		Path output = FileUtils.createOutputPath(graph_file, graph_file.getParent(),
+				FilenameUtils.getExtension(graph_file.toFile().getName()), global_ranked_suffix);
 		Serializer.serialize(graph, output);
 		log.info("Ranked global semantic graph serialized to " + output);
 	}
@@ -144,35 +143,38 @@ public class Driver
 		TextPlanner.Options options = new TextPlanner.Options();
 		final Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(graph, new AMRSemantics(), num_subgraphs, options);
 
-		Path output = createOutputPath(graph_file, subgraphs_suffix, false);
+		Path output = FileUtils.createOutputPath(graph_file, graph_file.getParent(),
+				FilenameUtils.getExtension(graph_file.toFile().getName()), subgraphs_suffix);
 		Serializer.serialize(subgraphs, output);
 		log.info("Subgraphs serialized to " + output);
 	}
 
-	private void remove_redundancy(Path subgraphs_file, int num_subgraphs, Path vectors, Format format) throws Exception
+	private void remove_redundancy(Path subgraphs_file, int num_subgraphs, Path vectors, VectorType vectorType) throws Exception
 	{
 		log.info("Running from " + subgraphs_file);
 		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
-		SimilarityFunction similarity = SimilarityFunctionFactory.get(vectors, format);
+		SimilarityFunction similarity = SimilarityFunctionFactory.get(SimilarityFunctionFactory.FunctionType.Cosine, vectors, vectorType);
 
 		TextPlanner.Options options = new TextPlanner.Options();
 		subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, num_subgraphs, similarity, options);
 
-		Path output = createOutputPath(subgraphs_file, non_redundant_suffix, false);
+		Path output = FileUtils.createOutputPath(subgraphs_file, subgraphs_file.getParent(),
+				FilenameUtils.getExtension(subgraphs_file.toFile().getName()), non_redundant_suffix);
 		Serializer.serialize(subgraphs, output);
 		log.info("Non-redundant subgraphs serialized to " + output);
 	}
 
-	private void sort_subgraphs(Path subgraphs_file, Path vectors, Format format) throws Exception
+	private void sort_subgraphs(Path subgraphs_file, Path vectors, VectorType vectorType) throws Exception
 	{
 		log.info("Running from " + subgraphs_file);
 		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
-		SimilarityFunction similarity = SimilarityFunctionFactory.get(vectors, format);
+		SimilarityFunction similarity = SimilarityFunctionFactory.get(SimilarityFunctionFactory.FunctionType.Cosine, vectors, vectorType);
 
 		TextPlanner.Options options = new TextPlanner.Options();
 		final List<SemanticSubgraph> plan = TextPlanner.sortSubgraphs(subgraphs, similarity, options);
 
-		Path output = createOutputPath(subgraphs_file, subgraphs_suffix, false);
+		Path output = FileUtils.createOutputPath(subgraphs_file, subgraphs_file.getParent(),
+				FilenameUtils.getExtension(subgraphs_file.toFile().getName()), sorted_suffix);
 		Serializer.serialize(plan, output);
 		log.info("Text plan serialized to " + output);
 	}
@@ -185,8 +187,9 @@ public class Driver
 		AMRWriter writer = new AMRWriter();
 		final String out_amr = writer.write(subgraphs);
 
-		Path output = createOutputPath(subgraphs_file, plan_suffix, false);
-		FileUtils.writeStringToFile(output.toFile(), out_amr, Charsets.UTF_8);
+		Path output = FileUtils.createOutputPath(subgraphs_file, subgraphs_file.getParent(),
+				FilenameUtils.getExtension(subgraphs_file.toFile().getName()), plan_suffix);
+		FileUtils.writeTextToFile(output, out_amr);
 		log.info("AMR plan writen to " + output);
 	}
 
@@ -194,17 +197,18 @@ public class Driver
 	private void generate(Path amr_file, Path resources) throws IOException, JWNLException
 	{
 		log.info("Running from " + amr_file);
-		final String amr = FileUtils.readFileToString(amr_file.toFile(), Charsets.UTF_8);
+		final String amr = FileUtils.readTextFile(amr_file);
 
 		AmrMain generator = new AmrMain(resources);
 		String text = generator.generate(amr);
 
-		Path output = createOutputPath(amr_file, summary_suffix);
-		FileUtils.writeStringToFile(output.toFile(), text, Charsets.UTF_8, false);
+		Path output = FileUtils.createOutputPath(amr_file, amr_file.getParent(),
+				FilenameUtils.getExtension(amr_file.toFile().getName()), summary_suffix);
+		FileUtils.writeTextToFile(output, text);
 		log.info("Summary text writen to " + output);
 	}
 
-	private void summarize(Path amr_bank, Path bn_config_folder, Path freqs, Path vectors, Format format,
+	private void summarize(Path amr_bank, Path bn_config_folder, Path freqs, Path vectors, VectorType vectorType,
 	                       boolean no_stanford, boolean no_babelnet, int num_subgraphs_extract, int num_subgraphs,
 	                       Path generation_resources, int max_words) throws Exception
 	{
@@ -221,7 +225,7 @@ public class Driver
 
 		WeightingFunction meanings_weighting = new NoWeights();
 		//WeightingFunction variables_weighting = new TFIDF(corpus, r -> true);
-		SimilarityFunction similarity = SimilarityFunctionFactory.get(vectors, format);
+		SimilarityFunction similarity = SimilarityFunctionFactory.get(SimilarityFunctionFactory.FunctionType.Cosine, vectors, vectorType);
 		AmrMain generator = new AmrMain(generation_resources);
 
 		TextPlanner.Options options = new TextPlanner.Options();
@@ -267,47 +271,55 @@ public class Driver
 			log.info("***Planning from " + amr_bank_file.getFileName() + "***");
 
 			// 1- Create semantic graphs
-			String amr_bank = FileUtils.readFileToString(amr_bank_file.toFile(), StandardCharsets.UTF_8);
+			String amr_bank = FileUtils.readTextFile(amr_bank_file);
 			AMRGraphList graphs = graphListFactory.create(amr_bank);
-			Path output_path = createOutputPath(amr_bank_file, graphs_suffix);
+			Path output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
+					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), graphs_suffix);
 			Serializer.serialize(graphs, output_path);
 
 			// 2- Rank meanings
 			TextPlanner.rankMeanings(graphs.getCandidates(), weight, similarity, options);
-			output_path = createOutputPath(amr_bank_file, graphs_ranked_suffix);
+			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
+					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), graphs_ranked_suffix);
 			Serializer.serialize(graphs, output_path);
 
 			// 3- Create global graph
 			SemanticGraph graph = globalGraphFactory.create(graphs);
-			output_path = createOutputPath(amr_bank_file, global_suffix);
+			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
+					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), global_suffix);
 			Serializer.serialize(graph, output_path);
 
 			// 4- Rank variables
 			TextPlanner.rankVertices(graph, options);
-			output_path = createOutputPath(amr_bank_file, global_ranked_suffix);
+			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
+					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), global_ranked_suffix);
 			Serializer.serialize(graph, output_path);
 
 			// 5- Extract subgraphs
 			Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(graph, new AMRSemantics(), num_subgraphs_extract, options);
-			output_path = createOutputPath(amr_bank_file, subgraphs_suffix);
+			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
+					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), subgraphs_suffix);
 			Serializer.serialize(subgraphs, output_path);
 
 			// 6- Remove redundancy
 			subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, num_subgraphs, similarity, options);
-			output_path = createOutputPath(amr_bank_file, non_redundant_suffix);
+			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
+					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), non_redundant_suffix);
 			Serializer.serialize(subgraphs, output_path);
 
 			// 6- sort subgraphs
 			List<SemanticSubgraph> sorted_subgraphs = TextPlanner.sortSubgraphs(subgraphs, similarity, options);
-			output_path = createOutputPath(amr_bank_file, sorted_suffix);
+			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
+					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), sorted_suffix);
 			Serializer.serialize(sorted_subgraphs, output_path);
 
 			// 7- create AMR plan
 			log.info("*Writing AMR*");
 			AMRWriter writer = new AMRWriter();
 			final String out_amr = writer.write(sorted_subgraphs);
-			output_path = createOutputPath(amr_bank_file, plan_suffix);
-			FileUtils.writeStringToFile(output_path.toFile(), out_amr, Charsets.UTF_8);
+			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
+					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), plan_suffix);
+			FileUtils.writeTextToFile(output_path, out_amr);
 			log.info("Plan serialized as AMR");
 
 			// 8- generate text
@@ -318,10 +330,12 @@ public class Driver
 					.limit(max_words)
 					.collect(joining(" "));
 
-			Path output = createOutputPath(amr_bank_file, summary_suffix);
-			FileUtils.writeStringToFile(output.toFile(), text, Charsets.UTF_8, false);
-			output = createOutputPath(amr_bank_file, truncated_summary_suffix);
-			FileUtils.writeStringToFile(output.toFile(), truncated_text, Charsets.UTF_8, false);
+			Path output = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
+					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), summary_suffix);
+			FileUtils.writeTextToFile(output, text);
+			output = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
+					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), truncated_summary_suffix);
+			FileUtils.writeTextToFile(output, truncated_text);
 
 			log.info("*Generation completed in " + gen_timer.stop() + "*");
 
@@ -336,32 +350,12 @@ public class Driver
 	}
 
 
-	private static Path createOutputPath(Path input, String suffix) throws IOException
-	{
-		return createOutputPath(input, suffix, true);
-	}
-	private static Path createOutputPath(Path input, String suffix, boolean useOutputFolder) throws IOException
-	{
-		final Path out = useOutputFolder ? input.getParent().resolve(output_folder) : input.getParent();
-		if (!Files.exists(out))
-			Files.createDirectories(out);
-
-		String basename = input.getFileName().toString();
-		final String new_name = suffixes.stream()
-				.filter(basename::endsWith)
-				.findFirst()
-				.map(s -> basename.substring(0, basename.length() - s.length()))
-				.orElse(basename) + suffix;
-
-		return out.resolve(new_name);
-	}
-
-	public static class FormatConverter implements IStringConverter<SimilarityFunctionFactory.Format>
+	public static class FormatConverter implements IStringConverter<VectorType>
 	{
 		@Override
-		public Format convert(String value)
+		public VectorType convert(String value)
 		{
-			return Format.valueOf(value);
+			return VectorType.valueOf(value);
 		}
 	}
 
@@ -370,7 +364,7 @@ public class Driver
 		@Override
 		public void validate(String name, String value) throws ParameterException
 		{
-			try{ Format.valueOf(value); }
+			try{ SimilarityFunctionFactory.VectorType.valueOf(value); }
 			catch (Exception e)
 			{
 				throw new ParameterException("Parameter " + name + " has invalid valued " + value);
@@ -405,9 +399,9 @@ public class Driver
 		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
-		@Parameter(names = {"-vf", "-format"}, description = "Vectors format", arity = 1, required = true,
+		@Parameter(names = {"-vf", "-vectorType"}, description = "Vectors vectorType", arity = 1, required = true,
 				converter = FormatConverter.class, validateWith = FormatValidator.class)
-		private Format format = Format.Text_Glove;
+		private VectorType vectorType = VectorType.Text_Glove;
 	}
 
 	@Parameters(commandDescription = "Create global semantic graph from a list of semantic graphs")
@@ -449,9 +443,9 @@ public class Driver
 		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
-		@Parameter(names = {"-vf", "-format"}, description = "Vectors format", arity = 1, required = true,
+		@Parameter(names = {"-vf", "-vectorType"}, description = "Vectors vectorType", arity = 1, required = true,
 				converter = FormatConverter.class, validateWith = FormatValidator.class)
-		private Format format = Format.Text_Glove;
+		private VectorType vectorType = VectorType.Text_Glove;
 	}
 
 	@Parameters(commandDescription = "Sort subgraphs")
@@ -463,9 +457,9 @@ public class Driver
 		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
-		@Parameter(names = {"-vf", "-format"}, description = "Vectors format", arity = 1, required = true,
+		@Parameter(names = {"-vf", "-vectorType"}, description = "Vectors vectorType", arity = 1, required = true,
 				converter = FormatConverter.class, validateWith = FormatValidator.class)
-		private Format format = Format.Text_Glove;
+		private VectorType vectorType = VectorType.Text_Glove;
 	}
 
 	@Parameters(commandDescription = "Serialize plan as AMR")
@@ -502,9 +496,9 @@ public class Driver
 		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
-		@Parameter(names = {"-vf", "-format"}, description = "Vectors format", arity = 1, required = true,
+		@Parameter(names = {"-vf", "-vectorType"}, description = "Vectors vectorType", arity = 1, required = true,
 				converter = FormatConverter.class, validateWith = FormatValidator.class)
-		private Format format = Format.Text_Glove;
+		private VectorType vectorType = VectorType.Text_Glove;
 		@Parameter(names = {"-ns", "-nostanford"}, description = "Do not load Stanford CoreNLP pipeline")
 		private boolean no_stanford = false;
 		@Parameter(names = {"-nb", "-nobabelnet"}, description = "Do not query BabelNet")
@@ -548,9 +542,9 @@ public class Driver
 		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
-		@Parameter(names = {"-vf", "-format"}, description = "Vectors format", arity = 1, required = true,
+		@Parameter(names = {"-vf", "-vectorType"}, description = "Vectors vectorType", arity = 1, required = true,
 				converter = Driver.FormatConverter.class, validateWith = Driver.FormatValidator.class)
-		private Format format = Format.Text_Glove;
+		private VectorType vectorType = SimilarityFunctionFactory.VectorType.Text_Glove;
 		@Parameter(names = {"-pw", "-pairwise"}, description = "If true calculate stats from pairwise similiarity values")
 		private boolean do_pairwise_similarity = false;
 	}
@@ -600,7 +594,7 @@ public class Driver
 					create_graphs.no_babelnet);
 		else if (jc.getParsedCommand().equals(rank_meanings_command))
 			driver.rank_meanings(rank_meanings.inputFile, rank_meanings.freqsFile, rank_meanings.vectorsPath,
-					rank_meanings.format);
+					rank_meanings.vectorType);
 		else if (jc.getParsedCommand().equals(create_global_command))
 			driver.create_global(create_global.inputFile);
 		else if (jc.getParsedCommand().equals(rank_variables_command))
@@ -609,9 +603,9 @@ public class Driver
 			driver.extract_subgraphs(extract_subgraphs.inputFile, extract_subgraphs.num_subgraphs);
 		else if (jc.getParsedCommand().equals(remove_redundancy_command))
 			driver.remove_redundancy(remove_redundancy.inputFile, remove_redundancy.num_subgraphs,
-					remove_redundancy.vectorsPath, remove_redundancy.format);
+					remove_redundancy.vectorsPath, remove_redundancy.vectorType);
 		else if (jc.getParsedCommand().equals(sort_subgraphs_command))
-			driver.sort_subgraphs(sort_subgraphs.inputFile, sort_subgraphs.vectorsPath, sort_subgraphs.format);
+			driver.sort_subgraphs(sort_subgraphs.inputFile, sort_subgraphs.vectorsPath, sort_subgraphs.vectorType);
 		else if (jc.getParsedCommand().equals(write_amr_command))
 			driver.write_amr(write_amr.inputFile);
 		else if (jc.getParsedCommand().equals(generate_command))
@@ -619,18 +613,18 @@ public class Driver
 		/* --- */
 		else if (jc.getParsedCommand().equals(summarize_command))
 			driver.summarize(summarize.input, summarize.bnFolder, summarize.freqsFile, summarize.vectorsPath,
-					summarize.format, summarize.no_stanford, summarize.no_babelnet, summarize.num_extract,
+					summarize.vectorType, summarize.no_stanford, summarize.no_babelnet, summarize.num_extract,
 					summarize.num_subgraphs, summarize.generation_resources, summarize.max_words);
 		else if (jc.getParsedCommand().equals(process_command))
 		{
-			final String text = FileUtils.readFileToString(process.inputFile.toFile(), StandardCharsets.UTF_8);
-
-			final Path output = createOutputPath(process.inputFile, process_suffix);
+			final String text = FileUtils.readTextFile(process.inputFile);
+			final Path output = FileUtils.createOutputPath(process.inputFile, process.inputFile.getParent(),
+					FilenameUtils.getExtension(process.inputFile.toFile().getName()), process_suffix);
 			EmpiricalStudy.processText(text, output, process.bnFolder);
 		}
 		else if (jc.getParsedCommand().equals(stats_command))
 		{
-			EmpiricalStudy.calculateStats(stats.inputFile, stats.freqsFile, stats.vectorsPath, stats.format, stats.do_pairwise_similarity);
+			EmpiricalStudy.calculateStats(stats.inputFile, stats.freqsFile, stats.vectorsPath, stats.vectorType, stats.do_pairwise_similarity);
 		}
 		else
 			jc.usage();

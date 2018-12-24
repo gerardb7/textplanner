@@ -3,22 +3,15 @@ package edu.upf.taln.textplanning.uima;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
-import com.google.common.base.Charsets;
-import edu.upf.taln.textplanning.common.BabelNetWrapper;
-import edu.upf.taln.textplanning.common.CMLCheckers;
+import edu.upf.taln.textplanning.common.*;
 import edu.upf.taln.textplanning.core.similarity.VectorsCosineSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.RandomAccessVectors;
 import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.common.Serializer;
-import edu.upf.taln.textplanning.common.VisualizationUtils;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -28,6 +21,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static edu.upf.taln.textplanning.common.FileUtils.*;
 import static java.util.stream.Collectors.*;
 
 public class Driver
@@ -56,6 +50,7 @@ public class Driver
 
 		Arrays.stream(text_files)
 				.sorted(Comparator.comparing(File::getName))
+				.map(File::toPath)
 				.forEach(f ->
 				{
 					final String text = readTextFile(f);
@@ -81,6 +76,7 @@ public class Driver
 
 		Arrays.stream(text_files)
 				.sorted(Comparator.comparing(File::getName))
+				.map(File::toPath)
 				.forEach(f ->
 				{
 					final String text = readTextFile(f);
@@ -100,7 +96,8 @@ public class Driver
 		final Predicate<String> is_meta = Pattern.compile("^@").asPredicate();
 		final List<String> summaries = Arrays.stream(gold_files)
 				.sorted(Comparator.comparing(File::getName))
-				.map(Driver::readTextFile)
+				.map(File::toPath)
+				.map(FileUtils::readTextFile)
 				.map(text ->
 						Pattern.compile("\n+").splitAsStream(text)
 								.filter(l -> !l.isEmpty() && !is_meta.test(l))
@@ -118,9 +115,9 @@ public class Driver
 									.map(set -> set.stream()
 											.collect(toMap(c -> c, c -> 0.0)))
 									.collect(toList()))
-							.collect(Collectors.toList());;
+							.collect(Collectors.toList());
 
-					serializeCandidates(candidates, gold_files[i], output_folder);
+					serializeCandidates(candidates, gold_files[i].toPath(), output_folder);
 				});
 	}
 
@@ -226,7 +223,8 @@ public class Driver
 	private static List<List<List<Set<Pair<String, String>>>>> readGoldMeanings(File[] gold_files)
 	{
 		return Arrays.stream(gold_files)
-				.map(Driver::readTextFile)
+				.map(File::toPath)
+				.map(FileUtils::readTextFile)
 				.map(text ->
 				{
 					final String regex = "(bn:\\d+[r|a|v|n](\\|bn:\\d+[r|a|v|n])*)-\"([^\"]+)\"";
@@ -259,12 +257,12 @@ public class Driver
 				.collect(toList());
 	}
 
-	private static void serializeCandidates(List<List<Map<Candidate, Double>>> candidates, File text_file, Path output_folder)
+	private static void serializeCandidates(List<List<Map<Candidate, Double>>> candidates, Path text_file, Path output_folder)
 	{
 		log.info("Serializing candidates for  " + text_file);
 		try
 		{
-			Path out_file = createOutputPath(text_file.toPath(), output_folder, text_suffix, candidates_suffix);
+			Path out_file = createOutputPath(text_file, output_folder, text_suffix, candidates_suffix);
 			Serializer.serialize(candidates, out_file);
 		}
 		catch (Exception e)
@@ -293,41 +291,7 @@ public class Driver
 		return candidates;
 	}
 
-	private static File[] getFilesInFolder(Path input_folder, String suffix)
-	{
-		final File[] text_files = input_folder.toFile().listFiles(pathname -> pathname.getName().toLowerCase().endsWith(suffix));
-		if (text_files == null)
-		{
-			log.error("Failed to find in any text files in " + input_folder);
-			System.exit(1);
-		}
 
-		return text_files;
-	}
-
-	private static String readTextFile(File file)
-	{
-		try
-		{
-			return FileUtils.readFileToString(file, Charsets.UTF_8);
-		}
-		catch (IOException e)
-		{
-			log.error("Cannot read file " + file + ": " + e);
-			return "";
-		}
-	}
-
-	private static Path createOutputPath(Path input_file, Path output_folder, String old_suffix, String new_suffix) throws IOException
-	{
-		if (!Files.exists(output_folder))
-			Files.createDirectories(output_folder);
-
-		final String basename = input_file.getFileName().toString();
-		final String out_filename = basename.substring(0, basename.length() - old_suffix.length()) + new_suffix;
-
-		return output_folder.resolve(out_filename);
-	}
 
 	private static void evaluate(Path text_folder, Path gold_folder)
 	{
@@ -404,8 +368,6 @@ public class Driver
 //		Path output = createOutputPath(graph_file, global_ranked_suffix, false);
 //		Serializer.serialize(graph, output);
 	}
-
-
 
 	@SuppressWarnings("unused")
 	@Parameters(commandDescription = "Run empirical study from serialized file")
@@ -494,7 +456,7 @@ public class Driver
 		private Path vectorsPath;
 	}
 
-	public static void main(String[] args) throws IOException
+	public static void main(String[] args)
 	{
 //		String corpus_folder = "/home/gerard/ownCloud/varis_tesi/deep_mind_annotated/development_set";
 //		String babelnet = "/home/gerard/data/babelconfig";

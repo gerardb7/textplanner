@@ -38,7 +38,6 @@ import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.resource.ExternalResourceDescription;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -108,10 +107,9 @@ public class UIMAPipelines
 					AnalysisEngineFactory.createEngineDescription(ConceptExtractorAnnotator.class, ConceptExtractorAnnotator.PARAM_FLASK_URL, concept_extraction_url)
 					: AnalysisEngineFactory.createEngineDescription(NGramAnnotator.class, NGramAnnotator.PARAM_N, ngram_size);
 
-
 			AnalysisEngineDescription babelnet_candidates = use_concept_extractor ?
-					AnalysisEngineFactory.createEngineDescription(BabelNetCandidateIdentification.PARAM_CLASS_NAME, WSDSpan.class)
-					: AnalysisEngineFactory.createEngineDescription(BabelNetCandidateIdentification.class, BabelNetCandidateIdentification.PARAM_CLASS_NAME, NGram.class);
+					AnalysisEngineFactory.createEngineDescription(BabelNetCandidateIdentification.class, WSDSpan.class)
+					: AnalysisEngineFactory.createEngineDescription(BabelNetCandidateIdentification.class, NGram.class);
 
 			ExternalResourceDescription babelnet = ExternalResourceFactory.createExternalResourceDescription(BabelnetSenseInventoryResource.class,
 					BabelnetSenseInventoryResource.PARAM_BABELNET_CONFIGPATH, babel_config.toString(),
@@ -148,7 +146,7 @@ public class UIMAPipelines
 
 			return new UIMAPipelines(createEngine(all));
 		}
-		catch (UIMAException | IOException e)
+		catch (UIMAException e)
 		{
 			log.error("Cannot create UIMA pipeline: " + e);
 			return null;

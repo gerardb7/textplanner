@@ -1,11 +1,6 @@
 package edu.upf.taln.textplanning.core.similarity;
 
-import edu.upf.taln.textplanning.core.similarity.vectors.RandomAccessVectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import java.nio.file.Path;
 
 /**
  * Computes similarity between items according to precomputed distributional vectors (embeddings) stored in a binary
@@ -14,7 +9,6 @@ import java.nio.file.Path;
 public class VectorsCosineSimilarity implements SimilarityFunction
 {
 	private final Vectors vectors;
-	private final static Logger log = LogManager.getLogger();
 
 	public VectorsCosineSimilarity(Vectors vectors)
 	{
@@ -35,8 +29,8 @@ public class VectorsCosineSimilarity implements SimilarityFunction
 	@Override
 	public double computeSimilarity(String e1, String e2)
 	{
-		double[] v1 = vectors.getVector(e1);
-		double[] v2 = vectors.getVector(e2);
+		double[] v1 = vectors.getVector(e1).orElse(new double[vectors.getNumDimensions()]);
+		double[] v2 = vectors.getVector(e2).orElse(new double[vectors.getNumDimensions()]);
 
 		double dotProduct = 0.0;
 		double normA = 0.0;

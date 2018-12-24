@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
+import java.util.Optional;
 
 public class FastTextVectors implements Vectors
 {
@@ -27,10 +28,16 @@ public class FastTextVectors implements Vectors
 	}
 
 	@Override
-	public double[] getVector(String item)
+	public Optional<double[]> getVector(String item)
 	{
-		return jft.getVector(item).stream()
+		return Optional.of(jft.getVector(item).stream()
 				.mapToDouble(Float::doubleValue)
-				.toArray();
+				.toArray());
+	}
+
+	@Override
+	public int getNumDimensions()
+	{
+		return jft.getDim();
 	}
 }

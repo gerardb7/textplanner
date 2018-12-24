@@ -1,8 +1,8 @@
 package edu.upf.taln.textplanning.core.weighting;
 
-import edu.upf.taln.textplanning.core.corpora.Corpus;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
+import edu.upf.taln.textplanning.core.weighting.corpora.Corpus;
 
 import java.util.*;
 import java.util.function.Function;

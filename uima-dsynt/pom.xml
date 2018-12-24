@@ -28,6 +28,7 @@
     </repositories>
 
     <dependencies>
+        <!-- Text planning -->
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>core</artifactId>
@@ -38,6 +39,8 @@
             <artifactId>common</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+        <!-- UIMA -->
         <dependency>
             <groupId>org.apache.uima</groupId>
             <artifactId>uimaj-core</artifactId>
@@ -48,16 +51,13 @@
             <artifactId>uimafit-core</artifactId>
             <version>2.4.0</version>
         </dependency>
+
+        <!-- DKPRO -->
         <dependency>
             <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
             <artifactId>de.tudarmstadt.ukp.dkpro.core-asl</artifactId>
             <version>${dkpro.version}</version>
-            <type>pom</type>
-        </dependency>
-        <dependency>
-            <groupId>edu.upf.taln.uima.wsd</groupId>
-            <artifactId>edu.upf.taln.uima.wsd.si.babelnet</artifactId>
-            <version>0.2.0</version>
+            <functionType>pom</functionType>
         </dependency>
         <dependency>
             <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
@@ -76,19 +76,9 @@
             <version>${dkpro.version}</version>
         </dependency>
         <dependency>
-            <groupId>de.tudarmstadt.ukp.dkpro.wsd</groupId>
-            <artifactId>de.tudarmstadt.ukp.dkpro.wsd.core</artifactId>
-            <version>1.3.2-taln</version>
-        </dependency>
-        <dependency>
-            <groupId>edu.upf.taln.uima</groupId>
-            <artifactId>TextPlanningAnnotator</artifactId>
-            <version>0.1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>edu.upf.taln.uima.wsd</groupId>
-            <artifactId>annotation-extender</artifactId>
-            <version>0.1.1</version>
+            <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
+            <artifactId>de.tudarmstadt.ukp.dkpro.core.ngrams-asl</artifactId>
+            <version>1.9.1</version>
         </dependency>
         <dependency>
             <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
@@ -97,20 +87,32 @@
             </artifactId>
             <version>20130117.1</version>
         </dependency>
+
+        <!-- DKPRO and UIMA TALN -->
+        <dependency>
+            <groupId>de.tudarmstadt.ukp.dkpro.wsd</groupId>
+            <artifactId>de.tudarmstadt.ukp.dkpro.wsd.core</artifactId>
+            <version>1.3.4-taln-SNAPSHOT</version>
+        </dependency>
         <dependency>
             <groupId>edu.upf.taln.parser</groupId>
             <artifactId>deep-parser-uima</artifactId>
-            <version>1.0.1</version>
+            <version>1.1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
-            <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
-            <artifactId>de.tudarmstadt.ukp.dkpro.core.ngrams-asl</artifactId>
-            <version>1.9.1</version>
+            <groupId>edu.upf.taln.uima.wsd</groupId>
+            <artifactId>annotation-extender</artifactId>
+            <version>0.2.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>edu.upf.taln.uima</groupId>
+            <artifactId>TextPlanningAnnotator</artifactId>
+            <version>0.3.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>edu.upf.taln.uima</groupId>
             <artifactId>flask_wrapper</artifactId>
-            <version>0.1.0</version>
+            <version>0.2.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
 

@@ -2,7 +2,7 @@ package edu.upf.taln.textplanning.core.optimization;
 
 import cc.mallet.optimize.ConjugateGradient;
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.core.corpora.Corpus;
+import edu.upf.taln.textplanning.core.weighting.corpora.Corpus;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.weighting.WeightingFunction;

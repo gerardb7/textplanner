@@ -9,10 +9,12 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Optional;
 
 public class RandomAccessVectors implements Vectors
 {
 	private final GloveRandomAccessReader db;
+	private int num_dimensions = 300; // wild guess
 	private final static Logger log = LogManager.getLogger();
 
 	public RandomAccessVectors(Path vectors_path) throws IOException
@@ -30,20 +32,25 @@ public class RandomAccessVectors implements Vectors
 	}
 
 	@Override
-	public double[] getVector(String item)
+	public Optional<double[]> getVector(String item)
 	{
 		try
 		{
-			final DoubleVector vector = db.get(item);
-			if (vector == null)
-				return null;
-			else
-				return vector.toArray();
+			return Optional.ofNullable(db.get(item)).map(DoubleVector::toArray);
+			//v.ifPresent(a -> num_dimensions = a.length);
 		}
 		catch (IOException e)
 		{
 			log.error("Error reading vector: " + e);
-			return null;
+			return Optional.empty();
 		}
 	}
+
+	@Override
+	public int getNumDimensions()
+	{
+		return num_dimensions;
+	}
+
+
 }

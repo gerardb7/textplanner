@@ -14,12 +14,12 @@ import edu.stanford.nlp.util.logging.RedwoodConfiguration;
 import edu.upf.taln.textplanning.amr.io.CandidatesCollector;
 import edu.upf.taln.textplanning.common.BabelNetWrapper;
 import edu.upf.taln.textplanning.common.Serializer;
-import edu.upf.taln.textplanning.core.corpora.CompactFrequencies;
+import edu.upf.taln.textplanning.core.weighting.corpora.CompactFrequencies;
 import edu.upf.taln.textplanning.core.ranking.GraphRanking;
 import edu.upf.taln.textplanning.core.ranking.MatrixFactory;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
-import edu.upf.taln.textplanning.core.similarity.vectors.SimilarityFunctionFactory;
-import edu.upf.taln.textplanning.core.similarity.vectors.SimilarityFunctionFactory.Format;
+import edu.upf.taln.textplanning.core.similarity.SimilarityFunctionFactory;
+import edu.upf.taln.textplanning.core.similarity.SimilarityFunctionFactory.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
@@ -384,13 +384,13 @@ public class EmpiricalStudy
 		log.info("All documents processed in " + gtimer.stop());
 	}
 
-	public static void calculateStats(Path input, Path frequencies, Path vectors, Format format, boolean do_pairwise_similarity) throws Exception
+	public static void calculateStats(Path input, Path frequencies, Path vectors, VectorType vectorType, boolean do_pairwise_similarity) throws Exception
 	{
 		final List<WeightingFunction> weighting_functions = new ArrayList<>();
 		CompactFrequencies freqs = (CompactFrequencies)Serializer.deserialize(frequencies);
 		weighting_functions.add(new TFIDF(freqs, r -> true));
 		weighting_functions.add(new NumberForms(r -> true));
-		final SimilarityFunction sim = SimilarityFunctionFactory.get(vectors, format);
+		final SimilarityFunction sim = SimilarityFunctionFactory.get(SimilarityFunctionFactory.FunctionType.Cosine, vectors, vectorType);
 
 		Stopwatch gtimer = Stopwatch.createStarted();
 		final CorpusInfo corpus = (CorpusInfo) Serializer.deserialize(input);
