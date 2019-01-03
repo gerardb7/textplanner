@@ -1,23 +1,20 @@
 package edu.upf.taln.textplanning.core.similarity.vectors;
 
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.core.similarity.SimilarityFunctionFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public class TextVectors implements Vectors
 {
 	private final Map<String, double[]> vectors;
 	private final static Logger log = LogManager.getLogger();
 
-	public TextVectors(Path vectors_path, SimilarityFunctionFactory.VectorType vectorType) throws Exception
+	public TextVectors(Path vectors_path, Vectors.VectorType vectorType) throws Exception
 	{
 		log.info("Loading vectors from " + vectors_path);
 		Stopwatch timer = Stopwatch.createStarted();
@@ -46,9 +43,9 @@ public class TextVectors implements Vectors
 	/**
 	 * Reads a text file containing distributional vectors.
 	 */
-	public static Map<String, double[]> readVectorsFromFile(Path vectors_file, SimilarityFunctionFactory.VectorType vectorType) throws Exception
+	public static Map<String, double[]> readVectorsFromFile(Path vectors_file, Vectors.VectorType vectorType) throws Exception
 	{
-		if (vectorType != SimilarityFunctionFactory.VectorType.Text_Glove && vectorType != SimilarityFunctionFactory.VectorType.Text_Word2vec)
+		if (vectorType != Vectors.VectorType.Text_Glove && vectorType != Vectors.VectorType.Text_Word2vec)
 			throw new Exception("VectorType " + vectorType + " not supported");
 
 		int num_lines = 0;
@@ -71,7 +68,7 @@ public class TextVectors implements Vectors
 				String[] columns = line.split(" ");
 				if (first_line)
 				{
-					if (vectorType == SimilarityFunctionFactory.VectorType.Text_Glove)
+					if (vectorType == Vectors.VectorType.Text_Glove)
 					{
 						num_lines = Integer.parseInt(columns[0]);
 						num_dimensions = Integer.parseInt(columns[1]);

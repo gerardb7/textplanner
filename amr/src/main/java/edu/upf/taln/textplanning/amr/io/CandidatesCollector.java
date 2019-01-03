@@ -1,7 +1,9 @@
 package edu.upf.taln.textplanning.amr.io;
 
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.common.BabelNetWrapper;
+import com.ibm.icu.util.ULocale;
+import edu.upf.taln.textplanning.common.BabelNetDictionary;
+import edu.upf.taln.textplanning.common.MeaningDictionary;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
@@ -23,12 +25,14 @@ import static java.util.stream.Collectors.*;
  */
 public class CandidatesCollector
 {
-	private final BabelNetWrapper bn;
+	private final MeaningDictionary bn;
+	private final ULocale language;
 	private final static Logger log = LogManager.getLogger();
 
-	public CandidatesCollector(BabelNetWrapper babelnet)
+	public CandidatesCollector(MeaningDictionary babelnet, ULocale language)
 	{
 		bn = babelnet;
+		this.language = language;
 	}
 
 	/**
@@ -69,7 +73,7 @@ public class CandidatesCollector
 		int num_references = candidates.stream().map(Candidate::getMeaning).map(Meaning::getReference).collect(toSet()).size();
 		log.info("Created " + candidates.size() + " candidates with " + num_references +
 				" distinct references for " + anchors2Mentions.keySet().size() + " anchors (" +
-				BabelNetWrapper.num_queries.get() +	" queries).");
+				BabelNetDictionary.num_queries.get() +	" queries).");
 		log.info("Candidate meanings collected in " + timer.stop());
 
 		return candidates;
@@ -81,10 +85,10 @@ public class CandidatesCollector
 		String form = mention.getLeft();
 		String lemma = mention.getMiddle();
 		String pos = mention.getRight();
-		Set<String> synset_set = new HashSet<>(bn.getSynsets(form, pos));
+		Set<String> synset_set = new HashSet<>(bn.getMeanings(form, pos, language));
 		if (!lemma.equalsIgnoreCase(form))
 		{
-			List<String> lemma_synsets = bn.getSynsets(lemma, pos);
+			List<String> lemma_synsets = bn.getMeanings(lemma, pos, language);
 			synset_set.addAll(lemma_synsets);
 		}
 
@@ -93,6 +97,6 @@ public class CandidatesCollector
 
 	private Meaning createMeaning(String synset)
 	{
-		return Meaning.get(synset, bn.getLabel(synset).orElse(""), bn.isNE(synset).orElse(false));
+		return Meaning.get(synset, bn.getLabel(synset, language).orElse(""), bn.isNE(synset).orElse(false));
 	}
 }

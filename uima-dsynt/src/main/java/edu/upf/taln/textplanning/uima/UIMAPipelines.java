@@ -1,5 +1,6 @@
 package edu.upf.taln.textplanning.uima;
 
+import com.ibm.icu.util.ULocale;
 import de.tudarmstadt.ukp.dkpro.core.api.metadata.type.DocumentMetaData;
 import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Lemma;
 import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.NGram;
@@ -14,7 +15,7 @@ import de.tudarmstadt.ukp.dkpro.wsd.annotator.WSDAnnotatorCollectiveCandidate;
 import de.tudarmstadt.ukp.dkpro.wsd.resource.WSDResourceCollectiveCandidate;
 import de.tudarmstadt.ukp.dkpro.wsd.type.WSDResult;
 import edu.upf.taln.flask_wrapper.type.WSDSpan;
-import edu.upf.taln.textplanning.common.BabelNetWrapper;
+import edu.upf.taln.textplanning.common.MeaningDictionary;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
@@ -48,8 +49,7 @@ import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngine;
 
 public class UIMAPipelines
 {
-	final private AnalysisEngine pipeline;
-	private static final String language = "en";
+	private final AnalysisEngine pipeline;
 	private static final int ngram_size = 3;
 	private static final String concept_extraction_url = "http://server01-taln.s.upf.edu:8000";
 	private final static Logger log = LogManager.getLogger();
@@ -59,7 +59,7 @@ public class UIMAPipelines
 		this.pipeline = pipeline;
 	}
 
-	public static UIMAPipelines createSpanPipeline(boolean use_concept_extractor)
+	public static UIMAPipelines createSpanPipeline(ULocale language, boolean use_concept_extractor)
 	{
 		try
 		{
@@ -91,16 +91,16 @@ public class UIMAPipelines
 		}
 	}
 
-	public static UIMAPipelines createRankingPipeline(boolean use_concept_extractor, Path babel_config, Path freqs_file, Path vectors)
+	public static UIMAPipelines createRankingPipeline(ULocale language, boolean use_concept_extractor, Path babel_config, Path freqs_file, Path vectors)
 	{
 		try
 		{
 			AnalysisEngineDescription segmenter = AnalysisEngineFactory.createEngineDescription(StanfordSegmenter.class,
-					StanfordSegmenter.PARAM_LANGUAGE, language);
+					StanfordSegmenter.PARAM_LANGUAGE, language.toLanguageTag());
 			AnalysisEngineDescription pos = AnalysisEngineFactory.createEngineDescription(StanfordPosTagger.class,
-					StanfordPosTagger.PARAM_LANGUAGE, language);
+					StanfordPosTagger.PARAM_LANGUAGE, language.toLanguageTag());
 			AnalysisEngineDescription lemma = AnalysisEngineFactory.createEngineDescription(MateLemmatizer.class,
-					MateLemmatizer.PARAM_LANGUAGE, language,
+					MateLemmatizer.PARAM_LANGUAGE, language.toLanguageTag(),
 					MateLemmatizer.PARAM_VARIANT, "default");
 
 			AnalysisEngineDescription spans = use_concept_extractor ?
@@ -113,8 +113,8 @@ public class UIMAPipelines
 
 			ExternalResourceDescription babelnet = ExternalResourceFactory.createExternalResourceDescription(BabelnetSenseInventoryResource.class,
 					BabelnetSenseInventoryResource.PARAM_BABELNET_CONFIGPATH, babel_config.toString(),
-					BabelnetSenseInventoryResource.PARAM_BABELNET_LANG, language.toUpperCase(),
-					BabelnetSenseInventoryResource.PARAM_BABELNET_DESCLANG, language.toUpperCase());
+					BabelnetSenseInventoryResource.PARAM_BABELNET_LANG, language.toLanguageTag().toUpperCase(),
+					BabelnetSenseInventoryResource.PARAM_BABELNET_DESCLANG, language.toLanguageTag().toUpperCase());
 
 			ExternalResourceDescription babelnetDisambiguationResources = ExternalResourceFactory.createExternalResourceDescription(WSDResourceCollectiveCandidate.class,
 					WSDResourceCollectiveCandidate.SENSE_INVENTORY_RESOURCE, babelnet,
@@ -153,7 +153,7 @@ public class UIMAPipelines
 		}
 	}
 
-	public List<List<Set<Candidate>>> getCandidates(String text, BabelNetWrapper bn)
+	public List<List<Set<Candidate>>> getCandidates(String text, MeaningDictionary bn, ULocale language)
 	{
 		if (text.isEmpty())
 			return Collections.emptyList();
@@ -161,7 +161,7 @@ public class UIMAPipelines
 		try
 		{
 			log.info("Processing text");
-			final JCas doc = processText(text, pipeline);
+			final JCas doc = processText(text, pipeline, language);
 
 			log.info("Collecting candidates");
 			final List<Sentence> sentences = new ArrayList<>(JCasUtil.select(doc, Sentence.class));
@@ -182,9 +182,9 @@ public class UIMAPipelines
 								final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
 								final Mention mention = Mention.get("s" + sentences.indexOf(sentence), offsets, surface_form, lemma, pos, false, "");
 
-								return bn.getSynsets(surface_form, pos).stream()
-										.filter(bn::isValid)
-										.map(s -> Meaning.get(s, bn.getLabel(s).orElse(""), bn.isNE(s).orElse(false)))
+								return bn.getMeanings(surface_form, pos, language).stream()
+										.filter(bn::contains)
+										.map(s -> Meaning.get(s, bn.getLabel(s, language).orElse(""), bn.isNE(s).orElse(false)))
 										.map(meaning -> new Candidate(meaning, mention))
 										.collect(Collectors.toSet());
 							})
@@ -199,7 +199,7 @@ public class UIMAPipelines
 		}
 	}
 
-	public List<List<Map<Candidate, Double>>> getDisambiguatedCandidates(String text)
+	public List<List<Map<Candidate, Double>>> getDisambiguatedCandidates(String text, ULocale language)
 	{
 		if (text.isEmpty())
 			return Collections.emptyList();
@@ -207,7 +207,7 @@ public class UIMAPipelines
 		try
 		{
 			log.info("Processing text");
-			final JCas doc = processText(text, pipeline);
+			final JCas doc = processText(text, pipeline, language);
 
 			log.info("Collecting candidates");
 			final List<Sentence> sentences = new ArrayList<>(JCasUtil.select(doc, Sentence.class));
@@ -250,11 +250,11 @@ public class UIMAPipelines
 		}
 	}
 
-	private static JCas processText(String text, AnalysisEngine pipeline) throws UIMAException
+	private static JCas processText(String text, AnalysisEngine pipeline, ULocale language) throws UIMAException
 	{
 		JCas jCas;
 		jCas = JCasFactory.createText(text);
-		jCas.setDocumentLanguage(language);
+		jCas.setDocumentLanguage(language.toLanguageTag());
 		DocumentMetaData.create(jCas);
 		pipeline.process(jCas);
 

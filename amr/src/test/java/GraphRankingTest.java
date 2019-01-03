@@ -1,9 +1,10 @@
-import edu.upf.taln.textplanning.common.BabelNetWrapper;
+import com.ibm.icu.util.ULocale;
+import edu.upf.taln.textplanning.common.BabelNetDictionary;
+import edu.upf.taln.textplanning.common.MeaningDictionary;
 import edu.upf.taln.textplanning.common.VisualizationUtils;
 import edu.upf.taln.textplanning.core.TextPlanner;
-import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
-import edu.upf.taln.textplanning.core.similarity.SimilarityFunctionFactory;
-import edu.upf.taln.textplanning.core.weighting.NoWeights;
+import edu.upf.taln.textplanning.core.similarity.VectorsCosineSimilarity;
+import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -126,16 +127,16 @@ public class GraphRankingTest
 		//final Path vectors_path = Paths.get("/home/gerard/data/sensembed-vectors-merged_bin");
 		//final Path vectors_path = Paths.get("/home/gerard/data/sew-embed.nasari_bin");
 		final Path vectors_path = Paths.get("/home/gerard/data/NASARIembed+UMBC_w2v_bin");
-		BabelNetWrapper bn = new BabelNetWrapper(babel_config_path, false);
+		MeaningDictionary bn = new BabelNetDictionary(babel_config_path, false);
 		GloveKeysReader reader = new GloveKeysReader(vectors_path);
-		final SimilarityFunction sim = SimilarityFunctionFactory.get(SimilarityFunctionFactory.FunctionType.Cosine,
-				vectors_path, SimilarityFunctionFactory.VectorType.Binary_RandomAccess);
+		final Vectors vectors = Vectors.get(vectors_path, Vectors.VectorType.Binary_RandomAccess, 300);
+		final VectorsCosineSimilarity sim = new VectorsCosineSimilarity(vectors);
 
 		music.keySet().stream()
-				.filter(s -> !sim.isDefinedFor(s))
+				.filter(s -> !vectors.isDefinedFor(s))
 				.forEach(s -> log.error("Vectors not defined for " + s + " " + music.get(s)));
 		politics.keySet().stream()
-				.filter(s -> !sim.isDefinedFor(s))
+				.filter(s -> !vectors.isDefinedFor(s))
 				.forEach(s -> log.error("Vectors not defined for " + s + " " + politics.get(s)));
 
 
@@ -143,32 +144,32 @@ public class GraphRankingTest
 		final Map<String, String> random = IntStream.range(0, 150)
 				.map(i -> rand.nextInt(reader.getNumKeys()))
 				.mapToObj(reader::get)
-				.filter(sim::isDefinedFor)
+				.filter(vectors::isDefinedFor)
 				.distinct()
 				.limit(100)
-				.collect(Collectors.toMap(Function.identity(), s -> s + "-" + bn.getLabel(s)));
+				.collect(Collectors.toMap(Function.identity(), s -> s + "-" + bn.getLabel(s, ULocale.ENGLISH)));
 
 		// 1- music
 		final List<String> music_synsets = music.keySet().stream()
-				.filter(sim::isDefinedFor)
+				.filter(vectors::isDefinedFor)
 				.collect(Collectors.toList());
 		final List<String> music_labels = music_synsets.stream()
 				.map(music::get)
 				.collect(Collectors.toList());
-		VisualizationUtils.visualizeSimilarityMatrix("Music", music_synsets, music_labels, sim);
+		VisualizationUtils.visualizeSimilarityMatrix("Music", music_synsets, music_labels, sim::of);
 
 		// 2- politics
 		final List<String> politics_synsets = politics.keySet().stream()
-				.filter(sim::isDefinedFor)
+				.filter(vectors::isDefinedFor)
 				.collect(Collectors.toList());
 		final List<String> politics_labels = politics_synsets.stream()
 				.map(politics::get)
 				.collect(Collectors.toList());
-		VisualizationUtils.visualizeSimilarityMatrix("Politics", politics_synsets, politics_labels, sim);
+		VisualizationUtils.visualizeSimilarityMatrix("Politics", politics_synsets, politics_labels, sim::of);
 
 		// 3 & 4- music + random, politics + random
 		final List<String> random_synsets = random.keySet().stream()
-				.filter(sim::isDefinedFor)
+				.filter(vectors::isDefinedFor)
 				.collect(Collectors.toList());
 		final List<String> random_labels = random_synsets.stream()
 				.map(random::get)
@@ -177,22 +178,21 @@ public class GraphRankingTest
 		music_random_synsets.addAll(random_synsets);
 		final List<String> music_random_labels = new ArrayList<>(music_labels);
 		music_random_labels.addAll(random_labels);
-		VisualizationUtils.visualizeSimilarityMatrix("Music + random", music_random_synsets, music_random_labels, sim);
+		VisualizationUtils.visualizeSimilarityMatrix("Music + random", music_random_synsets, music_random_labels, sim::of);
 
 		final List<String> politics_random_synsets = new ArrayList<>(politics_synsets);
 		politics_random_synsets.addAll(random_synsets);
 		final List<String> politics_random_labels = new ArrayList<>(politics_labels);
 		politics_random_labels.addAll(random_labels);
-		VisualizationUtils.visualizeSimilarityMatrix("Politics + random", politics_random_synsets, politics_random_labels, sim);
+		VisualizationUtils.visualizeSimilarityMatrix("Politics + random", politics_random_synsets, politics_random_labels, sim::of);
 
-		final NoWeights w = new NoWeights();
 		TextPlanner.Options o = new TextPlanner.Options();
 		o.sim_threshold = 0;
 		BiPredicate<String, String> filter = (s1, s2) -> true;
-		VisualizationUtils.visualizeRankingVector("Music ranking", music_synsets, music_labels, w, sim, filter, o.sim_threshold, o.damping_meanings);
-		VisualizationUtils.visualizeRankingVector("Politics ranking", politics_synsets, politics_labels, w, sim, filter, o.sim_threshold, o.damping_meanings);
-		VisualizationUtils.visualizeRankingVector("Music + random ranking", music_random_synsets, music_random_labels, w, sim, filter, o.sim_threshold, o.damping_meanings);
-		VisualizationUtils.visualizeRankingVector("Politics + random ranking", politics_random_synsets, politics_random_labels, w, sim, filter, o.sim_threshold, o.damping_meanings);
+		VisualizationUtils.visualizeRankingVector("Music ranking", music_synsets, music_labels, m -> 0.0, sim::of, filter, o.sim_threshold, o.damping_meanings);
+		VisualizationUtils.visualizeRankingVector("Politics ranking", politics_synsets, politics_labels, m -> 0.0, sim::of, filter, o.sim_threshold, o.damping_meanings);
+		VisualizationUtils.visualizeRankingVector("Music + random ranking", music_random_synsets, music_random_labels, m -> 0.0, sim::of, filter, o.sim_threshold, o.damping_meanings);
+		VisualizationUtils.visualizeRankingVector("Politics + random ranking", politics_random_synsets, politics_random_labels, m -> 0.0, sim::of, filter, o.sim_threshold, o.damping_meanings);
 	}
 
 

@@ -4,6 +4,9 @@ import edu.upf.taln.textplanning.core.structures.SemanticTree;
 import treedist.EditScore;
 import treedist.TreeEditDistance;
 
+import java.util.OptionalDouble;
+import java.util.function.BiFunction;
+
 
 /**
  * Semantic similarity between pairs of semantic trees, or more generally, labelled ordered trees.
@@ -11,10 +14,10 @@ import treedist.TreeEditDistance;
  */
 public final class SemanticTreeSimilarity
 {
-	private final SimilarityFunction sim;
+	private final BiFunction<String, String, OptionalDouble> sim;
 	private final double delta;
 
-	public SemanticTreeSimilarity(SimilarityFunction s, double delta)
+	public SemanticTreeSimilarity(BiFunction<String, String, OptionalDouble>  s, double delta)
 	{
 		sim = s;
 		this.delta = delta;
@@ -48,6 +51,6 @@ public final class SemanticTreeSimilarity
 	 */
 	public double getSimilarity(String m1, String m2)
 	{
-		return sim.getSimilarity(m1, m2).orElse(0.0);
+		return sim.apply(m1, m2).orElse(0.0);
 	}
 }

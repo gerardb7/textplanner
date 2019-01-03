@@ -14,23 +14,14 @@ import java.util.function.Predicate;
 import static java.util.Comparator.comparingLong;
 import static java.util.stream.Collectors.toList;
 
-
-public class NumberForms implements WeightingFunction
+public class NumberForms
 {
-	private final Predicate<String> filter;
 	private final Map<String, Double> weights = new HashMap<>();
 
-	public NumberForms(Predicate<String> filter)
+	public NumberForms(Collection<Candidate> candidates)
 	{
-		this.filter = filter;
-	}
-
-	@Override
-	public void setContents(Collection<Candidate> contents)
-	{
-		final List<Pair<Meaning, Long>> counts = contents.stream()
-				.filter(c -> filter.test(c.getMeaning().getReference()))
-				.map(c -> Pair.of(c.getMeaning(), contents.stream()
+		final List<Pair<Meaning, Long>> counts = candidates.stream()
+				.map(c -> Pair.of(c.getMeaning(), candidates.stream()
 						.filter(c2 -> c2.getMeaning().equals(c.getMeaning()))
 						.map(Candidate::getMention)
 						.map(Mention::getSurface_form)
@@ -45,9 +36,10 @@ public class NumberForms implements WeightingFunction
 		counts.forEach(p -> weights.put(p.getLeft().getReference(), p.getRight().doubleValue() / max_count));
 	}
 
-	@Override
-	public double weight(String item)
+	public double weight(String meaning)
 	{
-		return weights.getOrDefault(item, 0.0);
+		assert weights.containsKey(meaning);
+
+		return weights.get(meaning);
 	}
 }

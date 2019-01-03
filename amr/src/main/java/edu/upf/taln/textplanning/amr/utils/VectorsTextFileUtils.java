@@ -7,11 +7,11 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.common.CMLCheckers;
-import edu.upf.taln.textplanning.core.similarity.SimilarityFunctionFactory;
 import edu.upf.taln.textplanning.core.similarity.vectors.TextVectors;
+import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
+import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
-import edu.upf.taln.textplanning.core.similarity.SimilarityFunctionFactory.VectorType;
 import edu.upf.taln.textplanning.common.Serializer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -49,7 +49,7 @@ public class VectorsTextFileUtils
 		writeVectorsToFile(meanVectors, vectorType, out_path);
 	}
 
-	private static void subsetVectors(Path vectors_path, SimilarityFunctionFactory.VectorType vectorType, Path graphs_file, Path outPath) throws Exception
+	private static void subsetVectors(Path vectors_path, VectorType vectorType, Path graphs_file, Path outPath) throws Exception
 	{
 		Map<String, double[]> vectors = TextVectors.readVectorsFromFile(vectors_path, vectorType);
 		log.info("Calculating subset");
@@ -83,7 +83,7 @@ public class VectorsTextFileUtils
 	/**
 	 * Writes distributional vectors to a text file
 	 */
-	private static void writeVectorsToFile(Map<String, double[]> vectors, SimilarityFunctionFactory.VectorType vectorType, Path out_path) throws FileNotFoundException
+	private static void writeVectorsToFile(Map<String, double[]> vectors, VectorType vectorType, Path out_path) throws FileNotFoundException
 	{
 		// Create String representation of each averaged vector and writeGraphs them to a file
 		log.info("Writing to file");
@@ -208,8 +208,8 @@ public class VectorsTextFileUtils
 		Function<String, String> key_merger = k -> k.substring(k.indexOf("bn:"));
 
 		if (jc.getParsedCommand().equals("subset"))
-			VectorsTextFileUtils.subsetVectors(subset.graphs.get(0), SimilarityFunctionFactory.VectorType.Text_Glove, subset.inputFile.get(0), subset.outputFile.get(0));
+			VectorsTextFileUtils.subsetVectors(subset.graphs.get(0), VectorType.Text_Glove, subset.inputFile.get(0), subset.outputFile.get(0));
 		else if (jc.getParsedCommand().equals("convert"))
-			VectorsTextFileUtils.mergeVectors(key_merger, merge.inputFile.get(0), SimilarityFunctionFactory.VectorType.Text_Glove, subset.outputFile.get(0));
+			VectorsTextFileUtils.mergeVectors(key_merger, merge.inputFile.get(0), VectorType.Text_Glove, subset.outputFile.get(0));
 	}
 }

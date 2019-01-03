@@ -14,11 +14,13 @@ import java.util.Optional;
 public class RandomAccessVectors implements Vectors
 {
 	private final GloveRandomAccessReader db;
-	private int num_dimensions = 300; // wild guess
+	private final int num_dimensions;
 	private final static Logger log = LogManager.getLogger();
 
-	public RandomAccessVectors(Path vectors_path) throws IOException
+	public RandomAccessVectors(Path vectors_path, int num_dimensions) throws IOException
 	{
+		this.num_dimensions = num_dimensions;
+
 		log.info("Loading vectors from " + vectors_path);
 		Stopwatch timer = Stopwatch.createStarted();
 		db = new GloveBinaryRandomAccessReader(vectors_path);
@@ -51,6 +53,4 @@ public class RandomAccessVectors implements Vectors
 	{
 		return num_dimensions;
 	}
-
-
 }

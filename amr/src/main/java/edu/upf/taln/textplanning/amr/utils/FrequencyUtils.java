@@ -5,6 +5,7 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
+import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.amr.structures.AMRAlignments;
 import edu.upf.taln.textplanning.amr.io.AMRGraphListFactory;
@@ -41,6 +42,7 @@ import static java.util.stream.Collectors.*;
  */
 public class FrequencyUtils
 {
+	private static final ULocale language = ULocale.ENGLISH;
 	private final static Logger log = LogManager.getLogger();
 
 	private static void getFrequenciesFromSEW(Path sew_folder, Path freqs_file)
@@ -231,7 +233,7 @@ public class FrequencyUtils
 	private static void getStats(Path amr_bank, Path freqs_file, Path babel_config) throws IOException, ClassNotFoundException
 	{
 		AMRReader reader = new AMRReader();
-		AMRGraphListFactory factory = new AMRGraphListFactory(reader, null, babel_config, false, false);
+		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language, null, babel_config, false, false);
 		String contents = FileUtils.readFileToString(amr_bank.toFile(), Charsets.UTF_8);
 		AMRGraphList graphs = factory.create(contents);
 
@@ -306,10 +308,9 @@ public class FrequencyUtils
 				.sorted(Comparator.comparingInt(s -> reference_idfs.get(s).orElse(-1)))
 				.collect(Collectors.toList());
 
-		final TFIDF tfidf = new TFIDF(corpus, (n) -> n.endsWith("n"));
-		tfidf.setContents(graphs.getCandidates());
-		Map<String, Double> sense_tf_idfs = references.stream()
-				.collect(toMap(s -> s, tfidf::weight));
+		final TFIDF tfidf = new TFIDF(graphs.getCandidates(), corpus);
+				Map<String, Double> sense_tf_idfs = references.stream()
+						.collect(toMap(s -> s, tfidf::weight));
 		List<String> sorted_refs_tf_idf = sense_tf_idfs.keySet().stream()
 				.sorted(Comparator.comparingDouble(sense_tf_idfs::get))
 				.collect(Collectors.toList());

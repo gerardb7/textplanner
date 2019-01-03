@@ -3,7 +3,6 @@ package edu.upf.taln.textplanning.core.optimization;
 import edu.upf.taln.textplanning.core.ranking.MatrixFactory;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
-import edu.upf.taln.textplanning.core.weighting.WeightingFunction;
 
 import java.util.List;
 import java.util.Map;
@@ -24,7 +23,7 @@ public class Salience implements Function
 	private final double[] relevanceValues; // per entity, not candidate
 
 
-	Salience(List<Candidate> candidates, WeightingFunction weighting)
+	Salience(List<Candidate> candidates, java.util.function.Function<String, Double> weighting)
 	{
 		this.candidates = candidates;
 

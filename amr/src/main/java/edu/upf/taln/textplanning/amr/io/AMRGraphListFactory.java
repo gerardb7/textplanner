@@ -3,10 +3,11 @@ package edu.upf.taln.textplanning.amr.io;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.amr.structures.CoreferenceChain;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.amr.structures.AMRGraph;
-import edu.upf.taln.textplanning.common.BabelNetWrapper;
+import edu.upf.taln.textplanning.common.BabelNetDictionary;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import org.apache.logging.log4j.LogManager;
@@ -29,13 +30,13 @@ public class AMRGraphListFactory
 	private final TypesCollector types_collector;
 	private final static Logger log = LogManager.getLogger();
 
-	public AMRGraphListFactory(AMRReader reader, Path types_file, Path bn_config_folder, boolean no_stanford,
+	public AMRGraphListFactory(AMRReader reader, ULocale language, Path types_file, Path bn_config_folder, boolean no_stanford,
 	                           boolean no_babelnet) throws IOException
 	{
 		this.reader = reader;
 		stanford = new StanfordWrapper(no_stanford);
-		BabelNetWrapper babelnet = new BabelNetWrapper(bn_config_folder, no_babelnet);
-		this.candidate_collector = new CandidatesCollector(babelnet);
+		BabelNetDictionary babelnet = new BabelNetDictionary(bn_config_folder, no_babelnet);
+		this.candidate_collector = new CandidatesCollector(babelnet, language);
 		this.types_collector = (types_file != null) ? new TypesCollector(types_file, babelnet) : null;
 	}
 

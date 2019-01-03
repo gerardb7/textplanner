@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.uima;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.*;
 import edu.upf.taln.textplanning.core.similarity.VectorsCosineSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.RandomAccessVectors;
@@ -34,6 +35,7 @@ public class Driver
 	private static final String get_gold_candidates_command = "gold_candidates";
 	private static final String evaluate_command = "evaluate";
 	private static final String visualize_command = "visualize";
+	private static final ULocale language = ULocale.ENGLISH;
 	private final static Logger log = LogManager.getLogger();
 
 	private static void getCandidates(Path input_folder, Path output_folder, Path babelnet_config)
@@ -41,10 +43,10 @@ public class Driver
 		log.info("Loading files");
 		final File[] text_files = getFilesInFolder(input_folder, text_suffix);
 
-		BabelNetWrapper bn = new BabelNetWrapper(babelnet_config);
+		MeaningDictionary bn = new BabelNetDictionary(babelnet_config);
 
 		log.info("Processing texts with UIMA and looking up candidate meanings");
-		final UIMAPipelines uima = UIMAPipelines.createSpanPipeline(false);
+		final UIMAPipelines uima = UIMAPipelines.createSpanPipeline(language, false);
 		if (uima == null)
 			System.exit(-1);
 
@@ -54,7 +56,7 @@ public class Driver
 				.forEach(f ->
 				{
 					final String text = readTextFile(f);
-					final List<List<Map<Candidate, Double>>> candidates = uima.getCandidates(text, bn).stream()
+					final List<List<Map<Candidate, Double>>> candidates = uima.getCandidates(text, bn, language).stream()
 							.map(file_candidates -> file_candidates.stream()
 									.map(set -> set.stream()
 											.collect(toMap(c -> c, c -> 0.0)))
@@ -70,7 +72,7 @@ public class Driver
 		final File[] text_files = getFilesInFolder(input_folder, text_suffix);
 
 		log.info("Processing texts with UIMA and collecting system meanings");
-		final UIMAPipelines uima = UIMAPipelines.createRankingPipeline(false, babel_config, freqs_file, vectors);
+		final UIMAPipelines uima = UIMAPipelines.createRankingPipeline(language, false, babel_config, freqs_file, vectors);
 		if (uima == null)
 			System.exit(-1);
 
@@ -80,7 +82,7 @@ public class Driver
 				.forEach(f ->
 				{
 					final String text = readTextFile(f);
-					final List<List<Map<Candidate, Double>>> candidates = uima.getDisambiguatedCandidates(text);
+					final List<List<Map<Candidate, Double>>> candidates = uima.getDisambiguatedCandidates(text, language);
 					serializeCandidates(candidates, f, output_folder);
 				});
 	}
@@ -90,7 +92,7 @@ public class Driver
 		log.info("Loading files");
 		final File[] gold_files = getFilesInFolder(gold_folder, gold_suffix);
 
-		BabelNetWrapper bn = new BabelNetWrapper(babelnet_config);
+		MeaningDictionary bn = new BabelNetDictionary(babelnet_config);
 
 
 		final Predicate<String> is_meta = Pattern.compile("^@").asPredicate();
@@ -104,13 +106,13 @@ public class Driver
 								.collect(joining(" .\n")))
 				.collect(toList());
 
-		final UIMAPipelines uima = UIMAPipelines.createSpanPipeline(false);
+		final UIMAPipelines uima = UIMAPipelines.createSpanPipeline(language, false);
 		if (uima == null)
 			System.exit(-1);
 
 		IntStream.range(0, gold_files.length)
 				.forEach(i -> {
-					final List<List<Map<Candidate, Double>>> candidates = uima.getCandidates(summaries.get(i), bn).stream()
+					final List<List<Map<Candidate, Double>>> candidates = uima.getCandidates(summaries.get(i), bn, language).stream()
 							.map(file_candidates -> file_candidates.stream()
 									.map(set -> set.stream()
 											.collect(toMap(c -> c, c -> 0.0)))
@@ -178,7 +180,7 @@ public class Driver
 		IntStream.range(0, gold_files.length).forEach(i -> {
 			final List<Pair<String, String>> gold_meanings = all_gold_meanings.get(i);
 			final List<Pair<String, String>> gold_candidates = all_gold_candidates.get(i);
-			final List<Pair<String, String>> system_meanings = all_system_meanings.get(i);
+//			final List<Pair<String, String>> system_meanings = all_system_meanings.get(i);
 			final List<Pair<String, String>> candidate_meanings = all_candidate_meanings.get(i);
 			log.info("Creating matrix for file "+ gold_files[i].getName() + " with size " + candidate_meanings.size() + gold_meanings.size());
 
@@ -192,10 +194,10 @@ public class Driver
 //			final List<String> cws_labels = candidates_with_system.stream()
 //					.map(Pair::getRight)
 //					.collect(Collectors.toList());
-			VectorsCosineSimilarity sim = null;
+			VectorsCosineSimilarity sim;
 			try
 			{
-				RandomAccessVectors vectors = new RandomAccessVectors(vectors_path);
+				RandomAccessVectors vectors = new RandomAccessVectors(vectors_path, 300);
 				sim = new VectorsCosineSimilarity(vectors);
 			}
 			catch (Exception e)
@@ -216,7 +218,7 @@ public class Driver
 			final List<String> cwg_labels = gold_and_candidates.stream()
 					.map(Pair::getRight)
 					.collect(Collectors.toList());
-			VisualizationUtils.visualizeSimilarityMatrix("Gold meanings and candidates", cwg_meanings, cwg_labels, sim);
+			VisualizationUtils.visualizeSimilarityMatrix("Gold meanings and candidates", cwg_meanings, cwg_labels, sim::of);
 		});
 	}
 
@@ -350,8 +352,8 @@ public class Driver
 //		final List<String> cws_labels = candidates_with_system.stream()
 //				.map(Pair::getRight)
 //				.collect(Collectors.toList());
-//		VectorsCosineSimilarity sim = VectorsCosineSimilarity.create(vectors);
-//		VisualizationUtils.visualizeSimilarityMatrix("Candidate and system meanings", cws_meanings, cws_labels, sim);
+//		VectorsCosineSimilarity context_similarity_function = VectorsCosineSimilarity.create(vectors);
+//		VisualizationUtils.visualizeSimilarityMatrix("Candidate and system meanings", cws_meanings, cws_labels, context_similarity_function);
 //
 //		List<Pair<String, String>> candidates_with_gold = new ArrayList<>(candidates);
 //		candidates_with_system.removeAll(system_meanings_list);

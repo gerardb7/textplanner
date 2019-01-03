@@ -3,7 +3,7 @@ package edu.upf.taln.textplanning.amr.io;
 import com.google.common.base.Stopwatch;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import edu.upf.taln.textplanning.common.BabelNetWrapper;
+import edu.upf.taln.textplanning.common.BabelNetDictionary;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import org.apache.commons.io.FileUtils;
@@ -23,11 +23,11 @@ import static java.util.stream.Collectors.toSet;
 class TypesCollector
 {
 	private final DBPediaType dbpedia = new DBPediaType();
-	private final BabelNetWrapper babelnet;
+	private final BabelNetDictionary babelnet;
 	private final Map<String, Candidate.Type> types = new HashMap<>();
 	private final static Logger log = LogManager.getLogger();
 
-	TypesCollector(Path types_file, BabelNetWrapper babelnet) throws IOException
+	TypesCollector(Path types_file, BabelNetDictionary babelnet) throws IOException
 	{
 		this.babelnet = babelnet;
 

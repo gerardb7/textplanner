@@ -2,11 +2,14 @@ package edu.upf.taln.textplanning.core.similarity;
 
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
 
+import java.util.Optional;
+import java.util.OptionalDouble;
+
 /**
  * Computes similarity between items according to precomputed distributional vectors (embeddings) stored in a binary
  * file and accessed with random access glove library: https://github.com/thomasjungblut/glove/blob/master/README.md
  */
-public class VectorsCosineSimilarity implements SimilarityFunction
+public class VectorsCosineSimilarity
 {
 	private final Vectors vectors;
 
@@ -15,22 +18,18 @@ public class VectorsCosineSimilarity implements SimilarityFunction
 		this.vectors = vectors;
 	}
 
-	@Override
-	public boolean isDefinedFor(String e)
+	public OptionalDouble of(String e1, String e2)
 	{
-		return vectors.isDefinedFor(e);
-	}
-	@Override
-	public boolean isDefinedFor(String e1, String e2)
-	{
-		return vectors.isDefinedFor(e1) && vectors.isDefinedFor(e2);
-	}
+		final Optional<double[]> ov1 = vectors.getVector(e1);
+		final Optional<double[]> ov2 = vectors.getVector(e2);
+		if (!ov1.isPresent() || !ov2.isPresent())
+			return OptionalDouble.empty();
 
-	@Override
-	public double computeSimilarity(String e1, String e2)
-	{
-		double[] v1 = vectors.getVector(e1).orElse(new double[vectors.getNumDimensions()]);
-		double[] v2 = vectors.getVector(e2).orElse(new double[vectors.getNumDimensions()]);
+		if (e1.equals(e2))
+			return OptionalDouble.of(1.0);
+
+		double[] v1 = vectors.getVector(e1).orElse(vectors.getUnknownVector());
+		double[] v2 = vectors.getVector(e2).orElse(vectors.getUnknownVector());
 
 		double dotProduct = 0.0;
 		double normA = 0.0;
@@ -49,8 +48,8 @@ public class VectorsCosineSimilarity implements SimilarityFunction
 
 		// prevent NaNs
 		if (magnitude == 0.0d)
-			return 1.0;
+			return OptionalDouble.of(1.0);
 
-		return dotProduct / magnitude; // range (-1,1)
+		return OptionalDouble.of(dotProduct / magnitude); // range (-1,1)
 	}
 }

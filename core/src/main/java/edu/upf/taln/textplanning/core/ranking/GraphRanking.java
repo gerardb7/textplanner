@@ -1,18 +1,17 @@
 package edu.upf.taln.textplanning.core.ranking;
 
 import Jama.Matrix;
-
-import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
-import edu.upf.taln.textplanning.core.weighting.WeightingFunction;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -60,10 +59,10 @@ public class GraphRanking
 		}
 	}
 
-	public static void rankMeanings(Collection<Candidate> candidates, WeightingFunction weighting, SimilarityFunction similarity,
+	public static void rankMeanings(Collection<Candidate> candidates, Function<String, Double> weighting,
+	                                BiFunction<String, String, OptionalDouble> similarity,
 	                                double meaning_similarity_threshold, double damping_factor_meanings)
 	{
-		weighting.setContents(candidates);
 		final List<String> references = candidates.stream()
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
