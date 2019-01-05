@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.common;
 
 import com.ibm.icu.util.ULocale;
 
+import java.io.Serializable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -9,11 +10,12 @@ import java.util.stream.Collectors;
 
 public interface MeaningDictionary
 {
-	class Info
+	class Info implements Serializable
 	{
 		public final String id;
 		public final List<String> glosses;
 		public final List<String> lemmas;
+		private static final long serialVersionUID = 1L;
 
 		public Info(String id, List<String> glosses, List<String> lemmas)
 		{

@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.common;
 
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
+import edu.upf.taln.textplanning.common.MeaningDictionary.Info;
 import edu.upf.taln.textplanning.core.similarity.vectors.SIFVectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
 import org.apache.logging.log4j.LogManager;
@@ -10,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -24,16 +26,24 @@ public class BabelEmbeddingsCollector
 	public static final ULocale language = ULocale.ENGLISH;
 	private final static long limit = 1000;
 	public static final int step_size = 10000; // for logging purposes
+	public static final String meanings_file = "meanings.bin";
 	private final static Logger log = LogManager.getLogger();
 
 	public static void collectVectors(Path babel_config, Path vectors_path, Path idf_file, Path output_file) throws Exception
 	{
+		log.info("Collecting context vectors with " +  Runtime.getRuntime().availableProcessors() + " cores available");
 		log.info("Reading idf scores");
+		final Stopwatch gtimer = Stopwatch.createStarted();
 		final Stopwatch timer = Stopwatch.createStarted();
 		AtomicLong counter = new AtomicLong(0);
+		AtomicBoolean reported = new AtomicBoolean(false);
 
 		final Map<String, Double> weights = Arrays.stream(FileUtils.readTextFile(idf_file).split("\n"))
 				.parallel()
+				.peek(l -> {
+					if (!reported.getAndSet(true))
+						log.info("Number of threads: " + Thread.activeCount());
+				})
 				.map(l -> l.split(" "))
 				.peek(id -> {
 					long i = counter.incrementAndGet();
@@ -49,11 +59,17 @@ public class BabelEmbeddingsCollector
 
 		log.info("Collecting meanings");
 		timer.reset(); timer.start();
+		counter.set(0);
 		AtomicLong total_ids = new AtomicLong(0);
+		reported.set(false);
 
-		Iterable<MeaningDictionary.Info> iterable = () -> bn.infoIterator(language);
-		final List<MeaningDictionary.Info> meanings = StreamSupport.stream(iterable.spliterator(), true)
+		Iterable<Info> iterable = () -> bn.infoIterator(language);
+		final List<Info> meanings = StreamSupport.stream(iterable.spliterator(), true)
 				.parallel()
+				.peek(l -> {
+					if (!reported.getAndSet(true))
+						log.info("Number of threads: " + Thread.activeCount());
+				})
 				.peek(id -> total_ids.incrementAndGet())
 				.filter(i -> !i.glosses.isEmpty())
 				.peek(id ->
@@ -64,13 +80,21 @@ public class BabelEmbeddingsCollector
 //				.limit(limit)
 				.collect(toList());
 		log.info(meanings.size() + " with glosses collected in " + timer.stop() + "(out of " + total_ids + " synsets queried)");
+		final Path meanings_path = output_file.getParent().resolve(meanings_file);
+		Serializer.serialize(meanings, meanings_path);
+//		final List<Info> meanings = (List<Info>) Serializer.deserialize(meanings_path);
 
 		log.info("Creating embeddings for meanings");
 		timer.reset(); timer.start();
 		counter.set(0);
+		reported.set(false);
 
 		final List<Optional<double[]>> vectors = meanings.stream()
 				.parallel()
+				.peek(l -> {
+					if (!reported.getAndSet(true))
+						log.info("Number of threads: " + Thread.activeCount());
+				})
 				.peek(meaning -> {
 					long i = counter.incrementAndGet();
 					if (i % step_size == 0) log.info(i + " meanings processed");
@@ -79,19 +103,23 @@ public class BabelEmbeddingsCollector
 				.map(sif_vectors::getVector)
 				.collect(Collectors.toList());
 
-		final long num_undefined = vectors.stream()
-				.filter(Optional::isPresent)
-				.count();
-		log.info(vectors.size() + " vectors created in " + timer.stop() + " (" + num_undefined + " undefined vectors)");
+		log.info(vectors.size() + " vectors created in " + timer.stop());
 
 		log.info("Writing vectors to file");
 		timer.reset(); timer.start();
+		counter.set(0);
+		reported.set(false);
 
 		final String text = IntStream.range(0, vectors.size())
 				.parallel()
+				.peek(l -> {
+					if (!reported.getAndSet(true))
+						log.info("Number of threads: " + Thread.activeCount());
+				})
 				.filter(i -> vectors.get(i).isPresent())
 				.peek(i -> {
-					if (i % step_size == 0) log.info(i + " vectors converted to strings");
+					long c = counter.incrementAndGet();
+					if (c % step_size == 0) log.info(c + " vectors converted to strings");
 				})
 				.mapToObj(i ->
 				{
@@ -106,7 +134,8 @@ public class BabelEmbeddingsCollector
 				})
 				.collect(Collectors.joining("\n"));
 		FileUtils.writeTextToFile(output_file, text);
-		log.info("Embeddings written in " + timer.stop());
+		log.info(counter.get() + " vectors written in " + timer.stop());
+		log.info("Collection completed in " + gtimer.stop());
 
 //		log.info("Calculating similarity scores");
 //		timer.reset(); timer.start();
