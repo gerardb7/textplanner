@@ -50,6 +50,17 @@ public class FileUtils
 		}
 	}
 
+	public static void appendTextToFile(Path file, String text)
+	{
+		try
+		{
+			org.apache.commons.io.FileUtils.writeStringToFile(file.toFile(), text, Charsets.UTF_8,true);
+		}
+		catch (IOException e)
+		{
+			log.error("Cannot write to file " + file + ": " + e);
+		}
+	}
 
 	public static Path createOutputPath(Path input_file, Path output_folder, String old_suffix, String new_suffix) throws IOException
 	{

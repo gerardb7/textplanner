@@ -80,7 +80,7 @@ public class DSyntSemanticGraphListFactory implements SemanticGraphFactory<JCas>
 
 	private static Mention createMention(JCas jcas, Sentence sentence, DeepToken deep_token)
 	{
-		// Collect surface lingusitic info and create mention object
+		// Collect surface linguistic info and create mention object
 		final String surface_form = deep_token.getCoveredText();
 		final List<Token> surface_tokens = JCasUtil.selectAt(jcas, Token.class, deep_token.getBegin(), deep_token.getEnd());
 		final String lemma = surface_tokens.stream()

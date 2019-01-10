@@ -61,7 +61,6 @@ public class TextVectors implements Vectors
 
 		while ((line = br.readLine()) != null)
 		{
-			++line_counter;
 			try
 			{
 				// Determine number of vectors and dimensions
@@ -78,7 +77,6 @@ public class TextVectors implements Vectors
 						if (line == null)
 							line = "";
 						columns = line.split(" ");
-						++line_counter;
 					}
 					else // if (vectorType == VectorType.Text_Word2vec)
 					{
@@ -114,7 +112,7 @@ public class TextVectors implements Vectors
 			}
 
 			if (++line_counter % 100000 == 0)
-				log.info(line_counter + " lines parsed out of " + num_lines);
+				log.info(line_counter + " lines parsed out of " + (num_lines -1));
 
 		}
 		log.info("Parsing complete: " + vectors.size() + " vectors read from " + (num_lines - 1) + " lines");
