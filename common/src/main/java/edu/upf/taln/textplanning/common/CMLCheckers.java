@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.common;
 import com.beust.jcommander.IParameterValidator;
 import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.ParameterException;
+import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -114,5 +115,29 @@ public class CMLCheckers
 				throw new ParameterException("Invalid number of subgraphs " + value);
 		}
 	}
+
+	public static class FormatConverter implements IStringConverter<Vectors.VectorType>
+	{
+		@Override
+		public Vectors.VectorType convert(String value)
+		{
+			return Vectors.VectorType.valueOf(value);
+		}
+	}
+
+	public static class FormatValidator implements IParameterValidator
+	{
+		@Override
+		public void validate(String name, String value) throws ParameterException
+		{
+			try{ Vectors.VectorType.valueOf(value); }
+			catch (Exception e)
+			{
+				throw new ParameterException("Parameter " + name + " has invalid valued " + value);
+			}
+		}
+	}
+
+
 
 }

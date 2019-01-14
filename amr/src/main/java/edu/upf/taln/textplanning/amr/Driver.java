@@ -1,20 +1,27 @@
 package edu.upf.taln.textplanning.amr;
 
-import com.beust.jcommander.*;
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
+import com.beust.jcommander.Parameters;
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.amr.io.*;
+import edu.upf.taln.textplanning.amr.structures.AMRAlignments;
+import edu.upf.taln.textplanning.amr.structures.AMRGraph;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.amr.utils.EmpiricalStudy;
 import edu.upf.taln.textplanning.common.CMLCheckers;
+import edu.upf.taln.textplanning.common.ContextVectorsProducer;
 import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.similarity.VectorsCosineSimilarity;
+import edu.upf.taln.textplanning.core.similarity.vectors.SIFVectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
+import edu.upf.taln.textplanning.core.weighting.Context;
 import main.AmrMain;
 import net.sf.extjwnl.JWNLException;
 import org.apache.commons.io.FilenameUtils;
@@ -83,19 +90,33 @@ public class Driver
 		log.info("Graphs serialized to " + output);
 	}
 
-	private void rank_meanings(Path graphs_file, Path freqs, Path vectors_path, VectorType vectorType) throws Exception
+	private void rank_meanings(Path graphs_file, Path idf_file,
+	                           Path word_vectors_path, VectorType word_vectors_type,
+	                           Path sense_context_vectors_path, VectorType sense_context_vectors_type,
+	                           Path sense_vectors_path, VectorType sense_vectors_type) throws Exception
 	{
 		log.info("Running from " + graphs_file);
 		AMRGraphList graphs = (AMRGraphList) Serializer.deserialize(graphs_file);
 
-//		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
-		final Vectors vectors = Vectors.get(vectors_path, vectorType, 300);
-		VectorsCosineSimilarity sim = new VectorsCosineSimilarity(vectors);
+		// We'll use the whole text as a context
+		final String context = graphs.getGraphs().stream()
+				.map(AMRGraph::getAlignments)
+				.map(AMRAlignments::getTokens)
+				.flatMap(List::stream)
+				.collect(Collectors.joining(" "));
+
+		final Vectors word_vectors = Vectors.get(word_vectors_path, word_vectors_type, 300);
+		final Map<String, Double> weights = ContextVectorsProducer.getWeights(idf_file);
+		final SIFVectors sif_vectors = new SIFVectors(word_vectors, weights::get);
+		final Vectors sense_context_vectors = Vectors.get(sense_context_vectors_path, sense_context_vectors_type, 300);
+		final Context context_weighter = new Context(graphs.getCandidates(), sense_context_vectors, sif_vectors, w -> context);
+		final Vectors sense_vectors = Vectors.get(sense_vectors_path, sense_vectors_type, 300);
+		final VectorsCosineSimilarity sim = new VectorsCosineSimilarity(sense_vectors);
 
 		TextPlanner.Options options = new TextPlanner.Options();
 		options.damping_meanings = 0.5;
 		options.sim_threshold = 0.5;
-		TextPlanner.rankMeanings(graphs.getCandidates(), s -> 0.0, (e1, e2) -> sim.of(e1, e2), options);
+		TextPlanner.rankMeanings(graphs.getCandidates(), context_weighter::weight, sim::of, options);
 
 		Path output = FileUtils.createOutputPath(graphs_file, graphs_file.getParent(),
 				FilenameUtils.getExtension(graphs_file.toFile().getName()), graphs_ranked_suffix);
@@ -346,29 +367,6 @@ public class Driver
 		}
 	}
 
-
-	public static class FormatConverter implements IStringConverter<VectorType>
-	{
-		@Override
-		public VectorType convert(String value)
-		{
-			return VectorType.valueOf(value);
-		}
-	}
-
-	public static class FormatValidator implements IParameterValidator
-	{
-		@Override
-		public void validate(String name, String value) throws ParameterException
-		{
-			try{ VectorType.valueOf(value); }
-			catch (Exception e)
-			{
-				throw new ParameterException("Parameter " + name + " has invalid valued " + value);
-			}
-		}
-	}
-
 	@Parameters(commandDescription = "Create semantic graphs from an AMR bank")
 	private static class CreateGraphsCommand
 	{
@@ -393,12 +391,24 @@ public class Driver
 		@Parameter(names = {"-f", "-frequencies"}, description = "Frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
-		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
+		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path vectorsPath;
-		@Parameter(names = {"-vf", "-vectorType"}, description = "Vectors vectorType", arity = 1, required = true,
-				converter = FormatConverter.class, validateWith = FormatValidator.class)
-		private VectorType vectorType = VectorType.Text_Glove;
+		private Path word_vectors_path;
+		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1, required = true,
+				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
+		private VectorType word_vector_type = VectorType.Text_Glove;
+		@Parameter(names = {"-cv", "-context_vectors"}, description = "Path to sense context vectors", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path context_vectors_path;
+		@Parameter(names = {"-ct", "-context_vectors_type"}, description = "Type of sense context vectors", arity = 1, required = true,
+				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
+		private VectorType context_vector_type = VectorType.Text_Glove;
+		@Parameter(names = {"-sv", "-sense_vectors"}, description = "Path to sense vectors", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path sense_vectors_path;
+		@Parameter(names = {"-st", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
+				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
+		private VectorType sense_vector_type = VectorType.Text_Glove;
 	}
 
 	@Parameters(commandDescription = "Create global semantic graph from a list of semantic graphs")
@@ -441,7 +451,7 @@ public class Driver
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
 		@Parameter(names = {"-vf", "-vectorType"}, description = "Vectors vectorType", arity = 1, required = true,
-				converter = FormatConverter.class, validateWith = FormatValidator.class)
+				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
 		private VectorType vectorType = VectorType.Text_Glove;
 	}
 
@@ -455,7 +465,7 @@ public class Driver
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
 		@Parameter(names = {"-vf", "-vectorType"}, description = "Vectors vectorType", arity = 1, required = true,
-				converter = FormatConverter.class, validateWith = FormatValidator.class)
+				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
 		private VectorType vectorType = VectorType.Text_Glove;
 	}
 
@@ -494,7 +504,7 @@ public class Driver
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
 		@Parameter(names = {"-vf", "-vectorType"}, description = "Vectors vectorType", arity = 1, required = true,
-				converter = FormatConverter.class, validateWith = FormatValidator.class)
+				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
 		private VectorType vectorType = VectorType.Text_Glove;
 		@Parameter(names = {"-ns", "-nostanford"}, description = "Do not load Stanford CoreNLP pipeline")
 		private boolean no_stanford = false;
@@ -540,7 +550,7 @@ public class Driver
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
 		@Parameter(names = {"-vf", "-vectorType"}, description = "Vectors vectorType", arity = 1, required = true,
-				converter = Driver.FormatConverter.class, validateWith = Driver.FormatValidator.class)
+				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
 		private VectorType vectorType = VectorType.Text_Glove;
 		@Parameter(names = {"-pw", "-pairwise"}, description = "If true of stats from pairwise similiarity values")
 		private boolean do_pairwise_similarity = false;
@@ -590,8 +600,10 @@ public class Driver
 			driver.create_graphs(create_graphs.inputFile, create_graphs.bnFolder, create_graphs.no_stanford,
 					create_graphs.no_babelnet);
 		else if (jc.getParsedCommand().equals(rank_meanings_command))
-			driver.rank_meanings(rank_meanings.inputFile, rank_meanings.freqsFile, rank_meanings.vectorsPath,
-					rank_meanings.vectorType);
+			driver.rank_meanings(rank_meanings.inputFile, rank_meanings.freqsFile,
+					rank_meanings.word_vectors_path, rank_meanings.word_vector_type,
+					rank_meanings.context_vectors_path, rank_meanings.context_vector_type,
+					rank_meanings.sense_vectors_path, rank_meanings.sense_vector_type);
 		else if (jc.getParsedCommand().equals(create_global_command))
 			driver.create_global(create_global.inputFile);
 		else if (jc.getParsedCommand().equals(rank_variables_command))

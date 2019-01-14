@@ -1,15 +1,27 @@
-package edu.upf.taln.textplanning.core.utils;
+package edu.upf.taln.textplanning.common;
 
+import edu.upf.taln.textplanning.core.TextPlanner;
+import edu.upf.taln.textplanning.core.similarity.VectorsCosineSimilarity;
+import edu.upf.taln.textplanning.core.similarity.vectors.SIFVectors;
+import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
+import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.core.utils.DebugUtils;
+import edu.upf.taln.textplanning.core.weighting.Context;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static edu.upf.taln.textplanning.common.FileUtils.getFilesInFolder;
+import static edu.upf.taln.textplanning.common.FileUtils.readTextFile;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
@@ -33,6 +45,64 @@ public class Evaluation
 	}
 
 	private final static Logger log = LogManager.getLogger();
+
+
+	private static List<List<List<Map<Candidate, Double>>>> deserializeCandidates(File[] files)
+	{
+		List<List<List<Map<Candidate, Double>>>> candidates = new ArrayList<>();
+		Arrays.stream(files).forEach(f ->
+		{
+			try
+			{
+				@SuppressWarnings("unchecked")
+				List<List<Map<Candidate, Double>>> c = (List<List<Map<Candidate, Double>>>)Serializer.deserialize(f.toPath());
+				candidates.add(c);
+			}
+			catch (Exception e)
+			{
+				log.error("Cannot store candidates for file " + f);
+			}
+		});
+
+		return candidates;
+	}
+
+	private static List<List<List<Set<Pair<String, String>>>>> readGoldMeanings(File[] gold_files)
+	{
+		return Arrays.stream(gold_files)
+				.map(File::toPath)
+				.map(FileUtils::readTextFile)
+				.map(text ->
+				{
+					final String regex = "(bn:\\d+[r|a|v|n](\\|bn:\\d+[r|a|v|n])*)-\"([^\"]+)\"";
+					final Pattern pattern = Pattern.compile(regex);
+					final Predicate<String> is_meanings = Pattern.compile("^@bn:.*").asPredicate();
+
+					return Pattern.compile("\n+").splitAsStream(text)
+							.filter(is_meanings)
+							.map(pattern::matcher)
+							.map(m ->
+							{
+								final List<Set<Pair<String, String>>> meanings = new ArrayList<>();
+								while (m.find())
+								{
+									final String meanings_string = m.group(1);
+									final String[] meanings_parts = meanings_string.split("\\|");
+									final Set<String> alternatives = Arrays.stream(meanings_parts)
+											.map(p -> p.startsWith("\"") && p.endsWith("\"") ? p.substring(1, p.length() - 1) : p)
+											.collect(toSet());
+									final String covered_text = m.group(3);
+									meanings.add(alternatives.stream()
+											.map(a -> Pair.of(a, covered_text))
+											.collect(toSet()));
+								}
+
+								return meanings;
+							})
+							.collect(toList());
+				})
+				.collect(toList());
+	}
 
 	public static void evaluate(List<List<Pair<String, String>>> system, List<String> gold)
 	{

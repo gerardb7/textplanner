@@ -5,9 +5,15 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.*;
+import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.similarity.VectorsCosineSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.RandomAccessVectors;
+import edu.upf.taln.textplanning.core.similarity.vectors.SIFVectors;
+import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
+import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.core.structures.Mention;
+import edu.upf.taln.textplanning.core.weighting.Context;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,6 +37,7 @@ public class Driver
 	private static final String gold_suffix = ".gold";
 	private static final String candidates_suffix = ".candidates";
 	private static final String get_candidates_command = "candidates";
+	private static final String get_system_UIMA_command = "system_uima";
 	private static final String get_system_command = "system";
 	private static final String get_gold_candidates_command = "gold_candidates";
 	private static final String evaluate_command = "evaluate";
@@ -66,7 +73,7 @@ public class Driver
 				});
 	}
 
-	private static void getSystemMeanings(Path input_folder, Path output_folder, Path babel_config, Path freqs_file, Path vectors)
+	private static void getSystemMeaningsUIMA(Path input_folder, Path output_folder, Path babel_config, Path freqs_file, Path vectors)
 	{
 		log.info("Loading files");
 		final File[] text_files = getFilesInFolder(input_folder, text_suffix);
@@ -84,6 +91,58 @@ public class Driver
 					final String text = readTextFile(f);
 					final List<List<Map<Candidate, Double>>> candidates = uima.getDisambiguatedCandidates(text, language);
 					serializeCandidates(candidates, f, output_folder);
+				});
+	}
+
+	private static void getSystemMeanings(Path input_folder, Path output_folder, Path babel_config, Path idf_file,
+	                                      Path word_vectors_path, VectorType word_vectors_type,
+	                                      Path sense_context_vectors_path, VectorType sense_context_vectors_type,
+	                                      Path sense_vectors_path, VectorType sense_vectors_type) throws Exception
+	{
+		log.info("Loading files");
+		final File[] text_files = getFilesInFolder(input_folder, text_suffix);
+
+		log.info("Setting up UIMA pipeline");
+		final UIMAPipelines uima = UIMAPipelines.createSpanPipeline(language, false);
+		if (uima == null)
+			throw new Exception("Cannot create UIMA pipeline");
+
+		log.info("Loading resources");
+		BabelNetDictionary bn = new BabelNetDictionary(babel_config);
+		final Vectors word_vectors = Vectors.get(word_vectors_path, word_vectors_type, 300);
+		final Map<String, Double> weights = ContextVectorsProducer.getWeights(idf_file);
+		final SIFVectors sif_vectors = new SIFVectors(word_vectors, weights::get);
+		final Vectors sense_context_vectors = Vectors.get(sense_context_vectors_path, sense_context_vectors_type, 300);
+		final Vectors sense_vectors = Vectors.get(sense_vectors_path, sense_vectors_type, 300);
+		final VectorsCosineSimilarity sim = new VectorsCosineSimilarity(sense_vectors);
+
+		log.info("Processing text files");
+		Arrays.stream(text_files)
+				.sorted(Comparator.comparing(File::getName))
+				.map(File::toPath)
+				.forEach(f ->
+				{
+					final String text = readTextFile(f);
+					final List<Candidate> candidates = uima.getCandidates(text, bn, language).stream()
+							.flatMap(l -> l.stream()
+									.flatMap(Set::stream))
+							.collect(toList());
+					final Context context_weighter = new Context(candidates, sense_context_vectors, sif_vectors, w -> text);
+					TextPlanner.rankMeanings(candidates, context_weighter::weight, sim::of, new TextPlanner.Options());
+
+					// Let's group and sort the plain list of candidates by sentence and offsets.
+					final List<List<Map<Candidate, Double>>> grouped_candidates = candidates.stream()
+							.collect(groupingBy(c -> c.getMention().getSentenceId(), groupingBy(c -> c.getMention().getSpan(), toMap(c -> c, c -> c.getMeaning().getWeight()))))
+							.entrySet().stream()
+							.sorted(Comparator.comparing(Map.Entry::getKey))
+							.map(Map.Entry::getValue)
+							.map(e -> e.entrySet().stream()
+									.sorted(Comparator.comparingInt(e2 -> e2.getKey().getLeft()))
+									.map(Map.Entry::getValue)
+									.collect(toList()))
+							.collect(toList());
+
+					serializeCandidates(grouped_candidates, f, output_folder);
 				});
 	}
 
@@ -388,7 +447,7 @@ public class Driver
 
 	@SuppressWarnings("unused")
 	@Parameters(commandDescription = "Run empirical study from serialized file")
-	private static class GetSystemMeaningsCommand
+	private static class GetSystemMeaningsUIMACommand
 	{
 		@Parameter(names = {"-i", "-input"}, description = "Path to input folder containing text files", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
@@ -405,6 +464,42 @@ public class Driver
 		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
+	}
+
+	@SuppressWarnings("unused")
+	@Parameters(commandDescription = "Run empirical study from serialized file")
+	private static class GetSystemMeaningsCommand
+	{
+		@Parameter(names = {"-i", "-input"}, description = "Path to input folder containing text files", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path input;
+		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
+		private Path output;
+		@Parameter(names = {"-b", "-babelconfig"}, description = "Path to BabelNet configuration folder", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path babelConfigPath;
+		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path freqsFile;
+		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path word_vectors_path;
+		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1, required = true,
+				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
+		private VectorType word_vector_type = VectorType.Text_Glove;
+		@Parameter(names = {"-cv", "-context_vectors"}, description = "Path to sense context vectors", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path context_vectors_path;
+		@Parameter(names = {"-ct", "-context_vectors_type"}, description = "Type of sense context vectors", arity = 1, required = true,
+				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
+		private VectorType context_vector_type = VectorType.Text_Glove;
+		@Parameter(names = {"-sv", "-sense_vectors"}, description = "Path to sense vectors", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path sense_vectors_path;
+		@Parameter(names = {"-st", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
+				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
+		private VectorType sense_vector_type = VectorType.Text_Glove;
 	}
 
 	@SuppressWarnings("unused")
@@ -458,7 +553,7 @@ public class Driver
 		private Path vectorsPath;
 	}
 
-	public static void main(String[] args)
+	public static void main(String[] args) throws Exception
 	{
 //		String corpus_folder = "/home/gerard/ownCloud/varis_tesi/deep_mind_annotated/development_set";
 //		String babelnet = "/home/gerard/data/babelconfig";
@@ -466,6 +561,7 @@ public class Driver
 //		String vectors = "/home/gerard/data/sew-embed.nasari_bin";
 
 		GetCandidatesCommand candidates = new GetCandidatesCommand();
+		GetSystemMeaningsUIMACommand system_uima = new GetSystemMeaningsUIMACommand();
 		GetSystemMeaningsCommand system = new GetSystemMeaningsCommand();
 		GetGoldCandidatesCommand gold_candidates = new GetGoldCandidatesCommand();
 		RunEvaluationCommand evaluate = new RunEvaluationCommand();
@@ -473,6 +569,7 @@ public class Driver
 
 		JCommander jc = new JCommander();
 		jc.addCommand(get_candidates_command, candidates);
+		jc.addCommand(get_system_UIMA_command, system_uima);
 		jc.addCommand(get_system_command, system);
 		jc.addCommand(get_gold_candidates_command, gold_candidates);
 		jc.addCommand(evaluate_command, evaluate);
@@ -490,8 +587,14 @@ public class Driver
 			case get_candidates_command:
 				getCandidates(candidates.input, candidates.output, candidates.babelnet);
 				break;
+			case get_system_UIMA_command:
+				getSystemMeaningsUIMA(system_uima.input, system_uima.output, system_uima.babelConfigPath, system_uima.freqsFile, system_uima.vectorsPath);
+				break;
 			case get_system_command:
-				getSystemMeanings(system.input, system.output, system.babelConfigPath, system.freqsFile, system.vectorsPath);
+				getSystemMeanings(system.input, system.output, system.babelConfigPath, system.freqsFile,
+						system.word_vectors_path, system.word_vector_type,
+						system.context_vectors_path, system.context_vector_type,
+						system.sense_vectors_path, system.sense_vector_type);
 				break;
 			case get_gold_candidates_command:
 				getGoldCandidates(gold_candidates.gold, gold_candidates.output, gold_candidates.babelnet);
