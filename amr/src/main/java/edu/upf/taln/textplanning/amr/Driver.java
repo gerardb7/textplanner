@@ -99,15 +99,16 @@ public class Driver
 		AMRGraphList graphs = (AMRGraphList) Serializer.deserialize(graphs_file);
 
 		// We'll use the whole text as a context
-		final String context = graphs.getGraphs().stream()
+		final List<String> context = graphs.getGraphs().stream()
 				.map(AMRGraph::getAlignments)
 				.map(AMRAlignments::getTokens)
 				.flatMap(List::stream)
-				.collect(Collectors.joining(" "));
+				.collect(toList());
 
 		final Vectors word_vectors = Vectors.get(word_vectors_path, word_vectors_type, 300);
 		final Map<String, Double> weights = ContextVectorsProducer.getWeights(idf_file);
-		final SIFVectors sif_vectors = new SIFVectors(word_vectors, weights::get);
+		final Double default_weight = Collections.min(weights.values());
+		final SIFVectors sif_vectors = new SIFVectors(word_vectors, w -> weights.getOrDefault(w, default_weight));
 		final Vectors sense_context_vectors = Vectors.get(sense_context_vectors_path, sense_context_vectors_type, 300);
 		final Context context_weighter = new Context(graphs.getCandidates(), sense_context_vectors, sif_vectors, w -> context);
 		final Vectors sense_vectors = Vectors.get(sense_vectors_path, sense_vectors_type, 300);
@@ -394,21 +395,21 @@ public class Driver
 		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path word_vectors_path;
-		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1, required = true,
+		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1,
 				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
-		private VectorType word_vector_type = VectorType.Text_Glove;
+		private VectorType word_vector_type = VectorType.Binary_RandomAccess;
 		@Parameter(names = {"-cv", "-context_vectors"}, description = "Path to sense context vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path context_vectors_path;
-		@Parameter(names = {"-ct", "-context_vectors_type"}, description = "Type of sense context vectors", arity = 1, required = true,
+		@Parameter(names = {"-ct", "-context_vectors_type"}, description = "Type of sense context vectors", arity = 1,
 				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
-		private VectorType context_vector_type = VectorType.Text_Glove;
+		private VectorType context_vector_type = VectorType.Binary_RandomAccess;
 		@Parameter(names = {"-sv", "-sense_vectors"}, description = "Path to sense vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path sense_vectors_path;
-		@Parameter(names = {"-st", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
+		@Parameter(names = {"-st", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1,
 				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
-		private VectorType sense_vector_type = VectorType.Text_Glove;
+		private VectorType sense_vector_type = VectorType.Binary_RandomAccess;
 	}
 
 	@Parameters(commandDescription = "Create global semantic graph from a list of semantic graphs")

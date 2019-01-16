@@ -11,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -27,9 +28,9 @@ public class Context
 	public Context( Collection<Candidate> contents,
 					Vectors all_meaning_context_vectors,
 	                SIFVectors all_mention_context_vectors,
-	                Function<String, String> context_function)
+	                Function<String, List<String>> context_function)
 	{
-		log.info("Setting up vectors for context-based meaning weighting");
+		log.info("Setting up vectors for context-based weighting of meanings");
 		final Stopwatch timer = Stopwatch.createStarted();
 		sif = all_mention_context_vectors.getFunction();
 		meanings = contents.stream()
@@ -39,9 +40,18 @@ public class Context
 		meaning_context_vectors = meanings.stream()
 				.map(c -> all_meaning_context_vectors.getVector(c).orElse(all_mention_context_vectors.getUnknownVector()))
 				.collect(toList());
+
+		// Calculate context vectors just once per each context
+		final Map<String, List<String>> contexts = meanings.stream()
+				.collect(Collectors.toMap(m -> m, context_function, (c1, c2) -> c1));
+		final Map<List<String>, double[]> vectors = contexts.values().stream()
+				.distinct()
+				.collect(Collectors.toMap(c -> c,
+						c -> all_mention_context_vectors.getVector(c).orElse(all_mention_context_vectors.getUnknownVector())));
+
 		mention_context_vectors = meanings.stream()
-				.map(context_function)
-				.map(c -> all_mention_context_vectors.getVector(c).orElse(all_mention_context_vectors.getUnknownVector()))
+				.map(contexts::get)
+				.map(vectors::get)
 				.collect(toList());
 		log.info("Set up completed in " + timer.stop());
 	}

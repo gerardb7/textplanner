@@ -19,7 +19,6 @@ import edu.upf.taln.textplanning.common.MeaningDictionary;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
-import edu.upf.taln.textplanning.uima.types.ConceptRelevance;
 import edu.upf.taln.uima.flask_wrapper.ConceptExtractorAnnotator;
 import edu.upf.taln.uima.wsd.annotation_extender.core.WSDResultExtender;
 import edu.upf.taln.uima.wsd.candidateDetection.BabelNetCandidateIdentification;
@@ -40,35 +39,59 @@ import org.apache.uima.jcas.JCas;
 import org.apache.uima.resource.ExternalResourceDescription;
 
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngine;
 
-public class UIMAPipelines
+public class UIMAWrapper
 {
-	private final AnalysisEngine pipeline;
+	public static class Pipeline
+	{
+		private final AnalysisEngine pipeline;
+		public Pipeline(AnalysisEngine uima_pipeline)
+		{
+			this.pipeline = uima_pipeline;
+		}
+
+		private AnalysisEngine getPipeline() { return pipeline; }
+	}
+
+	private final ULocale language;
+	private final JCas doc;
 	private static final int ngram_size = 3;
 	private static final String concept_extraction_url = "http://server01-taln.s.upf.edu:8000";
 	private final static Logger log = LogManager.getLogger();
 
-	private UIMAPipelines(AnalysisEngine pipeline)
+	public UIMAWrapper(String text, ULocale language, Pipeline pipeline)
 	{
-		this.pipeline = pipeline;
+		this.language = language;
+		try
+		{
+			log.info("Processing text");
+			doc = processText(text, pipeline, language);
+		}
+		catch (UIMAException e)
+		{
+			log.error("Failed to process text with UIMA pipeline: " + e);
+			throw new RuntimeException(e);
+		}
 	}
 
-	public static UIMAPipelines createSpanPipeline(ULocale language, boolean use_concept_extractor)
+	public static Pipeline createSpanPipeline(ULocale language, boolean use_concept_extractor)
 	{
 		try
 		{
 			AnalysisEngineDescription segmenter = AnalysisEngineFactory.createEngineDescription(StanfordSegmenter.class,
-					StanfordSegmenter.PARAM_LANGUAGE, language);
+					StanfordSegmenter.PARAM_LANGUAGE, language.toLanguageTag());
 			AnalysisEngineDescription pos = AnalysisEngineFactory.createEngineDescription(StanfordPosTagger.class,
-					StanfordPosTagger.PARAM_LANGUAGE, language);
+					StanfordPosTagger.PARAM_LANGUAGE, language.toLanguageTag());
 			AnalysisEngineDescription lemma = AnalysisEngineFactory.createEngineDescription(MateLemmatizer.class,
-					MateLemmatizer.PARAM_LANGUAGE, language,
+					MateLemmatizer.PARAM_LANGUAGE, language.toLanguageTag(),
 					MateLemmatizer.PARAM_VARIANT, "default");
 			AnalysisEngineDescription spans = use_concept_extractor ?
 					AnalysisEngineFactory.createEngineDescription(ConceptExtractorAnnotator.class, ConceptExtractorAnnotator.PARAM_FLASK_URL, concept_extraction_url)
@@ -82,7 +105,7 @@ public class UIMAPipelines
 			AnalysisEngineDescription[] componentArray = components.toArray(new AnalysisEngineDescription[0]);
 			AnalysisEngineDescription all = AnalysisEngineFactory.createEngineDescription(componentArray);
 
-			return new UIMAPipelines(createEngine(all));
+			return new Pipeline(createEngine(all));
 		}
 		catch (UIMAException e)
 		{
@@ -91,7 +114,8 @@ public class UIMAPipelines
 		}
 	}
 
-	public static UIMAPipelines createRankingPipeline(ULocale language, boolean use_concept_extractor, Path babel_config, Path freqs_file, Path vectors)
+	public static Pipeline createRankingPipeline(ULocale language, boolean use_concept_extractor, Path babel_config,
+	                                                   Path freqs_file, Path vectors)
 	{
 		try
 		{
@@ -144,7 +168,7 @@ public class UIMAPipelines
 			AnalysisEngineDescription[] componentArray = components.toArray(new AnalysisEngineDescription[0]);
 			AnalysisEngineDescription all = AnalysisEngineFactory.createEngineDescription(componentArray);
 
-			return new UIMAPipelines(createEngine(all));
+			return new Pipeline(createEngine(all));
 		}
 		catch (UIMAException e)
 		{
@@ -153,110 +177,91 @@ public class UIMAPipelines
 		}
 	}
 
-	public List<List<Set<Candidate>>> getCandidates(String text, MeaningDictionary bn, ULocale language)
+	public List<List<String>> getTokens()
 	{
-		if (text.isEmpty())
-			return Collections.emptyList();
-
-		try
-		{
-			log.info("Processing text");
-			final JCas doc = processText(text, pipeline, language);
-
-			log.info("Collecting candidates");
-			final List<Sentence> sentences = new ArrayList<>(JCasUtil.select(doc, Sentence.class));
-			return sentences.stream()
-					.map(sentence -> JCasUtil.selectCovered(NGram.class, sentence).stream()
-							.map(span ->
-							{
-								final String surface_form = span.getCoveredText();
-								final List<Token> surface_tokens = JCasUtil.selectCovered(Token.class, span);
-								final String lemma = surface_tokens.stream()
-										.map(Token::getLemma)
-										.map(Lemma::getValue)
-										.collect(Collectors.joining(" "));
-								final String pos = surface_tokens.size() == 1 ? surface_tokens.get(0).getPos().getPosValue() : "NN";
-								final List<Token> sentence_tokens = JCasUtil.selectCovered(Token.class, sentence);
-								final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
-								final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1)) + 1;
-								final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
-								final Mention mention = Mention.get("s" + sentences.indexOf(sentence), offsets, surface_form, lemma, pos, false, "");
-
-								return bn.getMeanings(surface_form, pos, language).stream()
-										.filter(bn::contains)
-										.map(s -> Meaning.get(s, bn.getLabel(s, language).orElse(""), bn.isNE(s).orElse(false)))
-										.map(meaning -> new Candidate(meaning, mention))
-										.collect(Collectors.toSet());
-							})
-							.filter(l -> !l.isEmpty())
-							.collect(toList()))
-					.collect(toList());
-		}
-		catch (UIMAException e)
-		{
-			log.error("Cannot get candidates from text " + text + ": " + e);
-			return Collections.emptyList();
-		}
+		return JCasUtil.select(doc, Sentence.class).stream()
+				.map(s -> JCasUtil.selectCovered(Token.class, s).stream()
+						.map(Token::getText)
+						.collect(toList()))
+				.collect(toList());
 	}
 
-	public List<List<Map<Candidate, Double>>> getDisambiguatedCandidates(String text, ULocale language)
+	public List<List<Set<Candidate>>> getCandidates(MeaningDictionary bn)
 	{
-		if (text.isEmpty())
-			return Collections.emptyList();
+		log.info("Collecting candidates");
+		final List<Sentence> sentences = new ArrayList<>(JCasUtil.select(doc, Sentence.class));
+		return sentences.stream()
+				.map(sentence -> JCasUtil.selectCovered(NGram.class, sentence).stream()
+						.map(span ->
+						{
+							final String surface_form = span.getCoveredText();
+							final List<Token> surface_tokens = JCasUtil.selectCovered(Token.class, span);
+							final String lemma = surface_tokens.stream()
+									.map(Token::getLemma)
+									.map(Lemma::getValue)
+									.collect(Collectors.joining(" "));
+							final String pos = surface_tokens.size() == 1 ? surface_tokens.get(0).getPos().getPosValue() : "NN";
+							final List<Token> sentence_tokens = JCasUtil.selectCovered(Token.class, sentence);
+							final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
+							final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1)) + 1;
+							final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
+							final Mention mention = Mention.get("s" + sentences.indexOf(sentence), offsets, surface_form, lemma, pos, false, "");
 
-		try
-		{
-			log.info("Processing text");
-			final JCas doc = processText(text, pipeline, language);
-
-			log.info("Collecting candidates");
-			final List<Sentence> sentences = new ArrayList<>(JCasUtil.select(doc, Sentence.class));
-			return sentences.stream()
-					.map(sentence -> JCasUtil.selectCovered(NGram.class, sentence).stream()
-							.map(span ->
-							{
-								final String surface_form = span.getCoveredText();
-								final List<Token> surface_tokens = JCasUtil.selectCovered(Token.class, span);
-								final String lemma = surface_tokens.stream()
-										.map(Token::getLemma)
-										.map(Lemma::getValue)
-										.collect(Collectors.joining(" "));
-								final String pos = surface_tokens.size() == 1 ? surface_tokens.get(0).getPos().getPosValue() : "NN";
-								final List<Token> sentence_tokens = JCasUtil.selectCovered(Token.class, sentence);
-								final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
-								final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1));
-								final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
-								final Mention mention = Mention.get("s" + sentences.indexOf(sentence), offsets, surface_form, lemma, pos, false, "");
-
-								return JCasUtil.selectAt(doc, WSDResult.class, span.getBegin(), span.getEnd()).stream()
-										.map(a ->
-										{
-											final BabelNetSense s = (BabelNetSense) a.getBestSense();
-											final Meaning meaning = Meaning.get(s.getId(), s.getLabel(), s.getNameEntity());
-											final Candidate c = new Candidate(meaning, mention);
-											final double rank = JCasUtil.selectAt(doc, ConceptRelevance.class, a.getBegin(), a.getEnd()).get(0).getDomainRelevance();
-											return Pair.of(c, rank);
-										})
-										.collect(toMap(Pair::getLeft, Pair::getRight));
-							})
-							.filter(l -> !l.isEmpty())
-							.collect(toList()))
-					.collect(toList());
-		}
-		catch (UIMAException e)
-		{
-			log.error("Cannot get disambiguated meanings from text " + text + ": " + e);
-			return Collections.emptyList();
-		}
+							return bn.getMeanings(surface_form, pos, language).stream()
+									.filter(bn::contains)
+									.map(s -> Meaning.get(s, bn.getLabel(s, language).orElse(""), bn.isNE(s).orElse(false)))
+									.map(meaning -> new Candidate(meaning, mention))
+									.collect(toSet());
+						})
+						.filter(l -> !l.isEmpty())
+						.collect(toList()))
+				.collect(toList());
 	}
 
-	private static JCas processText(String text, AnalysisEngine pipeline, ULocale language) throws UIMAException
+	public List<List<Set<Candidate>>> getDisambiguatedCandidates()
+	{
+		log.info("Collecting disambiguated candidates");
+		final List<Sentence> sentences = new ArrayList<>(JCasUtil.select(doc, Sentence.class));
+		return sentences.stream()
+				.map(sentence -> JCasUtil.selectCovered(NGram.class, sentence).stream()
+						.map(span ->
+						{
+							final String surface_form = span.getCoveredText();
+							final List<Token> surface_tokens = JCasUtil.selectCovered(Token.class, span);
+							final String lemma = surface_tokens.stream()
+									.map(Token::getLemma)
+									.map(Lemma::getValue)
+									.collect(Collectors.joining(" "));
+							final String pos = surface_tokens.size() == 1 ? surface_tokens.get(0).getPos().getPosValue() : "NN";
+							final List<Token> sentence_tokens = JCasUtil.selectCovered(Token.class, sentence);
+							final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
+							final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1));
+							final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
+							final Mention mention = Mention.get("s" + sentences.indexOf(sentence), offsets, surface_form, lemma, pos, false, "");
+
+							return JCasUtil.selectAt(doc, WSDResult.class, span.getBegin(), span.getEnd()).stream()
+									.map(a ->
+									{
+										final BabelNetSense s = (BabelNetSense) a.getBestSense();
+										final Meaning meaning = Meaning.get(s.getId(), s.getLabel(), s.getNameEntity());
+										meaning.setWeight(s.getConfidence());
+//										final double rank = JCasUtil.selectAt(doc, ConceptRelevance.class, a.getBegin(), a.getEnd()).get(0).getDomainRelevance();
+										return new Candidate(meaning, mention);
+									})
+									.collect(toSet());
+						})
+						.filter(l -> !l.isEmpty())
+						.collect(toList()))
+				.collect(toList());
+	}
+
+	private static JCas processText(String text, Pipeline pipeline, ULocale language) throws UIMAException
 	{
 		JCas jCas;
 		jCas = JCasFactory.createText(text);
 		jCas.setDocumentLanguage(language.toLanguageTag());
 		DocumentMetaData.create(jCas);
-		pipeline.process(jCas);
+		pipeline.getPipeline().process(jCas);
 
 		return jCas;
 	}

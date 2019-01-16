@@ -25,6 +25,7 @@ public class ContextVectorsProducer
 	private static final int LOGGING_STEP_SIZE = 100000;
 	private final static Logger log = LogManager.getLogger();
 
+	// Utility method to create context vectors out of a file with meanings, an idf file and a set of word vectors
 	public static void createVectors(Path meanings_path, int chunk_size, Path vectors_path, Vectors.VectorType vectors_type,
 	                                  Path idf_file, Path output_file) throws Exception
 	{
@@ -89,25 +90,7 @@ public class ContextVectorsProducer
 //				.forEach(p -> log.info(meanings.get(p.getLeft()) + ", " + meanings.get(p.getRight()) + " = " + sim_values.get(p)));
 	}
 
-	private static List<Info> getMeanings(Path meanings_path) throws Exception
-	{
-		log.info("Collecting meanings");
-		final Stopwatch timer = Stopwatch.createStarted();
-		AtomicLong counter = new AtomicLong(0);
-		AtomicBoolean reported = new AtomicBoolean(false);
-
-		if (meanings_path.toFile().exists() && meanings_path.toFile().isFile())
-		{
-			log.info("Reading from file " + meanings_path);
-			//noinspection unchecked
-			List<Info> meanings = (List<Info>) Serializer.deserialize(meanings_path);
-			log.info(meanings.size() + " with glosses read " + " in " + timer.stop());
-			return meanings;
-		}
-		else
-			throw new Exception("Invalid path to meanings file: " + meanings_path);
-}
-
+	// Reads text-based IDF file
 	public static Map<String, Double> getWeights(Path weights_file)
 	{
 		log.info("Reading idf scores");
@@ -131,6 +114,27 @@ public class ContextVectorsProducer
 
 		return weights;
 	}
+
+	private static List<Info> getMeanings(Path meanings_path) throws Exception
+	{
+		log.info("Collecting meanings");
+		final Stopwatch timer = Stopwatch.createStarted();
+		AtomicLong counter = new AtomicLong(0);
+		AtomicBoolean reported = new AtomicBoolean(false);
+
+		if (meanings_path.toFile().exists() && meanings_path.toFile().isFile())
+		{
+			log.info("Reading from file " + meanings_path);
+			//noinspection unchecked
+			List<Info> meanings = (List<Info>) Serializer.deserialize(meanings_path);
+			log.info(meanings.size() + " with glosses read " + " in " + timer.stop());
+			return meanings;
+		}
+		else
+			throw new Exception("Invalid path to meanings file: " + meanings_path);
+}
+
+
 
 	private static List<Optional<double[]>> getVectors(List<Info> meanings, SIFVectors sif_vectors)
 	{
