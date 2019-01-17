@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>textplanning</artifactId>
         <groupId>edu.upf.taln.textplanning</groupId>
@@ -116,4 +117,58 @@
         </dependency>
     </dependencies>
 
+    <profiles>
+        <profile>
+            <id>uima</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-shade-plugin</artifactId>
+                        <version>3.2.0</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>shade</goal>
+                                </goals>
+                                <id>uima-planner</id>
+                                <configuration>
+                                    <finalName>uima-planner</finalName>
+                                    <transformers>
+                                        <transformer
+                                                implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                            <mainClass>edu.upf.taln.textplanning.uima.Driver</mainClass>
+                                        </transformer>
+                                        <!-- Merge the uimaFIT configuration files -->
+                                        <transformer
+                                                implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                            <resource>
+                                                META-INF/org.apache.uima.fit/fsindexes.txt
+                                            </resource>
+                                        </transformer>
+                                        <transformer
+                                                implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                            <resource>
+                                                META-INF/org.apache.uima.fit/types.txt
+                                            </resource>
+                                        </transformer>
+                                        <transformer
+                                                implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                            <resource>
+                                                META-INF/org.apache.uima.fit/typepriorities.txt
+                                            </resource>
+                                        </transformer>
+                                    </transformers>
+                                    <outputFile>
+                                        ${project.build.directory}/uima-planner.jar
+                                    </outputFile>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
