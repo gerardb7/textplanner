@@ -87,8 +87,6 @@ public class Evaluation
 					.map(c -> c.alternatives.iterator().next())
 					.collect(toList());
 
-
-			Function<String, Integer> get_rank = (m) -> sorted_system_meanings.contains(m) ? sorted_system_meanings.indexOf(m) : sorted_system_meanings.size();
 			final String ranks_string = gold_meanings.stream()
 					.map(gold_meaning -> gold_meaning.alternatives.stream()
 							.map(a -> a + " " + sorted_system_meanings.indexOf(a))
@@ -97,12 +95,14 @@ public class Evaluation
 
 			final List<String> max_gold_meanings = gold_meanings.stream()
 					.map(am -> am.alternatives.stream()
-							.min(Comparator.comparingInt(get_rank::apply))) // choose alternative appearing first in ranked list
+							.filter(sorted_system_meanings::contains)
+							.min(Comparator.comparingInt(sorted_system_meanings::indexOf))) // choose alternative appearing first in ranked list
 					.filter(Optional::isPresent)
 					.map(Optional::get)
 					.collect(toList());
 			final double avg_rank = max_gold_meanings.stream()
-					.mapToInt(get_rank::apply)
+					.filter(sorted_system_meanings::contains)
+					.mapToInt(sorted_system_meanings::indexOf)
 					.mapToDouble(r -> r / (double)sorted_system_meanings.size())
 					.average().orElse(0.0);
 			log.info("Average rank = " + DebugUtils.printDouble(avg_rank) + ". Ranks = " + ranks_string + " out of " + sorted_candidates.size());
