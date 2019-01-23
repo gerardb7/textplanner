@@ -40,8 +40,11 @@ import org.apache.uima.resource.ExternalResourceDescription;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -200,44 +203,56 @@ public class UIMAWrapper
 	public List<List<Set<Candidate>>> getCandidates(MeaningDictionary bn)
 	{
 		log.info("Collecting candidates");
+		Predicate<String> is_punct = (str) -> Pattern.matches("\\p{Punct}", str);
+
 		final List<Sentence> sentences = new ArrayList<>(JCasUtil.select(doc, Sentence.class));
 		return sentences.stream()
 				.map(sentence -> JCasUtil.selectCovered(NGram.class, sentence).stream()
 						.map(span ->
 						{
-							final String surface_form = span.getCoveredText();
 							final List<Token> surface_tokens = JCasUtil.selectCovered(Token.class, span);
+							if (surface_tokens.stream().map(Token::getCoveredText).anyMatch(is_punct))
+							{
+								return new HashSet<Candidate>();
+							}
+							else
+							{
+								final String surface_form = IntStream.range(0, surface_tokens.size())
+										.mapToObj(surface_tokens::get)
+										.map(Token::getCoveredText)
+										.collect(joining(" "));
 
-							// For single words look up lemma too
-							final String lemma = IntStream.range(0, surface_tokens.size() - 1)
-									.mapToObj(surface_tokens::get)
-									.map(Token::getText)
-									.collect(joining(" "))
-									+ " " + surface_tokens.get(surface_tokens.size() - 1).getLemmaValue();
+								// For single words look up lemma too
+								String lemma = surface_tokens.get(surface_tokens.size() - 1).getLemmaValue();
+								if (surface_tokens.size() > 1)
+									lemma = IntStream.range(0, surface_tokens.size() - 1)
+											.mapToObj(surface_tokens::get)
+											.map(Token::getCoveredText)
+											.collect(joining(" ")) + " " + lemma;
 
-							final String pos = surface_tokens.size() == 1 ? surface_tokens.get(0).getPos().getPosValue() : noun_pos_tag;
-							final List<Token> sentence_tokens = JCasUtil.selectCovered(Token.class, sentence);
-							final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
-							final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1)) + 1;
-							final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
-							final Mention mention = Mention.get("s" + sentences.indexOf(sentence), offsets, surface_form, lemma, pos, false, "");
+								final String pos = surface_tokens.size() == 1 ? surface_tokens.get(0).getPos().getPosValue() : noun_pos_tag;
+								final List<Token> sentence_tokens = JCasUtil.selectCovered(Token.class, sentence);
+								final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
+								final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1)) + 1;
+								final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
+								final Mention mention = Mention.get("s" + sentences.indexOf(sentence), offsets, surface_form, lemma, pos, false, "");
 
-							final Set<Candidate> meanings = bn.getMeanings(surface_form, pos, language).stream()
-									.filter(bn::contains)
-									.map(s -> Meaning.get(s, bn.getLabel(s, language).orElse(""), bn.isNE(s).orElse(false)))
-									.map(meaning -> new Candidate(meaning, mention))
-									.collect(toSet());
-
-							// Add meanings for lemma
-							if (!lemma.equals(surface_form))
-								bn.getMeanings(lemma, pos, language).stream()
+								final Set<Candidate> meanings = bn.getMeanings(surface_form, pos, language).stream()
 										.filter(bn::contains)
 										.map(s -> Meaning.get(s, bn.getLabel(s, language).orElse(""), bn.isNE(s).orElse(false)))
 										.map(meaning -> new Candidate(meaning, mention))
-										.forEach(meanings::add); // Meanings is a Set -> no duplicates
+										.collect(toSet());
 
-							return meanings;
+								// Add meanings for lemma
+								if (!lemma.equalsIgnoreCase(surface_form))
+									bn.getMeanings(lemma, pos, language).stream()
+											.filter(bn::contains)
+											.map(s -> Meaning.get(s, bn.getLabel(s, language).orElse(""), bn.isNE(s).orElse(false)))
+											.map(meaning -> new Candidate(meaning, mention))
+											.forEach(meanings::add); // Meanings is a Set -> no duplicates
 
+								return meanings;
+							}
 						})
 						.filter(l -> !l.isEmpty())
 						.collect(toList()))
