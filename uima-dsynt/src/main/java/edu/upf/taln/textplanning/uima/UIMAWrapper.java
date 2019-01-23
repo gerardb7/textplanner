@@ -19,6 +19,7 @@ import edu.upf.taln.textplanning.common.MeaningDictionary;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
+import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.uima.flask_wrapper.ConceptExtractorAnnotator;
 import edu.upf.taln.uima.wsd.annotation_extender.core.WSDResultExtender;
 import edu.upf.taln.uima.wsd.candidateDetection.BabelNetCandidateIdentification;
@@ -203,10 +204,12 @@ public class UIMAWrapper
 	public List<List<Set<Candidate>>> getCandidates(MeaningDictionary bn)
 	{
 		log.info("Collecting candidates");
+		DebugUtils.ThreadReporter reporter = new DebugUtils.ThreadReporter(log);
 		Predicate<String> is_punct = (str) -> Pattern.matches("\\p{Punct}", str);
-
 		final List<Sentence> sentences = new ArrayList<>(JCasUtil.select(doc, Sentence.class));
 		return sentences.stream()
+				.parallel()
+				.peek(s -> reporter.report())
 				.map(sentence -> JCasUtil.selectCovered(NGram.class, sentence).stream()
 						.map(span ->
 						{
@@ -217,8 +220,7 @@ public class UIMAWrapper
 							}
 							else
 							{
-								final String surface_form = IntStream.range(0, surface_tokens.size())
-										.mapToObj(surface_tokens::get)
+								final String surface_form = surface_tokens.stream()
 										.map(Token::getCoveredText)
 										.collect(joining(" "));
 
@@ -262,8 +264,11 @@ public class UIMAWrapper
 	public List<List<Set<Candidate>>> getDisambiguatedCandidates()
 	{
 		log.info("Collecting disambiguated candidates");
+		DebugUtils.ThreadReporter reporter = new DebugUtils.ThreadReporter(log);
 		final List<Sentence> sentences = new ArrayList<>(JCasUtil.select(doc, Sentence.class));
 		return sentences.stream()
+				.parallel()
+				.peek(s -> reporter.report())
 				.map(sentence -> JCasUtil.selectCovered(NGram.class, sentence).stream()
 						.map(span ->
 						{
