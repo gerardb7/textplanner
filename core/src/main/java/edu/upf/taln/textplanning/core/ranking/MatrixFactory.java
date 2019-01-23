@@ -3,6 +3,8 @@ package edu.upf.taln.textplanning.core.ranking;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
+import edu.upf.taln.textplanning.core.utils.DebugUtils;
+import edu.upf.taln.textplanning.core.utils.DebugUtils.ThreadReporter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -43,7 +45,7 @@ public class MatrixFactory
 
 		// Bias each row in X using bias L and d factor d
 		// Ruv = d*Lu + (1.0-d)*Xuv
-		IntStream.range(0, n).forEach(u ->
+		IntStream.range(0, n).parallel().forEach(u ->
 				IntStream.range(0, n).forEach(v -> {
 					double Lu = L[u]; // bias towards relevance of v
 					double Xuv = X[u][v]; // similarity
@@ -77,7 +79,7 @@ public class MatrixFactory
 
 		// Bias each row in Y using bias T and d factor d
 		// Prob index->j = a*T(j) + b*t(j) + (1.0-a-b)*Y(index,j)
-		IntStream.range(0, n).forEach(u ->
+		IntStream.range(0, n).parallel().forEach(u ->
 				IntStream.range(0, n).forEach(v -> {
 					double tu = T[u]; // bias towards meanings of u
 					double Yuv = Y[u][v]; // adjacency
@@ -97,6 +99,7 @@ public class MatrixFactory
 	{
 		int num_entities = meanings.size();
 		double[] v = meanings.stream()
+				.parallel()
 				.mapToDouble(weighting::apply)
 				.toArray();
 
@@ -119,6 +122,7 @@ public class MatrixFactory
 	private static double[] createVariablesBiasVector(List<String> variables, SemanticGraph graph)
 	{
 		final double[] weights = variables.stream()
+				.parallel()
 				.map(graph::getMeaning)
 				.mapToDouble(om -> om.map(Meaning::getWeight).orElse(0.0))
 				.toArray();
@@ -151,10 +155,13 @@ public class MatrixFactory
 		AtomicLong num_filtered = new AtomicLong(0);
 		AtomicLong num_defined = new AtomicLong(0);
 		AtomicLong num_negative = new AtomicLong(0);
+		ThreadReporter reporter = new ThreadReporter(log);
 
 		// Calculate similarity values
-		IntStream.range(0, n).forEach(i ->
-				IntStream.range(i, n).forEach(j ->
+		IntStream.range(0, n)
+				.parallel()
+				.peek(i -> reporter.report())
+				.forEach(i -> IntStream.range(i, n).forEach(j ->
 				{
 					double simij = 0.0;
 					if (i == j)
@@ -225,13 +232,16 @@ public class MatrixFactory
 	private static double[][] createVariablesAdjacencyMatrix(List<String> variables, SemanticGraph graph)
 	{
 		int n = variables.size();
+		ThreadReporter reporter = new ThreadReporter(log);
 
 		// Create symmetric non-negative similarity matrix from sim function
 //		AtomicLong counter = new AtomicLong(0);
 //		long num_calculations1 = ((((long)n * (long)n) - n)  / 2) + n;
 		double[][] m = new double[n][n];
-		IntStream.range(0, n).forEach(i ->
-				IntStream.range(i, n)
+		IntStream.range(0, n)
+				.parallel()
+				.peek(i -> reporter.report())
+				.forEach(i -> IntStream.range(i, n)
 						.filter(j -> i != j)
 						.forEach(j ->
 						{
@@ -255,7 +265,11 @@ public class MatrixFactory
 	// Creates normalized *strictly positive* type row vector for the candidate set
 	public static double[] createTypeVector(List<Candidate> candidates, boolean smooth, boolean normalize)
 	{
+		ThreadReporter reporter = new ThreadReporter(log);
+
 		double[] v = candidates.stream()
+				.parallel()
+				.peek(c -> reporter.report())
 				.mapToDouble(c -> {
 					String mtype = c.getMention().getType();
 					String etype = c.getMeaning().getType();
@@ -287,7 +301,7 @@ public class MatrixFactory
 		int r = m.length;
 		int c = m[0].length;
 
-		IntStream.range(0, r).forEach(i ->
+		IntStream.range(0, r).parallel().forEach(i ->
 		{
 			double accum = Arrays.stream(m[i]).sum();
 			IntStream.range(0, c).forEach(j -> m[i][j] = m[i][j] / accum);

@@ -65,6 +65,7 @@ public class UIMAWrapper
 	private final JCas doc;
 	private static final int ngram_size = 3;
 	private static final String concept_extraction_url = "http://server01-taln.s.upf.edu:8000";
+	private static final String noun_pos_tag = "NN"; // PTB
 	private final static Logger log = LogManager.getLogger();
 
 	public UIMAWrapper(String text, ULocale language, Pipeline pipeline)
@@ -186,6 +187,16 @@ public class UIMAWrapper
 				.collect(toList());
 	}
 
+	public List<List<String>> getNominalTokens()
+	{
+		return JCasUtil.select(doc, Sentence.class).stream()
+				.map(s -> JCasUtil.selectCovered(Token.class, s).stream()
+						.filter(t -> t.getPos().getPosValue().startsWith(noun_pos_tag))
+						.map(Token::getText)
+						.collect(toList()))
+				.collect(toList());
+	}
+
 	public List<List<Set<Candidate>>> getCandidates(MeaningDictionary bn)
 	{
 		log.info("Collecting candidates");
@@ -200,7 +211,7 @@ public class UIMAWrapper
 									.map(Token::getLemma)
 									.map(Lemma::getValue)
 									.collect(Collectors.joining(" "));
-							final String pos = surface_tokens.size() == 1 ? surface_tokens.get(0).getPos().getPosValue() : "NN";
+							final String pos = surface_tokens.size() == 1 ? surface_tokens.get(0).getPos().getPosValue() : noun_pos_tag;
 							final List<Token> sentence_tokens = JCasUtil.selectCovered(Token.class, sentence);
 							final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
 							final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1)) + 1;
@@ -232,7 +243,7 @@ public class UIMAWrapper
 									.map(Token::getLemma)
 									.map(Lemma::getValue)
 									.collect(Collectors.joining(" "));
-							final String pos = surface_tokens.size() == 1 ? surface_tokens.get(0).getPos().getPosValue() : "NN";
+							final String pos = surface_tokens.size() == 1 ? surface_tokens.get(0).getPos().getPosValue() : noun_pos_tag;
 							final List<Token> sentence_tokens = JCasUtil.selectCovered(Token.class, sentence);
 							final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
 							final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1));

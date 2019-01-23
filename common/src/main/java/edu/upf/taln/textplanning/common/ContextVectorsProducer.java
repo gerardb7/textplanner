@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import edu.upf.taln.textplanning.common.MeaningDictionary.Info;
 import edu.upf.taln.textplanning.core.similarity.vectors.SIFVectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
+import edu.upf.taln.textplanning.core.utils.DebugUtils.ThreadReporter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -96,14 +97,11 @@ public class ContextVectorsProducer
 		log.info("Reading idf scores");
 		final Stopwatch timer = Stopwatch.createStarted();
 		AtomicLong counter = new AtomicLong(0);
-		AtomicBoolean reported = new AtomicBoolean(false);
+		ThreadReporter reporter = new ThreadReporter(log);
 
 		Map<String, Double> weights = Arrays.stream(FileUtils.readTextFile(weights_file).split("\n"))
 				.parallel()
-				.peek(l -> {
-					if (!reported.getAndSet(true))
-						log.info("Number of threads: " + Thread.activeCount());
-				})
+				.peek(l -> reporter.report()) // report number of threads
 				.map(l -> l.split(" "))
 				.peek(id -> {
 					long i = counter.incrementAndGet();

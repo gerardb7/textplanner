@@ -2,20 +2,38 @@ package edu.upf.taln.textplanning.core.utils;
 
 import Jama.Matrix;
 import edu.upf.taln.textplanning.core.structures.*;
-import edu.upf.taln.textplanning.core.structures.Candidate;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.Logger;
 
 import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.joining;
 
 public class DebugUtils
 {
+	public static class ThreadReporter
+	{
+		private final AtomicBoolean reported = new AtomicBoolean(false);
+		private final Logger log;
+
+		public ThreadReporter(Logger log)
+		{
+			this.log = log;
+		}
+
+		public void report()
+		{
+			if (!reported.getAndSet(true))
+				log.info("Number of threads: " + Thread.activeCount());
+		}
+	}
+
 	private final static NumberFormat format = NumberFormat.getInstance();
 	static {
 		format.setRoundingMode(RoundingMode.UP);

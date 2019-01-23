@@ -2,13 +2,13 @@ package edu.upf.taln.textplanning.common;
 
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
+import edu.upf.taln.textplanning.core.utils.DebugUtils.ThreadReporter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.StreamSupport;
 
@@ -25,7 +25,7 @@ public class BabelNetMeaningsCollector
 		log.info("Collecting meanings with " +  Runtime.getRuntime().availableProcessors() + " cores available");
 		final Stopwatch timer = Stopwatch.createStarted();
 		AtomicLong counter = new AtomicLong(0);
-		AtomicBoolean reported = new AtomicBoolean(false);
+		ThreadReporter reporter = new ThreadReporter(log);
 
 		List<MeaningDictionary.Info> meanings;
 
@@ -37,11 +37,7 @@ public class BabelNetMeaningsCollector
 			Iterable<MeaningDictionary.Info> iterable = () -> bn.infoIterator(language);
 			meanings = StreamSupport.stream(iterable.spliterator(), true)
 					.parallel()
-					.peek(l ->
-					{
-						if (!reported.getAndSet(true))
-							log.info("Number of threads: " + Thread.activeCount());
-					})
+					.peek(l -> reporter.report()) // report number of threads
 					.peek(id -> total_ids.incrementAndGet())
 					.filter(i -> glosses_only ? !i.glosses.isEmpty() : !i.glosses.isEmpty() || !i.lemmas.isEmpty())
 					.peek(id ->

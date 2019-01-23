@@ -32,16 +32,20 @@ public class Context
 	{
 		log.info("Setting up vectors for context-based weighting of meanings");
 		final Stopwatch timer = Stopwatch.createStarted();
+
+		log.info("Retrieving vector for meanings");
 		sif = all_mention_context_vectors.getFunction();
 		meanings = contents.stream()
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
 				.collect(Collectors.toList());
+
 		meaning_context_vectors = meanings.stream()
 				.map(c -> all_meaning_context_vectors.getVector(c).orElse(all_mention_context_vectors.getUnknownVector()))
 				.collect(toList());
 
 		// Calculate context vectors just once per each context
+		log.info("Calculating vector for contexts");
 		final Map<String, List<String>> contexts = meanings.stream()
 				.collect(Collectors.toMap(m -> m, context_function, (c1, c2) -> c1));
 		final Map<List<String>, double[]> vectors = contexts.values().stream()

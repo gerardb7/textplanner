@@ -23,6 +23,7 @@ public interface Vectors
 				.orElse(new Random().doubles(getNumDimensions()).toArray());
 	}
 
+	// Text_Glove -> with header containing num dimensions, Text_Word2Vec -> without header
 	enum VectorType {Text_Glove, Text_Word2vec, Binary_Word2vec, Binary_RandomAccess}
 
 	static Vectors get(Path location, VectorType type, int num_dimensions) throws Exception

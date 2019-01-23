@@ -1,151 +1,124 @@
 package edu.upf.taln.textplanning.common;
 
-import edu.upf.taln.textplanning.core.TextPlanner;
-import edu.upf.taln.textplanning.core.similarity.VectorsCosineSimilarity;
-import edu.upf.taln.textplanning.core.similarity.vectors.SIFVectors;
-import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
 import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
-import edu.upf.taln.textplanning.core.weighting.Context;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
-import java.util.stream.IntStream;
+import java.util.stream.Collectors;
 
-import static edu.upf.taln.textplanning.common.FileUtils.getFilesInFolder;
-import static edu.upf.taln.textplanning.common.FileUtils.readTextFile;
+import static edu.upf.taln.textplanning.common.FileUtils.deserializeMeanings;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
 public class Evaluation
 {
-	private static class AlternativeMeanings
+	public static class AlternativeMeanings
 	{
 		private final Set<String> alternatives = new HashSet<>();
 		private final String text; // covered text or label
+		private final double rank;
 
-		private AlternativeMeanings(Collection<String> meanings, String text)
+		private AlternativeMeanings(Collection<String> meanings, String text, double rank)
 		{
 			alternatives.addAll(meanings);
 			this.text = text;
+			this.rank = rank;
 		}
 
 		private static boolean match(AlternativeMeanings a1, AlternativeMeanings a2)
 		{
-			return Collections.disjoint(a1.alternatives, a2.alternatives);
+			return !Collections.disjoint(a1.alternatives, a2.alternatives);
 		}
 	}
 
 	private final static Logger log = LogManager.getLogger();
 
 
-	private static List<List<List<Map<Candidate, Double>>>> deserializeCandidates(File[] files)
+	public static void evaluate(List<Path> ranked_candidate_files, List<Path> gold_files)
 	{
-		List<List<List<Map<Candidate, Double>>>> candidates = new ArrayList<>();
-		Arrays.stream(files).forEach(f ->
-		{
-			try
-			{
-				@SuppressWarnings("unchecked")
-				List<List<Map<Candidate, Double>>> c = (List<List<Map<Candidate, Double>>>)Serializer.deserialize(f.toPath());
-				candidates.add(c);
-			}
-			catch (Exception e)
-			{
-				log.error("Cannot store candidates for file " + f);
-			}
-		});
-
-		return candidates;
-	}
-
-	private static List<List<List<Set<Pair<String, String>>>>> readGoldMeanings(File[] gold_files)
-	{
-		return Arrays.stream(gold_files)
-				.map(File::toPath)
-				.map(FileUtils::readTextFile)
-				.map(text ->
-				{
-					final String regex = "(bn:\\d+[r|a|v|n](\\|bn:\\d+[r|a|v|n])*)-\"([^\"]+)\"";
-					final Pattern pattern = Pattern.compile(regex);
-					final Predicate<String> is_meanings = Pattern.compile("^@bn:.*").asPredicate();
-
-					return Pattern.compile("\n+").splitAsStream(text)
-							.filter(is_meanings)
-							.map(pattern::matcher)
-							.map(m ->
-							{
-								final List<Set<Pair<String, String>>> meanings = new ArrayList<>();
-								while (m.find())
-								{
-									final String meanings_string = m.group(1);
-									final String[] meanings_parts = meanings_string.split("\\|");
-									final Set<String> alternatives = Arrays.stream(meanings_parts)
-											.map(p -> p.startsWith("\"") && p.endsWith("\"") ? p.substring(1, p.length() - 1) : p)
-											.collect(toSet());
-									final String covered_text = m.group(3);
-									meanings.add(alternatives.stream()
-											.map(a -> Pair.of(a, covered_text))
-											.collect(toSet()));
-								}
-
-								return meanings;
-							})
-							.collect(toList());
-				})
-				.collect(toList());
-	}
-
-	public static void evaluate(List<List<Pair<String, String>>> system, List<String> gold)
-	{
-		final List<List<AlternativeMeanings>> gold_meanings = gold.stream()
-				.map(Evaluation::readGoldMeanings)
-				.flatMap(List::stream)
-				.collect(toList());
-		final List<List<AlternativeMeanings>> system_meanings = system.stream()
-				.map(l -> l.stream()
-						.map(p -> new AlternativeMeanings(Collections.singletonList(p.getKey()), p.getValue()))
+		final List<List<Candidate>> ranked_candidates = ranked_candidate_files.stream()
+				.map(system_file -> deserializeMeanings(system_file).stream()
+						.flatMap(l -> l.stream()
+								.flatMap(Set::stream))
 						.collect(toList()))
 				.collect(toList());
+		final List<String> gold_contents = gold_files.stream()
+				.map(FileUtils::readTextFile)
+				.collect(toList());
+
+		// Store evaluation results here
+		List<Pair<Double, Double>> prec_recall_list = new ArrayList<>();
+		List<Double> average_ranks = new ArrayList<>();
+
+		// Iterate candidate and gold files
+		for (int i=0; i < gold_files.size(); ++i)
 		{
-			final List<AlternativeMeanings> one_set_gold = gold_meanings.stream()
-					.flatMap(Collection::stream)
-					.collect(toList());
-			final List<AlternativeMeanings> one_set_system = system_meanings.stream()
-					.flatMap(Collection::stream)
+			// Read list of candidate and gold meanings
+			final List<Candidate> candidate_set = ranked_candidates.get(i);
+			final String gold_set = gold_contents.get(i);
+			final List<AlternativeMeanings> gold_meanings = readGoldMeanings(gold_set).stream().flatMap(List::stream).collect(toList());
+			final List<AlternativeMeanings> sorted_candidates = candidate_set.stream()
+					.map(Candidate::getMeaning)
+					.distinct() // no duplicates!
+					.sorted(Comparator.comparingDouble(Meaning::getWeight).reversed()) // decreasing order
+					.map(m -> new AlternativeMeanings(Collections.singletonList(m.getReference()), m.toString(), m.getWeight()))
 					.collect(toList());
 
-			final Pair<Double, Double> prec_recall = calculatePrecisionAndRecall(one_set_gold, one_set_system);
+			// Calculate prec and recall using top system meanings
+			final List<AlternativeMeanings> system_meanings = sorted_candidates.subList(0, Math.min(sorted_candidates.size(), gold_meanings.size()));
+			final Pair<Double, Double> prec_recall = calculatePrecisionAndRecall(gold_meanings, system_meanings);
 			final double precision = prec_recall.getLeft();
 			final double recall = prec_recall.getRight();
-			final double fscore = 2 * precision * recall / (precision + recall);
-			log.info("One set per summary evaluation: p = " + DebugUtils.printDouble(precision) +
+			final double fscore = (precision + recall > 0) ? 2 * precision * recall / (precision + recall) : 0.0;
+			log.info("Stats for " + gold_files.get(i).getFileName()+ ": p = " + DebugUtils.printDouble(precision) +
 					" r = " + DebugUtils.printDouble(recall) + " f = " + DebugUtils.printDouble(fscore));
+			prec_recall_list.add(prec_recall);
+
+			// Get list of system meanings sorted descendingly by rank
+			final List<String> sorted_system_meanings = sorted_candidates.stream()
+					.map(c -> c.alternatives.iterator().next())
+					.collect(toList());
+
+
+			Function<String, Integer> get_rank = (m) -> sorted_system_meanings.contains(m) ? sorted_system_meanings.indexOf(m) : sorted_system_meanings.size();
+			final String ranks_string = gold_meanings.stream()
+					.map(gold_meaning -> gold_meaning.alternatives.stream()
+							.map(a -> a + " " + sorted_system_meanings.indexOf(a))
+							.collect(Collectors.joining("|", "[", "]")))
+					.collect(Collectors.joining(", "));
+
+			final List<String> max_gold_meanings = gold_meanings.stream()
+					.map(am -> am.alternatives.stream()
+							.min(Comparator.comparingInt(get_rank::apply))) // choose alternative appearing first in ranked list
+					.filter(Optional::isPresent)
+					.map(Optional::get)
+					.collect(toList());
+			final double avg_rank = max_gold_meanings.stream()
+					.mapToInt(get_rank::apply)
+					.mapToDouble(r -> r / (double)sorted_system_meanings.size())
+					.average().orElse(0.0);
+			log.info("Average rank = " + DebugUtils.printDouble(avg_rank) + ". Ranks = " + ranks_string + " out of " + sorted_candidates.size());
+			average_ranks.add(avg_rank);
 		}
 
-		{
-			final List<Pair<Double, Double>> prec_recall_list = IntStream.range(0, gold_meanings.size())
-					.mapToObj(i -> Pair.of(gold_meanings.get(i), system_meanings.get(i)))
-					.map(p -> calculatePrecisionAndRecall(p.getLeft(), p.getRight()))
-					.collect(toList());
-			final double precision = prec_recall_list.stream()
-					.mapToDouble(Pair::getLeft)
-					.average().orElse(0.0);
-			final double recall = prec_recall_list.stream()
-					.mapToDouble(Pair::getRight)
-					.average().orElse(0.0);
-			final double fscore = 2 * precision * recall / (precision + recall);
-			log.info("One set per sentence evaluation: p = " + DebugUtils.printDouble(precision) +
-					" r = " + DebugUtils.printDouble(recall) + " f = " + DebugUtils.printDouble(fscore));
-		}
+		final double precision = prec_recall_list.stream()
+				.mapToDouble(Pair::getLeft)
+				.average().orElse(0.0);
+		final double recall = prec_recall_list.stream()
+				.mapToDouble(Pair::getRight)
+				.average().orElse(0.0);
+		final double fscore = (precision + recall > 0) ? 2 * precision * recall / (precision + recall) : 0.0;
+		log.info("Average stats: p = " + DebugUtils.printDouble(precision) +
+				" r = " + DebugUtils.printDouble(recall) + " f = " + DebugUtils.printDouble(fscore));
+		log.info("Total average rank = " + DebugUtils.printDouble(average_ranks.stream().mapToDouble(d -> d).average().orElse(0.0)));
 	}
 
 	private static List<List<AlternativeMeanings>> readGoldMeanings(String text)
@@ -168,7 +141,7 @@ public class Evaluation
 								.map(p -> p.startsWith("\"") && p.endsWith("\"") ? p.substring(1, p.length() - 1) : p)
 								.collect(toSet());
 						final String covered_text = m.group(2);
-						meanings.add(new AlternativeMeanings(alternatives, covered_text));
+						meanings.add(new AlternativeMeanings(alternatives, covered_text, 0.0));
 					}
 
 					return meanings;

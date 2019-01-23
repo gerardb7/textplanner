@@ -52,7 +52,7 @@
 
     <profiles>
         <profile>
-            <id>collect</id>
+            <id>common</id>
             <build>
                 <plugins>
                     <plugin>
