@@ -78,8 +78,9 @@ public class Evaluation
 			final double precision = prec_recall.getLeft();
 			final double recall = prec_recall.getRight();
 			final double fscore = (precision + recall > 0) ? 2 * precision * recall / (precision + recall) : 0.0;
-			log.info("Stats for " + gold_files.get(i).getFileName()+ ": p = " + DebugUtils.printDouble(precision) +
-					" r = " + DebugUtils.printDouble(recall) + " f = " + DebugUtils.printDouble(fscore));
+			log.info("Stats for " + gold_files.get(i).getFileName());
+			log.info("p = " + DebugUtils.printDouble(precision) + 	" r = " + DebugUtils.printDouble(recall) +
+					" f = " + DebugUtils.printDouble(fscore));
 			prec_recall_list.add(prec_recall);
 
 			// Get list of system meanings sorted descendingly by rank
@@ -89,7 +90,13 @@ public class Evaluation
 
 			final String ranks_string = gold_meanings.stream()
 					.map(gold_meaning -> gold_meaning.alternatives.stream()
-							.map(a -> a + " " + sorted_system_meanings.indexOf(a))
+							.map(a -> {
+								final int rank = sorted_system_meanings.indexOf(a);
+								if (rank != -1)
+									return sorted_candidates.get(rank).text.replaceAll("-[^:]+:EN:", "-") + " " + rank;
+								else
+									return a + "-" + gold_meaning.text + " " + rank;
+							})
 							.collect(Collectors.joining("|", "[", "]")))
 					.collect(Collectors.joining(", "));
 
@@ -105,7 +112,8 @@ public class Evaluation
 					.mapToInt(sorted_system_meanings::indexOf)
 					.mapToDouble(r -> r / (double)sorted_system_meanings.size())
 					.average().orElse(0.0);
-			log.info("Average rank = " + DebugUtils.printDouble(avg_rank) + ". Ranks = " + ranks_string + " out of " + sorted_candidates.size());
+			log.info("Average rank = " + DebugUtils.printDouble(avg_rank) + " (" + + sorted_candidates.size() + " candidates)");
+			log.info("Ranks = " + ranks_string + "\n");
 			average_ranks.add(avg_rank);
 		}
 
@@ -123,7 +131,7 @@ public class Evaluation
 
 	private static List<List<AlternativeMeanings>> readGoldMeanings(String text)
 	{
-		final String regex = "(bn:\\d+[r|a|v|n](\\|bn:\\d+[r|a|v|n])*)-\"([^\"]+)\"";
+		final String regex = "(bn:\\d+[r|a|v|n]\\|bn:\\d+[r|a|v|n]*)-\"([^\"]+)\"";
 		final Pattern pattern = Pattern.compile(regex);
 		final Predicate<String> is_meanings = pattern.asPredicate();
 
