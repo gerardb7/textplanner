@@ -44,7 +44,8 @@ public class Driver
 	private static final String get_system_command = "system";
 	private static final String get_gold_candidates_command = "gold_candidates";
 	private static final String evaluate_command = "evaluate";
-	//	private static final String visualize_command = "visualize";
+	private static final String semeval_command = "semeval";
+
 	private static final ULocale language = ULocale.ENGLISH;
 	private final static Logger log = LogManager.getLogger();
 
@@ -141,8 +142,8 @@ public class Driver
 		final Double default_weight = Collections.min(weights.values());
 		final SIFVectors sif_vectors = new SIFVectors(word_vectors, w -> weights.getOrDefault(w, default_weight));
 		final Vectors sense_context_vectors = Vectors.get(sense_context_vectors_path, sense_context_vectors_type, 300);
-		final Vectors sense_vectors = Vectors.get(sense_vectors_path, sense_vectors_type, 300);
-		final VectorsCosineSimilarity sim = new VectorsCosineSimilarity(sense_vectors);
+//		final Vectors sense_vectors = Vectors.get(sense_vectors_path, sense_vectors_type, 300);
+//		final VectorsCosineSimilarity sim = new VectorsCosineSimilarity(sense_vectors);
 
 		log.info("Processing text files");
 		IntStream.range(0, text_files.size())
@@ -162,13 +163,16 @@ public class Driver
 							.collect(toList());
 
 					final Context context_weighter = new Context(candidates, sense_context_vectors, sif_vectors, w -> context);
-					TextPlanner.rankMeanings(candidates, context_weighter::weight, sim::of, new TextPlanner.Options());
+//					TextPlanner.rankMeanings(candidates, context_weighter::weight, sim::of, new TextPlanner.Options());
+					candidates.stream()
+							.map(Candidate::getMeaning)
+							.forEach(m -> m.setWeight(context_weighter.weight(m.getReference())));
 
-					final String stats = print_stats(candidates, context_weighter);
-					final Path stats_file = createOutputPath(file, output_folder, text_suffix, stats_suffix);
-					log.info("Writing stats to " + stats_file);
-					if (stats_file != null)
-						FileUtils.writeTextToFile(stats_file, stats);
+//					final String stats = print_stats(candidates, context_weighter);
+//					final Path stats_file = createOutputPath(file, output_folder, text_suffix, stats_suffix);
+//					log.info("Writing stats to " + stats_file);
+//					if (stats_file != null)
+//						FileUtils.writeTextToFile(stats_file, stats);
 
 					// Let's group and sort the plain list of candidates by sentence and offsets.
 					final List<List<Set<Candidate>>> grouped_candidates = candidates.stream()
@@ -243,142 +247,6 @@ public class Driver
 					FileUtils.serializeMeanings(candidates, out_file);
 				});
 	}
-
-//	private static void visualize(Path gold_folder, Path gold_candidates_folder, Path system_folder, Path candidates_folder,
-//	                              Path freqs_file, Path vectors_path)
-//	{
-//		log.info("Loading files");
-//		final File[] gold_files = getFilesInFolder(gold_folder, gold_suffix);
-//		final File[] gold_candidates_files = getFilesInFolder(gold_candidates_folder, meanings_suffix);
-//		final File[] system_files = getFilesInFolder(system_folder, meanings_suffix);
-//		final File[] candidates_files = getFilesInFolder(candidates_folder, meanings_suffix);
-//
-//		if (gold_files.length != system_files.length)
-//		{
-//			log.error("Mismatch between number of text and meanings files");
-//			System.exit(1);
-//		}
-//
-//		final List<List<Pair<String, String>>> all_gold_meanings = readGoldMeanings(gold_files).stream()
-//				.map(l -> l.stream()
-//						.flatMap(List::stream)
-//						.flatMap(Set::stream)
-//						.distinct()
-//						.collect(toList()))
-//				.collect(toList());
-//
-//		final List<List<Pair<String, String>>> all_gold_candidates = deserializeMeanings(gold_candidates_files).stream()
-//				.map(l -> l.stream()
-//						.flatMap(List::stream)
-//						.flatMap(m -> m.keySet().stream())
-//						.map(Candidate::getMeaning)
-//						.map(m -> Pair.of(m.getReference(), m.toString()))
-//						.distinct()
-//						.collect(toList()))
-//				.collect(toList());
-//
-//		final List<List<Pair<String, String>>> all_system_meanings = deserializeMeanings(system_files).stream()
-//				.map(l -> l.stream()
-//						.flatMap(List::stream)
-//						.flatMap(m -> m.keySet().stream())
-//						.map(Candidate::getMeaning)
-//						.map(m -> Pair.of(m.getReference(), m.toString()))
-//						.distinct()
-//						.collect(toList()))
-//				.collect(toList());
-//
-//		final List<List<Pair<String, String>>> all_candidate_meanings = deserializeMeanings(candidates_files).stream()
-//				.map(l -> l.stream()
-//						.flatMap(List::stream)
-//						.flatMap(m -> m.keySet().stream())
-//						.map(Candidate::getMeaning)
-//						.map(m -> Pair.of(m.getReference(), m.toString()))
-//						.distinct()
-//						.collect(toList()))
-//				.collect(toList());
-//
-//		log.info("Visualizing similarity matrices");
-//		IntStream.range(0, gold_files.length).forEach(i -> {
-//			final List<Pair<String, String>> gold_meanings = all_gold_meanings.get(i);
-//			final List<Pair<String, String>> gold_candidates = all_gold_candidates.get(i);
-////			final List<Pair<String, String>> system_meanings = all_system_meanings.get(i);
-//			final List<Pair<String, String>> candidate_meanings = all_candidate_meanings.get(i);
-//			log.info("Creating matrix for file "+ gold_files[i].getName() + " with size " + candidate_meanings.size() + gold_meanings.size());
-//
-////			List<Pair<String, String>> candidates_with_system = new ArrayList<>(candidate_meanings);
-////			candidates_with_system.removeAll(system_meanings);
-////			candidates_with_system.addAll(system_meanings);
-////
-////			final List<String> cws_meanings = candidates_with_system.stream()
-////					.map(Pair::getLeft)
-////					.collect(Collectors.toList());
-////			final List<String> cws_labels = candidates_with_system.stream()
-////					.map(Pair::getRight)
-////					.collect(Collectors.toList());
-//			VectorsCosineSimilarity sim;
-//			try
-//			{
-//				RandomAccessVectors vectors = new RandomAccessVectors(vectors_path, 300);
-//				sim = new VectorsCosineSimilarity(vectors);
-//			}
-//			catch (Exception e)
-//			{
-//				throw new RuntimeException(e);
-//			}
-////			VisualizationUtils.visualizeSimilarityMatrix("Candidate and system meanings", cws_meanings, cws_labels, sim);
-//
-//			List<Pair<String, String>> gold_and_candidates = new ArrayList<>(gold_meanings);
-//			gold_candidates.stream()
-//					.filter(p -> !gold_and_candidates.contains(p))
-//					.map(p -> Pair.of(p.getLeft(), "cand-" + p.getRight()))
-//					.forEach(gold_and_candidates::add);
-//
-//			final List<String> cwg_meanings = gold_and_candidates.stream()
-//					.map(Pair::getLeft)
-//					.collect(Collectors.toList());
-//			final List<String> cwg_labels = gold_and_candidates.stream()
-//					.map(Pair::getRight)
-//					.collect(Collectors.toList());
-//			VisualizationUtils.visualizeSimilarityMatrix("Gold meanings and candidates", cwg_meanings, cwg_labels, sim::of);
-//		});
-//	}
-
-//	private static List<List<List<Set<Pair<String, String>>>>> readGoldMeanings(File[] gold_files)
-//	{
-//		return Arrays.stream(gold_files)
-//				.map(File::toPath)
-//				.map(FileUtils::readTextFile)
-//				.map(text ->
-//				{
-//					final String regex = "(bn:\\d+[r|a|v|n](\\|bn:\\d+[r|a|v|n])*)-\"([^\"]+)\"";
-//					final Pattern pattern = Pattern.compile(regex);
-//					final Predicate<String> is_meanings = Pattern.compile("^@bn:.*").asPredicate();
-//
-//					return Pattern.compile("\n+").splitAsStream(text)
-//							.filter(is_meanings)
-//							.map(pattern::matcher)
-//							.map(m ->
-//							{
-//								final List<Set<Pair<String, String>>> meanings = new ArrayList<>();
-//								while (m.find())
-//								{
-//									final String meanings_string = m.group(1);
-//									final String[] meanings_parts = meanings_string.split("\\|");
-//									final Set<String> alternatives = Arrays.stream(meanings_parts)
-//											.map(p -> p.startsWith("\"") && p.endsWith("\"") ? p.substring(1, p.length() - 1) : p)
-//											.collect(toSet());
-//									final String covered_text = m.group(3);
-//									meanings.add(alternatives.stream()
-//											.map(a -> Pair.of(a, covered_text))
-//											.collect(toSet()));
-//								}
-//
-//								return meanings;
-//							})
-//							.collect(toList());
-//				})
-//				.collect(toList());
-//	}
 
 	private static void evaluate(Path system_folder, Path gold_folder)
 	{
@@ -504,6 +372,45 @@ public class Driver
 		private Path gold;
 	}
 
+	@SuppressWarnings("unused")
+	@Parameters(commandDescription = "Run SemEval WSD/EL evaluation")
+	private static class SemEvalEvaluationCommand
+	{
+		@Parameter(names = {"-g", "-gold"}, description = "Path to gold file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path gold_file;
+		@Parameter(names = {"-i", "-input"}, description = "Path to XML input file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path input_file;
+		@Parameter(names = {"-b", "-babelconfig"}, description = "Path to BabelNet configuration folder", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path babelnet;
+		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
+		private Path output;
+		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path freqsFile;
+		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path word_vectors_path;
+		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1,
+				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
+		private VectorType word_vector_type = VectorType.Binary_RandomAccess;
+		@Parameter(names = {"-cv", "-context_vectors"}, description = "Path to sense context vectors", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path context_vectors_path;
+		@Parameter(names = {"-ct", "-context_vectors_type"}, description = "Type of sense context vectors", arity = 1,
+				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
+		private VectorType context_vector_type = VectorType.Binary_RandomAccess;
+		@Parameter(names = {"-sv", "-sense_vectors"}, description = "Path to sense vectors", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path sense_vectors_path;
+		@Parameter(names = {"-st", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1,
+				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
+		private VectorType sense_vector_type = VectorType.Binary_RandomAccess;
+	}
+
 //	@SuppressWarnings("unused")
 //	@Parameters(commandDescription = "Run empirical study from serialized file")
 //	private static class VisualizeVectorsCommand
@@ -540,7 +447,7 @@ public class Driver
 		GetSystemMeaningsCommand system = new GetSystemMeaningsCommand();
 		GetGoldCandidatesCommand gold_candidates = new GetGoldCandidatesCommand();
 		RunEvaluationCommand evaluate = new RunEvaluationCommand();
-//		VisualizeVectorsCommand visualize = new VisualizeVectorsCommand();
+		SemEvalEvaluationCommand semEval = new SemEvalEvaluationCommand();
 
 		JCommander jc = new JCommander();
 		jc.addCommand(get_candidates_command, candidates);
@@ -548,7 +455,7 @@ public class Driver
 		jc.addCommand(get_system_command, system);
 		jc.addCommand(get_gold_candidates_command, gold_candidates);
 		jc.addCommand(evaluate_command, evaluate);
-//		jc.addCommand(visualize_command, visualize);
+		jc.addCommand(semeval_command, semEval);
 		jc.parse(args);
 
 		DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
@@ -577,9 +484,12 @@ public class Driver
 			case evaluate_command:
 				evaluate(evaluate.system, evaluate.gold);
 				break;
-//			case visualize_command:
-//				visualize(visualize.gold, visualize.gold_candidates, visualize.system, visualize.candidates, visualize.freqsFile, visualize.vectorsPath);
-//				break;
+			case semeval_command:
+				SemEvalEvaluation.evaluate(semEval.gold_file, semEval.input_file, semEval.babelnet, semEval.output, semEval.freqsFile,
+						semEval.word_vectors_path, semEval.word_vector_type,
+						semEval.context_vectors_path, semEval.context_vector_type,
+						semEval.sense_vectors_path, semEval.sense_vector_type);
+				break;
 			default:
 				jc.usage();
 				break;
