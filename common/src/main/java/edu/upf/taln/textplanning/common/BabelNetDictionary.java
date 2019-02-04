@@ -141,6 +141,8 @@ public class BabelNetDictionary implements MeaningDictionary
 		try
 		{
 			BabelPOS bnPOS = BN_POS_EN.get(pos);
+//			if (bnPOS == null)
+//				log.warn("Cannot recognize " + pos + " POS tag");
 			num_queries.getAndIncrement();
 			return bn.getSynsets(form, Language.fromISO(language.toLanguageTag()), bnPOS).stream()
 					.map(BabelSynset::getId)

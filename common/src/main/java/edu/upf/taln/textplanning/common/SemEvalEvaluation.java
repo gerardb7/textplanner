@@ -1,8 +1,6 @@
 package edu.upf.taln.textplanning.common;
 
 import com.ibm.icu.util.ULocale;
-import edu.upf.taln.textplanning.core.similarity.vectors.SIFVectors;
-import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
@@ -73,10 +71,7 @@ public class SemEvalEvaluation
 	private static final ULocale language = ULocale.ENGLISH;
 	private final static Logger log = LogManager.getLogger();
 
-	public static void evaluate(Path gold_file, Path xml_file, Path babel_config, Path output_path, Path idf_file,
-	                            Path word_vectors_path, Vectors.VectorType word_vectors_type,
-	                            Path sense_context_vectors_path, Vectors.VectorType sense_context_vectors_type,
-	                            Path sense_vectors_path, Vectors.VectorType sense_vectors_type) throws Exception
+	public static void evaluate(Path gold_file, Path xml_file, Path babel_config, Path output_path, ResourcesFactory resources) throws Exception
 	{
 		// parse xml
 		log.info("Parsing XML file");
@@ -134,16 +129,6 @@ public class SemEvalEvaluation
 					.collect(toList()));
 		};
 
-		// Load ranking resources
-		log.info("Loading resources for ranking");
-		final Vectors word_vectors = Vectors.get(word_vectors_path, word_vectors_type, 300);
-		final Map<String, Double> weights = ContextVectorsProducer.getWeights(idf_file);
-		final Double default_weight = Collections.min(weights.values());
-		final SIFVectors sif_vectors = new SIFVectors(word_vectors, w -> weights.getOrDefault(w, default_weight));
-		final Vectors sense_context_vectors = Vectors.get(sense_context_vectors_path, sense_context_vectors_type, 300);
-//		final Vectors sense_vectors = Vectors.get(sense_vectors_path, sense_vectors_type, 300);
-//		final VectorsCosineSimilarity sim = new VectorsCosineSimilarity(sense_vectors);
-
 		// Rank and serialize candidate meanings
 		log.info("Ranking meanings");
 		for (int i = 0; i < corpus.texts.size(); ++i)
@@ -154,13 +139,14 @@ public class SemEvalEvaluation
 					.distinct()
 					.collect(toList());
 			final Text document = corpus.texts.get(i);
-			log.info("\tranking " + meanings.size() + " candidates for document " + document.id);
+			log.info("\tRanking " + meanings.size() + " candidates for document " + document.id);
 			final List<String> context = document.sentences.stream()
 					.flatMap(s -> s.tokens.stream()
 							.map(t -> t.wf))
 					.collect(toList());
 
-			final Context context_weighter = new Context(candidates_i, sense_context_vectors, sif_vectors, w -> context);
+			final Context context_weighter = new Context(candidates_i, resources.getSenseContextVectors(),
+					resources.getSentenceVectors(), w -> context, resources.getSimilarityFunction());
 //					TextPlanner.rankMeanings(candidates, context_weighter::weight, sim::of, new TextPlanner.Options());
 			meanings.stream()
 					.forEach(m -> m.setWeight(context_weighter.weight(m.getReference())));
@@ -189,7 +175,6 @@ public class SemEvalEvaluation
 				.collect(groupingBy(c -> c.getMention(),
 						maxBy(Comparator.comparingDouble(c -> c.getMeaning().getWeight()))));
 
-
 		String results = top_candidates.values().stream()
 				.filter(Optional::isPresent)
 				.map(Optional::get)
@@ -202,16 +187,16 @@ public class SemEvalEvaluation
 					final Sentence sentence = document.sentences.stream()
 							.filter(s -> s.id.equals(sentenceId))
 							.findFirst().orElseThrow(() -> new RuntimeException());
-					return IntStream.range(mention.getSpan().getLeft(), mention.getSpan().getRight())
-							.mapToObj(sentence.tokens::get)
-							.map(t -> t.id)
-							.map(id -> id + "\t" + c.getMeaning().getReference())
-							.collect(Collectors.joining("\n"));
+					final Token first_token = sentence.tokens.get(mention.getSpan().getLeft());
+					final Token last_token = sentence.tokens.get(mention.getSpan().getRight() - 1);
+
+					return first_token.id + "\t" + last_token.id + "\t" + c.getMeaning().getReference();
 				})
 				.collect(Collectors.joining("\n"));
 
 		final Path results_file = FileUtils.createOutputPath(xml_file, output_path, "xml", "results");
 		FileUtils.writeTextToFile(results_file, results);
+		log.info("Results file written to " + results_file);
 		Scorer.main(new String[]{gold_file.toString(), results_file.toString()});
 	}
 }

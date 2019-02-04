@@ -18,7 +18,8 @@ import edu.upf.taln.textplanning.common.MeaningDictionary;
 import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.ranking.GraphRanking;
 import edu.upf.taln.textplanning.core.ranking.MatrixFactory;
-import edu.upf.taln.textplanning.core.similarity.VectorsCosineSimilarity;
+import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
+import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
@@ -390,7 +391,8 @@ public class EmpiricalStudy
 //		weighting_functions.add(new TFIDF(freqs, r -> true));
 //		weighting_functions.add(new NumberForms(r -> true));
 		final Vectors vectors = Vectors.get(vectors_path, vectorType, 300);
-		final VectorsCosineSimilarity sim = new VectorsCosineSimilarity(vectors);
+		final CosineSimilarity sim_function = new CosineSimilarity();
+		final VectorsSimilarity sim = new VectorsSimilarity(vectors, sim_function);
 
 		Stopwatch gtimer = Stopwatch.createStarted();
 		final CorpusInfo corpus = (CorpusInfo) Serializer.deserialize(input);
@@ -651,7 +653,7 @@ public class EmpiricalStudy
 
 	}
 
-	private static  SimilarityStats getSimilarityStats(Collection<Candidate> candidates, VectorsCosineSimilarity sim,
+	private static  SimilarityStats getSimilarityStats(Collection<Candidate> candidates, VectorsSimilarity sim,
 	                                                   boolean do_pairwise_similarity)
 	{
 		if (candidates.isEmpty())

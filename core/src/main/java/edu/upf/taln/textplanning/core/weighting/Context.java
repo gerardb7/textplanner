@@ -1,8 +1,7 @@
 package edu.upf.taln.textplanning.core.weighting;
 
-import com.easemob.TextualSim;
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.core.similarity.vectors.SIFVectors;
+import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
@@ -12,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -19,22 +19,22 @@ import static java.util.stream.Collectors.toList;
 
 public class Context
 {
-	public final TextualSim sif;
 	public final List<String> meanings;
 	public final List<double[]> meaning_context_vectors;
 	public final List<double[]> mention_context_vectors;
+	public final BiFunction<double[], double[], Double> score_function;
 	private final static Logger log = LogManager.getLogger();
 
 	public Context( Collection<Candidate> contents,
 					Vectors all_meaning_context_vectors,
-	                SIFVectors all_mention_context_vectors,
-	                Function<String, List<String>> context_function)
+	                SentenceVectors all_mention_context_vectors,
+	                Function<String, List<String>> context_function,
+	                BiFunction<double[], double[], Double> score_function)
 	{
 		log.info("Setting up vectors for context-based weighting of meanings");
 		final Stopwatch timer = Stopwatch.createStarted();
 
 		log.info("Retrieving vector for meanings");
-		sif = all_mention_context_vectors.getFunction();
 		meanings = contents.stream()
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
@@ -57,6 +57,8 @@ public class Context
 				.map(contexts::get)
 				.map(vectors::get)
 				.collect(toList());
+
+		this.score_function = score_function;
 		log.info("Set up completed in " + timer.stop());
 	}
 
@@ -65,6 +67,6 @@ public class Context
 		final int i = meanings.indexOf(item);
 		final double[] meaning_context_vector = meaning_context_vectors.get(i);
 		final double[] mention_context_vector = mention_context_vectors.get(i);
-		return sif.score(meaning_context_vector, mention_context_vector);
+		return score_function.apply(meaning_context_vector, mention_context_vector);
 	}
 }

@@ -3,7 +3,8 @@ import edu.upf.taln.textplanning.common.BabelNetDictionary;
 import edu.upf.taln.textplanning.common.MeaningDictionary;
 import edu.upf.taln.textplanning.common.VisualizationUtils;
 import edu.upf.taln.textplanning.core.TextPlanner;
-import edu.upf.taln.textplanning.core.similarity.VectorsCosineSimilarity;
+import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
+import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -130,7 +131,7 @@ public class GraphRankingTest
 		MeaningDictionary bn = new BabelNetDictionary(babel_config_path, false);
 		GloveKeysReader reader = new GloveKeysReader(vectors_path);
 		final Vectors vectors = Vectors.get(vectors_path, Vectors.VectorType.Binary_RandomAccess, 300);
-		final VectorsCosineSimilarity sim = new VectorsCosineSimilarity(vectors);
+		final VectorsSimilarity sim = new VectorsSimilarity(vectors, new CosineSimilarity());
 
 		music.keySet().stream()
 				.filter(s -> !vectors.isDefinedFor(s))

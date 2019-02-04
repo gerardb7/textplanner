@@ -65,38 +65,18 @@
                                 <goals>
                                     <goal>shade</goal>
                                 </goals>
-                                <id>collect-meanings</id>
+                                <id>common-tools</id>
                                 <configuration>
-                                    <finalName>collect-meanings</finalName>
+                                    <finalName>common-tools</finalName>
                                     <transformers>
                                         <transformer
                                                 implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                            <mainClass>edu.upf.taln.textplanning.common.BabelNetMeaningsCollector
+                                            <mainClass>edu.upf.taln.textplanning.common.Driver
                                             </mainClass>
                                         </transformer>
                                     </transformers>
                                     <outputFile>
-                                        ${project.build.directory}/collect-meanings.jar
-                                    </outputFile>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>shade</goal>
-                                </goals>
-                                <id>collect-context-vectors</id>
-                                <configuration>
-                                    <finalName>collect-context-vectors</finalName>
-                                    <transformers>
-                                        <transformer
-                                                implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                            <mainClass>edu.upf.taln.textplanning.common.ContextVectorsProducer
-                                            </mainClass>
-                                        </transformer>
-                                    </transformers>
-                                    <outputFile>
-                                        ${project.build.directory}/collect-context-vectors.jar
+                                        ${project.build.directory}/common-tools.jar
                                     </outputFile>
                                 </configuration>
                             </execution>

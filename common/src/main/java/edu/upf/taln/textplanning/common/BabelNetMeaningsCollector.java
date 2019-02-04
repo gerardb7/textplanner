@@ -7,7 +7,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.StreamSupport;
@@ -20,7 +19,7 @@ public class BabelNetMeaningsCollector
 	public static final int LOGGING_STEP_SIZE = 100000;
 	private final static Logger log = LogManager.getLogger();
 
-	public static void collectMeanings(Path meanings_path, Path output_file, boolean glosses_only) throws Exception
+	public static void collectMeanings(Path babel_path, Path output_file, boolean glosses_only, int max_meanings) throws Exception
 	{
 		log.info("Collecting meanings with " +  Runtime.getRuntime().availableProcessors() + " cores available");
 		final Stopwatch timer = Stopwatch.createStarted();
@@ -29,13 +28,14 @@ public class BabelNetMeaningsCollector
 
 		List<MeaningDictionary.Info> meanings;
 
-		if (meanings_path.toFile().exists() && meanings_path.toFile().isDirectory())
+		if (babel_path.toFile().exists() && babel_path.toFile().isDirectory())
 		{
-			MeaningDictionary bn = new BabelNetDictionary(meanings_path);
+			MeaningDictionary bn = new BabelNetDictionary(babel_path);
 			AtomicLong total_ids = new AtomicLong(0);
 
 			Iterable<MeaningDictionary.Info> iterable = () -> bn.infoIterator(language);
 			meanings = StreamSupport.stream(iterable.spliterator(), true)
+					.limit(max_meanings)
 					.parallel()
 					.peek(l -> reporter.report()) // report number of threads
 					.peek(id -> total_ids.incrementAndGet())
@@ -47,18 +47,11 @@ public class BabelNetMeaningsCollector
 					})
 					.collect(toList());
 
-			log.info(meanings.size() + " collected in " + timer.stop() + "(out of " + total_ids + " synsets queried)");
+			log.info(meanings.size() + " meanings collected in " + timer.stop() + "(out of " + total_ids + " synsets queried)");
 			Serializer.serialize(meanings, output_file);
 			log.info("Meanings serialized to " + output_file);
 		}
 		else
-			throw new Exception("A path must be provided to the BabelNet config folder or a meanings file: " + meanings_path);
-	}
-
-
-	public static void main(String[] args) throws Exception
-	{
-		// babelnet_config_path, output_file)
-		collectMeanings(Paths.get(args[0]), Paths.get(args[1]), Boolean.valueOf(args[2]));
+			throw new Exception("A path must be provided to the BabelNet config folder or a meanings file: " + babel_path);
 	}
 }

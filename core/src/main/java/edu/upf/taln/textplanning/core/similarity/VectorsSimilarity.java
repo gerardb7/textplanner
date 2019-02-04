@@ -4,18 +4,21 @@ import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
 
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.function.BiFunction;
 
 /**
  * Computes similarity between items according to precomputed distributional vectors (embeddings) stored in a binary
  * file and accessed with random access glove library: https://github.com/thomasjungblut/glove/blob/master/README.md
  */
-public class VectorsCosineSimilarity
+public class VectorsSimilarity
 {
 	private final Vectors vectors;
+	private final BiFunction<double [], double [], Double> sim_function;
 
-	public VectorsCosineSimilarity(Vectors vectors)
+	public VectorsSimilarity(Vectors vectors, BiFunction<double [], double [], Double> sim_function)
 	{
 		this.vectors = vectors;
+		this.sim_function = sim_function;
 	}
 
 	public OptionalDouble of(String e1, String e2)
@@ -31,25 +34,11 @@ public class VectorsCosineSimilarity
 		double[] v1 = vectors.getVector(e1).orElse(vectors.getUnknownVector());
 		double[] v2 = vectors.getVector(e2).orElse(vectors.getUnknownVector());
 
-		double dotProduct = 0.0;
-		double normA = 0.0;
-		double normB = 0.0;
-		for (int i = 0; i < v1.length; i++)
-		{
-			dotProduct += v1[i] * v2[i];
-			normA += Math.pow(v1[i], 2);
-			normB += Math.pow(v2[i], 2);
-		}
+		final double sim = sim_function.apply(v1, v2);
 
-		double magnitude = Math.sqrt(normA) * Math.sqrt(normB); // will normalize with magnitude in order to ignore it
+		if (Double.isNaN(sim))
+			return OptionalDouble.empty();
 
-		// correct for floating-point rounding errors
-		magnitude = Math.max(magnitude, dotProduct);
-
-		// prevent NaNs
-		if (magnitude == 0.0d)
-			return OptionalDouble.of(1.0);
-
-		return OptionalDouble.of(dotProduct / magnitude); // range (-1,1)
+		return OptionalDouble.of(sim);
 	}
 }

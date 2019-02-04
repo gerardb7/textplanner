@@ -17,6 +17,8 @@ import static java.util.stream.Collectors.joining;
 
 public class DebugUtils
 {
+	public static final int LOGGING_STEP_SIZE = 100000;
+
 	public static class ThreadReporter
 	{
 		private final AtomicBoolean reported = new AtomicBoolean(false);

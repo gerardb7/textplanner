@@ -11,13 +11,12 @@ import edu.upf.taln.textplanning.amr.structures.AMRGraph;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.amr.utils.EmpiricalStudy;
 import edu.upf.taln.textplanning.common.CMLCheckers;
-import edu.upf.taln.textplanning.common.ContextVectorsProducer;
 import edu.upf.taln.textplanning.common.FileUtils;
+import edu.upf.taln.textplanning.common.ResourcesFactory;
 import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.TextPlanner;
-import edu.upf.taln.textplanning.core.similarity.VectorsCosineSimilarity;
-import edu.upf.taln.textplanning.core.similarity.vectors.SIFVectors;
-import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
+import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
+import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
@@ -90,10 +89,7 @@ public class Driver
 		log.info("Graphs serialized to " + output);
 	}
 
-	private void rank_meanings(Path graphs_file, Path idf_file,
-	                           Path word_vectors_path, VectorType word_vectors_type,
-	                           Path sense_context_vectors_path, VectorType sense_context_vectors_type,
-	                           Path sense_vectors_path, VectorType sense_vectors_type) throws Exception
+	private void rank_meanings(Path graphs_file, ResourcesFactory resources) throws Exception
 	{
 		log.info("Running from " + graphs_file);
 		AMRGraphList graphs = (AMRGraphList) Serializer.deserialize(graphs_file);
@@ -105,14 +101,9 @@ public class Driver
 				.flatMap(List::stream)
 				.collect(toList());
 
-		final Vectors word_vectors = Vectors.get(word_vectors_path, word_vectors_type, 300);
-		final Map<String, Double> weights = ContextVectorsProducer.getWeights(idf_file);
-		final Double default_weight = Collections.min(weights.values());
-		final SIFVectors sif_vectors = new SIFVectors(word_vectors, w -> weights.getOrDefault(w, default_weight));
-		final Vectors sense_context_vectors = Vectors.get(sense_context_vectors_path, sense_context_vectors_type, 300);
-		final Context context_weighter = new Context(graphs.getCandidates(), sense_context_vectors, sif_vectors, w -> context);
-		final Vectors sense_vectors = Vectors.get(sense_vectors_path, sense_vectors_type, 300);
-		final VectorsCosineSimilarity sim = new VectorsCosineSimilarity(sense_vectors);
+		final Context context_weighter = new Context(graphs.getCandidates(), resources.getSenseContextVectors(),
+				resources.getSentenceVectors(), w -> context, resources.getSimilarityFunction());
+		final VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
 
 		TextPlanner.Options options = new TextPlanner.Options();
 		options.damping_meanings = 0.5;
@@ -167,12 +158,11 @@ public class Driver
 		log.info("Subgraphs serialized to " + output);
 	}
 
-	private void remove_redundancy(Path subgraphs_file, int num_subgraphs, Path vectors_path, VectorType vectorType) throws Exception
+	private void remove_redundancy(Path subgraphs_file, int num_subgraphs, ResourcesFactory resources) throws Exception
 	{
 		log.info("Running from " + subgraphs_file);
 		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
-		final Vectors vectors = Vectors.get(vectors_path, vectorType, 300);
-		VectorsCosineSimilarity sim = new VectorsCosineSimilarity(vectors);
+		VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
 
 		TextPlanner.Options options = new TextPlanner.Options();
 		subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, num_subgraphs, (e1, e2) -> sim.of(e1, e2), options);
@@ -183,12 +173,11 @@ public class Driver
 		log.info("Non-redundant subgraphs serialized to " + output);
 	}
 
-	private void sort_subgraphs(Path subgraphs_file, Path vectors_path, VectorType vectorType) throws Exception
+	private void sort_subgraphs(Path subgraphs_file, ResourcesFactory resources) throws Exception
 	{
 		log.info("Running from " + subgraphs_file);
 		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
-		final Vectors vectors = Vectors.get(vectors_path, vectorType, 300);
-		VectorsCosineSimilarity sim = new VectorsCosineSimilarity(vectors);
+		VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
 
 		TextPlanner.Options options = new TextPlanner.Options();
 		final List<SemanticSubgraph> plan = TextPlanner.sortSubgraphs(subgraphs, (e1, e2) -> sim.of(e1, e2), options);
@@ -228,7 +217,7 @@ public class Driver
 		log.info("Summary text writen to " + output);
 	}
 
-	private void summarize(Path amr_bank, Path bn_config_folder, Path freqs, Path vectors_path, VectorType vectorType,
+	private void summarize(Path amr_bank, Path babelnet, ResourcesFactory resources,
 	                       boolean no_stanford, boolean no_babelnet, int num_subgraphs_extract, int num_subgraphs,
 	                       Path generation_resources, int max_words) throws Exception
 	{
@@ -239,11 +228,10 @@ public class Driver
 		log.info("*****Setting up planner*****");
 //		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
 		AMRReader reader = new AMRReader();
-		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language,null, bn_config_folder, no_stanford, no_babelnet);
+		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language,null, babelnet, no_stanford, no_babelnet);
 		AMRSemanticGraphFactory globalFactory = new AMRSemanticGraphFactory();
 
-		final Vectors vectors = Vectors.get(vectors_path, vectorType, 300);
-		VectorsCosineSimilarity sim = new VectorsCosineSimilarity(vectors);
+		VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
 
 		AmrMain generator = new AmrMain(generation_resources);
 
@@ -392,23 +380,26 @@ public class Driver
 		@Parameter(names = {"-f", "-frequencies"}, description = "Frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
+		@Parameter(names = {"-st", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1,
+				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
+		private SentenceVectors.VectorType sentence_vector_type = SentenceVectors.VectorType.SIF;
 		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path word_vectors_path;
 		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1,
-				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
 		private VectorType word_vector_type = VectorType.Binary_RandomAccess;
 		@Parameter(names = {"-cv", "-context_vectors"}, description = "Path to sense context vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path context_vectors_path;
 		@Parameter(names = {"-ct", "-context_vectors_type"}, description = "Type of sense context vectors", arity = 1,
-				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
 		private VectorType context_vector_type = VectorType.Binary_RandomAccess;
 		@Parameter(names = {"-sv", "-sense_vectors"}, description = "Path to sense vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path sense_vectors_path;
 		@Parameter(names = {"-st", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1,
-				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
 		private VectorType sense_vector_type = VectorType.Binary_RandomAccess;
 	}
 
@@ -452,7 +443,7 @@ public class Driver
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
 		@Parameter(names = {"-vf", "-vectorType"}, description = "Vectors vectorType", arity = 1, required = true,
-				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
 		private VectorType vectorType = VectorType.Text_Glove;
 	}
 
@@ -466,7 +457,7 @@ public class Driver
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
 		@Parameter(names = {"-vf", "-vectorType"}, description = "Vectors vectorType", arity = 1, required = true,
-				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
 		private VectorType vectorType = VectorType.Text_Glove;
 	}
 
@@ -505,7 +496,7 @@ public class Driver
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
 		@Parameter(names = {"-vf", "-vectorType"}, description = "Vectors vectorType", arity = 1, required = true,
-				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
 		private VectorType vectorType = VectorType.Text_Glove;
 		@Parameter(names = {"-ns", "-nostanford"}, description = "Do not load Stanford CoreNLP pipeline")
 		private boolean no_stanford = false;
@@ -551,7 +542,7 @@ public class Driver
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
 		@Parameter(names = {"-vf", "-vectorType"}, description = "Vectors vectorType", arity = 1, required = true,
-				converter = CMLCheckers.FormatConverter.class, validateWith = CMLCheckers.FormatValidator.class)
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
 		private VectorType vectorType = VectorType.Text_Glove;
 		@Parameter(names = {"-pw", "-pairwise"}, description = "If true of stats from pairwise similiarity values")
 		private boolean do_pairwise_similarity = false;
@@ -601,30 +592,44 @@ public class Driver
 			driver.create_graphs(create_graphs.inputFile, create_graphs.bnFolder, create_graphs.no_stanford,
 					create_graphs.no_babelnet);
 		else if (jc.getParsedCommand().equals(rank_meanings_command))
-			driver.rank_meanings(rank_meanings.inputFile, rank_meanings.freqsFile,
-					rank_meanings.word_vectors_path, rank_meanings.word_vector_type,
-					rank_meanings.context_vectors_path, rank_meanings.context_vector_type,
-					rank_meanings.sense_vectors_path, rank_meanings.sense_vector_type);
-		else if (jc.getParsedCommand().equals(create_global_command))
+		{
+			ResourcesFactory resources = new ResourcesFactory(rank_meanings.freqsFile, rank_meanings.sentence_vector_type,
+					rank_meanings.word_vectors_path,  rank_meanings.word_vector_type,
+					rank_meanings.context_vectors_path,  rank_meanings.context_vector_type,
+					rank_meanings.sense_vectors_path,  rank_meanings.sense_vector_type);
+
+			driver.rank_meanings(rank_meanings.inputFile, resources);
+		}
+			else if (jc.getParsedCommand().equals(create_global_command))
 			driver.create_global(create_global.inputFile);
 		else if (jc.getParsedCommand().equals(rank_variables_command))
 			driver.rank_variables(rank_variables.inputFile);
 		else if (jc.getParsedCommand().equals(extract_subgraphs_command))
 			driver.extract_subgraphs(extract_subgraphs.inputFile, extract_subgraphs.num_subgraphs);
 		else if (jc.getParsedCommand().equals(remove_redundancy_command))
-			driver.remove_redundancy(remove_redundancy.inputFile, remove_redundancy.num_subgraphs,
-					remove_redundancy.vectorsPath, remove_redundancy.vectorType);
+		{
+			ResourcesFactory resources = new ResourcesFactory(null, null, null, null,
+					null, null, remove_redundancy.vectorsPath, remove_redundancy.vectorType);
+			driver.remove_redundancy(remove_redundancy.inputFile, remove_redundancy.num_subgraphs, resources);
+		}
 		else if (jc.getParsedCommand().equals(sort_subgraphs_command))
-			driver.sort_subgraphs(sort_subgraphs.inputFile, sort_subgraphs.vectorsPath, sort_subgraphs.vectorType);
+		{
+			ResourcesFactory resources = new ResourcesFactory(null, null, null, null,
+					null, null, sort_subgraphs.vectorsPath, sort_subgraphs.vectorType);
+			driver.sort_subgraphs(sort_subgraphs.inputFile, resources);
+		}
 		else if (jc.getParsedCommand().equals(write_amr_command))
 			driver.write_amr(write_amr.inputFile);
 		else if (jc.getParsedCommand().equals(generate_command))
 			driver.generate(generateCommand.inputFile, generateCommand.generation_resources);
 		/* --- */
 		else if (jc.getParsedCommand().equals(summarize_command))
-			driver.summarize(summarize.input, summarize.bnFolder, summarize.freqsFile, summarize.vectorsPath,
-					summarize.vectorType, summarize.no_stanford, summarize.no_babelnet, summarize.num_extract,
+		{
+			ResourcesFactory resources = new ResourcesFactory(summarize.freqsFile, null, null, null,
+					null, null, summarize.vectorsPath, summarize.vectorType);
+			driver.summarize(summarize.input, summarize.bnFolder, resources, summarize.no_stanford, summarize.no_babelnet, summarize.num_extract,
 					summarize.num_subgraphs, summarize.generation_resources, summarize.max_words);
+		}
 		else if (jc.getParsedCommand().equals(process_command))
 		{
 			final String text = FileUtils.readTextFile(process.inputFile);

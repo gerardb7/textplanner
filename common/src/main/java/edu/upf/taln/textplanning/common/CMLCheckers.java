@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.common;
 import com.beust.jcommander.IParameterValidator;
 import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.ParameterException;
+import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
 
 import java.nio.file.Files;
@@ -104,6 +105,18 @@ public class CMLCheckers
 		}
 	}
 
+	public static class GreaterOrEqualThanZero implements IParameterValidator
+	{
+
+		@Override
+		public void validate(String name, String value) throws ParameterException
+		{
+			int n = Integer.parseInt(value);
+			if (n < 0)
+				throw new ParameterException("Value must be greater or equal to 0: " + value);
+		}
+	}
+
 	public static class GreaterThanZero implements IParameterValidator
 	{
 
@@ -112,11 +125,11 @@ public class CMLCheckers
 		{
 			int n = Integer.parseInt(value);
 			if (n < 1)
-				throw new ParameterException("Invalid number of subgraphs " + value);
+				throw new ParameterException("Value must be greater than 0: " + value);
 		}
 	}
 
-	public static class FormatConverter implements IStringConverter<Vectors.VectorType>
+	public static class VectorTypeConverter implements IStringConverter<Vectors.VectorType>
 	{
 		@Override
 		public Vectors.VectorType convert(String value)
@@ -125,7 +138,16 @@ public class CMLCheckers
 		}
 	}
 
-	public static class FormatValidator implements IParameterValidator
+	public static class SentenceVectorTypeConverter implements IStringConverter<SentenceVectors.VectorType>
+	{
+		@Override
+		public SentenceVectors.VectorType convert(String value)
+		{
+			return SentenceVectors.VectorType.valueOf(value);
+		}
+	}
+
+	public static class VectorTypeValidator implements IParameterValidator
 	{
 		@Override
 		public void validate(String name, String value) throws ParameterException
@@ -138,6 +160,17 @@ public class CMLCheckers
 		}
 	}
 
-
+	public static class SentenceVectorTypeValidator implements IParameterValidator
+	{
+		@Override
+		public void validate(String name, String value) throws ParameterException
+		{
+			try{ SentenceVectors.VectorType.valueOf(value); }
+			catch (Exception e)
+			{
+				throw new ParameterException("Parameter " + name + " has invalid valued " + value);
+			}
+		}
+	}
 
 }
