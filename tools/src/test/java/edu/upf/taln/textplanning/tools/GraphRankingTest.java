@@ -1,7 +1,8 @@
+package edu.upf.taln.textplanning.tools;
+
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.BabelNetDictionary;
 import edu.upf.taln.textplanning.common.MeaningDictionary;
-import edu.upf.taln.textplanning.common.VisualizationUtils;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
 import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;

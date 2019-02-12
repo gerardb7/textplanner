@@ -3,15 +3,14 @@ package edu.upf.taln.textplanning.core.ranking;
 import Jama.Matrix;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
-import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
-import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -35,40 +34,21 @@ import static java.util.stream.Collectors.*;
  */
 public class GraphRanking
 {
-	// Accept references which are not candidates of exactly the same set of mentions
-	public static class DifferentMentions implements BiPredicate<String, String>
-	{
-
-		private final Set<Pair<String, String>> different_mention_pairs;
-		public DifferentMentions(Collection<Candidate> candidates)
-		{
-			final Map<String, List<Mention>> references2mentions = candidates.stream()
-					.collect(Collectors.groupingBy(c -> c.getMeaning().getReference(), mapping(Candidate::getMention, toList())));
-
-			different_mention_pairs = references2mentions.keySet().stream()
-					.flatMap(r1 -> references2mentions.keySet().stream()
-							.filter(r2 -> !references2mentions.get(r1).equals(references2mentions.get(r2)))
-							.map(r2 -> Pair.of(r1, r2)))
-					.collect(toSet());
-		}
-
-		@Override
-		public boolean test(String r1, String r2)
-		{
-			return different_mention_pairs.contains(Pair.of(r1, r2)); // should differ in at least one mention
-		}
-	}
-
-	public static void rankMeanings(Collection<Candidate> candidates, Function<String, Double> weighting,
+	public static void rankMeanings(Collection<Candidate> candidates,
+	                                Predicate<Candidate> candidates_filter,
+	                                BiPredicate<String, String> meanings_filter,
+	                                Function<String, Double> weighting,
 	                                BiFunction<String, String, OptionalDouble> similarity,
 	                                double meaning_similarity_threshold, double damping_factor_meanings)
 	{
 		final List<String> references = candidates.stream()
+				.filter(candidates_filter)
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
 				.distinct()
 				.collect(Collectors.toList());
 		final List<String> labels = candidates.stream() // for debugging purposes
+				.filter(candidates_filter)
 				.map(Candidate::getMeaning)
 				.map(Meaning::toString)
 				.distinct()
@@ -77,9 +57,8 @@ public class GraphRanking
 		if (references.isEmpty())
 			return;
 
-		DifferentMentions filter = new DifferentMentions(candidates);
-		double[][] ranking_arrays = MatrixFactory.createMeaningRankingMatrix(references, weighting, similarity, filter,
-				meaning_similarity_threshold, damping_factor_meanings);
+		double[][] ranking_arrays = MatrixFactory.createMeaningRankingMatrix(references, weighting, similarity,
+				meanings_filter, meaning_similarity_threshold, damping_factor_meanings);
 		Matrix ranking_matrix = new Matrix(ranking_arrays);
 
 		JamaPowerIteration alg = new JamaPowerIteration();

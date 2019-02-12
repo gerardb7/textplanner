@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.common;
+package edu.upf.taln.textplanning.tools;
 
 import java.io.BufferedReader;
 import java.io.File;

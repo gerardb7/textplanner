@@ -18,6 +18,8 @@
         <module>common</module>
         <module>amr</module>
         <module>uima-dsynt</module>
+        <module>tools</module>
+        <module>optimization</module>
     </modules>
 
     <dependencies>

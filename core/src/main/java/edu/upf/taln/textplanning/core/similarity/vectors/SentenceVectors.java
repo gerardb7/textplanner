@@ -5,9 +5,9 @@ import java.util.Optional;
 
 public interface SentenceVectors
 {
-	boolean isDefinedFor(String item);
+	boolean isDefinedFor(List<String> tokens);
 	int getNumDimensions();
-	Optional<double[]> getVector(List<String> items);
+	Optional<double[]> getVector(List<String> tokens);
 	double[] getUnknownVector();
 
 	enum VectorType {BoW, SIF, Precomputed}

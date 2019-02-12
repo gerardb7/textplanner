@@ -1,5 +1,6 @@
-package edu.upf.taln.textplanning.common;
+package edu.upf.taln.textplanning.tools;
 
+import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
@@ -42,7 +43,7 @@ public class Evaluation
 	public static void evaluate(List<Path> ranked_candidate_files, List<Path> gold_files)
 	{
 		final List<List<Candidate>> ranked_candidates = ranked_candidate_files.stream()
-				.map(system_file -> deserializeMeanings(system_file).stream()
+				.map(system_file -> FileUtils.deserializeMeanings(system_file).stream()
 						.flatMap(l -> l.stream()
 								.flatMap(Set::stream))
 						.collect(toList()))

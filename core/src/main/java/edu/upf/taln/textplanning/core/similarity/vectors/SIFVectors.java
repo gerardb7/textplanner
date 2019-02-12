@@ -2,7 +2,6 @@ package edu.upf.taln.textplanning.core.similarity.vectors;
 
 import com.easemob.TextualSim;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -22,15 +21,15 @@ public class SIFVectors implements SentenceVectors, BiFunction<double [], double
 
 	// A meaningful SIF vector can be produced if at least on the tokens in which item is divided has a word vector
 	@Override
-	public boolean isDefinedFor(String item)
+	public boolean isDefinedFor(List<String> tokens)
 	{
-		return Arrays.stream(item.split("\\s")).anyMatch(word_vectors::isDefinedFor);
+		return tokens.stream().anyMatch(word_vectors::isDefinedFor);
 	}
 
 	// List of tokens
-	public Optional<double[]> getVector(List<String> items)
+	public Optional<double[]> getVector(List<String> tokens)
 	{
-		return Optional.of(sif.getEmbedding(items).getRow(0));
+		return Optional.of(sif.getEmbedding(tokens).getRow(0));
 	}
 
 	@Override

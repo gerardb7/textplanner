@@ -19,8 +19,8 @@ public class BeawareOutputTest
 	public void testBasic() throws Exception
 	{
 		Map<String, EntityExtractor.Entity> result = doTest("src/test/resources/",
-				"basic.xmi",
-				"src/test/resources/typesystem.xml",
+				"testFile.txt.xmi",
+				"src/test/resources/TypeSystem.xml",
 				"en");
 
 		// Do asserts

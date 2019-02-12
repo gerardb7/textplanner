@@ -1,6 +1,5 @@
 package edu.upf.taln.textplanning.core.similarity.vectors;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -17,9 +16,9 @@ public class BoWVectors implements SentenceVectors
 
 	// A meaningful vector can be produced if at least on the tokens in which item is divided has a word vector
 	@Override
-	public boolean isDefinedFor(String item)
+	public boolean isDefinedFor(List<String> tokens)
 	{
-		return Arrays.stream(item.split("\\s")).anyMatch(word_vectors::isDefinedFor);
+		return tokens.stream().anyMatch(word_vectors::isDefinedFor);
 	}
 
 	@Override
@@ -34,10 +33,10 @@ public class BoWVectors implements SentenceVectors
 		return word_vectors.getUnknownVector();
 	}
 
-	// calculates arithmetic average of vectors of items
-	public Optional<double[]> getVector(List<String> items)
+	// calculates arithmetic average of vectors of tokens
+	public Optional<double[]> getVector(List<String> tokens)
 	{
-		final List<double[]> vectors = items.stream()
+		final List<double[]> vectors = tokens.stream()
 				.map(word_vectors::getVector)
 				.filter(Optional::isPresent)
 				.map(Optional::get)

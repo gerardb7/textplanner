@@ -24,6 +24,75 @@ public class TypeMapper
 	private final static Map<String, Type> forms2types = new HashMap<String, Type>()
 	{
 		{
+			// English
+			put("flood", Type.Flood);
+			put("floods", Type.Flood);
+			put("flooded", Type.Flood);
+			put("flooding", Type.Flood);
+			put("crack", Type.Crack);
+			put("cracks", Type.Crack);
+			put("cracked", Type.Crack);
+			put("cracking", Type.Crack);
+			put("collapse", Type.Collapse);
+			put("collapses", Type.Collapse);
+			put("collapsed", Type.Collapse);
+			put("collapsing", Type.Collapse);
+			put("overflow", Type.Overflow);
+			put("overflows", Type.Overflow);
+			put("overflew", Type.Overflow);
+			put("overflown", Type.Overflow);
+			put("overflowing", Type.Overflow);
+			put("fire", Type.Fire);
+			put("fires", Type.Fire);
+			put("smoke", Type.Smoke);
+			put("empty", Type.Empty);
+			put("empties", Type.Empty);
+			put("emptied", Type.Empty);
+			put("emptying", Type.Empty);
+			put("full", Type.Full);
+			put("fill", Type.Full);
+			put("fills", Type.Full);
+			put("filled", Type.Full);
+			put("filling", Type.Full);
+			put("jam", Type.TrafficJam);
+			put("jams", Type.TrafficJam);
+			put("congestion", Type.TrafficJam);
+			put("congestions", Type.TrafficJam);
+			put("bridge", Type.Bridge);
+			put("bridges", Type.Bridge);
+			put("river", Type.River);
+			put("rivers", Type.River);
+			put("square", Type.Square);
+			put("squares", Type.Square);
+			put("car", Type.Car);
+			put("cars", Type.Car);
+			put("vehicle", Type.Vehicle);
+			put("vehicles", Type.Vehicle);
+			put("human", Type.Person);
+			put("humans", Type.Person);
+			put("people", Type.Person);
+			put("man", Type.Person);
+			put("woman", Type.Person);
+			put("men", Type.Person);
+			put("women", Type.Person);
+			put("sewer", Type.Sewer);
+			put("sewers", Type.Sewer);
+			put("levee", Type.Levee);
+			put("levees", Type.Levee);
+			put("forest", Type.Forest);
+			put("woods", Type.Forest);
+			put("park", Type.Park);
+			put("parks", Type.Park);
+			put("venue", Type.Venue);
+			put("venues", Type.Venue);
+			put("building", Type.Building);
+			put("buildings", Type.Building);
+			put("house", Type.Building);
+			put("houses", Type.Building);
+			put("basement", Type.Building);
+			put("basements", Type.Building);
+
+			// Italian
 			put("piazza", Type.Square);
 			put("allagata", Type.Flood);
 			put("allagare", Type.Flood);
@@ -44,11 +113,13 @@ public class TypeMapper
 			put("crollati", Type.Collapse);
 			put("fiume", Type.River);
 
+			// Spanish
 			put("parque", Type.Park);
 			put("incendio", Type.Fire);
 			put("fuego", Type.Fire);
 			put("bosque", Type.Forest);
 
+			// Greek
 			put("αίθουσα", Type.Venue); // feminine
 			put("κτίριο", Type.Building); // neuter
 			put("κτήριο", Type.Building); // neuter
@@ -68,7 +139,7 @@ public class TypeMapper
 
 	public static String map(String meaning, String text, boolean isPredicate)
 	{
-		if (meanings2types.containsKey(meaning))
+		if (meaning != null && meanings2types.containsKey(meaning))
 			return meanings2types.get(meaning).toString();
 
 		if (forms2types.containsKey(text))

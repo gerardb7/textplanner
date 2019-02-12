@@ -6,6 +6,8 @@ import com.beust.jcommander.Parameters;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.*;
 import edu.upf.taln.textplanning.core.TextPlanner;
+import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
+import edu.upf.taln.textplanning.core.ranking.TopCandidatesFilter;
 import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
@@ -241,7 +243,9 @@ public class Driver
 					final Context context_weighter = new Context(candidates, resources.getSenseContextVectors(),
 							resources.getSentenceVectors(), w -> context, resources.getSimilarityFunction());
 					final VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
-					TextPlanner.rankMeanings(candidates, context_weighter::weight, sim::of, new TextPlanner.Options());
+					TopCandidatesFilter candidates_filter = new TopCandidatesFilter(candidates, context_weighter::weight, 5);
+					DifferentMentionsFilter meanings_filter = new DifferentMentionsFilter(candidates);
+					TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter::weight, sim::of, new TextPlanner.Options());
 
 					candidates.stream()
 							.map(Candidate::getMeaning)

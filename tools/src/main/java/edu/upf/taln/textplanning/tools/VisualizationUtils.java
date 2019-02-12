@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.common;
+package edu.upf.taln.textplanning.tools;
 
 import Jama.Matrix;
 import edu.upf.taln.textplanning.core.ranking.JamaPowerIteration;

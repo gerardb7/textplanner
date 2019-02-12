@@ -16,6 +16,7 @@ import edu.upf.taln.textplanning.amr.io.CandidatesCollector;
 import edu.upf.taln.textplanning.common.BabelNetDictionary;
 import edu.upf.taln.textplanning.common.MeaningDictionary;
 import edu.upf.taln.textplanning.common.Serializer;
+import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
 import edu.upf.taln.textplanning.core.ranking.GraphRanking;
 import edu.upf.taln.textplanning.core.ranking.MatrixFactory;
 import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
@@ -662,7 +663,7 @@ public class EmpiricalStudy
 			return new SimilarityStats();
 		}
 
-		GraphRanking.DifferentMentions filter = new GraphRanking.DifferentMentions(candidates);
+		DifferentMentionsFilter filter = new DifferentMentionsFilter(candidates);
 
 		final List<String> meanings = candidates.stream()
 				.map(Candidate::getMeaning)

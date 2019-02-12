@@ -4,9 +4,11 @@ package edu.upf.taln.textplanning.uima;
 import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Sentence;
 import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Token;
 import de.tudarmstadt.ukp.dkpro.wsd.type.WSDResult;
+import edu.upf.taln.flask_wrapper.type.Geolocation;
 import edu.upf.taln.parser.deep_parser.types.DeepDependency;
 import edu.upf.taln.parser.deep_parser.types.DeepToken;
 import edu.upf.taln.parser.deep_parser.types.ROOT;
+import edu.upf.taln.uima.geolocation.GeolocationOutput;
 import edu.upf.taln.uima.wsd.types.BabelNetSense;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -54,6 +56,14 @@ public class EntityExtractor
 			cardinality = other.cardinality;
 			number = other.number;
 		}
+
+		@Override
+		public String toString()
+		{
+			return "Entity{" +
+					"id='" + id + '\'' +
+					'}';
+		}
 	}
 
 	public static class Participant
@@ -81,7 +91,8 @@ public class EntityExtractor
 	}
 
 	public static long id_counter = 0;
-	private static final String verb_pos_tag = "VB"; // assuming Penn Tree Bank tagset
+	private static final String verb_pos_tag = "VERB"; // that's what goes into the feature 'pos' of DeepToken annotations
+	private static final String adj_pos_tag = "ADJ";
 	private final static Logger log = LogManager.getLogger();
 
 	public static Map<String, Entity> extract(JCas jcas)
@@ -133,13 +144,27 @@ public class EntityExtractor
 	{
 		final List<Token> surface_tokens = JCasUtil.selectAt(jcas, Token.class, deep_token.getBegin(), deep_token.getEnd());
 		final String lemma = (surface_tokens.size() == 1) ? surface_tokens.get(0).getLemmaValue() : deep_token.getCoveredText();
-		final boolean isPredicate =  deep_token.getPos().getPosValue().startsWith(verb_pos_tag);
 		JCasUtil.selectAt(jcas, WSDResult.class, deep_token.getBegin(), deep_token.getEnd()).forEach(ann ->
 		{
 			BabelNetSense babel_synset = (BabelNetSense) ann.getBestSense();
 			entity.refs.add(babel_synset.getId());
-			final String type = TypeMapper.map(babel_synset.getId(), lemma, isPredicate);
-			entity.type.add(type);
 		});
+		JCasUtil.selectAt(jcas, Geolocation.class, deep_token.getBegin(), deep_token.getEnd()).forEach(ann ->
+		{
+			entity.location = new Location(ann.getLatitude(), ann.getLongitude());
+			// @todo add reference to geonames/OSM
+		});
+
+		// Add types
+		final String posValue = deep_token.getPos().getPosValue();
+		final boolean isPredicate =  posValue.equalsIgnoreCase(verb_pos_tag) || posValue.equalsIgnoreCase(adj_pos_tag);
+		if (entity.refs.isEmpty())
+			entity.type.add(TypeMapper.map(null, lemma, isPredicate));
+		else
+			entity.refs.stream()
+					.map(ref -> TypeMapper.map(ref, lemma, isPredicate))
+					.filter(type -> !entity.type.contains(type)) // avoid duplicates
+					.forEach(entity.type::add);
+
 	}
 }

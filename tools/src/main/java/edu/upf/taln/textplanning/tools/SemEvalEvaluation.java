@@ -1,6 +1,13 @@
-package edu.upf.taln.textplanning.common;
+package edu.upf.taln.textplanning.tools;
 
 import com.ibm.icu.util.ULocale;
+import edu.upf.taln.textplanning.common.BabelNetDictionary;
+import edu.upf.taln.textplanning.common.FileUtils;
+import edu.upf.taln.textplanning.common.ResourcesFactory;
+import edu.upf.taln.textplanning.core.TextPlanner;
+import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
+import edu.upf.taln.textplanning.core.ranking.TopCandidatesFilter;
+import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
@@ -11,11 +18,13 @@ import org.apache.logging.log4j.Logger;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
+import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.*;
 import javax.xml.transform.stream.StreamSource;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -27,43 +36,43 @@ public class SemEvalEvaluation
 {
 	@XmlRootElement(name = "corpus")
 	@XmlAccessorType(XmlAccessType.FIELD)
-	private static class Corpus
+	public static class Corpus
 	{
 		@XmlAttribute
-		private String lang;
+		public String lang;
 		@XmlElement(name = "text")
-		private List<Text> texts;
+		public List<Text> texts;
 	}
 
 	@XmlAccessorType(XmlAccessType.FIELD)
-	private static class Text
+	public static class Text
 	{
 		@XmlAttribute
-		private String id;
+		public String id;
 		@XmlElement(name="sentence")
-		private List<Sentence> sentences;
+		public List<Sentence> sentences;
 	}
 
 	@XmlAccessorType(XmlAccessType.FIELD)
-	private static class Sentence
+	public static class Sentence
 	{
 		@XmlAttribute
-		private String id;
+		public String id;
 		@XmlElement(name="wf")
-		private List<Token> tokens;
+		public List<Token> tokens;
 	}
 
 	@XmlAccessorType(XmlAccessType.FIELD)
-	private static class Token
+	public static class Token
 	{
 		@XmlAttribute
-		private String id;
+		public String id;
 		@XmlAttribute
-		private String lemma;
+		public String lemma;
 		@XmlAttribute
-		private String pos;
+		public String pos;
 		@XmlValue
-		private String wf;
+		public String wf;
 	}
 
 	private static final int max_span_size = 3;
@@ -71,15 +80,21 @@ public class SemEvalEvaluation
 	private static final ULocale language = ULocale.ENGLISH;
 	private final static Logger log = LogManager.getLogger();
 
-	public static void evaluate(Path gold_file, Path xml_file, Path babel_config, Path output_path, ResourcesFactory resources) throws Exception
+	public static Corpus parse(Path xml_file) throws JAXBException
 	{
-		// parse xml
-		log.info("Parsing XML file");
 		JAXBContext jc = JAXBContext.newInstance(Corpus.class);
 		StreamSource xml = new StreamSource(xml_file.toString());
 		Unmarshaller unmarshaller = jc.createUnmarshaller();
 		JAXBElement<Corpus> je1 = unmarshaller.unmarshal(xml, Corpus.class);
-		Corpus corpus = je1.getValue();
+		return je1.getValue();
+	}
+
+	public static void evaluate(Path gold_file, Path xml_file, Path babel_config, Path output_path, ResourcesFactory resources) throws Exception
+	{
+		Paths.get("");
+		// parse xml
+		log.info("Parsing XML file");
+		Corpus corpus = parse(xml_file);
 
 		// create mention objects
 		log.info("Collecting mentions");
@@ -134,22 +149,26 @@ public class SemEvalEvaluation
 		for (int i = 0; i < corpus.texts.size(); ++i)
 		{
 			final List<Candidate> candidates_i = candidates.get(i);
-			final List<Meaning> meanings = candidates_i.stream()
+			final List<Meaning> meanings_i = candidates_i.stream()
 					.map(Candidate::getMeaning)
 					.distinct()
 					.collect(toList());
 			final Text document = corpus.texts.get(i);
-			log.info("\tRanking " + meanings.size() + " candidates for document " + document.id);
+			log.info("\tRanking " + meanings_i.size() + " candidates for document " + document.id);
 			final List<String> context = document.sentences.stream()
 					.flatMap(s -> s.tokens.stream()
 							.map(t -> t.wf))
 					.collect(toList());
-
 			final Context context_weighter = new Context(candidates_i, resources.getSenseContextVectors(),
 					resources.getSentenceVectors(), w -> context, resources.getSimilarityFunction());
-//					TextPlanner.rankMeanings(candidates, context_weighter::weight, sim::of, new TextPlanner.Options());
-			meanings.stream()
-					.forEach(m -> m.setWeight(context_weighter.weight(m.getReference())));
+			final VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
+			TopCandidatesFilter candidates_filter = new TopCandidatesFilter(candidates_i, context_weighter::weight, 5);
+			DifferentMentionsFilter meanings_filter = new DifferentMentionsFilter(candidates_i);
+			TextPlanner.rankMeanings(candidates_i, candidates_filter, meanings_filter, context_weighter::weight,
+					sim::of, new TextPlanner.Options());
+//
+//			meanings_i.stream()
+//					.forEach(m -> m.setWeight(context_weighter.weight(m.getReference())));
 
 			final List<List<Set<Candidate>>> grouped_candidates = candidates_i.stream()
 					.collect(groupingBy(c -> c.getMention().getSentenceId(), groupingBy(c -> c.getMention().getSpan(), toSet())))
@@ -198,5 +217,6 @@ public class SemEvalEvaluation
 		FileUtils.writeTextToFile(results_file, results);
 		log.info("Results file written to " + results_file);
 		Scorer.main(new String[]{gold_file.toString(), results_file.toString()});
+		log.info("DONE");
 	}
 }

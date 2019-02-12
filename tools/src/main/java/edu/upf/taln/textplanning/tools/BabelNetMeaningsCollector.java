@@ -1,7 +1,10 @@
-package edu.upf.taln.textplanning.common;
+package edu.upf.taln.textplanning.tools;
 
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
+import edu.upf.taln.textplanning.common.BabelNetDictionary;
+import edu.upf.taln.textplanning.common.MeaningDictionary;
+import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.utils.DebugUtils.ThreadReporter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -37,9 +40,9 @@ public class BabelNetMeaningsCollector
 			meanings = StreamSupport.stream(iterable.spliterator(), true)
 					.limit(max_meanings)
 					.parallel()
-					.peek(l -> reporter.report()) // report number of threads
-					.peek(id -> total_ids.incrementAndGet())
-					.filter(i -> glosses_only ? !i.glosses.isEmpty() : !i.glosses.isEmpty() || !i.lemmas.isEmpty())
+					.peek(m -> reporter.report()) // report number of threads
+					.peek(m -> total_ids.incrementAndGet())
+					.filter(m -> glosses_only ? !m.glosses.isEmpty() : (!m.glosses.isEmpty() || !m.lemmas.isEmpty()))
 					.peek(id ->
 					{
 						long i = counter.incrementAndGet();

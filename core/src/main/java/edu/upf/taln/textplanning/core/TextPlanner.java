@@ -19,7 +19,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.OptionalDouble;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 
 /**
@@ -93,13 +95,15 @@ public final class TextPlanner
 	 * Ranks set of candidate meanings associated with a collection of semantic graphs, and stores the resulting ranks as
 	 * candidate weights.
 	 */
-	public static void rankMeanings(Collection<Candidate> candidates, Function<String, Double> weighting,
+	public static void rankMeanings(Collection<Candidate> candidates, Predicate<Candidate> candidates_filter,
+	                                BiPredicate<String, String> meanings_filter, Function<String, Double> weighting,
 	                                BiFunction<String, String, OptionalDouble> similarity, Options o)
 	{
 		log.info("*Ranking meanings*");
 		Stopwatch timer = Stopwatch.createStarted();
 
-		GraphRanking.rankMeanings(candidates, weighting, similarity, o.sim_threshold, o.damping_meanings);
+		GraphRanking.rankMeanings(candidates, candidates_filter, meanings_filter, weighting, similarity, o.sim_threshold,
+				o.damping_meanings);
 		log.info("Ranking completed in " + timer.stop());
 	}
 

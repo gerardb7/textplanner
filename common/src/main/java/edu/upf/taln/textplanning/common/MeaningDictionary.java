@@ -27,7 +27,8 @@ public interface MeaningDictionary
 		@Override
 		public String toString()
 		{
-			return id + "-" + String.join("|", lemmas);
+			return id + "-" + String.join("|", lemmas) +
+					glosses.stream().collect(Collectors.joining("\n\t", "\n\t", ""));
 		}
 	}
 

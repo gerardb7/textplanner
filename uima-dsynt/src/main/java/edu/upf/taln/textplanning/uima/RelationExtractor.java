@@ -20,6 +20,13 @@ public class RelationExtractor
 			this.root = new Node(root);
 		}
 
+		public Set<Node> getNodes()
+		{
+			final Set<Node> nodes = this.root.getDescendants();
+			nodes.add(root);
+			return nodes;
+		}
+
 		public static class Node
 		{
 			private final Entity entity;
@@ -49,7 +56,11 @@ public class RelationExtractor
 			public Set<Node> getDescendants()
 			{
 				return children.stream()
-						.map(Node::getDescendants)
+						.map(n -> {
+							final Set<Node> descendants = n.getDescendants();
+							descendants.add(n);
+							return descendants;
+						})
 						.flatMap(Set::stream)
 						.collect(Collectors.toSet());
 			}
@@ -82,7 +93,7 @@ public class RelationExtractor
 			populateTree(tree.root, root.participants);
 
 			// Find the entity of type incident closest to the root
-			final Tree.Node main_incident = tree.root.getDescendants().stream()
+			final Tree.Node main_incident = tree.getNodes().stream()
 					.sorted(Comparator.comparingInt(n -> n.depth))
 					.filter(n -> n.entity.type.stream()
 							.anyMatch(TypeMapper::isIncident))
@@ -95,7 +106,7 @@ public class RelationExtractor
 					.collect(toList());
 
 			// Find all locations, regardless of where in the tree they are found
-			final List<Tree.Node> locations = tree.root.getDescendants().stream()
+			final List<Tree.Node> locations = tree.getNodes().stream()
 					.filter(n -> n.entity.location != null)
 					.filter(n -> !objects.contains(n)) // exclude locations that are also objects
 					.collect(toList());

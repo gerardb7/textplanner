@@ -102,7 +102,7 @@ public class BabelNetDictionary implements MeaningDictionary
 			}
 
 			final List<String> lemmas = s.getSenses(babel_language).stream()
-					.map(BabelSense::getLemma)
+					.map(BabelSense::getSimpleLemma)
 					.collect(toList());
 			return new Info(s.getId().getID(), glosses, lemmas);
 		});

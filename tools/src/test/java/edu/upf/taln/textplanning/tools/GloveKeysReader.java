@@ -1,3 +1,5 @@
+package edu.upf.taln.textplanning.tools;
+
 import de.jungblut.glove.impl.GloveBinaryWriter;
 import de.jungblut.glove.util.WritableUtils;
 

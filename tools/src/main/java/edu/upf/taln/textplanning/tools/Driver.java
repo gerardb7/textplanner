@@ -1,8 +1,11 @@
-package edu.upf.taln.textplanning.common;
+package edu.upf.taln.textplanning.tools;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import edu.upf.taln.textplanning.common.CMLCheckers;
+import edu.upf.taln.textplanning.common.FileUtils;
+import edu.upf.taln.textplanning.common.ResourcesFactory;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
 import it.uniroma1.lcl.jlt.util.Files;
@@ -15,7 +18,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-import static edu.upf.taln.textplanning.common.FileUtils.getFilesInFolder;
 import static java.util.stream.Collectors.toList;
 
 public class Driver
@@ -93,8 +95,8 @@ public class Driver
 		@Parameter(names = {"-o", "-output"}, description = "Path to output file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFile.class)
 		private Path output;
-		@Parameter(names = {"-go", "-glosses_only"}, description = "If true, only glosses are collected. Lemmas are als collected otherwise", arity = 1, required = true)
-		private boolean glosses_only = true;
+		@Parameter(names = {"-go", "-glosses_only"}, description = "If true, only glosses are collected. Lemmas are als collected otherwise", arity = 1)
+		private boolean glosses_only = false;
 		@Parameter(names = {"-mx", "-max_meanings"}, description = "Maximum number of meanings to collect", arity = 1,
 				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
 		private int max_meanings = Integer.MAX_VALUE;
@@ -108,11 +110,13 @@ public class Driver
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path meanings;
 		@Parameter(names = {"-o", "-output"}, description = "Path to output context vectors file", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFile.class)
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToNewFile.class)
 		private Path output;
 		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
+		@Parameter(names = {"-go", "-glosses_only"}, description = "If true, only glosses are used to generate context vectors", arity = 1, required = true)
+		private boolean glosses_only = true;
 		@Parameter(names = {"-svt", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1,  required = true,
 				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
 		private SentenceVectors.VectorType sentence_vector_type = SentenceVectors.VectorType.SIF;
@@ -127,16 +131,14 @@ public class Driver
 		private int chunk_size = 0;
 	}
 
-
-
 	private static void evaluate(Path system_folder, Path gold_folder)
 	{
 		log.info("Loading files");
-		final List<Path> system_files = Arrays.stream(Objects.requireNonNull(getFilesInFolder(system_folder, meanings_suffix)))
+		final List<Path> system_files = Arrays.stream(Objects.requireNonNull(FileUtils.getFilesInFolder(system_folder, meanings_suffix)))
 				.sorted(Comparator.comparing(File::getName))
 				.map(File::toPath)
 				.collect(toList());
-		final List<Path> gold_files = Arrays.stream(Objects.requireNonNull(getFilesInFolder(gold_folder, gold_suffix)))
+		final List<Path> gold_files = Arrays.stream(Objects.requireNonNull(FileUtils.getFilesInFolder(gold_folder, gold_suffix)))
 				.sorted(Comparator.comparing(File::getName))
 				.map(File::toPath)
 				.collect(toList());
@@ -170,8 +172,7 @@ public class Driver
 
 		DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 		Date date = new Date();
-		log.info(dateFormat.format(date) + " running " + String.join(" ", args));
-		log.debug(dateFormat.format(date) + " running " + String.join(" ", args));
+		log.info(dateFormat.format(date) + " running \n\t" + String.join("\n\t", args));
 		log.debug("*********************************************************");
 
 		switch (jc.getParsedCommand())
@@ -200,7 +201,7 @@ public class Driver
 						context.word_vectors_path,  context.word_vector_type,
 						null,  null,
 						null,  null);
-				ContextVectorsProducer.createVectors(context.meanings, context.chunk_size, context.output, resources);
+				ContextVectorsProducer.createVectors(context.meanings, context.chunk_size, context.output, resources, context.glosses_only);
 				break;
 			}
 			default:

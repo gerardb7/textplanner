@@ -15,9 +15,12 @@ import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.ResourcesFactory;
 import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.TextPlanner;
+import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
+import edu.upf.taln.textplanning.core.ranking.TopCandidatesFilter;
 import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
+import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.core.weighting.Context;
@@ -101,14 +104,17 @@ public class Driver
 				.flatMap(List::stream)
 				.collect(toList());
 
-		final Context context_weighter = new Context(graphs.getCandidates(), resources.getSenseContextVectors(),
+		final List<Candidate> candidates = new ArrayList<>(graphs.getCandidates());
+		final Context context_weighter = new Context(candidates, resources.getSenseContextVectors(),
 				resources.getSentenceVectors(), w -> context, resources.getSimilarityFunction());
 		final VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
+		TopCandidatesFilter candidates_filter = new TopCandidatesFilter(candidates, context_weighter::weight, 5);
+		DifferentMentionsFilter meanings_filter = new DifferentMentionsFilter(candidates);
 
 		TextPlanner.Options options = new TextPlanner.Options();
 		options.damping_meanings = 0.5;
 		options.sim_threshold = 0.5;
-		TextPlanner.rankMeanings(graphs.getCandidates(), context_weighter::weight, sim::of, options);
+		TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter::weight, sim::of, options);
 
 		Path output = FileUtils.createOutputPath(graphs_file, graphs_file.getParent(),
 				FilenameUtils.getExtension(graphs_file.toFile().getName()), graphs_ranked_suffix);
@@ -232,7 +238,6 @@ public class Driver
 		AMRSemanticGraphFactory globalFactory = new AMRSemanticGraphFactory();
 
 		VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
-
 		AmrMain generator = new AmrMain(generation_resources);
 
 		TextPlanner.Options options = new TextPlanner.Options();
@@ -259,6 +264,7 @@ public class Driver
 		else if (Files.isRegularFile(amr_bank))
 		{
 			log.info("*****Begin processing*****");
+
 			summarizeFile(amr_bank, reader, factory, globalFactory, e -> 0.0, (e1, e2) -> sim.of(e1, e2), options, num_subgraphs_extract, num_subgraphs, generator, max_words);
 		}
 		else
@@ -285,7 +291,21 @@ public class Driver
 			Serializer.serialize(graphs, output_path);
 
 			// 2- Rank meanings
-			TextPlanner.rankMeanings(graphs.getCandidates(), weight, similarity, options);
+			List<Candidate> candidates = new ArrayList<>(graphs.getCandidates());
+
+			// We'll use the whole text as a context
+			final List<String> context = graphs.getGraphs().stream()
+					.map(AMRGraph::getAlignments)
+					.map(AMRAlignments::getTokens)
+					.flatMap(List::stream)
+					.collect(toList());
+//			final Context context_weighter = new Context(candidates, resources.getSenseContextVectors(),
+//					resources.getSentenceVectors(), w -> context, resources.getSimilarityFunction());
+
+//			TopCandidatesFilter candidates_filter = new TopCandidatesFilter(candidates, context_weighter::weight, 5);
+			DifferentMentionsFilter meanings_filter = new DifferentMentionsFilter(candidates);
+
+//			TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, weight, similarity, options);
 			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
 					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), graphs_ranked_suffix);
 			Serializer.serialize(graphs, output_path);
