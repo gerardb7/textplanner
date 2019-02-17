@@ -11,13 +11,13 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
 
-public class RandomAccessVectors implements Vectors
+public class RandomAccessFileVectors implements Vectors
 {
 	private final GloveRandomAccessReader db;
 	private final int num_dimensions;
 	private final static Logger log = LogManager.getLogger();
 
-	public RandomAccessVectors(Path vectors_path, int num_dimensions) throws IOException
+	public RandomAccessFileVectors(Path vectors_path, int num_dimensions) throws IOException
 	{
 		this.num_dimensions = num_dimensions;
 

@@ -241,7 +241,7 @@ public class UIMAWrapper
 								final Set<Candidate> meanings = bn.getMeanings(surface_form, pos, language).stream()
 										.filter(bn::contains)
 										.map(s -> Meaning.get(s, bn.getLabel(s, language).orElse(""), bn.isNE(s).orElse(false)))
-										.map(meaning -> new Candidate(meaning, mention))
+										.map(meaning -> new Candidate(mention, meaning))
 										.collect(toSet());
 
 								// Add meanings for lemma
@@ -249,7 +249,7 @@ public class UIMAWrapper
 									bn.getMeanings(lemma, pos, language).stream()
 											.filter(bn::contains)
 											.map(s -> Meaning.get(s, bn.getLabel(s, language).orElse(""), bn.isNE(s).orElse(false)))
-											.map(meaning -> new Candidate(meaning, mention))
+											.map(meaning -> new Candidate(mention, meaning))
 											.forEach(meanings::add); // Meanings is a Set -> no duplicates
 
 								return meanings;
@@ -291,7 +291,7 @@ public class UIMAWrapper
 										final Meaning meaning = Meaning.get(s.getId(), s.getLabel(), s.getNameEntity());
 										meaning.setWeight(s.getConfidence());
 //										final double rank = JCasUtil.selectAt(doc, ConceptRelevance.class, a.getBegin(), a.getEnd()).get(0).getDomainRelevance();
-										return new Candidate(meaning, mention);
+										return new Candidate(mention, meaning);
 									})
 									.collect(toSet());
 						})

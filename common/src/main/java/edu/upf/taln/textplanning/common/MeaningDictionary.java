@@ -6,6 +6,7 @@ import java.io.Serializable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public interface MeaningDictionary
@@ -35,6 +36,7 @@ public interface MeaningDictionary
 	Iterator<String> iterator();
 	Iterator<Info> infoIterator(ULocale language);
 
+	// List of meanings sorted according to dictionary criteria, e.g. frequency, best sense first, etc.
 	List<String> getMeanings(String form, ULocale language);
 	List<String> getMeanings(String form, String pos, ULocale language);
 	boolean contains(String id);

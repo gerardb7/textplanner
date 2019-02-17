@@ -12,7 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.*;
@@ -141,13 +140,17 @@ public class BabelNetDictionary implements MeaningDictionary
 		try
 		{
 			BabelPOS bnPOS = BN_POS_EN.get(pos);
+			final Language bnLang = Language.fromISO(language.toLanguageTag());
 //			if (bnPOS == null)
 //				log.warn("Cannot recognize " + pos + " POS tag");
 			num_queries.getAndIncrement();
-			return bn.getSynsets(form, Language.fromISO(language.toLanguageTag()), bnPOS).stream()
+			final List<BabelSynset> synsets = bn.getSynsets(form, bnLang, bnPOS);
+			synsets.sort(new BabelSynsetComparator(form, bnLang));
+			return synsets.stream()
 					.map(BabelSynset::getId)
 					.map(BabelSynsetID::getID)
 					.collect(toList());
+
 		}
 		catch (Exception e)
 		{

@@ -361,7 +361,8 @@ public class Driver
 				break;
 			case get_system_command:
 			{
-				ResourcesFactory resources = new ResourcesFactory(system.freqsFile, system.sentence_vector_type,
+				ResourcesFactory resources = new ResourcesFactory(system.freqsFile,
+						null, system.sentence_vector_type,
 						system.word_vectors_path,  system.word_vector_type,
 						system.context_vectors_path,  system.context_vector_type,
 						system.sense_vectors_path,  system.sense_vector_type);

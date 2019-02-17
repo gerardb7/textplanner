@@ -10,5 +10,5 @@ public interface SentenceVectors
 	Optional<double[]> getVector(List<String> tokens);
 	double[] getUnknownVector();
 
-	enum VectorType {BoW, SIF, Precomputed}
+	enum VectorType {BoW, SIF, Precomputed, Random}
 }

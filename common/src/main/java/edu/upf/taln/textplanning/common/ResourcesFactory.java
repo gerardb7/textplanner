@@ -2,10 +2,7 @@ package edu.upf.taln.textplanning.common;
 
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
-import edu.upf.taln.textplanning.core.similarity.vectors.BoWVectors;
-import edu.upf.taln.textplanning.core.similarity.vectors.SIFVectors;
-import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors;
-import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
+import edu.upf.taln.textplanning.core.similarity.vectors.*;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,12 +22,13 @@ public class ResourcesFactory
 	private Vectors word_vectors = null;
 	private Vectors sense_vectors = null;
 	private Vectors sense_context_vectors = null;
-	private SentenceVectors sentence_vectors = null;
+	private SentenceVectors sentence_vectors;
 	private BiFunction<double[], double[], Double> similarity_function = null;
 
 	private final static Logger log = LogManager.getLogger();
 
-	public ResourcesFactory(Path idf_file, SentenceVectors.VectorType sentence_vectors_type,
+	public ResourcesFactory(Path idf_file,
+	                        Path sentence_vectors_path, SentenceVectors.VectorType sentence_vectors_type,
 	                        Path word_vectors_path, Vectors.VectorType word_vectors_type,
 	                        Path sense_context_vectors_path, Vectors.VectorType sense_context_vectors_type,
 	                        Path sense_vectors_path, Vectors.VectorType sense_vectors_type) throws Exception
@@ -38,37 +36,49 @@ public class ResourcesFactory
 
 		// Load ranking resources
 		log.info("Loading resources for ranking");
-		if (word_vectors_path != null && word_vectors_type != null)
+		if (word_vectors_type != null)
 			word_vectors = Vectors.get(word_vectors_path, word_vectors_type, 300);
-		if (sense_context_vectors_path != null && sense_context_vectors_type != null)
+		if (sense_context_vectors_type != null)
 			sense_context_vectors = Vectors.get(sense_context_vectors_path, sense_context_vectors_type, 300);
-		if (sense_vectors_path != null && sense_vectors_type != null)
+		if (sense_vectors_type != null)
 			sense_vectors = Vectors.get(sense_vectors_path, sense_vectors_type, 300);
 
-		switch (sentence_vectors_type)
+		if (sentence_vectors_type != null)
 		{
-			case SIF:
+			switch (sentence_vectors_type)
 			{
-				if (word_vectors != null && idf_file != null)
+				case SIF:
 				{
-					final Map<String, Double> weights = getWeights(idf_file);
-					final Double default_weight = Collections.min(weights.values());
-					sentence_vectors = new SIFVectors(word_vectors, w -> weights.getOrDefault(w, default_weight));
-					similarity_function = (SIFVectors) sentence_vectors;
+					if (word_vectors != null && idf_file != null)
+					{
+						final Map<String, Double> weights = getWeights(idf_file);
+						final Double default_weight = Collections.min(weights.values());
+						sentence_vectors = new SIFVectors(word_vectors, w -> weights.getOrDefault(w, default_weight));
+						similarity_function = (SIFVectors) sentence_vectors;
+					}
+					else
+						throw new Exception("Word vectors and idf file are required for SIF sentence vectors");
+					break;
 				}
-				break;
-			}
-			case BoW:
-			default:
-			{
-				if (word_vectors != null)
+				case BoW:
 				{
-					sentence_vectors = new BoWVectors(word_vectors);
+					if (word_vectors != null)
+					{
+						sentence_vectors = new BoWVectors(word_vectors);
+						similarity_function = new CosineSimilarity();
+					}
+					else
+						throw new Exception("Word vectors are required for BoW sentence vectors");
+					break;
+				}
+				case Random:
+				default:
+				{
+					sentence_vectors = new RandomVectors();
 					similarity_function = new CosineSimilarity();
 				}
 			}
 		}
-
 	}
 
 	public Vectors getWordVectors()

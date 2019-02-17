@@ -62,27 +62,33 @@ public class Driver
 		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
-		@Parameter(names = {"-svt", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1, required = true,
+		@Parameter(names = {"-sv", "-sentence_vectors"}, description = "Path to sentence vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path sentence_vectors_path;
+		@Parameter(names = {"-st", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1, required = true,
 				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
 		private SentenceVectors.VectorType sentence_vector_type = SentenceVectors.VectorType.SIF;
-		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1, required = true,
+		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path word_vectors_path;
 		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1, required = true,
 				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
 		private Vectors.VectorType word_vector_type = Vectors.VectorType.Binary_RandomAccess;
-		@Parameter(names = {"-cv", "-context_vectors"}, description = "Path to sense context vectors", arity = 1, required = true,
+		@Parameter(names = {"-cv", "-context_vectors"}, description = "Path to sense context vectors", arity = 1,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path context_vectors_path;
 		@Parameter(names = {"-ct", "-context_vectors_type"}, description = "Type of sense context vectors", arity = 1, required = true,
 				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
 		private Vectors.VectorType context_vector_type = Vectors.VectorType.Binary_RandomAccess;
-		@Parameter(names = {"-sv", "-sense_vectors"}, description = "Path to sense vectors", arity = 1, required = true,
+		@Parameter(names = {"-sev", "-sense_vectors"}, description = "Path to sense vectors", arity = 1,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path sense_vectors_path;
-		@Parameter(names = {"-st", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
+		@Parameter(names = {"-set", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
 				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
 		private Vectors.VectorType sense_vector_type = Vectors.VectorType.Binary_RandomAccess;
+		@Parameter(names = {"-mc", "-max_candidates"}, description = "Maximum number of candidates per mention", arity = 1,
+				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
+		private int max_meanings = Integer.MAX_VALUE;
 	}
 
 	@SuppressWarnings("unused")
@@ -182,12 +188,13 @@ public class Driver
 				break;
 			case semeval_command:
 			{
-				ResourcesFactory resources = new ResourcesFactory(semEval.freqsFile, semEval.sentence_vector_type,
+				ResourcesFactory resources = new ResourcesFactory(semEval.freqsFile,
+						semEval.sentence_vectors_path, semEval.sentence_vector_type,
 						semEval.word_vectors_path,  semEval.word_vector_type,
 						semEval.context_vectors_path,  semEval.context_vector_type,
 						semEval.sense_vectors_path,  semEval.sense_vector_type);
 				SemEvalEvaluation.evaluate(semEval.gold_file, semEval.input_file, semEval.babelnet, semEval.output,
-						resources);
+						resources, semEval.max_meanings);
 				break;
 			}
 			case collect_meanings_vectors:
@@ -197,7 +204,8 @@ public class Driver
 			}
 			case create_context_vectors:
 			{
-				ResourcesFactory resources = new ResourcesFactory(context.freqsFile, context.sentence_vector_type,
+				ResourcesFactory resources = new ResourcesFactory(context.freqsFile,
+						null, context.sentence_vector_type,
 						context.word_vectors_path,  context.word_vector_type,
 						null,  null,
 						null,  null);

@@ -67,7 +67,7 @@ public class CandidatesCollector
 		List<Candidate> candidates = anchors2Meanings.keySet().stream()
 				.flatMap(l -> anchors2Meanings.get(l).stream() // given a label l
 						.flatMap(meaning -> anchors2Mentions.get(l).stream() // for each mention m with label l
-								.map(mention -> new Candidate(meaning, mention))))
+								.map(mention -> new Candidate(mention, meaning))))
 				.collect(toList());
 
 		int num_references = candidates.stream().map(Candidate::getMeaning).map(Meaning::getReference).collect(toSet()).size();

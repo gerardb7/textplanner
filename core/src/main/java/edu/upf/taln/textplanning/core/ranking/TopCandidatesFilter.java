@@ -44,7 +44,7 @@ public class TopCandidatesFilter implements Predicate<Candidate>
 		if (candidates.size() < max_candidates)
 			return candidates;
 
-		candidates.sort(Comparator.comparingDouble(c -> eval.apply(c.getMeaning().getReference())));
+		candidates.sort(Comparator.<Candidate>comparingDouble(c -> eval.apply(c.getMeaning().getReference())).reversed());
 		return candidates.subList(0, max_candidates);
 	}
 

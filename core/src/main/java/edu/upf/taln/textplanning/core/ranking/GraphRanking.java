@@ -41,14 +41,15 @@ public class GraphRanking
 	                                BiFunction<String, String, OptionalDouble> similarity,
 	                                double meaning_similarity_threshold, double damping_factor_meanings)
 	{
-		final List<String> references = candidates.stream()
+		final List<Candidate> filtered_candidates = candidates.stream()
 				.filter(candidates_filter)
+				.collect(toList());
+		final List<String> references = filtered_candidates.stream()
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
 				.distinct()
 				.collect(Collectors.toList());
-		final List<String> labels = candidates.stream() // for debugging purposes
-				.filter(candidates_filter)
+		final List<String> labels = filtered_candidates.stream() // for debugging purposes
 				.map(Candidate::getMeaning)
 				.map(Meaning::toString)
 				.distinct()
@@ -66,7 +67,7 @@ public class GraphRanking
 		double[] ranking = final_distribution.getColumnPackedCopy();
 
 		// Assign ranking values to meanings
-		candidates.stream()
+		filtered_candidates.stream()
 				.map(Candidate::getMeaning)
 				.distinct()
 				.forEach(m ->

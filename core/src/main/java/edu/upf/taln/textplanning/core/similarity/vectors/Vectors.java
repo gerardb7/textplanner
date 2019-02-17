@@ -24,7 +24,7 @@ public interface Vectors
 	}
 
 	// Text_Glove -> with header containing num dimensions, Text_Word2Vec -> without header
-	enum VectorType {Text_Glove, Text_Word2vec, Binary_Word2vec, Binary_RandomAccess}
+	enum VectorType {Text_Glove, Text_Word2vec, Binary_Word2vec, Binary_RandomAccess, Random}
 
 	static Vectors get(Path location, VectorType type, int num_dimensions) throws Exception
 	{
@@ -36,8 +36,10 @@ public interface Vectors
 			case Binary_Word2vec:
 				return new Word2VecVectors(location);
 			case Binary_RandomAccess:
+				return new RandomAccessFileVectors(location, num_dimensions);
+			case Random:
 			default:
-				return new RandomAccessVectors(location,num_dimensions);
+				return new RandomVectors();
 		}
 	}
 }

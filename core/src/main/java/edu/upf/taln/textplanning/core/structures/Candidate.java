@@ -10,18 +10,18 @@ public class Candidate implements Serializable
 {
 	public enum Type {Location, Organization, Person, Other}
 
-	private final Meaning meaning;
 	private final Mention mention;
+	private final Meaning meaning;
 	private final static long serialVersionUID = 1L;
 
-	public Candidate(Meaning e, Mention m)
+	public Candidate(Mention m, Meaning e)
 	{
-		this.meaning = e;
 		this.mention = m;
+		this.meaning = e;
 	}
 
-	public Meaning getMeaning() { return meaning; }
 	public Mention getMention() { return mention; }
+	public Meaning getMeaning() { return meaning; }
 
 	@Override
 	public String toString()
@@ -36,12 +36,12 @@ public class Candidate implements Serializable
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
 		Candidate candidate = (Candidate) o;
-		return Objects.equals(meaning, candidate.meaning) && Objects.equals(mention, candidate.mention);
+		return Objects.equals(mention, candidate.mention) && Objects.equals(meaning, candidate.meaning);
 	}
 
 	@Override
 	public int hashCode()
 	{
-		return Objects.hash(meaning, mention);
+		return Objects.hash(mention, meaning);
 	}
 }

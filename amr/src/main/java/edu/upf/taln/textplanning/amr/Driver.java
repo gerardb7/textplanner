@@ -613,7 +613,8 @@ public class Driver
 					create_graphs.no_babelnet);
 		else if (jc.getParsedCommand().equals(rank_meanings_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(rank_meanings.freqsFile, rank_meanings.sentence_vector_type,
+			ResourcesFactory resources = new ResourcesFactory(rank_meanings.freqsFile,
+					null, rank_meanings.sentence_vector_type,
 					rank_meanings.word_vectors_path,  rank_meanings.word_vector_type,
 					rank_meanings.context_vectors_path,  rank_meanings.context_vector_type,
 					rank_meanings.sense_vectors_path,  rank_meanings.sense_vector_type);
@@ -628,13 +629,13 @@ public class Driver
 			driver.extract_subgraphs(extract_subgraphs.inputFile, extract_subgraphs.num_subgraphs);
 		else if (jc.getParsedCommand().equals(remove_redundancy_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(null, null, null, null,
+			ResourcesFactory resources = new ResourcesFactory(null, null, null, null, null,
 					null, null, remove_redundancy.vectorsPath, remove_redundancy.vectorType);
 			driver.remove_redundancy(remove_redundancy.inputFile, remove_redundancy.num_subgraphs, resources);
 		}
 		else if (jc.getParsedCommand().equals(sort_subgraphs_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(null, null, null, null,
+			ResourcesFactory resources = new ResourcesFactory(null, null, null, null, null,
 					null, null, sort_subgraphs.vectorsPath, sort_subgraphs.vectorType);
 			driver.sort_subgraphs(sort_subgraphs.inputFile, resources);
 		}
@@ -645,7 +646,7 @@ public class Driver
 		/* --- */
 		else if (jc.getParsedCommand().equals(summarize_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(summarize.freqsFile, null, null, null,
+			ResourcesFactory resources = new ResourcesFactory(summarize.freqsFile, null, null, null, null,
 					null, null, summarize.vectorsPath, summarize.vectorType);
 			driver.summarize(summarize.input, summarize.bnFolder, resources, summarize.no_stanford, summarize.no_babelnet, summarize.num_extract,
 					summarize.num_subgraphs, summarize.generation_resources, summarize.max_words);
