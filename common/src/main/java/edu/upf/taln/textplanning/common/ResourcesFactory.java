@@ -1,8 +1,10 @@
 package edu.upf.taln.textplanning.common;
 
 import com.google.common.base.Stopwatch;
+import edu.upf.taln.textplanning.core.ranking.StopWordsFilter;
 import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.*;
+import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,12 +15,15 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
+import java.util.function.Predicate;
 
 import static edu.upf.taln.textplanning.core.utils.DebugUtils.LOGGING_STEP_SIZE;
 import static java.util.stream.Collectors.toMap;
 
 public class ResourcesFactory
 {
+	private MeaningDictionary dictionary = null;
+	private final Predicate<Mention> stop_words_filter;
 	private Vectors word_vectors = null;
 	private Vectors sense_vectors = null;
 	private Vectors sense_context_vectors = null;
@@ -27,15 +32,26 @@ public class ResourcesFactory
 
 	private final static Logger log = LogManager.getLogger();
 
-	public ResourcesFactory(Path idf_file,
+	public ResourcesFactory(Path dictionary_config) throws Exception
+	{
+		this(dictionary_config, null, null, null, null, null, null, null, null, null, null);
+	}
+
+	public ResourcesFactory(Path dictionary_config, Path idf_file, Path stop_words_file,
 	                        Path sentence_vectors_path, SentenceVectors.VectorType sentence_vectors_type,
 	                        Path word_vectors_path, Vectors.VectorType word_vectors_type,
 	                        Path sense_context_vectors_path, Vectors.VectorType sense_context_vectors_type,
 	                        Path sense_vectors_path, Vectors.VectorType sense_vectors_type) throws Exception
 	{
-
 		// Load ranking resources
 		log.info("Loading resources for ranking");
+
+		if (dictionary_config != null)
+			dictionary = new BabelNetDictionary(dictionary_config);
+		if (stop_words_file != null)
+			stop_words_filter = new StopWordsFilter(stop_words_file);
+		else
+			stop_words_filter = (m) -> true;
 		if (word_vectors_type != null)
 			word_vectors = Vectors.get(word_vectors_path, word_vectors_type, 300);
 		if (sense_context_vectors_type != null)
@@ -80,6 +96,10 @@ public class ResourcesFactory
 			}
 		}
 	}
+
+	public MeaningDictionary getDictionary() { return dictionary; }
+
+	public Predicate<Mention> getStopWordsFilter() { return stop_words_filter; }
 
 	public Vectors getWordVectors()
 	{

@@ -4,7 +4,9 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.ibm.icu.util.ULocale;
-import edu.upf.taln.textplanning.common.*;
+import edu.upf.taln.textplanning.common.CMLCheckers;
+import edu.upf.taln.textplanning.common.FileUtils;
+import edu.upf.taln.textplanning.common.ResourcesFactory;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
 import edu.upf.taln.textplanning.core.ranking.TopCandidatesFilter;
@@ -12,8 +14,6 @@ import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.structures.Meaning;
-import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.weighting.Context;
 import it.uniroma1.lcl.jlt.util.Files;
 import org.apache.logging.log4j.LogManager;
@@ -24,10 +24,8 @@ import java.nio.file.Path;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static edu.upf.taln.textplanning.common.FileUtils.*;
@@ -38,7 +36,6 @@ public class Driver
 	private static final String text_suffix = ".story";
 	private static final String gold_suffix = ".gold";
 	private static final String meanings_suffix = ".candidates";
-	private static final String stats_suffix = ".stats";
 
 	private static final String get_candidates_command = "candidates";
 	private static final String get_system_UIMA_command = "system_uima";
@@ -49,7 +46,7 @@ public class Driver
 	private final static Logger log = LogManager.getLogger();
 
 	@SuppressWarnings("unused")
-	@Parameters(commandDescription = "Get candidates from text files using BabelNet")
+	@Parameters(commandDescription = "Get candidates from text files using a dictionary")
 	private static class GetCandidatesCommand
 	{
 		@Parameter(names = {"-t", "-texts"}, description = "ath to folder containing text files", arity = 1, required = true,
@@ -58,9 +55,9 @@ public class Driver
 		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where candidate files will be stored", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
-		@Parameter(names = {"-b", "-babelconfig"}, description = "Path to BabelNet configuration folder", arity = 1, required = true,
+		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path babelnet;
+		private Path dictionary;
 	}
 
 	@SuppressWarnings("unused")
@@ -73,12 +70,15 @@ public class Driver
 		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
-		@Parameter(names = {"-b", "-babelconfig"}, description = "Path to BabelNet configuration folder", arity = 1, required = true,
+		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path babelConfigPath;
+		private Path dictionary;
 		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
+		@Parameter(names = {"-s", "-stopwords"}, description = "Path to stop words file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path stopwords;
 		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
@@ -100,6 +100,9 @@ public class Driver
 		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
+		@Parameter(names = {"-s", "-stopwords"}, description = "Path to stop words file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path stopwords;
 		@Parameter(names = {"-svt", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1,
 				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
 		private SentenceVectors.VectorType sentence_vector_type = SentenceVectors.VectorType.SIF;
@@ -133,12 +136,12 @@ public class Driver
 		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where candidate files will be stored", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
-		@Parameter(names = {"-b", "-babelconfig"}, description = "Path to BabelNet configuration folder", arity = 1, required = true,
+		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path babelnet;
+		private Path dictionary;
 	}
 
-	private static void getCandidates(Path input_folder, Path output_folder, Path babelnet_config)
+	private static void getCandidates(Path input_folder, Path output_folder, ResourcesFactory resources)
 	{
 		log.info("Loading files");
 		final File[] text_files = getFilesInFolder(input_folder, text_suffix);
@@ -146,9 +149,6 @@ public class Driver
 			log.error("No files found");
 		else
 		{
-
-			MeaningDictionary bn = new BabelNetDictionary(babelnet_config);
-
 			log.info("Processing texts with UIMA and looking up candidate meanings");
 			final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createSpanPipeline(language, false);
 
@@ -160,7 +160,7 @@ public class Driver
 						log.info("Processing " + f);
 						final String text = readTextFile(f);
 						UIMAWrapper uima = new UIMAWrapper(text, language, pipeline);
-						final List<List<Set<Candidate>>> candidates = uima.getCandidates(bn);
+						final List<List<Set<Candidate>>> candidates = uima.getCandidates(resources.getDictionary());
 
 						Path out_file = createOutputPath(f, output_folder, text_suffix, meanings_suffix);
 						log.info("Serializing meanings to  " + out_file);
@@ -198,7 +198,7 @@ public class Driver
 		}
 	}
 
-	private static void getSystemMeanings(Path text_folder, Path candidate_folder, Path output_folder, ResourcesFactory resources) throws Exception
+	private static void getSystemMeanings(Path text_folder, Path candidate_folder, Path output_folder, ResourcesFactory resources)
 	{
 		log.info("Loading files");
 		final List<Path> text_files = Arrays.stream(Objects.requireNonNull(getFilesInFolder(text_folder, text_suffix)))
@@ -251,12 +251,6 @@ public class Driver
 							.map(Candidate::getMeaning)
 							.forEach(m -> m.setWeight(context_weighter.weight(m.getReference())));
 
-//					final String stats = print_stats(candidates, context_weighter);
-//					final Path stats_file = createOutputPath(file, output_folder, text_suffix, stats_suffix);
-//					log.info("Writing stats to " + stats_file);
-//					if (stats_file != null)
-//						FileUtils.writeTextToFile(stats_file, stats);
-
 					// Let's group and sort the plain list of candidates by sentence and offsets.
 					final List<List<Set<Candidate>>> grouped_candidates = candidates.stream()
 							.collect(groupingBy(c -> c.getMention().getSentenceId(), groupingBy(c -> c.getMention().getSpan(), toSet())))
@@ -275,36 +269,10 @@ public class Driver
 				});
 	}
 
-	public static String print_stats(List<Candidate> candidates, Context context_weighter)
-	{
-		final List<Meaning> meanings = candidates.stream()
-				.map(Candidate::getMeaning)
-				.distinct()
-				.collect(toList());
-		final Map<Meaning, Double> context_weights = meanings.stream()
-				.collect(Collectors.toMap(m -> m, m -> context_weighter.weight(m.getReference())));
-
-		Function<Mention, String> print_mention = m -> m.getSentenceId() + " " + m.getSpan() + " " + m.getSurface_form();
-
-		return candidates.stream()
-				.map(c -> {
-					final Mention mention = c.getMention();
-					final Meaning meaning = c.getMeaning();
-					return print_mention.apply(mention) + "\t" +
-							meaning + "\t" +
-							context_weights.get(meaning) + "\t" +
-							meaning.getWeight();
-				})
-				.collect(Collectors.joining("\n"));
-	}
-
-	private static void getGoldCandidates(Path gold_folder, Path output_folder, Path babelnet_config)
+	private static void getGoldCandidates(Path gold_folder, Path output_folder, ResourcesFactory resources)
 	{
 		log.info("Loading files");
 		final File[] gold_files = getFilesInFolder(gold_folder, gold_suffix);
-
-		MeaningDictionary bn = new BabelNetDictionary(babelnet_config);
-
 
 		final Predicate<String> is_meta = Pattern.compile("^@").asPredicate();
 		assert gold_files != null;
@@ -323,7 +291,7 @@ public class Driver
 		IntStream.range(0, gold_files.length)
 				.forEach(i -> {
 					final UIMAWrapper uimaWrapper = new UIMAWrapper(summaries.get(i), language, pipeline);
-					final List<List<Set<Candidate>>> candidates = uimaWrapper.getCandidates(bn);
+					final List<List<Set<Candidate>>> candidates = uimaWrapper.getCandidates(resources.getDictionary());
 
 					Path out_file = createOutputPath(gold_files[i].toPath(), output_folder, text_suffix, meanings_suffix);
 					log.info("Serializing meanings to  " + out_file);
@@ -354,14 +322,19 @@ public class Driver
 		switch (jc.getParsedCommand())
 		{
 			case get_candidates_command:
-				getCandidates(candidates.texts, candidates.output, candidates.babelnet);
+			{
+				final ResourcesFactory resourcesFactory = new ResourcesFactory(candidates.dictionary);
+				getCandidates(candidates.texts, candidates.output, resourcesFactory);
 				break;
+			}
 			case get_system_UIMA_command:
-				getSystemMeaningsUIMA(system_uima.texts, system_uima.output, system_uima.babelConfigPath, system_uima.freqsFile, system_uima.vectorsPath);
+			{
+				getSystemMeaningsUIMA(system_uima.texts, system_uima.output, candidates.dictionary, system_uima.freqsFile, system_uima.vectorsPath);
 				break;
+			}
 			case get_system_command:
 			{
-				ResourcesFactory resources = new ResourcesFactory(system.freqsFile,
+				ResourcesFactory resources = new ResourcesFactory(null,  system.freqsFile, system.stopwords,
 						null, system.sentence_vector_type,
 						system.word_vectors_path,  system.word_vector_type,
 						system.context_vectors_path,  system.context_vector_type,
@@ -370,8 +343,11 @@ public class Driver
 				break;
 			}
 			case get_gold_candidates_command:
-				getGoldCandidates(gold_candidates.gold, gold_candidates.output, gold_candidates.babelnet);
+			{
+				final ResourcesFactory resourcesFactory = new ResourcesFactory(candidates.dictionary);
+				getGoldCandidates(gold_candidates.gold, gold_candidates.output, resourcesFactory);
 				break;
+			}
 			default:
 				jc.usage();
 				break;

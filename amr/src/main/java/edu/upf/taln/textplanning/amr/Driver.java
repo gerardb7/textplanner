@@ -76,14 +76,16 @@ public class Driver
 	private static final String process_command = "process";
 	private static final String stats_command = "stats";
 
-	private void create_graphs(Path amr_bank_file, Path bn_config_folder, boolean no_stanford, boolean no_babelnet)
+	private void create_graphs(Path amr_bank_file, ResourcesFactory resources, boolean no_stanford)
 			throws IOException
 	{
 		log.info("Running from " + amr_bank_file);
 		String amr_bank = FileUtils.readTextFile(amr_bank_file);
 
 		AMRReader reader = new AMRReader();
-		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language, null, bn_config_folder, no_stanford, no_babelnet);
+		AMRGraphListFactory factory =
+				new AMRGraphListFactory(reader, language, null, resources.getDictionary(), resources.getStopWordsFilter(),
+						no_stanford);
 		AMRGraphList graphs = factory.create(amr_bank);
 
 		Path output = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
@@ -223,8 +225,8 @@ public class Driver
 		log.info("Summary text writen to " + output);
 	}
 
-	private void summarize(Path amr_bank, Path babelnet, ResourcesFactory resources,
-	                       boolean no_stanford, boolean no_babelnet, int num_subgraphs_extract, int num_subgraphs,
+	private void summarize(Path amr_bank, ResourcesFactory resources,
+	                       boolean no_stanford, int num_subgraphs_extract, int num_subgraphs,
 	                       Path generation_resources, int max_words) throws Exception
 	{
 		log.info("*****Running from " + amr_bank + "*****");
@@ -234,7 +236,7 @@ public class Driver
 		log.info("*****Setting up planner*****");
 //		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
 		AMRReader reader = new AMRReader();
-		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language,null, babelnet, no_stanford, no_babelnet);
+		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language,null, resources.getDictionary(), resources.getStopWordsFilter(), no_stanford);
 		AMRSemanticGraphFactory globalFactory = new AMRSemanticGraphFactory();
 
 		VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
@@ -382,13 +384,14 @@ public class Driver
 		@Parameter(names = {"-i", "-input"}, description = "Input text-based AMR file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
-		@Parameter(names = {"-b", "-babelconfig"}, description = "BabelNet configuration folder", arity = 1, required = true,
+		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path bnFolder;
+		private Path dictionary;
+		@Parameter(names = {"-s", "-stopwords"}, description = "Path to stop words file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path stopwords;
 		@Parameter(names = {"-ns", "-nostanford"}, description = "Do not load Stanford CoreNLP pipeline")
 		private boolean no_stanford = false;
-		@Parameter(names = {"-nb", "-nobabelnet"}, description = "Do not query BabelNet")
-		private boolean no_babelnet = false;
 	}
 
 	@Parameters(commandDescription = "Rank meanings in a collection of semantic graphs")
@@ -397,9 +400,12 @@ public class Driver
 		@Parameter(names = {"-i", "-input"}, description = "Input binary graphs file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
-		@Parameter(names = {"-f", "-frequencies"}, description = "Frequencies file", arity = 1, required = true,
+		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
+		@Parameter(names = {"-s", "-stopwords"}, description = "Path to stop words file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path stopwords;
 		@Parameter(names = {"-st", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1,
 				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
 		private SentenceVectors.VectorType sentence_vector_type = SentenceVectors.VectorType.SIF;
@@ -506,12 +512,15 @@ public class Driver
 		@Parameter(names = {"-i", "-input"}, description = "Path to input file or folder containing text-based AMRs", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path input;
-		@Parameter(names = {"-b", "-babelconfig"}, description = "Path to BabelNet configuration folder", arity = 1, required = true,
+		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path bnFolder;
+		private Path dictionary;
 		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
+		@Parameter(names = {"-s", "-stopwords"}, description = "Path to stop words file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path stopwords;
 		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
@@ -520,8 +529,6 @@ public class Driver
 		private VectorType vectorType = VectorType.Text_Glove;
 		@Parameter(names = {"-ns", "-nostanford"}, description = "Do not load Stanford CoreNLP pipeline")
 		private boolean no_stanford = false;
-		@Parameter(names = {"-nb", "-nobabelnet"}, description = "Do not query BabelNet")
-		private boolean no_babelnet = false;
 		@Parameter(names = {"-ne", "-number_extract"}, description = "Number of subgraphs to extract", arity = 1, required = true,
 				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
 		private int num_extract;
@@ -537,15 +544,15 @@ public class Driver
 	}
 
 	@SuppressWarnings("unused")
-	@Parameters(commandDescription = "Process plain text file with CoreNLP and BabelNet")
+	@Parameters(commandDescription = "Process plain text file with CoreNLP and a dictionary")
 	private static class ProcessFileCommand
 	{
 		@Parameter(names = {"-i", "-input"}, description = "Input text file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
-		@Parameter(names = {"-b", "-babelconfig"}, description = "BabelNet configuration folder", arity = 1, required = true,
+		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path bnFolder;
+		private Path dictionary;
 	}
 
 	@SuppressWarnings("unused")
@@ -558,6 +565,9 @@ public class Driver
 		@Parameter(names = {"-f", "-frequencies"}, description = "Frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
+		@Parameter(names = {"-s", "-stopwords"}, description = "Path to stop words file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path stopwords;
 		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path vectorsPath;
@@ -609,11 +619,17 @@ public class Driver
 
 		Driver driver = new Driver();
 		if (jc.getParsedCommand().equals(create_graphs_command))
-			driver.create_graphs(create_graphs.inputFile, create_graphs.bnFolder, create_graphs.no_stanford,
-					create_graphs.no_babelnet);
+		{
+			ResourcesFactory resources = new ResourcesFactory(create_graphs.dictionary, null, rank_meanings.stopwords,
+					null, null,
+					null,  null,
+					null,  null,
+					null,  null);
+			driver.create_graphs(create_graphs.inputFile, resources, create_graphs.no_stanford);
+		}
 		else if (jc.getParsedCommand().equals(rank_meanings_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(rank_meanings.freqsFile,
+			ResourcesFactory resources = new ResourcesFactory(null, rank_meanings.freqsFile, rank_meanings.stopwords,
 					null, rank_meanings.sentence_vector_type,
 					rank_meanings.word_vectors_path,  rank_meanings.word_vector_type,
 					rank_meanings.context_vectors_path,  rank_meanings.context_vector_type,
@@ -629,13 +645,13 @@ public class Driver
 			driver.extract_subgraphs(extract_subgraphs.inputFile, extract_subgraphs.num_subgraphs);
 		else if (jc.getParsedCommand().equals(remove_redundancy_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(null, null, null, null, null,
+			ResourcesFactory resources = new ResourcesFactory(null, null, null, null, null, null, null,
 					null, null, remove_redundancy.vectorsPath, remove_redundancy.vectorType);
 			driver.remove_redundancy(remove_redundancy.inputFile, remove_redundancy.num_subgraphs, resources);
 		}
 		else if (jc.getParsedCommand().equals(sort_subgraphs_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(null, null, null, null, null,
+			ResourcesFactory resources = new ResourcesFactory(null, null, null, null, null, null, null,
 					null, null, sort_subgraphs.vectorsPath, sort_subgraphs.vectorType);
 			driver.sort_subgraphs(sort_subgraphs.inputFile, resources);
 		}
@@ -646,9 +662,9 @@ public class Driver
 		/* --- */
 		else if (jc.getParsedCommand().equals(summarize_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(summarize.freqsFile, null, null, null, null,
+			ResourcesFactory resources = new ResourcesFactory(summarize.dictionary, summarize.freqsFile, summarize.stopwords, null, null, null, null,
 					null, null, summarize.vectorsPath, summarize.vectorType);
-			driver.summarize(summarize.input, summarize.bnFolder, resources, summarize.no_stanford, summarize.no_babelnet, summarize.num_extract,
+			driver.summarize(summarize.input, resources, summarize.no_stanford,summarize.num_extract,
 					summarize.num_subgraphs, summarize.generation_resources, summarize.max_words);
 		}
 		else if (jc.getParsedCommand().equals(process_command))
@@ -656,7 +672,7 @@ public class Driver
 			final String text = FileUtils.readTextFile(process.inputFile);
 			final Path output = FileUtils.createOutputPath(process.inputFile, process.inputFile.getParent(),
 					FilenameUtils.getExtension(process.inputFile.toFile().getName()), process_suffix);
-			EmpiricalStudy.processText(text, output, process.bnFolder);
+			EmpiricalStudy.processText(text, output, process.dictionary);
 		}
 		else if (jc.getParsedCommand().equals(stats_command))
 		{

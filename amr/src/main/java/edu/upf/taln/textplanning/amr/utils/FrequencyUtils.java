@@ -230,92 +230,92 @@ public class FrequencyUtils
 		log.info("Json written to file" + outputFile);
 	}
 
-	private static void getStats(Path amr_bank, Path freqs_file, Path babel_config) throws IOException, ClassNotFoundException
-	{
-		AMRReader reader = new AMRReader();
-		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language, null, babel_config, false, false);
-		String contents = FileUtils.readFileToString(amr_bank.toFile(), Charsets.UTF_8);
-		AMRGraphList graphs = factory.create(contents);
-
-		long num_tokens = graphs.getGraphs().stream()
-				.mapToLong(g ->
-				{
-					AMRAlignments a = g.getAlignments();
-					List<String> tokens = a.getTokens();
-					return tokens.size();
-				})
-				.sum();
-
-		long num_aligned_tokens = graphs.getGraphs().stream()
-				.mapToLong(g ->
-				{
-					AMRAlignments a = g.getAlignments();
-					List<String> tokens = a.getTokens();
-					return IntStream.range(0, tokens.size())
-							.mapToObj(a::getAlignedVertices)
-							.filter(l -> !l.isEmpty())
-							.count();
-				})
-				.sum();
-
-		long num_tokens_with_meaning = graphs.getGraphs().stream()
-				.mapToLong(g ->
-				{
-					AMRAlignments a = g.getAlignments();
-					List<String> tokens = a.getTokens();
-					return IntStream.range(0, tokens.size())
-							.mapToObj(a::getAlignedVertices)
-							.filter(l -> !l.isEmpty())
-							.flatMap(Set::stream)
-							.map(graphs::getCandidates)
-							.filter(l -> !l.isEmpty())
-							.count();
-				})
-				.sum();
-
-
-		Map<Meaning, Long> reference_freqs = graphs.getCandidates().stream()
-				.collect(groupingBy(Candidate::getMeaning, counting()));
-		Map<String, Long> form_freqs = graphs.getGraphs().stream()
-				.map(g -> g.getAlignments().getTokens())
-				.flatMap(List::stream)
-				.collect(groupingBy(s -> s, counting()));
-		Map<String, Long> lemma_freqs = graphs.getGraphs().stream()
-				.map(g ->
-				{
-					AMRAlignments a = g.getAlignments();
-					List<String> tokens = a.getTokens();
-					return IntStream.range(0, tokens.size())
-							.mapToObj(a::getLemma)
-							.collect(toList());
-				})
-				.flatMap(List::stream)
-				.collect(groupingBy(s -> s, counting()));
-
-		Set<String> references = graphs.getCandidates().stream()
-				.map(Candidate::getMeaning)
-				.map(Meaning::getReference)
-				.collect(Collectors.toSet());
-
-
-		CompactFrequencies corpus = (CompactFrequencies) Serializer.deserialize(freqs_file);
-		Map<String, OptionalInt> reference_idfs = references.stream()
-				.collect(toMap(s -> s, corpus::getMeaningDocumentCount));
-		long num_ref_in_corpus = reference_idfs.keySet().stream()
-				.filter(s -> reference_idfs.get(s).isPresent())
-				.count();
-		List<String> sorted_refs_idf = reference_idfs.keySet().stream()
-				.sorted(Comparator.comparingInt(s -> reference_idfs.get(s).orElse(-1)))
-				.collect(Collectors.toList());
-
-		final TFIDF tfidf = new TFIDF(graphs.getCandidates(), corpus);
-				Map<String, Double> sense_tf_idfs = references.stream()
-						.collect(toMap(s -> s, tfidf::weight));
-		List<String> sorted_refs_tf_idf = sense_tf_idfs.keySet().stream()
-				.sorted(Comparator.comparingDouble(sense_tf_idfs::get))
-				.collect(Collectors.toList());
-
-	}
+//	private static void getStats(Path amr_bank, Path freqs_file, Path babel_config) throws IOException, ClassNotFoundException
+//	{
+//		AMRReader reader = new AMRReader();
+//		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language, null, babel_config, false, false);
+//		String contents = FileUtils.readFileToString(amr_bank.toFile(), Charsets.UTF_8);
+//		AMRGraphList graphs = factory.create(contents);
+//
+//		long num_tokens = graphs.getGraphs().stream()
+//				.mapToLong(g ->
+//				{
+//					AMRAlignments a = g.getAlignments();
+//					List<String> tokens = a.getTokens();
+//					return tokens.size();
+//				})
+//				.sum();
+//
+//		long num_aligned_tokens = graphs.getGraphs().stream()
+//				.mapToLong(g ->
+//				{
+//					AMRAlignments a = g.getAlignments();
+//					List<String> tokens = a.getTokens();
+//					return IntStream.range(0, tokens.size())
+//							.mapToObj(a::getAlignedVertices)
+//							.filter(l -> !l.isEmpty())
+//							.count();
+//				})
+//				.sum();
+//
+//		long num_tokens_with_meaning = graphs.getGraphs().stream()
+//				.mapToLong(g ->
+//				{
+//					AMRAlignments a = g.getAlignments();
+//					List<String> tokens = a.getTokens();
+//					return IntStream.range(0, tokens.size())
+//							.mapToObj(a::getAlignedVertices)
+//							.filter(l -> !l.isEmpty())
+//							.flatMap(Set::stream)
+//							.map(graphs::getCandidates)
+//							.filter(l -> !l.isEmpty())
+//							.count();
+//				})
+//				.sum();
+//
+//
+//		Map<Meaning, Long> reference_freqs = graphs.getCandidates().stream()
+//				.collect(groupingBy(Candidate::getMeaning, counting()));
+//		Map<String, Long> form_freqs = graphs.getGraphs().stream()
+//				.map(g -> g.getAlignments().getTokens())
+//				.flatMap(List::stream)
+//				.collect(groupingBy(s -> s, counting()));
+//		Map<String, Long> lemma_freqs = graphs.getGraphs().stream()
+//				.map(g ->
+//				{
+//					AMRAlignments a = g.getAlignments();
+//					List<String> tokens = a.getTokens();
+//					return IntStream.range(0, tokens.size())
+//							.mapToObj(a::getLemma)
+//							.collect(toList());
+//				})
+//				.flatMap(List::stream)
+//				.collect(groupingBy(s -> s, counting()));
+//
+//		Set<String> references = graphs.getCandidates().stream()
+//				.map(Candidate::getMeaning)
+//				.map(Meaning::getReference)
+//				.collect(Collectors.toSet());
+//
+//
+//		CompactFrequencies corpus = (CompactFrequencies) Serializer.deserialize(freqs_file);
+//		Map<String, OptionalInt> reference_idfs = references.stream()
+//				.collect(toMap(s -> s, corpus::getMeaningDocumentCount));
+//		long num_ref_in_corpus = reference_idfs.keySet().stream()
+//				.filter(s -> reference_idfs.get(s).isPresent())
+//				.count();
+//		List<String> sorted_refs_idf = reference_idfs.keySet().stream()
+//				.sorted(Comparator.comparingInt(s -> reference_idfs.get(s).orElse(-1)))
+//				.collect(Collectors.toList());
+//
+//		final TFIDF tfidf = new TFIDF(graphs.getCandidates(), corpus);
+//				Map<String, Double> sense_tf_idfs = references.stream()
+//						.collect(toMap(s -> s, tfidf::weight));
+//		List<String> sorted_refs_tf_idf = sense_tf_idfs.keySet().stream()
+//				.sorted(Comparator.comparingDouble(sense_tf_idfs::get))
+//				.collect(Collectors.toList());
+//
+//	}
 
 	@Parameters(commandDescription = "Obtain frequencies from SEW")
 	private static class GetFrequenciesCommand

@@ -23,13 +23,13 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 	private static final int max_tokens = 5;
 	private final static Logger log = LogManager.getLogger();
 
-	public static Multimap<String, Mention> collectMentions(Collection<AMRGraph> graphs)
+	public static Multimap<String, Mention> collectMentions(Collection<AMRGraph> graphs, Predicate<Mention> filter)
 	{
 		log.info("Collecting mentions");
 		Stopwatch timer = Stopwatch.createStarted();
 
 		final Multimap<String, Mention> multiwords = collectMultiwordMentions(graphs);
-		final Multimap<String, Mention> singlewords = collectoSingleWordMentions(graphs);
+		final Multimap<String, Mention> singlewords = collectoSingleWordMentions(graphs, filter);
 		Multimap<String, Mention> mentions = HashMultimap.create(multiwords);
 		mentions.putAll(singlewords);
 
@@ -79,7 +79,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 	/**
 	 * Returns a mention for every individual token
 	 */
-	private static Multimap<String, Mention> collectoSingleWordMentions(Collection<AMRGraph> graphs)
+	private static Multimap<String, Mention> collectoSingleWordMentions(Collection<AMRGraph> graphs, Predicate<Mention> filter)
 	{
 		Multimap<String, Mention> vertices2Mentions = HashMultimap.create();
 		graphs.forEach(g ->
@@ -94,6 +94,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 						return Mention.get(g.getSource(), span, a.getSurfaceForm(span), a.getLemma(i), a.getPOS(i),
 								isName(span, g), getType(span, g));
 					})
+					.filter(filter)
 					.forEach(m -> vertices2Mentions.put(v, m)));
 		});
 		return vertices2Mentions;

@@ -4,10 +4,10 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.ibm.icu.util.ULocale;
-import edu.upf.taln.textplanning.amr.structures.CoreferenceChain;
-import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.amr.structures.AMRGraph;
-import edu.upf.taln.textplanning.common.BabelNetDictionary;
+import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
+import edu.upf.taln.textplanning.amr.structures.CoreferenceChain;
+import edu.upf.taln.textplanning.common.MeaningDictionary;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import org.apache.logging.log4j.LogManager;
@@ -18,6 +18,7 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import static java.util.stream.Collectors.toList;
 
@@ -28,16 +29,17 @@ public class AMRGraphListFactory
 	private final StanfordWrapper stanford;
 	private final CandidatesCollector candidate_collector;
 	private final TypesCollector types_collector;
+	private final Predicate<Mention> mentions_filter;
 	private final static Logger log = LogManager.getLogger();
 
-	public AMRGraphListFactory(AMRReader reader, ULocale language, Path types_file, Path bn_config_folder, boolean no_stanford,
-	                           boolean no_babelnet) throws IOException
+	public AMRGraphListFactory(AMRReader reader, ULocale language, Path types_file, MeaningDictionary dictionary,
+	                           Predicate<Mention> mentions_filter, boolean no_stanford) throws IOException
 	{
 		this.reader = reader;
 		stanford = new StanfordWrapper(no_stanford);
-		BabelNetDictionary babelnet = new BabelNetDictionary(bn_config_folder, no_babelnet);
-		this.candidate_collector = new CandidatesCollector(babelnet, language);
-		this.types_collector = (types_file != null) ? new TypesCollector(types_file, babelnet) : null;
+		this.candidate_collector = new CandidatesCollector(dictionary, language);
+		this.types_collector = (types_file != null) ? new TypesCollector(types_file, dictionary) : null;
+		this.mentions_filter = mentions_filter;
 	}
 
 	public AMRGraphList create(String graph_bank)
@@ -62,7 +64,7 @@ public class AMRGraphListFactory
 		List<CoreferenceChain> chains = stanford.process(graphs);
 
 		// Collect and classify mentions
-		final Multimap<String, Mention> mentions = AMRMentionsCollector.collectMentions(graphs);
+		final Multimap<String, Mention> mentions = AMRMentionsCollector.collectMentions(graphs, mentions_filter);
 		final Multimap<String, Mention> singlewords = HashMultimap.create();
 		mentions.entries().stream().filter(e -> !e.getValue().isMultiWord()).forEach(e -> singlewords.put(e.getKey(), e.getValue()));
 		final Multimap<String, Mention> multiwords = HashMultimap.create();

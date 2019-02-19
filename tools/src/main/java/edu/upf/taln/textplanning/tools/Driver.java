@@ -53,15 +53,18 @@ public class Driver
 		@Parameter(names = {"-i", "-input"}, description = "Path to XML input file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path input_file;
-		@Parameter(names = {"-b", "-babelconfig"}, description = "Path to BabelNet configuration folder", arity = 1, required = true,
+		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path babelnet;
+		private Path dictionary;
 		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
 		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
+		@Parameter(names = {"-s", "-stopwords"}, description = "Path to stop words file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path stopwords;
 		@Parameter(names = {"-sv", "-sentence_vectors"}, description = "Path to sentence vectors", arity = 1,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path sentence_vectors_path;
@@ -92,12 +95,12 @@ public class Driver
 	}
 
 	@SuppressWarnings("unused")
-	@Parameters(commandDescription = "Collect meanings info from BabelNet and stores them into a binary file")
+	@Parameters(commandDescription = "Collect meanings info from a dictionary and stores them into a binary file")
 	private static class CollectMeaningsCommand
 	{
-		@Parameter(names = {"-b", "-babelconfig"}, description = "Path to BabelNet configuration folder", arity = 1, required = true,
+		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path babelnet;
+		private Path dictionary;
 		@Parameter(names = {"-o", "-output"}, description = "Path to output file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFile.class)
 		private Path output;
@@ -121,6 +124,9 @@ public class Driver
 		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
+		@Parameter(names = {"-s", "-stopwords"}, description = "Path to stop words file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path stopwords;
 		@Parameter(names = {"-go", "-glosses_only"}, description = "If true, only glosses are used to generate context vectors", arity = 1, required = true)
 		private boolean glosses_only = true;
 		@Parameter(names = {"-svt", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1,  required = true,
@@ -188,23 +194,23 @@ public class Driver
 				break;
 			case semeval_command:
 			{
-				ResourcesFactory resources = new ResourcesFactory(semEval.freqsFile,
+				ResourcesFactory resources = new ResourcesFactory(semEval.dictionary, semEval.freqsFile, semEval.stopwords,
 						semEval.sentence_vectors_path, semEval.sentence_vector_type,
 						semEval.word_vectors_path,  semEval.word_vector_type,
 						semEval.context_vectors_path,  semEval.context_vector_type,
 						semEval.sense_vectors_path,  semEval.sense_vector_type);
-				SemEvalEvaluation.evaluate(semEval.gold_file, semEval.input_file, semEval.babelnet, semEval.output,
-						resources, semEval.max_meanings);
+				SemEvalEvaluation.evaluate(semEval.gold_file, semEval.input_file, semEval.output, resources, semEval.max_meanings);
 				break;
 			}
 			case collect_meanings_vectors:
 			{
-				BabelNetMeaningsCollector.collectMeanings(meanings.babelnet, meanings.output, meanings.glosses_only, meanings.max_meanings);
+				ResourcesFactory resources = new ResourcesFactory(meanings.dictionary);
+				MeaningsCollector.collectMeanings(meanings.output, resources, meanings.glosses_only, meanings.max_meanings);
 				break;
 			}
 			case create_context_vectors:
 			{
-				ResourcesFactory resources = new ResourcesFactory(context.freqsFile,
+				ResourcesFactory resources = new ResourcesFactory(null, context.freqsFile, context.stopwords,
 						null, context.sentence_vector_type,
 						context.word_vectors_path,  context.word_vector_type,
 						null,  null,
