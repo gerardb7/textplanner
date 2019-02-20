@@ -2,7 +2,7 @@ package edu.upf.taln.textplanning.tools;
 
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
-import edu.upf.taln.textplanning.common.MeaningDictionary;
+import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import edu.upf.taln.textplanning.common.ResourcesFactory;
 import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.utils.DebugUtils.ThreadReporter;
@@ -22,7 +22,7 @@ public class MeaningsCollector
 	public static final int LOGGING_STEP_SIZE = 100000;
 	private final static Logger log = LogManager.getLogger();
 
-	public static void collectMeanings(Path output_file, ResourcesFactory resources, boolean glosses_only, int max_meanings) throws Exception
+	public static void collectMeanings(Path output_file, ResourcesFactory resources, int max_meanings) throws Exception
 	{
 		log.info("Collecting meanings with " + Runtime.getRuntime().availableProcessors() + " cores available");
 		final Stopwatch timer = Stopwatch.createStarted();
@@ -40,7 +40,7 @@ public class MeaningsCollector
 				.parallel()
 				.peek(m -> reporter.report()) // report number of threads
 				.peek(m -> total_ids.incrementAndGet())
-				.filter(m -> glosses_only ? !m.glosses.isEmpty() : (!m.glosses.isEmpty() || !m.lemmas.isEmpty()))
+				.filter(m -> !m.glosses.isEmpty() || !m.lemmas.isEmpty())
 				.peek(id ->
 				{
 					long i = counter.incrementAndGet();

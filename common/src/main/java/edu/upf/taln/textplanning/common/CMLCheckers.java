@@ -4,7 +4,9 @@ import com.beust.jcommander.IParameterValidator;
 import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.ParameterException;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors;
+import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
+import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -129,21 +131,21 @@ public class CMLCheckers
 		}
 	}
 
-	public static class VectorTypeConverter implements IStringConverter<Vectors.VectorType>
+	public static class VectorTypeConverter implements IStringConverter<VectorType>
 	{
 		@Override
-		public Vectors.VectorType convert(String value)
+		public VectorType convert(String value)
 		{
-			return Vectors.VectorType.valueOf(value);
+			return VectorType.valueOf(value);
 		}
 	}
 
-	public static class SentenceVectorTypeConverter implements IStringConverter<SentenceVectors.VectorType>
+	public static class SentenceVectorTypeConverter implements IStringConverter<SentenceVectorType>
 	{
 		@Override
-		public SentenceVectors.VectorType convert(String value)
+		public SentenceVectorType convert(String value)
 		{
-			return SentenceVectors.VectorType.valueOf(value);
+			return SentenceVectorType.valueOf(value);
 		}
 	}
 
@@ -152,7 +154,7 @@ public class CMLCheckers
 		@Override
 		public void validate(String name, String value) throws ParameterException
 		{
-			try{ Vectors.VectorType.valueOf(value); }
+			try{ VectorType.valueOf(value); }
 			catch (Exception e)
 			{
 				throw new ParameterException("Parameter " + name + " has invalid valued " + value);
@@ -165,7 +167,7 @@ public class CMLCheckers
 		@Override
 		public void validate(String name, String value) throws ParameterException
 		{
-			try{ SentenceVectors.VectorType.valueOf(value); }
+			try{ SentenceVectorType.valueOf(value); }
 			catch (Exception e)
 			{
 				throw new ParameterException("Parameter " + name + " has invalid valued " + value);

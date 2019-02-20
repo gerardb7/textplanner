@@ -45,7 +45,7 @@ public class TextVectors implements Vectors
 	 */
 	public static Map<String, double[]> readVectorsFromFile(Path vectors_file, Vectors.VectorType vectorType) throws Exception
 	{
-		if (vectorType != Vectors.VectorType.Text_Glove && vectorType != Vectors.VectorType.Text_Word2vec)
+		if (vectorType != VectorType.Text_Glove && vectorType != VectorType.Text_Word2vec)
 			throw new Exception("VectorType " + vectorType + " not supported");
 
 		int num_lines = 0;
@@ -67,7 +67,7 @@ public class TextVectors implements Vectors
 				String[] columns = line.split(" ");
 				if (first_line)
 				{
-					if (vectorType == Vectors.VectorType.Text_Glove)
+					if (vectorType == VectorType.Text_Glove)
 					{
 						num_lines = Integer.parseInt(columns[0]);
 						num_dimensions = Integer.parseInt(columns[1]);

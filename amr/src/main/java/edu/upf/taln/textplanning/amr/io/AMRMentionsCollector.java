@@ -3,8 +3,10 @@ package edu.upf.taln.textplanning.amr.io;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.amr.structures.AMRAlignments;
 import edu.upf.taln.textplanning.amr.structures.AMRGraph;
+import edu.upf.taln.textplanning.core.ranking.StopWordsFilter;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -23,13 +25,13 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 	private static final int max_tokens = 5;
 	private final static Logger log = LogManager.getLogger();
 
-	public static Multimap<String, Mention> collectMentions(Collection<AMRGraph> graphs, Predicate<Mention> filter)
+	public static Multimap<String, Mention> collectMentions(Collection<AMRGraph> graphs, ULocale language)
 	{
 		log.info("Collecting mentions");
 		Stopwatch timer = Stopwatch.createStarted();
 
 		final Multimap<String, Mention> multiwords = collectMultiwordMentions(graphs);
-		final Multimap<String, Mention> singlewords = collectoSingleWordMentions(graphs, filter);
+		final Multimap<String, Mention> singlewords = collectoSingleWordMentions(graphs, language);
 		Multimap<String, Mention> mentions = HashMultimap.create(multiwords);
 		mentions.putAll(singlewords);
 
@@ -79,7 +81,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 	/**
 	 * Returns a mention for every individual token
 	 */
-	private static Multimap<String, Mention> collectoSingleWordMentions(Collection<AMRGraph> graphs, Predicate<Mention> filter)
+	private static Multimap<String, Mention> collectoSingleWordMentions(Collection<AMRGraph> graphs, ULocale language)
 	{
 		Multimap<String, Mention> vertices2Mentions = HashMultimap.create();
 		graphs.forEach(g ->
@@ -94,7 +96,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 						return Mention.get(g.getSource(), span, a.getSurfaceForm(span), a.getLemma(i), a.getPOS(i),
 								isName(span, g), getType(span, g));
 					})
-					.filter(filter)
+					.filter(m -> StopWordsFilter.filter(m, language))
 					.forEach(m -> vertices2Mentions.put(v, m)));
 		});
 		return vertices2Mentions;

@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.common;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterators;
 import com.ibm.icu.util.ULocale;
+import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import it.uniroma1.lcl.babelnet.*;
 import it.uniroma1.lcl.babelnet.data.BabelGloss;
 import it.uniroma1.lcl.babelnet.data.BabelPOS;

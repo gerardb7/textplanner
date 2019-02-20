@@ -20,26 +20,9 @@ public interface Vectors
 				.filter(Optional::isPresent)
 				.map(Optional::get)
 				.findFirst()
-				.orElse(new Random().doubles(getNumDimensions()).toArray());
+				.orElse(new double[getNumDimensions()]);
 	}
 
 	// Text_Glove -> with header containing num dimensions, Text_Word2Vec -> without header
-	enum VectorType {Text_Glove, Text_Word2vec, Binary_Word2vec, Binary_RandomAccess, Random}
-
-	static Vectors get(Path location, VectorType type, int num_dimensions) throws Exception
-	{
-		switch (type)
-		{
-			case Text_Glove:
-			case Text_Word2vec:
-				return new TextVectors(location, type);
-			case Binary_Word2vec:
-				return new Word2VecVectors(location);
-			case Binary_RandomAccess:
-				return new RandomAccessFileVectors(location, num_dimensions);
-			case Random:
-			default:
-				return new RandomVectors();
-		}
-	}
+	public enum VectorType {Text_Glove, Text_Word2vec, Binary_Word2vec, Binary_RandomAccess, SenseGlosses, Random}
 }

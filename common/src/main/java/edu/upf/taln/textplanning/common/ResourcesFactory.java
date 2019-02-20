@@ -1,10 +1,12 @@
 package edu.upf.taln.textplanning.common;
 
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.core.ranking.StopWordsFilter;
+import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.*;
-import edu.upf.taln.textplanning.core.structures.Mention;
+import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
+import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
+import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,49 +17,50 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
-import java.util.function.Predicate;
 
 import static edu.upf.taln.textplanning.core.utils.DebugUtils.LOGGING_STEP_SIZE;
 import static java.util.stream.Collectors.toMap;
 
 public class ResourcesFactory
 {
-	private MeaningDictionary dictionary = null;
-	private final Predicate<Mention> stop_words_filter;
-	private Vectors word_vectors = null;
-	private Vectors sense_vectors = null;
-	private Vectors sense_context_vectors = null;
-	private SentenceVectors sentence_vectors;
-	private BiFunction<double[], double[], Double> similarity_function = null;
+	private final ULocale language;
+	private final MeaningDictionary dictionary;
+	private final Vectors sense_vectors;
+	private final Vectors word_vectors;
+	private final SentenceVectors sentence_vectors;
+	private final Vectors sense_context_vectors;
+	private final BiFunction<double[], double[], Double> similarity_function;
 
 	private final static Logger log = LogManager.getLogger();
 
-	public ResourcesFactory(Path dictionary_config) throws Exception
+	public ResourcesFactory(ULocale language, Path dictionary_config) throws Exception
 	{
-		this(dictionary_config, null, null, null, null, null, null, null, null, null, null);
+		this(language, dictionary_config, null, null, null, null, null, null, null, null, null);
 	}
 
-	public ResourcesFactory(Path dictionary_config, Path idf_file, Path stop_words_file,
-	                        Path sentence_vectors_path, SentenceVectors.VectorType sentence_vectors_type,
-	                        Path word_vectors_path, Vectors.VectorType word_vectors_type,
-	                        Path sense_context_vectors_path, Vectors.VectorType sense_context_vectors_type,
-	                        Path sense_vectors_path, Vectors.VectorType sense_vectors_type) throws Exception
+	public ResourcesFactory(ULocale language, Path dictionary_config, Path idf_file,
+	                        Path sense_vectors_path, VectorType sense_vectors_type,
+	                        Path word_vectors_path, VectorType word_vectors_type,
+	                        Path sentence_vectors_path, SentenceVectorType sentence_vectors_type,
+	                        Path sense_context_vectors_path, VectorType sense_context_vectors_type) throws Exception
 	{
 		// Load ranking resources
 		log.info("Loading resources for ranking");
 
+		this.language = language;
 		if (dictionary_config != null)
 			dictionary = new BabelNetDictionary(dictionary_config);
-		if (stop_words_file != null)
-			stop_words_filter = new StopWordsFilter(stop_words_file);
 		else
-			stop_words_filter = (m) -> true;
-		if (word_vectors_type != null)
-			word_vectors = Vectors.get(word_vectors_path, word_vectors_type, 300);
-		if (sense_context_vectors_type != null)
-			sense_context_vectors = Vectors.get(sense_context_vectors_path, sense_context_vectors_type, 300);
+			dictionary = null;
+
 		if (sense_vectors_type != null)
-			sense_vectors = Vectors.get(sense_vectors_path, sense_vectors_type, 300);
+			sense_vectors = get(sense_vectors_path, sense_vectors_type, 300);
+		else
+			sense_vectors = null;
+
+		if (word_vectors_type != null)
+			word_vectors = get(word_vectors_path, word_vectors_type, 300);
+		else word_vectors = null;
 
 		if (sentence_vectors_type != null)
 		{
@@ -95,25 +98,48 @@ public class ResourcesFactory
 				}
 			}
 		}
+		else
+		{
+			sentence_vectors = null;
+			similarity_function = null;
+		}
+
+		if (sense_context_vectors_type != null)
+			sense_context_vectors = get(sense_context_vectors_path, sense_context_vectors_type, 300);
+		else
+			sense_context_vectors = null;
+
+	}
+
+	public Vectors get(Path location, VectorType type, int num_dimensions) throws Exception
+	{
+		switch (type)
+		{
+			case Text_Glove:
+			case Text_Word2vec:
+				return new TextVectors(location, type);
+			case Binary_Word2vec:
+				return new Word2VecVectors(location);
+			case Binary_RandomAccess:
+				return new RandomAccessFileVectors(location, num_dimensions);
+			case SenseGlosses:
+				return new SenseGlossesVectors(dictionary, language, sentence_vectors);
+			case Random:
+			default:
+				return new RandomVectors();
+		}
 	}
 
 	public MeaningDictionary getDictionary() { return dictionary; }
-
-	public Predicate<Mention> getStopWordsFilter() { return stop_words_filter; }
-
-	public Vectors getWordVectors()
-	{
-		return word_vectors;
-	}
 
 	public Vectors getSenseVectors()
 	{
 		return sense_vectors;
 	}
 
-	public Vectors getSenseContextVectors()
+	public Vectors getWordVectors()
 	{
-		return sense_context_vectors;
+		return word_vectors;
 	}
 
 	public SentenceVectors getSentenceVectors()
@@ -121,6 +147,10 @@ public class ResourcesFactory
 		return sentence_vectors;
 	}
 
+	public Vectors getSenseContextVectors()
+	{
+		return sense_context_vectors;
+	}
 
 	public BiFunction<double[], double[], Double> getSimilarityFunction()
 	{

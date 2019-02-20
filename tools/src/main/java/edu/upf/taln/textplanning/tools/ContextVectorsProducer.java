@@ -3,7 +3,7 @@ package edu.upf.taln.textplanning.tools;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import edu.upf.taln.textplanning.common.FileUtils;
-import edu.upf.taln.textplanning.common.MeaningDictionary.Info;
+import edu.upf.taln.textplanning.core.structures.MeaningDictionary.Info;
 import edu.upf.taln.textplanning.common.ResourcesFactory;
 import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors;
@@ -18,7 +18,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static edu.upf.taln.textplanning.core.utils.DebugUtils.LOGGING_STEP_SIZE;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 

@@ -14,15 +14,15 @@ import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.util.logging.RedwoodConfiguration;
 import edu.upf.taln.textplanning.amr.io.CandidatesCollector;
 import edu.upf.taln.textplanning.common.BabelNetDictionary;
-import edu.upf.taln.textplanning.common.MeaningDictionary;
+import edu.upf.taln.textplanning.common.ResourcesFactory;
+import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
+import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
-import edu.upf.taln.textplanning.core.ranking.GraphRanking;
 import edu.upf.taln.textplanning.core.ranking.MatrixFactory;
 import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
 import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
-import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
@@ -391,7 +391,7 @@ public class EmpiricalStudy
 //		CompactFrequencies freqs = (CompactFrequencies)Serializer.deserialize(frequencies);
 //		weighting_functions.add(new TFIDF(freqs, r -> true));
 //		weighting_functions.add(new NumberForms(r -> true));
-		final Vectors vectors = Vectors.get(vectors_path, vectorType, 300);
+		final Vectors vectors = null; //ResourcesFactory.get(vectors_path, vectorType, 300);
 		final CosineSimilarity sim_function = new CosineSimilarity();
 		final VectorsSimilarity sim = new VectorsSimilarity(vectors, sim_function);
 

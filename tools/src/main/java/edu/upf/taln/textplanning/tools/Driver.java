@@ -3,11 +3,12 @@ package edu.upf.taln.textplanning.tools;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.ResourcesFactory;
-import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors;
-import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
+import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
+import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import it.uniroma1.lcl.jlt.util.Files;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,6 +23,7 @@ import static java.util.stream.Collectors.toList;
 
 public class Driver
 {
+	private final static ULocale language = ULocale.ENGLISH;
 	private static final String gold_suffix = ".gold";
 	private static final String meanings_suffix = ".candidates";
 	private static final String evaluate_command = "evaluate";
@@ -62,33 +64,30 @@ public class Driver
 		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
-		@Parameter(names = {"-s", "-stopwords"}, description = "Path to stop words file", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path stopwords;
 		@Parameter(names = {"-sv", "-sentence_vectors"}, description = "Path to sentence vectors", arity = 1,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path sentence_vectors_path;
 		@Parameter(names = {"-st", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1, required = true,
 				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
-		private SentenceVectors.VectorType sentence_vector_type = SentenceVectors.VectorType.SIF;
+		private SentenceVectorType sentence_vector_type = SentenceVectorType.Random;
 		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path word_vectors_path;
 		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1, required = true,
 				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private Vectors.VectorType word_vector_type = Vectors.VectorType.Binary_RandomAccess;
+		private VectorType word_vector_type = VectorType.Random;
 		@Parameter(names = {"-cv", "-context_vectors"}, description = "Path to sense context vectors", arity = 1,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path context_vectors_path;
 		@Parameter(names = {"-ct", "-context_vectors_type"}, description = "Type of sense context vectors", arity = 1, required = true,
 				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private Vectors.VectorType context_vector_type = Vectors.VectorType.Binary_RandomAccess;
+		private VectorType context_vector_type = VectorType.Random;
 		@Parameter(names = {"-sev", "-sense_vectors"}, description = "Path to sense vectors", arity = 1,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path sense_vectors_path;
 		@Parameter(names = {"-set", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
 				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private Vectors.VectorType sense_vector_type = Vectors.VectorType.Binary_RandomAccess;
+		private VectorType sense_vector_type = VectorType.Random;
 		@Parameter(names = {"-mc", "-max_candidates"}, description = "Maximum number of candidates per mention", arity = 1,
 				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
 		private int max_meanings = Integer.MAX_VALUE;
@@ -104,8 +103,6 @@ public class Driver
 		@Parameter(names = {"-o", "-output"}, description = "Path to output file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFile.class)
 		private Path output;
-		@Parameter(names = {"-go", "-glosses_only"}, description = "If true, only glosses are collected. Lemmas are als collected otherwise", arity = 1)
-		private boolean glosses_only = false;
 		@Parameter(names = {"-mx", "-max_meanings"}, description = "Maximum number of meanings to collect", arity = 1,
 				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
 		private int max_meanings = Integer.MAX_VALUE;
@@ -124,20 +121,17 @@ public class Driver
 		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
-		@Parameter(names = {"-s", "-stopwords"}, description = "Path to stop words file", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path stopwords;
 		@Parameter(names = {"-go", "-glosses_only"}, description = "If true, only glosses are used to generate context vectors", arity = 1, required = true)
 		private boolean glosses_only = true;
 		@Parameter(names = {"-svt", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1,  required = true,
 				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
-		private SentenceVectors.VectorType sentence_vector_type = SentenceVectors.VectorType.SIF;
+		private SentenceVectorType sentence_vector_type = SentenceVectorType.Random;
 		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path word_vectors_path;
 		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1, required = true,
 				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private Vectors.VectorType word_vector_type = Vectors.VectorType.Binary_RandomAccess;
+		private VectorType word_vector_type = VectorType.Random;
 		@Parameter(names = {"-c", "-chunk_size"}, description = "Chunk size used when computing vectors", arity = 1, required = true,
 				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
 		private int chunk_size = 0;
@@ -194,26 +188,26 @@ public class Driver
 				break;
 			case semeval_command:
 			{
-				ResourcesFactory resources = new ResourcesFactory(semEval.dictionary, semEval.freqsFile, semEval.stopwords,
-						semEval.sentence_vectors_path, semEval.sentence_vector_type,
+				ResourcesFactory resources = new ResourcesFactory(language, semEval.dictionary, semEval.freqsFile,
+						semEval.sense_vectors_path,  semEval.sense_vector_type,
 						semEval.word_vectors_path,  semEval.word_vector_type,
-						semEval.context_vectors_path,  semEval.context_vector_type,
-						semEval.sense_vectors_path,  semEval.sense_vector_type);
+						semEval.sentence_vectors_path, semEval.sentence_vector_type,
+						semEval.context_vectors_path,  semEval.context_vector_type);
 				SemEvalEvaluation.evaluate(semEval.gold_file, semEval.input_file, semEval.output, resources, semEval.max_meanings);
 				break;
 			}
 			case collect_meanings_vectors:
 			{
-				ResourcesFactory resources = new ResourcesFactory(meanings.dictionary);
-				MeaningsCollector.collectMeanings(meanings.output, resources, meanings.glosses_only, meanings.max_meanings);
+				ResourcesFactory resources = new ResourcesFactory(language, meanings.dictionary);
+				MeaningsCollector.collectMeanings(meanings.output, resources, meanings.max_meanings);
 				break;
 			}
 			case create_context_vectors:
 			{
-				ResourcesFactory resources = new ResourcesFactory(null, context.freqsFile, context.stopwords,
-						null, context.sentence_vector_type,
+				ResourcesFactory resources = new ResourcesFactory(language, null, context.freqsFile,
+						null, null,
 						context.word_vectors_path,  context.word_vector_type,
-						null,  null,
+						null, context.sentence_vector_type,
 						null,  null);
 				ContextVectorsProducer.createVectors(context.meanings, context.chunk_size, context.output, resources, context.glosses_only);
 				break;

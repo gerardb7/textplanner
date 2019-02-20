@@ -1,11 +1,13 @@
 package edu.upf.taln.textplanning.tools;
 
+import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.FileUtils;
-import edu.upf.taln.textplanning.common.MeaningDictionary;
+import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import edu.upf.taln.textplanning.common.ResourcesFactory;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
+import edu.upf.taln.textplanning.core.ranking.StopWordsFilter;
 import edu.upf.taln.textplanning.core.ranking.TopCandidatesFilter;
 import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
 import edu.upf.taln.textplanning.core.structures.Candidate;
@@ -27,7 +29,6 @@ import javax.xml.transform.stream.StreamSource;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -90,13 +91,15 @@ public class SemEvalEvaluation
 		final Corpus corpus = parse(xml_file);
 
 		log.info("Collecting mentions");
-		final List<List<List<Mention>>> mentions = collectMentions(corpus, resources.getStopWordsFilter());
+		Stopwatch timer = Stopwatch.createStarted();
+		final List<List<List<Mention>>> mentions = collectMentions(corpus);
+		log.info("Mentions collected in " + timer);
 
 		log.info("Looking up meanings");
 		List<List<List<List<Candidate>>>> candidates = collectCandidates(resources.getDictionary(), corpus, mentions);
 
 		log.info("Creating contexts");
-		List<Context> contexts = createContexts(corpus, candidates, resources);
+		List<Context> contexts = createContexts(mentions, candidates, resources);
 
 		{
 			log.info("Ranking meanings (random)");
@@ -115,7 +118,7 @@ public class SemEvalEvaluation
 			evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "first_sense_nomw.results", true);
 		}
 		{
-			for (double threshold = 0.9; threshold <= 0.9; threshold += 0.01)
+			for (double threshold = 0.7; threshold <= 0.7; threshold += 0.01)
 			{
 				log.info("Ranking meanings (context only, threshold set to " + DebugUtils.printDouble(threshold) + ")");
 				final List<List<List<Candidate>>> ranked_candidates = context_rank(candidates, contexts, resources, threshold,true);
@@ -123,7 +126,7 @@ public class SemEvalEvaluation
 				evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "context.results", false);
 			};
 
-			for (double threshold = 0.9; threshold <= 0.9; threshold += 0.01)
+			for (double threshold = 0.7; threshold <= 0.7; threshold += 0.01)
 			{
 				log.info("Ranking meanings (context only, threshold set to " + DebugUtils.printDouble(threshold) + ")");
 				final List<List<List<Candidate>>> ranked_candidates = context_rank(candidates, contexts, resources, threshold,false);
@@ -152,7 +155,7 @@ public class SemEvalEvaluation
 		return je1.getValue();
 	}
 
-	private static List<List<List<Mention>>> collectMentions(Corpus corpus, Predicate<Mention> filter)
+	private static List<List<List<Mention>>> collectMentions(Corpus corpus)
 	{
 		// create mention objects
 		return corpus.texts.stream()
@@ -185,7 +188,7 @@ public class SemEvalEvaluation
 											final String id = tokens.size() == 1 ? start_id : start_id + "-" + end_id;
 											return Mention.get(id, Pair.of(start, end), form, lemma, pos, false, "");
 										})
-										.filter(filter))
+										.filter(m -> StopWordsFilter.filter(m, language)))
 								.flatMap(stream -> stream)
 								.collect(toList()))
 						.collect(toList()))
@@ -253,36 +256,30 @@ public class SemEvalEvaluation
 		return synsets;
 	}
 
-	private static List<Context> createContexts(Corpus corpus, List<List<List<List<Candidate>>>> candidates,
+	private static List<Context> createContexts(List<List<List<Mention>>> mentions, List<List<List<List<Candidate>>>> candidates,
 	                                            ResourcesFactory resources)
 	{
-		log.info("Texts:" + corpus.texts.stream()
-				.map(d -> d.sentences.stream()
-						.map(s -> s.tokens.stream()
-								.map(t -> t.wf)
-								.collect(joining(" ")))
-						.collect(joining("\n\t", "\t", "")))
-				.collect(joining("\n---\n", "\n", "\n")));
-
 		final List<Context> contexts = new ArrayList<>();
-		for (int i = 0; i < corpus.texts.size(); ++i)
+		for (int i = 0; i < mentions.size(); ++i)
 		{
-			final List<Candidate> document_candidates = candidates.get(i).stream()
+			final List<String> tokens = mentions.get(i).stream()
+					.flatMap(sentence_mentions -> sentence_mentions.stream()
+							.filter(m -> !m.isMultiWord())
+							.filter(m -> StopWordsFilter.filter(m, language))
+							.sorted(Comparator.comparingInt(m -> m.getSpan().getLeft())))
+					.map(Mention::getSurface_form)
+					.collect(toList());
+
+			tokens.removeIf(t -> Collections.frequency(tokens, t) < 3);
+			final List<String> context = tokens.stream().distinct().collect(toList());
+			log.info("Context for text " + i + " is: " + context);
+
+			final List<Candidate> text_candidates = candidates.get(i).stream()
 					.flatMap(l -> l.stream()
 							.flatMap(s -> s.stream()))
 					.collect(toList());
-			final List<Meaning> document_meanings = document_candidates.stream()
-					.map(Candidate::getMeaning)
-					.distinct()
-					.collect(toList());
-			final Text document = corpus.texts.get(i);
 
-			final List<String> context = document.sentences.stream()
-					.flatMap(s -> s.tokens.stream()
-							.map(t -> t.wf))
-					.collect(toList());
-
-			final Context context_weighter = new Context(document_candidates, resources.getSenseContextVectors(),
+			final Context context_weighter = new Context(text_candidates, resources.getSenseContextVectors(),
 					resources.getSentenceVectors(), w -> context, resources.getSimilarityFunction());
 			contexts.add(context_weighter);
 		}
@@ -434,6 +431,17 @@ public class SemEvalEvaluation
 //			FileUtils.serializeMeanings(grouped_candidates, output_path.resolve(out_filename));
 	}
 
+
+	private static void print_texts(Corpus corpus)
+	{
+		log.info("Texts:" + corpus.texts.stream()
+				.map(d -> d.sentences.stream()
+						.map(s -> s.tokens.stream()
+								.map(t -> t.wf)
+								.collect(joining(" ")))
+						.collect(joining("\n\t", "\t", "")))
+				.collect(joining("\n---\n", "\n", "\n")));
+	}
 
 	private static void print_ranking(List<Candidate> candidates, boolean print_debug)
 	{

@@ -34,11 +34,5 @@
             <artifactId>babelnet-api</artifactId>
             <version>3.7</version>
         </dependency>
-        <dependency>
-            <!--Locale-->
-            <groupId>com.ibm.icu</groupId>
-            <artifactId>icu4j</artifactId>
-            <version>63.1</version>
-        </dependency>
     </dependencies>
 </project>

@@ -3,7 +3,7 @@ package edu.upf.taln.textplanning.amr.io;
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.BabelNetDictionary;
-import edu.upf.taln.textplanning.common.MeaningDictionary;
+import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;

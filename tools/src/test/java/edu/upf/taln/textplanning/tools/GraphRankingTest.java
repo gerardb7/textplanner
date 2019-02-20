@@ -2,7 +2,8 @@ package edu.upf.taln.textplanning.tools;
 
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.BabelNetDictionary;
-import edu.upf.taln.textplanning.common.MeaningDictionary;
+import edu.upf.taln.textplanning.common.ResourcesFactory;
+import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
 import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
@@ -131,7 +132,7 @@ public class GraphRankingTest
 		final Path vectors_path = Paths.get("/home/gerard/data/NASARIembed+UMBC_w2v_bin");
 		MeaningDictionary bn = new BabelNetDictionary(babel_config_path, false);
 		GloveKeysReader reader = new GloveKeysReader(vectors_path);
-		final Vectors vectors = Vectors.get(vectors_path, Vectors.VectorType.Binary_RandomAccess, 300);
+		final Vectors vectors = null; // ResourcesFactory.get(vectors_path, Vectors.VectorType.Binary_RandomAccess, 300);
 		final VectorsSimilarity sim = new VectorsSimilarity(vectors, new CosineSimilarity());
 
 		music.keySet().stream()

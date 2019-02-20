@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.common;
+package edu.upf.taln.textplanning.core.structures;
 
 import com.ibm.icu.util.ULocale;
 

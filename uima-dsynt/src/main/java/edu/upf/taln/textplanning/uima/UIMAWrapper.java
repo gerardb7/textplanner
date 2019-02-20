@@ -15,7 +15,7 @@ import de.tudarmstadt.ukp.dkpro.wsd.annotator.WSDAnnotatorCollectiveCandidate;
 import de.tudarmstadt.ukp.dkpro.wsd.resource.WSDResourceCollectiveCandidate;
 import de.tudarmstadt.ukp.dkpro.wsd.type.WSDResult;
 import edu.upf.taln.flask_wrapper.type.WSDSpan;
-import edu.upf.taln.textplanning.common.MeaningDictionary;
+import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
