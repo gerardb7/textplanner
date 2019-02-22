@@ -31,7 +31,7 @@ public class CoreferenceChain implements Serializable
 	public String toString()
 	{
 		return "Chain of size " + getSize() + ": " + coreferents.values().stream()
-				.sorted(Comparator.comparing(Mention::getSentenceId))
+				.sorted()
 				.map(m ->  m + " in sentence " + m.getSentenceId())
 				.collect(Collectors.joining(","));
 	}

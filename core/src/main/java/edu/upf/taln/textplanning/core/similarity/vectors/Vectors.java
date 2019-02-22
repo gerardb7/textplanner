@@ -1,26 +1,23 @@
 package edu.upf.taln.textplanning.core.similarity.vectors;
 
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 
-public interface Vectors
+public abstract class Vectors
 {
-	boolean isDefinedFor(String item);
-	int getNumDimensions();
-	Optional<double[]> getVector(String item);
+	abstract public boolean isDefinedFor(String item);
+	abstract public int getNumDimensions();
+	abstract public Optional<double[]> getVector(String item);
 
-	default double[] getUnknownVector()
+	protected Optional<double[]> getUnknownVector()
 	{
 		final List<String> unknown = Arrays.asList("UNKNOWN", "UUUNKKK", "UNK", "*UNKNOWN*", "<unk>");
 		return unknown.stream()
 				.map(this::getVector)
 				.filter(Optional::isPresent)
 				.map(Optional::get)
-				.findFirst()
-				.orElse(new double[getNumDimensions()]);
+				.findFirst();
 	}
 
 	// Text_Glove -> with header containing num dimensions, Text_Word2Vec -> without header

@@ -13,7 +13,7 @@ import java.util.Optional;
 /**
  *
  */
-public class Word2VecVectors implements Vectors
+public class Word2VecVectors extends Vectors
 {
 //	private final Word2Vec vectors;
 	private final static Logger log = LogManager.getLogger();
@@ -35,7 +35,7 @@ public class Word2VecVectors implements Vectors
 	@Override
 	public Optional<double[]> getVector(String item)
 	{
-		return Optional.empty();
+		return Optional.<double[]>empty().or(this::getUnknownVector);
 	}
 
 	@Override

@@ -14,7 +14,7 @@ public class SIFVectors implements SentenceVectors, BiFunction<double [], double
 
 	public SIFVectors(Vectors word_vectors, Function<String, Double> weights)
 	{
-		sif = new TextualSim(s -> word_vectors.getVector(s).orElse(word_vectors.getUnknownVector()), word_vectors.getNumDimensions(), weights);
+		sif = new TextualSim(word_vectors::getVector, word_vectors.getNumDimensions(), weights);
 		this.word_vectors = word_vectors;
 	}
 
@@ -30,12 +30,6 @@ public class SIFVectors implements SentenceVectors, BiFunction<double [], double
 	public Optional<double[]> getVector(List<String> tokens)
 	{
 		return Optional.of(sif.getEmbedding(tokens).getRow(0));
-	}
-
-	@Override
-	public double[] getUnknownVector()
-	{
-		return word_vectors.getUnknownVector();
 	}
 
 	@Override

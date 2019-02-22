@@ -3,12 +3,11 @@ package edu.upf.taln.textplanning.core.similarity.vectors;
 import java.util.*;
 import java.util.stream.IntStream;
 
-public class RandomVectors implements Vectors, SentenceVectors
+public class RandomVectors extends Vectors implements SentenceVectors
 {
 	private final Map<String, double []> vectors = new HashMap<>();
 	private static final Random rand = new Random();
 	private static final int num_dimensions = 300;
-	private static final String unknown = "unknown";
 
 	@Override
 	public boolean isDefinedFor(String item)
@@ -39,13 +38,6 @@ public class RandomVectors implements Vectors, SentenceVectors
 	public int getNumDimensions()
 	{
 		return 300;
-	}
-
-
-	@Override
-	public double[] getUnknownVector()
-	{
-		return vectors.computeIfAbsent(unknown, RandomVectors::generateNewVector);
 	}
 
 	@SuppressWarnings("unused")

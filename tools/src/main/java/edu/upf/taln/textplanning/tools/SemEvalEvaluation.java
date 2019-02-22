@@ -96,7 +96,10 @@ public class SemEvalEvaluation
 		log.info("Mentions collected in " + timer);
 
 		log.info("Looking up meanings");
+		timer.reset();
+		timer.start();
 		List<List<List<List<Candidate>>>> candidates = collectCandidates(resources.getDictionary(), corpus, mentions);
+		log.info("Meanings looked up in " + timer);
 
 		log.info("Creating contexts");
 		List<Context> contexts = createContexts(mentions, candidates, resources);
@@ -137,7 +140,7 @@ public class SemEvalEvaluation
 		}
 		{
 			log.info("Ranking meanings (full)");
-			final List<List<List<Candidate>>> ranked_candidates = full_rank(candidates, contexts, resources, max_meanings, output_path, true);
+			final List<List<List<Candidate>>> ranked_candidates = full_rank(candidates, contexts, resources, max_meanings, output_path, false);
 			log.info("Results (full)");
 			evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "full.results", false);
 			log.info("Results (full, no multiwords)");
@@ -328,7 +331,7 @@ public class SemEvalEvaluation
 	}
 
 	private static List<List<List<Candidate>>> context_rank(List<List<List<List<Candidate>>>> candidates, List<Context> contexts,
-	                                                        ResourcesFactory resources, double threshold, boolean print_debug)
+	                                                        ResourcesFactory resources, boolean print_debug)
 	{
 		return IntStream.range(0, candidates.size())
 				.mapToObj(text_i ->
@@ -343,7 +346,39 @@ public class SemEvalEvaluation
 												return c;
 											})
 											.collect(toList()))
-									.map(mention_candidates -> {
+									.map(mention_candidates ->
+									{
+										final Optional<Candidate> max = mention_candidates.stream()
+												.max(comparingDouble(c -> c.getMeaning().getWeight()));
+										SemEvalEvaluation.print_ranking(mention_candidates, print_debug);
+										return max;
+									})
+									.filter(Optional::isPresent)
+									.map(Optional::get)
+									.collect(toList()))
+							.collect(toList());
+				})
+				.collect(toList());
+	}
+
+	private static List<List<List<Candidate>>> first_sense_context_rank(List<List<List<List<Candidate>>>> candidates, List<Context> contexts,
+	                                                                    ResourcesFactory resources, double threshold, boolean print_debug)
+	{
+		return IntStream.range(0, candidates.size())
+				.mapToObj(text_i ->
+				{
+					final Context document_context = contexts.get(text_i);
+					return candidates.get(text_i).stream()
+							.map(sentence -> sentence.stream()
+									.map(mention_candidates -> mention_candidates.stream()
+											.map(c ->
+											{
+												c.getMeaning().setWeight(document_context.weight(c.getMeaning().getReference()));
+												return c;
+											})
+											.collect(toList()))
+									.map(mention_candidates ->
+									{
 										final Optional<Candidate> max = mention_candidates.stream()
 												.max(comparingDouble(c -> c.getMeaning().getWeight()));
 
@@ -393,8 +428,8 @@ public class SemEvalEvaluation
 							.distinct()
 							.count();
 
-					log.info("\tRanking document " + (text_i + 1) + " with " + candidates_i.size() + "candidates, " +
-							num_filtered_candidates + " filtered candidates, and " +
+					log.info("\tRanking document " + (text_i + 1) + " with " + candidates_i.size() + " candidates, " +
+							num_filtered_candidates + " candidates after filtering, and " +
 							num_meanings + " distinct meanings");
 					TextPlanner.rankMeanings(candidates_i, candidates_filter, meanings_filter, context_weighter::weight,
 							sim::of, new TextPlanner.Options());

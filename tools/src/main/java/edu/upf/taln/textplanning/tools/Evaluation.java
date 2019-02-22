@@ -186,7 +186,7 @@ public class Evaluation
 				.collect(groupingBy(Candidate::getMention));
 
 		log.info(mentions2candidates.keySet().stream()
-				.sorted(Comparator.comparing(Mention::getSentenceId).thenComparing(Mention::getSpan))
+				.sorted()
 				.map(mention -> mention.getSurface_form() + ": " + mentions2candidates.get(mention).stream()
 							.map(Candidate::getMeaning)
 							.sorted(Comparator.comparingDouble(Meaning::getWeight).reversed())

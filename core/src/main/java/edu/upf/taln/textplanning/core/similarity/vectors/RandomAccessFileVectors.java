@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
 
-public class RandomAccessFileVectors implements Vectors
+public class RandomAccessFileVectors extends Vectors
 {
 	private final GloveRandomAccessReader db;
 	private final int num_dimensions;
@@ -38,8 +38,7 @@ public class RandomAccessFileVectors implements Vectors
 	{
 		try
 		{
-			return Optional.ofNullable(db.get(item)).map(DoubleVector::toArray);
-			//v.ifPresent(a -> num_dimensions = a.length);
+			return Optional.ofNullable(db.get(item)).map(DoubleVector::toArray).or(this::getUnknownVector);
 		}
 		catch (IOException e)
 		{

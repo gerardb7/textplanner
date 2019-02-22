@@ -8,8 +8,6 @@ public interface SentenceVectors
 	boolean isDefinedFor(List<String> tokens);
 	int getNumDimensions();
 	Optional<double[]> getVector(List<String> tokens);
-	double[] getUnknownVector();
 
-
-	public enum SentenceVectorType {BoW, SIF, Precomputed, Random}
+	enum SentenceVectorType {BoW, SIF, Precomputed, Random}
 }

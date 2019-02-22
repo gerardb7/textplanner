@@ -23,16 +23,16 @@ public class VectorsSimilarity
 
 	public OptionalDouble of(String e1, String e2)
 	{
+		if (e1.equals(e2))
+			return OptionalDouble.of(1.0);
+
 		final Optional<double[]> ov1 = vectors.getVector(e1);
 		final Optional<double[]> ov2 = vectors.getVector(e2);
 		if (!ov1.isPresent() || !ov2.isPresent())
 			return OptionalDouble.empty();
 
-		if (e1.equals(e2))
-			return OptionalDouble.of(1.0);
-
-		double[] v1 = vectors.getVector(e1).orElse(vectors.getUnknownVector());
-		double[] v2 = vectors.getVector(e2).orElse(vectors.getUnknownVector());
+		double[] v1 = ov1.get();
+		double[] v2 = ov2.get();
 
 		final double sim = sim_function.apply(v1, v2);
 

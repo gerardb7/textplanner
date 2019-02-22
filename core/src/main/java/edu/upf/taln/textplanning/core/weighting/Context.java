@@ -58,8 +58,7 @@ public class Context
 				.collect(Collectors.toMap(m -> m, context_function, (c1, c2) -> c1));
 		final Map<List<String>, Optional<double[]>> vectors = contexts.values().stream()
 				.distinct()
-				.collect(Collectors.toMap(c -> c,
-						mention_context_vectors_producer::getVector));
+				.collect(Collectors.toMap(c -> c, mention_context_vectors_producer::getVector));
 
 		mention_context_vectors = this.meanings.stream()
 				.map(contexts::get)

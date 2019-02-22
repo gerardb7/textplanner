@@ -31,9 +31,11 @@ public class TopCandidatesFilter implements Predicate<Candidate>
 
 	private static List<Candidate> filter(List<Candidate> candidates, Function<String, Double> eval, int max_candidates)
 	{
-		final Map<Mention, List<Candidate>> collect = candidates.stream()
+		final Map<Mention, List<Candidate>> mentions2candidates = candidates.stream()
 				.collect(Collectors.groupingBy(Candidate::getMention));
-		return collect.values().stream()
+		return mentions2candidates.keySet().stream()
+				.sorted()
+				.map(mentions2candidates::get)
 				.map(l -> limit(l, eval, max_candidates))
 				.flatMap(List::stream)
 				.collect(Collectors.toList());

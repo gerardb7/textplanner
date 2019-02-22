@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.*;
 
-public class TextVectors implements Vectors
+public class TextVectors extends Vectors
 {
 	private final Map<String, double[]> vectors;
 	private final static Logger log = LogManager.getLogger();
@@ -31,7 +31,7 @@ public class TextVectors implements Vectors
 	@Override
 	public Optional<double[]> getVector(String item)
 	{
-		return Optional.ofNullable(vectors.get(item));
+		return Optional.ofNullable(vectors.get(item)).or(this::getUnknownVector);
 	}
 
 	@Override

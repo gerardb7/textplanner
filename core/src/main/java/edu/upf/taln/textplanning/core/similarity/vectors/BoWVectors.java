@@ -27,12 +27,6 @@ public class BoWVectors implements SentenceVectors
 		return word_vectors.getNumDimensions();
 	}
 
-	@Override
-	public double[] getUnknownVector()
-	{
-		return word_vectors.getUnknownVector();
-	}
-
 	// calculates arithmetic average of vectors of tokens
 	public Optional<double[]> getVector(List<String> tokens)
 	{

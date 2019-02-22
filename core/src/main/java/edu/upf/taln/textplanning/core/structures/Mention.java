@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.core.structures;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.Serializable;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -10,7 +11,7 @@ import java.util.Objects;
 /**
  * A sequence of one or more consecutive tokens
  */
-public final class Mention implements Serializable
+public final class Mention implements Comparable<Mention>, Serializable
 {
 	private final String sentence_id; // Identifies sentence and, if necessary, document
 	private final Pair<Integer, Integer> span; // Token-based offsets
@@ -69,5 +70,11 @@ public final class Mention implements Serializable
 	public int hashCode()
 	{
 		return Objects.hash(sentence_id, span);
+	}
+
+	@Override
+	public int compareTo( Mention o)
+	{
+		return Comparator.comparing(Mention::getSentenceId).thenComparing(Mention::getSpan).compare(this, o);
 	}
 }
