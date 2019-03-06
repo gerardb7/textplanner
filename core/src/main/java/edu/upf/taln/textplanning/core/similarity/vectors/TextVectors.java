@@ -31,7 +31,11 @@ public class TextVectors extends Vectors
 	@Override
 	public Optional<double[]> getVector(String item)
 	{
-		return Optional.ofNullable(vectors.get(item)).or(this::getUnknownVector);
+		final Optional<double[]> v = Optional.ofNullable(vectors.get(item));
+		if (v.isPresent())
+			return v;
+		else
+			return getUnknownVector((i) -> Optional.ofNullable(vectors.get(i)));
 	}
 
 	@Override

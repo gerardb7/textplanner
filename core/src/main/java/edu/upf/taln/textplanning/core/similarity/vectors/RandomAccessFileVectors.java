@@ -38,7 +38,19 @@ public class RandomAccessFileVectors extends Vectors
 	{
 		try
 		{
-			return Optional.ofNullable(db.get(item)).map(DoubleVector::toArray).or(this::getUnknownVector);
+			final Optional<double[]> v = Optional.ofNullable(db.get(item)).map(DoubleVector::toArray);
+			if (v.isPresent())
+				return v;
+			return getUnknownVector((i) -> {
+				try
+				{
+					return Optional.ofNullable(db.get(item)).map(DoubleVector::toArray);
+				}
+				catch (IOException e)
+				{
+					return Optional.empty();
+				}
+			});
 		}
 		catch (IOException e)
 		{

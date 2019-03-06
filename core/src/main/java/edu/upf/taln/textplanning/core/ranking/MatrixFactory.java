@@ -1,9 +1,7 @@
 package edu.upf.taln.textplanning.core.ranking;
 
 import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
-import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.core.utils.DebugUtils.ThreadReporter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -123,8 +121,7 @@ public class MatrixFactory
 	{
 		final double[] weights = variables.stream()
 				.parallel()
-				.map(graph::getMeaning)
-				.mapToDouble(om -> om.map(Meaning::getWeight).orElse(0.0))
+				.mapToDouble(graph::getWeight)
 				.toArray();
 
 		double alpha = Arrays.stream(weights)

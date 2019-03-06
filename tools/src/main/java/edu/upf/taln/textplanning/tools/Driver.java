@@ -88,9 +88,12 @@ public class Driver
 		@Parameter(names = {"-set", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
 				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
 		private VectorType sense_vector_type = VectorType.Random;
-		@Parameter(names = {"-mc", "-max_candidates"}, description = "Maximum number of candidates per mention", arity = 1,
-				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
-		private int max_meanings = Integer.MAX_VALUE;
+		@Parameter(names = {"-k", "-top_k"}, description = "Top k candidates from dictionary to be used for ranking", arity = 1,
+				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.IntegerGreaterThanZero.class)
+		private int top_k = 1;
+		@Parameter(names = {"-t", "-threshold"}, description = "Minimum candidate weight", arity = 1,
+				converter = CMLCheckers.DoubleConverter.class, validateWith = CMLCheckers.NormalizedDouble.class)
+		private double threshold = 0.0;
 	}
 
 	@SuppressWarnings("unused")
@@ -104,7 +107,7 @@ public class Driver
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFile.class)
 		private Path output;
 		@Parameter(names = {"-mx", "-max_meanings"}, description = "Maximum number of meanings to collect", arity = 1,
-				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
+				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.IntegerGreaterThanZero.class)
 		private int max_meanings = Integer.MAX_VALUE;
 	}
 
@@ -133,7 +136,7 @@ public class Driver
 				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
 		private VectorType word_vector_type = VectorType.Random;
 		@Parameter(names = {"-c", "-chunk_size"}, description = "Chunk size used when computing vectors", arity = 1, required = true,
-				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
+				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.IntegerGreaterThanZero.class)
 		private int chunk_size = 0;
 	}
 
@@ -193,7 +196,7 @@ public class Driver
 						semEval.word_vectors_path,  semEval.word_vector_type,
 						semEval.sentence_vectors_path, semEval.sentence_vector_type,
 						semEval.context_vectors_path,  semEval.context_vector_type);
-				SemEvalEvaluation.evaluate(semEval.gold_file, semEval.input_file, semEval.output, resources, semEval.max_meanings);
+				SemEvalEvaluation.run(semEval.gold_file, semEval.input_file, semEval.output, resources, semEval.top_k, semEval.threshold);
 				break;
 			}
 			case collect_meanings_vectors:

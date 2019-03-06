@@ -67,14 +67,11 @@ public class GraphRanking
 		double[] ranking = final_distribution.getColumnPackedCopy();
 
 		// Assign ranking values to meanings
-		filtered_candidates.stream()
-				.map(Candidate::getMeaning)
-				.distinct()
-				.forEach(m ->
-				{
-					int i = references.indexOf(m.getReference());
-					m.setWeight(ranking[i]);
-				});
+		filtered_candidates.forEach(m ->
+		{
+			int i = references.indexOf(m.getMeaning().getReference());
+			m.setWeight(ranking[i]);
+		});
 	}
 
 	public static void rankVariables(SemanticGraph graph, double damping_factor_variables)

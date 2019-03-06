@@ -8,74 +8,50 @@ import edu.upf.taln.textplanning.core.structures.Meaning;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.io.Serializable;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.toList;
-
-public class Context
+public class Context implements Serializable
 {
-	public final List<String> meanings;
-	public final List<Optional<double[]>> meaning_context_vectors;
-	public final List<Optional<double[]>> mention_context_vectors;
-	public final BiFunction<double[], double[], Double> score_function;
+	public final Map<String, Double> weights = new HashMap<>();
 	private final static Logger log = LogManager.getLogger();
+	private final static long serialVersionUID = 1L;
 
-	public Context( Collection<Candidate> meanings,
-					Vectors meaning_context_vectors_producer,
-	                SentenceVectors mention_context_vectors_producer,
+	public Context( Collection<Candidate> candidates,
+					Vectors glosses_vectors,
+	                SentenceVectors context_vectors,
 	                Function<String, List<String>> context_function,
 	                BiFunction<double[], double[], Double> score_function)
 	{
-		log.info("Setting up vectors for context-based weighting of meanings");
+		log.info("Calculating meaning weights using gloss and context vectors");
 		final Stopwatch timer = Stopwatch.createStarted();
 
-		log.info("Retrieving vector for meanings");
-		this.meanings = meanings.stream()
+		final Set<String> meanings = candidates.stream()
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
-				.collect(Collectors.toList());
-
-		meaning_context_vectors = this.meanings.stream()
-				.map(meaning_context_vectors_producer::getVector)
-				.collect(toList());
-
-		{
-			final long num_defined_vectors = meaning_context_vectors.stream()
-					.filter(Optional::isPresent)
-					.count();
-			log.info(num_defined_vectors + " defined meaning context vectors out of " + meaning_context_vectors.size());
-		}
+				.collect(Collectors.toSet());
 
 		// Calculate context vectors just once per each context
-		log.info("Calculating vector for contexts");
-		final Map<String, List<String>> contexts = this.meanings.stream()
-				.collect(Collectors.toMap(m -> m, context_function, (c1, c2) -> c1));
-		final Map<List<String>, Optional<double[]>> vectors = contexts.values().stream()
-				.distinct()
-				.collect(Collectors.toMap(c -> c, mention_context_vectors_producer::getVector));
+		meanings.forEach(m -> {
+					final Optional<double[]> glosses_vector = glosses_vectors.getVector(m);
+					final List<String> context = context_function.apply(m);
+					final Optional<double[]> context_vector =context_vectors.getVector(context);
+					if (glosses_vector.isPresent() && context_vector.isPresent())
+						weights.put(m, score_function.apply(glosses_vector.get(), context_vector.get()));
+					else
+						weights.put(m, 0.0);
 
-		mention_context_vectors = this.meanings.stream()
-				.map(contexts::get)
-				.map(vectors::get)
-				.collect(toList());
+				});
 
-		this.score_function = score_function;
+		log.info(weights.size() + " meanings with weights out of " + candidates.size());
 		log.info("Set up completed in " + timer.stop());
 	}
 
 	public double weight(String item)
 	{
-		final int i = meanings.indexOf(item);
-		final Optional<double[]> meaning_context_vector = meaning_context_vectors.get(i);
-		final Optional<double[]> mention_context_vector = mention_context_vectors.get(i);
-		if (!meaning_context_vector.isPresent() || !mention_context_vector.isPresent())
-			return 0.0;
-		return score_function.apply(meaning_context_vector.get(), mention_context_vector.get());
+		return weights.get(item);
 	}
 }

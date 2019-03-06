@@ -3,8 +3,8 @@ package edu.upf.taln.textplanning.tools;
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.FileUtils;
-import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import edu.upf.taln.textplanning.common.ResourcesFactory;
+import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
 import edu.upf.taln.textplanning.core.ranking.StopWordsFilter;
@@ -12,6 +12,7 @@ import edu.upf.taln.textplanning.core.ranking.TopCandidatesFilter;
 import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
+import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.core.weighting.Context;
@@ -27,8 +28,10 @@ import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.*;
 import javax.xml.transform.stream.StreamSource;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -83,69 +86,146 @@ public class SemEvalEvaluation
 	private static final String noun_pos_tag = "N";
 	private static final String other_pos_tag = "X";
 	private static final ULocale language = ULocale.ENGLISH;
+	private static final String candidates_file = "candidates.bin";
+	private static final String contexts_file = "contexts.bin";
 	private final static Logger log = LogManager.getLogger();
 
-	public static void evaluate(Path gold_file, Path xml_file, Path output_path, ResourcesFactory resources, int max_meanings) throws Exception
+	public static void run(Path gold_file, Path xml_file, Path output_path, ResourcesFactory resources, int top_k, double threshold) throws Exception
 	{
+		log.info("Parsing gold file");
+		final Map<String, String> gold = parseGoldFile(gold_file);
+		log.info(gold.keySet().size() + " lines read from gold");
 		log.info("Parsing XML file");
 		final Corpus corpus = parse(xml_file);
 
-		log.info("Collecting mentions");
-		Stopwatch timer = Stopwatch.createStarted();
-		final List<List<List<Mention>>> mentions = collectMentions(corpus);
-		log.info("Mentions collected in " + timer);
+		List<List<List<List<Candidate>>>> candidates;
+		List<Context> contexts;
+		final Path candidates_path = output_path.resolve(candidates_file);
+		final Path contexts_path = output_path.resolve(contexts_file);
 
-		log.info("Looking up meanings");
-		timer.reset();
-		timer.start();
-		List<List<List<List<Candidate>>>> candidates = collectCandidates(resources.getDictionary(), corpus, mentions);
-		log.info("Meanings looked up in " + timer);
+		if (Files.exists(candidates_path) && Files.exists(contexts_path))
+		{
+			log.info("Loading candidates from " + candidates_path);
+			candidates = ((List<List<List<List<Candidate>>>>) Serializer.deserialize(candidates_path)).stream().map(text ->
+					text.stream().map(sentence ->
+							sentence.stream().map(mention ->
+									mention.stream().
+											distinct().
+											collect(toList()))
+									.collect(toList()))
+							.collect(toList()))
+					.collect(toList());;
+			log.info("Loading contexts from " + contexts_path);
+			contexts = (List<Context>) Serializer.deserialize(contexts_path);
+		}
+		else
+		{
+			log.info("Collecting mentions");
+			Stopwatch timer = Stopwatch.createStarted();
+			final List<List<List<Mention>>> mentions = collectMentions(corpus);
+			log.info("Mentions collected in " + timer.stop());
 
-		log.info("Creating contexts");
-		List<Context> contexts = createContexts(mentions, candidates, resources);
+			log.info("Looking up meanings");
+			timer.reset(); timer.start();
+			candidates = collectCandidates(resources.getDictionary(), corpus, mentions).stream()
+					.map(text -> text.stream().map(sentence ->
+							sentence.stream().map(mention ->
+									mention.stream().
+											distinct().
+											collect(toList()))
+									.collect(toList()))
+							.collect(toList()))
+					.collect(toList());
+			log.info("Meanings looked up in " + timer.stop());
+
+			Serializer.serialize(candidates, candidates_path);
+			log.info("Canidates saved in " + candidates_path);
+
+			log.info("Creating contexts");
+			timer.reset(); timer.start();
+			contexts = createContexts(mentions, candidates, resources);
+			log.info("Contexts created in " + timer.stop());
+			Serializer.serialize(contexts, contexts_path);
+			log.info("Contexts saved in " + contexts_path);
+		}
 
 		{
 			log.info("Ranking meanings (random)");
+			resetRanks(candidates);
 			final List<List<List<Candidate>>> ranked_candidates = random_rank(candidates, false);
 			log.info("Results (random)");
 			evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "random.results", false);
-			log.info("Results (random, no multiwords)");
-			evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "random_nomw.results", true);
+//			log.info("Results (random, no multiwords)");
+//			evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "random_nomw.results", true);
 		}
 		{
 			log.info("Ranking meanings (first sense)");
+			resetRanks(candidates);
 			final List<List<List<Candidate>>> ranked_candidates = first_sense_rank(candidates, resources.getDictionary(), false);
 			log.info("Results (first sense)");
 			evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "first_sense.results", false);
-			log.info("Results (first sense, no multiwords)");
-			evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "first_sense_nomw.results", true);
+//			log.info("Results (first sense, no multiwords)");
+//			evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "first_sense_nomw.results", true);
 		}
 		{
-			for (double threshold = 0.7; threshold <= 0.7; threshold += 0.01)
+			log.info("Ranking meanings (context only)");
+			resetRanks(candidates);
+			final List<List<List<Candidate>>> ranked_candidates = context_rank(candidates, contexts, resources, false);
+			log.info("Results (context only)");
+			evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "context.results", false);
+//			log.info("Results (context only, no multiwords)");
+//			evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "context_nomw.results", true);
+		}
+		{
+			for (double context_threshold = 0.7; context_threshold <= 0.7; context_threshold += 0.01)
 			{
-				log.info("Ranking meanings (context only, threshold set to " + DebugUtils.printDouble(threshold) + ")");
-				final List<List<List<Candidate>>> ranked_candidates = context_rank(candidates, contexts, resources, threshold,true);
-				log.info("Results (context only, threshold set to " + DebugUtils.printDouble(threshold) + ")");
-				evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "context.results", false);
-			};
+				log.info("Ranking meanings (first sense + context, threshold set to " + DebugUtils.printDouble(context_threshold) + ")");
+				resetRanks(candidates);
+				final List<List<List<Candidate>>> ranked_candidates = first_sense_context_rank(candidates, contexts, resources, context_threshold, false);
+				log.info("Results (first sense + context, threshold set to " + DebugUtils.printDouble(context_threshold) + ")");
+				evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "first_sense_context + " + context_threshold +".results", false);
+			}
 
-			for (double threshold = 0.7; threshold <= 0.7; threshold += 0.01)
-			{
-				log.info("Ranking meanings (context only, threshold set to " + DebugUtils.printDouble(threshold) + ")");
-				final List<List<List<Candidate>>> ranked_candidates = context_rank(candidates, contexts, resources, threshold,false);
-				log.info("Results (context only, no multiwords, threshold set to " + DebugUtils.printDouble(threshold) + ")");
-				evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "context_nomw.results", true);
-			};
-
+//			for (double context_threshold = 0.7; context_threshold <= 0.7; context_threshold += 0.01)
+//			{
+//				log.info("Ranking meanings (first sense + context, no multiwords threshold set to " + DebugUtils.printDouble(context_threshold) + ")");
+//				resetRanks(candidates);
+//				final List<List<List<Candidate>>> ranked_candidates = first_sense_context_rank(candidates, contexts, resources, context_threshold, false);
+//				log.info("Results (first sense + context, no multiwords, threshold set to " + DebugUtils.printDouble(context_threshold) + ")");
+//				evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "first_sense_context_nomw.results", true);
+//			}
 		}
 		{
 			log.info("Ranking meanings (full)");
-			final List<List<List<Candidate>>> ranked_candidates = full_rank(candidates, contexts, resources, max_meanings, output_path, false);
+			resetRanks(candidates);
+			final List<List<List<Candidate>>> ranked_candidates = full_rank(candidates, contexts, resources, top_k, threshold, output_path, true);
 			log.info("Results (full)");
 			evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "full.results", false);
-			log.info("Results (full, no multiwords)");
-			evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "full_nomw.results", true);
+//			log.info("Results (full, no multiwords)");
+//			evaluate(corpus, ranked_candidates, gold_file, xml_file, output_path, "full_nomw.results", true);
 			log.info("DONE");
+
+			final int max_length = candidates.stream()
+					.flatMap(List::stream)
+					.flatMap(List::stream)
+					.flatMap(List::stream)
+					.map(Candidate::getMeaning)
+					.map(Meaning::toString)
+					.mapToInt(String::length)
+					.max().orElse(5) + 4;
+
+			IntStream.range(0, candidates.size()).forEach(i ->
+			{
+				log.info("TEXT " + i);
+				final Context text_context = contexts.get(i);
+				final List<List<List<Candidate>>> text_candidates = candidates.get(i);
+
+				text_candidates.forEach(sentence_candidates ->
+						sentence_candidates.forEach(mention_candidates ->
+								SemEvalEvaluation.print_full_ranking(mention_candidates, contexts.get(i), gold, true, max_length)));
+
+				print_meaning_rankings(text_candidates, text_context, true, max_length);
+			});
 		}
 	}
 
@@ -299,9 +379,9 @@ public class SemEvalEvaluation
 								.filter(mention_candidates -> !mention_candidates.isEmpty())
 								.map(mention_candidates ->
 								{
-									mention_candidates.forEach(c -> c.getMeaning().setWeight(0.0));
+									mention_candidates.forEach(c -> c.setWeight(0.0));
 									final Candidate candidate = mention_candidates.get(rand.nextInt(mention_candidates.size()));
-									candidate.getMeaning().setWeight(1.0);
+									candidate.setWeight(1.0);
 									print_ranking(mention_candidates, print_debug);
 									return candidate;
 								})
@@ -320,8 +400,8 @@ public class SemEvalEvaluation
 								.map(mention_candidates ->
 								{
 									final Iterator<Candidate> it = mention_candidates.iterator();
-									it.next().getMeaning().setWeight(1.0);
-									it.forEachRemaining(c -> c.getMeaning().setWeight(0.0));
+									it.next().setWeight(1.0);
+									it.forEachRemaining(c -> c.setWeight(0.0));
 									print_ranking(mention_candidates, print_debug);
 									return mention_candidates.get(0);
 								})
@@ -342,14 +422,14 @@ public class SemEvalEvaluation
 									.map(mention_candidates -> mention_candidates.stream()
 											.map(c ->
 											{
-												c.getMeaning().setWeight(document_context.weight(c.getMeaning().getReference()));
+												c.setWeight(document_context.weight(c.getMeaning().getReference()));
 												return c;
 											})
 											.collect(toList()))
 									.map(mention_candidates ->
 									{
 										final Optional<Candidate> max = mention_candidates.stream()
-												.max(comparingDouble(c -> c.getMeaning().getWeight()));
+												.max(comparingDouble(c -> c.getWeight()));
 										SemEvalEvaluation.print_ranking(mention_candidates, print_debug);
 										return max;
 									})
@@ -373,19 +453,19 @@ public class SemEvalEvaluation
 									.map(mention_candidates -> mention_candidates.stream()
 											.map(c ->
 											{
-												c.getMeaning().setWeight(document_context.weight(c.getMeaning().getReference()));
+												c.setWeight(document_context.weight(c.getMeaning().getReference()));
 												return c;
 											})
 											.collect(toList()))
 									.map(mention_candidates ->
 									{
 										final Optional<Candidate> max = mention_candidates.stream()
-												.max(comparingDouble(c -> c.getMeaning().getWeight()));
+												.max(comparingDouble(c -> c.getWeight()));
 
 										SemEvalEvaluation.print_ranking(mention_candidates, print_debug);
 
 										// Return top scored candidate if scored above the threshold, otherwise return first sense
-										if (max.map(Candidate::getMeaning).map(Meaning::getWeight).orElse(0.0) >= threshold)
+										if (max.map(Candidate::getWeight).orElse(0.0) >= threshold)
 											return max;
 										else if (!mention_candidates.isEmpty())
 											return Optional.<Candidate>of(mention_candidates.get(0));
@@ -402,50 +482,60 @@ public class SemEvalEvaluation
 	}
 
 	private static List<List<List<Candidate>>> full_rank(List<List<List<List<Candidate>>>> candidates, List<Context> contexts,
-	                                                     ResourcesFactory resources, int max_meanings, Path output_path,
+	                                                     ResourcesFactory resources, int top_k, double threshold, Path output_path,
 	                                                     boolean print_debug) throws IOException
 	{
 		// Rank candidates
 		IntStream.range(0, candidates.size())
 				.forEach(text_i ->
 				{
-					final List<Candidate> candidates_i = candidates.get(text_i).stream()
+					final List<Candidate> text_candidates = candidates.get(text_i).stream()
 							.flatMap(l -> l.stream()
-									.flatMap(s -> s.stream()))
+									.flatMap(l2 -> l2.stream()))
 							.collect(toList());
+					final Map<Mention, List<Candidate>> mentions2candidates = candidates.get(text_i).stream()
+							.flatMap(l -> l.stream()
+									.filter(l2 -> !l2.isEmpty()))
+							.collect(toMap(l -> l.get(0).getMention(), l -> l));
 
 					final Context context_weighter = contexts.get(text_i);
 					final VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
-					final TopCandidatesFilter candidates_filter = new TopCandidatesFilter(candidates_i, context_weighter::weight, max_meanings);
-					final DifferentMentionsFilter meanings_filter = new DifferentMentionsFilter(candidates_i);
+					final TopCandidatesFilter candidates_filter =
+							new TopCandidatesFilter(mentions2candidates, context_weighter::weight, top_k, threshold);
+					final DifferentMentionsFilter meanings_filter = new DifferentMentionsFilter(text_candidates);
 
-					final long num_filtered_candidates = candidates_i.stream()
+					final long num_filtered_candidates = text_candidates.stream()
 							.filter(candidates_filter)
 							.count();
-					final long num_meanings = candidates_i.stream()
+					final long num_meanings = text_candidates.stream()
 							.filter(candidates_filter)
 							.map(Candidate::getMeaning)
 							.distinct()
 							.count();
 
-					log.info("\tRanking document " + (text_i + 1) + " with " + candidates_i.size() + " candidates, " +
+					log.info("\tRanking document " + (text_i + 1) + " with " + text_candidates.size() + " candidates, " +
 							num_filtered_candidates + " candidates after filtering, and " +
 							num_meanings + " distinct meanings");
-					TextPlanner.rankMeanings(candidates_i, candidates_filter, meanings_filter, context_weighter::weight,
+					TextPlanner.rankMeanings(text_candidates, candidates_filter, meanings_filter, context_weighter::weight,
 							sim::of, new TextPlanner.Options());
 				});
 
+
+
 		// Choose top candidates
-		return candidates.stream()
-				.map(text -> text.stream()
-						.map(sentence -> sentence.stream()
-								.peek(mention_candidates -> SemEvalEvaluation.print_ranking(mention_candidates, print_debug))
-								.map(mention_candidates -> mention_candidates.stream()
-										.max(comparingDouble(c -> c.getMeaning().getWeight())))
-								.filter(Optional::isPresent)
-								.map(Optional::get)
-								.collect(toList()))
-						.collect(toList()))
+		return IntStream.range(0, candidates.size())
+				.mapToObj(i ->
+				{
+					final Context context = contexts.get(i);
+					return candidates.get(i).stream()
+							.map(sentence -> sentence.stream()
+									.map(mention_candidates -> mention_candidates.stream()
+											.max(comparingDouble(c -> c.getWeight())))
+									.filter(Optional::isPresent)
+									.map(Optional::get)
+									.collect(toList()))
+							.collect(toList());
+				})
 				.collect(toList());
 
 //			final List<List<Set<Candidate>>> grouped_candidates = candidates_i.stream()
@@ -466,6 +556,13 @@ public class SemEvalEvaluation
 //			FileUtils.serializeMeanings(grouped_candidates, output_path.resolve(out_filename));
 	}
 
+	private static Map<String, String> parseGoldFile(Path file)
+	{
+		return Arrays.stream(FileUtils.readTextFile(file).split("\n"))
+				.map(l -> l.split("\t"))
+				.filter(a -> a.length >= 3)
+				.collect(Collectors.toMap(a -> a[0].equals(a[1]) ?  a[0] : (a[0] + "-" + a[1]), a -> a[2]));
+	}
 
 	private static void print_texts(Corpus corpus)
 	{
@@ -485,9 +582,56 @@ public class SemEvalEvaluation
 
 		final Mention mention = candidates.get(0).getMention();
 		log.info(mention.getSentenceId() + " \"" + mention + "\" " + mention.getPOS() + candidates.stream()
-				.map(Candidate::getMeaning)
-				.map(m -> m.toString() + " " + DebugUtils.printDouble(m.getWeight()))
+				.map(c -> c.toString() + " " + DebugUtils.printDouble(c.getWeight()))
 				.collect(joining("\n\t", "\n\t", "")));
+	}
+
+	private static void print_full_ranking(List<Candidate> candidates, Context context, Map<String, String> gold, boolean print_debug, int max_length)
+	{
+		if (!print_debug || candidates.isEmpty())
+			return;
+
+		final Mention mention = candidates.get(0).getMention();
+		final String gold_c = gold.get(mention.getSentenceId());
+		final String max_r = candidates.stream()
+				.max(comparingDouble(Candidate::getWeight))
+				.map(Candidate::getMeaning)
+				.map(Meaning::getReference).orElse("");
+		final String first_c = candidates.get(0).getMeaning().getReference();
+
+		final String result = gold_c != null && gold_c.equals(max_r) ? "OK" : "FAIL";
+		final String ranked = max_r.equals(first_c) ? "" : "RANKED";
+		Function<String, String> marker = (m) -> (m.equals(gold_c) ? "GOLD " : "") + (m.equals(max_r) ? "SYSTEM" : "");
+
+		log.info(mention.getSentenceId() + " \"" + mention + "\" " + mention.getPOS() + " " + result + " " + ranked +
+				candidates.stream()
+					.map(c -> String.format("%-15s%-" + max_length + "s%-15s%-15s", marker.apply(c.getMeaning().getReference()),
+							c.getMeaning().toString(), DebugUtils.printDouble(context.weight(c.getMeaning().getReference())),
+							(c.getWeight() > 0.0 ? DebugUtils.printDouble(c.getWeight(), 6) : "")))
+					.collect(joining("\n\t", "\t\n\t" + String.format("%-15s%-" + max_length + "s%-15s%-15s\n\t","Status", "Candidate","Context score","Rank score"), "")));
+	}
+
+	private static void print_meaning_rankings(List<List<List<Candidate>>> candidates, Context context, boolean print_debug, int max_length)
+	{
+		if (!print_debug || candidates.isEmpty())
+			return;
+		final Map<Meaning, Double> weights = candidates.stream()
+				.flatMap(l -> l.stream()
+						.flatMap(l2 -> l2.stream()))
+				.collect(groupingBy(Candidate::getMeaning, averagingDouble(Candidate::getWeight)));
+		final List<Meaning> meanings = weights.keySet().stream().collect(toList());
+
+		log.info(meanings.stream()
+				.filter(m -> weights.get(m) > 0.0)
+				.sorted(Comparator.comparingDouble(weights::get).reversed())
+				.map(m -> String.format("%-" + max_length + "s%-15s", m.toString(), DebugUtils.printDouble(weights.get(m))))
+				.collect(joining("\n\t", "Meaning ranking by ranking score:\n\t",
+						"\n--------------------------------------------------------------------------------------------")));
+		log.info(meanings.stream()
+				.sorted(Comparator.<Meaning>comparingDouble(m -> context.weight(m.getReference())).reversed())
+				.map(m -> String.format("%-" + max_length + "s%-15s", m.toString(), DebugUtils.printDouble(context.weight(m.getReference()))))
+				.collect(joining("\n\t", "Meaning ranking by context score:\n\t",
+						"\n--------------------------------------------------------------------------------------------")));
 	}
 
 	private static void evaluate(Corpus corpus, List<List<List<Candidate>>> candidates, Path gold_file, Path xml_file,
@@ -500,7 +644,7 @@ public class SemEvalEvaluation
 		final List<Pair<Mention, List<Candidate>>> sorted_candidates = mentions2candidates.keySet().stream()
 				.sorted(Comparator.comparing(Mention::getSentenceId).thenComparing(Mention::getSpan))
 				.map(m -> Pair.of(m, mentions2candidates.get(m).stream()
-						.sorted(Comparator.<Candidate>comparingDouble(c -> c.getMeaning().getWeight()).reversed())
+						.sorted(Comparator.<Candidate>comparingDouble(Candidate::getWeight).reversed())
 						.collect(toList())))
 				.collect(toList());
 
@@ -530,5 +674,14 @@ public class SemEvalEvaluation
 		FileUtils.writeTextToFile(results_file, results);
 		log.info("Results file written to " + results_file);
 		Scorer.main(new String[]{gold_file.toString(), results_file.toString()});
+	}
+
+	private static void resetRanks(List<List<List<List<Candidate>>>> candidates)
+	{
+		candidates.stream()
+				.flatMap(List::stream)
+				.flatMap(List::stream)
+				.flatMap(List::stream)
+				.forEach(c -> c.setWeight(0.0));
 	}
 }

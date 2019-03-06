@@ -111,7 +111,7 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 				g.vertexSet().forEach(v ->
 				{
 					final List<Candidate> candidates = graphs.getCandidates(v).stream()
-							.sorted(comparingDouble((Candidate c) -> c.getMeaning().getWeight()).reversed())
+							.sorted(comparingDouble(Candidate::getWeight).reversed())
 							.collect(toList());
 					if (!candidates.isEmpty())
 					{
@@ -124,10 +124,9 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 						Candidate selected = max;
 						if (max_multiword.isPresent())
 						{
-							final double max_multiword_weigth = max_multiword.get().getMeaning().getWeight();
+							final double max_multiword_weigth = max_multiword.get().getWeight();
 							DescriptiveStatistics stats = new DescriptiveStatistics(candidates.stream()
-									.map(Candidate::getMeaning)
-									.mapToDouble(Meaning::getWeight)
+									.mapToDouble(Candidate::getWeight)
 									.toArray());
 
 							if (max_multiword_weigth >= stats.getMean())
@@ -165,7 +164,7 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 
 			Candidate c = graphs.getCandidates(v).iterator().next();
 			// v_value = value of highest scored meaning of v
-			double v_value = c.getMeaning().getWeight();
+			double v_value = c.getWeight();
 
 			// s_max -> value of highest scored subsumed meaning
 			final Set<String> subsumed = g.getAlignments().getSpanVertices(c.getMention().getSpan());
@@ -173,8 +172,7 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 			double s_max = subsumed.stream()
 					.map(graphs::getCandidates)
 					.flatMap(Collection::stream)
-					.map(Candidate::getMeaning)
-					.mapToDouble(Meaning::getWeight)
+					.mapToDouble(Candidate::getWeight)
 					.max().orElse(0.0);
 
 			// Is there a descendant with a highest scored meaning?
@@ -238,7 +236,7 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 					Collection<String> C = c.getVertices();
 					// v node, whose meaning is kept, corresponds to that with the highest scored meaning
 					String v = C.stream()
-							.max(comparingDouble(n -> merged.getMeaning(n).map(Meaning::getWeight).orElse(0.0))).orElse(null);
+							.max(comparingDouble(merged::getWeight)).orElse(null);
 					C.remove(v);
 					log.debug(DebugUtils.printCorefMerge(v, C, merged));
 

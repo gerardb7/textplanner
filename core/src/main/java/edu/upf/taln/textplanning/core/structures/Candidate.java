@@ -12,6 +12,7 @@ public class Candidate implements Serializable
 
 	private final Mention mention;
 	private final Meaning meaning;
+	private double weight = 0.0;
 	private final static long serialVersionUID = 1L;
 
 	public Candidate(Mention m, Meaning e)
@@ -23,10 +24,21 @@ public class Candidate implements Serializable
 	public Mention getMention() { return mention; }
 	public Meaning getMeaning() { return meaning; }
 
+	public double getWeight()
+	{
+		return weight;
+	}
+
+	public void setWeight(double weight)
+	{
+		this.weight = weight;
+	}
+
+
 	@Override
 	public String toString()
 	{
-		return "s" + mention.getSentenceId() + " " + mention.getSpan() + " " + meaning;
+		return mention.getSentenceId() + " " + mention.getSpan() + " " + meaning;
 	}
 
 	// Two candidates are the same if they have same vertex and meaning. Mentions are ignored!

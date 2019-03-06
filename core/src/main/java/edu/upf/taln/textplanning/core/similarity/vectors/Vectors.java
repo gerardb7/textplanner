@@ -3,18 +3,20 @@ package edu.upf.taln.textplanning.core.similarity.vectors;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 public abstract class Vectors
 {
-	abstract public boolean isDefinedFor(String item);
-	abstract public int getNumDimensions();
-	abstract public Optional<double[]> getVector(String item);
 
-	protected Optional<double[]> getUnknownVector()
+	public abstract boolean isDefinedFor(String item);
+	public abstract int getNumDimensions();
+	public abstract Optional<double[]> getVector(String item);
+
+	protected static Optional<double[]> getUnknownVector(Function<String, Optional<double []>> f)
 	{
 		final List<String> unknown = Arrays.asList("UNKNOWN", "UUUNKKK", "UNK", "*UNKNOWN*", "<unk>");
-		return unknown.stream()
-				.map(this::getVector)
+		return 	unknown.stream()
+				.map(f)
 				.filter(Optional::isPresent)
 				.map(Optional::get)
 				.findFirst();

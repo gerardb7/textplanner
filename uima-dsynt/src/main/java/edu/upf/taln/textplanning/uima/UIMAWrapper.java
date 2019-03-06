@@ -289,9 +289,10 @@ public class UIMAWrapper
 									{
 										final BabelNetSense s = (BabelNetSense) a.getBestSense();
 										final Meaning meaning = Meaning.get(s.getId(), s.getLabel(), s.getNameEntity());
-										meaning.setWeight(s.getConfidence());
 //										final double rank = JCasUtil.selectAt(doc, ConceptRelevance.class, a.getBegin(), a.getEnd()).get(0).getDomainRelevance();
-										return new Candidate(mention, meaning);
+										Candidate c = new Candidate(mention, meaning);
+										c.setWeight(s.getConfidence());
+										return c;
 									})
 									.collect(toSet());
 						})

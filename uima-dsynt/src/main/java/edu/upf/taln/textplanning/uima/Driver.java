@@ -14,6 +14,7 @@ import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.weighting.Context;
 import it.uniroma1.lcl.jlt.util.Files;
 import org.apache.logging.log4j.LogManager;
@@ -227,23 +228,22 @@ public class Driver
 							.flatMap(l -> l.stream()
 									.flatMap(Set::stream))
 							.collect(toList());
+					final Map<Mention, List<Candidate>> mentions2candidates = candidates.stream()
+							.collect(groupingBy(Candidate::getMention));
 
 					UIMAWrapper uima = new UIMAWrapper(text, language, pipeline);
 					final List<String> context = uima.getNominalTokens().stream()
 							.flatMap(List::stream)
 							.collect(toList());
 
-
 					final Context context_weighter = new Context(candidates, resources.getSenseContextVectors(),
 							resources.getSentenceVectors(), w -> context, resources.getSimilarityFunction());
 					final VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
-					TopCandidatesFilter candidates_filter = new TopCandidatesFilter(candidates, context_weighter::weight, 5);
+					TopCandidatesFilter candidates_filter = new TopCandidatesFilter(mentions2candidates, context_weighter::weight, 1, 0.6);
 					DifferentMentionsFilter meanings_filter = new DifferentMentionsFilter(candidates);
 					TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter::weight, sim::of, new TextPlanner.Options());
 
-					candidates.stream()
-							.map(Candidate::getMeaning)
-							.forEach(m -> m.setWeight(context_weighter.weight(m.getReference())));
+					candidates.forEach(c -> c.setWeight(context_weighter.weight(c.getMeaning().getReference())));
 
 					// Let's group and sort the plain list of candidates by sentence and offsets.
 					final List<List<Set<Candidate>>> grouped_candidates = candidates.stream()

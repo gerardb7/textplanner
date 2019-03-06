@@ -59,13 +59,12 @@ public class DSyntSemanticGraphListFactory implements SemanticGraphFactory<JCas>
 		if (!graph.containsVertex(id))
 		{
 			final Mention mention = createMention(jcas, sentence, deep_token);
-			final Optional<Meaning> meaning = createMeaning(jcas, deep_token);
-			final OptionalDouble rank = getRank(jcas, deep_token);
+			final Optional<Pair<Meaning, Double>> meaning = createMeaning(jcas, deep_token);
 
 			graph.addVertex(id);
 			graph.addMention(id, mention);
-			meaning.ifPresent(m -> graph.setMeaning(id, m));
-			rank.ifPresent(r -> graph.setWeight(id, r));
+			meaning.ifPresent(p -> graph.setMeaning(id, p.getLeft()));
+			meaning.ifPresent(p -> graph.setWeight(id, p.getRight()));
 			graph.addSource(id, sentence.getId());
 			// TODO decide if type needs setting
 		}
@@ -96,7 +95,7 @@ public class DSyntSemanticGraphListFactory implements SemanticGraphFactory<JCas>
 		return Mention.get(sentence.getId(), offsets, surface_form, lemma, pos, false, "");
 	}
 
-	private static Optional<Meaning> createMeaning(JCas jcas, DeepToken deep_token)
+	private static Optional<Pair<Meaning, Double>> createMeaning(JCas jcas, DeepToken deep_token)
 	{
 		final List<WSDResult> annotations = JCasUtil.selectAt(jcas, WSDResult.class, deep_token.getBegin(), deep_token.getEnd());
 		if (!annotations.isEmpty())
@@ -104,14 +103,14 @@ public class DSyntSemanticGraphListFactory implements SemanticGraphFactory<JCas>
 			final WSDResult ann = annotations.get(0);
 			BabelNetSense babel_synset = (BabelNetSense) ann.getBestSense();
 			final Meaning meaning = Meaning.get(babel_synset.getId(), babel_synset.getLabel(), babel_synset.getNameEntity());
-			meaning.setWeight(babel_synset.getConfidence());
-			return Optional.of(meaning);
+			final double rank = babel_synset.getConfidence();
+			return Optional.of(Pair.of(meaning, rank));
 		}
 
 		return Optional.empty();
 	}
 
-	private static OptionalDouble getRank(JCas jcas, DeepToken deep_token)
+	private static OptionalDouble getConceptScore(JCas jcas, DeepToken deep_token)
 	{
 
 		final List<ConceptRelevance> annotations = JCasUtil.selectAt(jcas, ConceptRelevance.class, deep_token.getBegin(), deep_token.getEnd());

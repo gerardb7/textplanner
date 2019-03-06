@@ -35,7 +35,7 @@ public class Word2VecVectors extends Vectors
 	@Override
 	public Optional<double[]> getVector(String item)
 	{
-		return Optional.<double[]>empty().or(this::getUnknownVector);
+		return Optional.empty();
 	}
 
 	@Override

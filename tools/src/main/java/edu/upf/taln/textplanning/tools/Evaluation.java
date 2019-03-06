@@ -15,7 +15,6 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static edu.upf.taln.textplanning.common.FileUtils.deserializeMeanings;
 import static java.util.stream.Collectors.*;
 
 public class Evaluation
@@ -66,9 +65,9 @@ public class Evaluation
 			final String gold_set = gold_contents.get(i);
 			final List<AlternativeMeanings> gold_meanings = readGoldMeanings(gold_set).stream().flatMap(List::stream).collect(toList());
 			final List<Meaning> sorted_candidates = candidate_set.stream()
+					.sorted(Comparator.comparingDouble(Candidate::getWeight).reversed())
 					.map(Candidate::getMeaning)
-					.distinct() // no duplicates!
-					.sorted(Comparator.comparingDouble(Meaning::getWeight).reversed()) // decreasing order
+					.distinct()
 					.collect(toList());
 			final List<AlternativeMeanings> sorted_meanings = sorted_candidates.stream()
 					.map(m -> new AlternativeMeanings(Collections.singletonList(m.getReference()), m.toString()))
@@ -188,11 +187,10 @@ public class Evaluation
 		log.info(mentions2candidates.keySet().stream()
 				.sorted()
 				.map(mention -> mention.getSurface_form() + ": " + mentions2candidates.get(mention).stream()
-							.map(Candidate::getMeaning)
-							.sorted(Comparator.comparingDouble(Meaning::getWeight).reversed())
-							.map(meaning -> sorted_meanings.indexOf(meaning) + "\t" +
-									DebugUtils.printDouble(meaning.getWeight()) + "\t" +
-									meaning.toString().replaceAll("-[^:]+:EN:", "-"))
+							.sorted(Comparator.comparingDouble(Candidate::getWeight).reversed())
+							.map(c -> sorted_meanings.indexOf(c.getMeaning()) + "\t" +
+									DebugUtils.printDouble(c.getWeight()) + "\t" +
+									c.toString().replaceAll("-[^:]+:EN:", "-"))
 							.collect(Collectors.joining("\n\t", "\n\t", "\n")))
 				.collect(Collectors.joining("\n")));
 	}

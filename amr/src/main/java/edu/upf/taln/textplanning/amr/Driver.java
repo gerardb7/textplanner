@@ -21,6 +21,7 @@ import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.core.weighting.Context;
@@ -40,8 +41,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.*;
 
 @SuppressWarnings("ALL")
 public class Driver
@@ -105,10 +105,12 @@ public class Driver
 				.collect(toList());
 
 		final List<Candidate> candidates = new ArrayList<>(graphs.getCandidates());
+		final Map<Mention, List<Candidate>> mentions2candidates = candidates.stream()
+				.collect(groupingBy(Candidate::getMention));
 		final Context context_weighter = new Context(candidates, resources.getSenseContextVectors(),
 				resources.getSentenceVectors(), w -> context, resources.getSimilarityFunction());
 		final VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
-		TopCandidatesFilter candidates_filter = new TopCandidatesFilter(candidates, context_weighter::weight, 5);
+		TopCandidatesFilter candidates_filter = new TopCandidatesFilter(mentions2candidates, context_weighter::weight, 1, 0.6);
 		DifferentMentionsFilter meanings_filter = new DifferentMentionsFilter(candidates);
 
 		TextPlanner.Options options = new TextPlanner.Options();
@@ -444,7 +446,7 @@ public class Driver
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-n", "-number"}, description = "Number of subgraphs to extract", arity = 1, required = true,
-				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
+				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.IntegerGreaterThanZero.class)
 		private int num_subgraphs;
 	}
 
@@ -455,7 +457,7 @@ public class Driver
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path inputFile;
 		@Parameter(names = {"-n", "-number"}, description = "Number of subgraphs to extract", arity = 1, required = true,
-				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
+				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.IntegerGreaterThanZero.class)
 		private int num_subgraphs;
 		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
@@ -519,13 +521,13 @@ public class Driver
 		@Parameter(names = {"-ns", "-nostanford"}, description = "Do not load Stanford CoreNLP pipeline")
 		private boolean no_stanford = false;
 		@Parameter(names = {"-ne", "-number_extract"}, description = "Number of subgraphs to extract", arity = 1, required = true,
-				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
+				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.IntegerGreaterThanZero.class)
 		private int num_extract;
 		@Parameter(names = {"-n", "-number_subgraphs"}, description = "Number of subgraphs in plan", arity = 1, required = true,
-				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
+				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.IntegerGreaterThanZero.class)
 		private int num_subgraphs;
 		@Parameter(names = {"-w", "-max_words"}, description = "Maximum number of words in summary", arity = 1, required = true,
-				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.GreaterThanZero.class)
+				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.IntegerGreaterThanZero.class)
 		private int max_words;
 		@Parameter(names = {"-g", "-generation"}, description = "Path to generation resources folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)

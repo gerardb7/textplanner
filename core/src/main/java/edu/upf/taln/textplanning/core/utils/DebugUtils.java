@@ -64,11 +64,11 @@ public class DebugUtils
 				.map(DebugUtils::printCandidate)
 				.collect(joining(", "));
 		return "Disambiguated \"" + chosen.getMention().getSurface_form() +
-				"\" to " + chosen.getMeaning() + " " + printDouble(chosen.getMeaning().getWeight()) +
+				"\" to " + chosen.getMeaning() + " " + printDouble(chosen.getWeight()) +
 				"\t\t" + other.stream()
 				.filter(c2 -> c2 != chosen)
 				.map(Candidate::getMeaning)
-				.map(m -> m.toString()  + " " + printDouble(chosen.getMeaning().getWeight()))
+				.map(m -> m.toString()  + " " + printDouble(chosen.getWeight()))
 				.collect(joining(", ")) +
 				(accepted_multiword.isEmpty() ? "" : "\n\tDetected multiword " + accepted_multiword) +
 				(rejected_multiwords.isEmpty() ? "" : "\n\tDiscarded multiwords " + rejected_multiwords);
