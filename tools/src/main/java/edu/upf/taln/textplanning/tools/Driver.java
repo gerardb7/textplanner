@@ -88,12 +88,8 @@ public class Driver
 		@Parameter(names = {"-set", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
 				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
 		private VectorType sense_vector_type = VectorType.Random;
-		@Parameter(names = {"-k", "-top_k"}, description = "Top k candidates from dictionary to be used for ranking", arity = 1,
-				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.IntegerGreaterThanZero.class)
-		private int top_k = 1;
-		@Parameter(names = {"-t", "-threshold"}, description = "Minimum candidate weight", arity = 1,
-				converter = CMLCheckers.DoubleConverter.class, validateWith = CMLCheckers.NormalizedDouble.class)
-		private double threshold = 0.0;
+		@Parameter(names = {"-b", "-batch"}, description = "If true, a batch test is ran", arity = 1)
+		private boolean batch = false;
 	}
 
 	@SuppressWarnings("unused")
@@ -196,7 +192,10 @@ public class Driver
 						semEval.word_vectors_path,  semEval.word_vector_type,
 						semEval.sentence_vectors_path, semEval.sentence_vector_type,
 						semEval.context_vectors_path,  semEval.context_vector_type);
-				SemEvalEvaluation.run(semEval.gold_file, semEval.input_file, semEval.output, resources, semEval.top_k, semEval.threshold);
+				if (semEval.batch)
+					SemEvalEvaluation.run_batch(semEval.gold_file, semEval.input_file, semEval.output, resources);
+				else
+					SemEvalEvaluation.run(semEval.gold_file, semEval.input_file, semEval.output, resources);
 				break;
 			}
 			case collect_meanings_vectors:

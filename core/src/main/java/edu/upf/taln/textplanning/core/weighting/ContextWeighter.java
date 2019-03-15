@@ -14,17 +14,17 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class Context implements Serializable
+public class ContextWeighter implements Function<String, Double>, Serializable
 {
 	public final Map<String, Double> weights = new HashMap<>();
 	private final static Logger log = LogManager.getLogger();
 	private final static long serialVersionUID = 1L;
 
-	public Context( Collection<Candidate> candidates,
-					Vectors glosses_vectors,
-	                SentenceVectors context_vectors,
-	                Function<String, List<String>> context_function,
-	                BiFunction<double[], double[], Double> score_function)
+	public ContextWeighter(Collection<Candidate> candidates,
+	                       Vectors glosses_vectors,
+	                       SentenceVectors context_vectors,
+	                       Function<String, List<String>> context_function,
+	                       BiFunction<double[], double[], Double> score_function)
 	{
 		log.info("Calculating meaning weights using gloss and context vectors");
 		final Stopwatch timer = Stopwatch.createStarted();
@@ -46,11 +46,18 @@ public class Context implements Serializable
 
 				});
 
+		// Make sure all weights are normalized
+		assert weights.values().stream().map(Math::abs).allMatch(w -> w >= 0.0 && w <= 1.0);
+		if (weights.values().stream().anyMatch(w -> w < 0.0))
+			weights.keySet().forEach(i -> weights.replace(i, (weights.get(i) + 1.0)/2.0));
+
+
 		log.info(weights.size() + " meanings with weights out of " + candidates.size());
 		log.info("Set up completed in " + timer.stop());
 	}
 
-	public double weight(String item)
+	@Override
+	public Double apply(String item)
 	{
 		return weights.get(item);
 	}

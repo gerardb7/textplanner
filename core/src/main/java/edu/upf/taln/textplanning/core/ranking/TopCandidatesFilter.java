@@ -3,13 +3,15 @@ package edu.upf.taln.textplanning.core.ranking;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static java.lang.Math.min;
-import static java.util.function.Predicate.not;
 
 /**
  * For each mention, reduces its set of candidates to the best items according to an evaluation function
@@ -54,9 +56,9 @@ public class TopCandidatesFilter implements Predicate<Candidate>
 				.collect(Collectors.toList());
 		top_candidates.addAll(filtered);
 
-		candidates.stream()
-				.filter(not(top_candidates::contains))
-				.max(Comparator.comparingDouble(c -> eval.apply(c.getMeaning().getReference()))).ifPresent(top_candidates::add);
+//		candidates.stream()
+//				.filter(not(top_candidates::contains))
+//				.max(Comparator.comparingDouble(c -> eval.apply(c.getMeaning().getReference()))).ifPresent(top_candidates::add);
 
 		return top_candidates;
 	}

@@ -45,7 +45,7 @@ public class FileUtils
 	{
 		try
 		{
-			org.apache.commons.io.FileUtils.writeStringToFile(file.toFile(), text, Charsets.UTF_8);
+			org.apache.commons.io.FileUtils.writeStringToFile(file.toFile(), text, Charsets.UTF_8, false);
 		}
 		catch (IOException e)
 		{

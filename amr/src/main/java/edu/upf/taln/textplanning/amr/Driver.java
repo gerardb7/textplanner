@@ -14,17 +14,14 @@ import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.ResourcesFactory;
 import edu.upf.taln.textplanning.common.Serializer;
+import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
-import edu.upf.taln.textplanning.core.ranking.TopCandidatesFilter;
-import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
-import edu.upf.taln.textplanning.core.weighting.Context;
 import main.AmrMain;
 import net.sf.extjwnl.JWNLException;
 import org.apache.commons.io.FilenameUtils;
@@ -38,10 +35,13 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 @SuppressWarnings("ALL")
 public class Driver
@@ -105,18 +105,13 @@ public class Driver
 				.collect(toList());
 
 		final List<Candidate> candidates = new ArrayList<>(graphs.getCandidates());
-		final Map<Mention, List<Candidate>> mentions2candidates = candidates.stream()
-				.collect(groupingBy(Candidate::getMention));
-		final Context context_weighter = new Context(candidates, resources.getSenseContextVectors(),
-				resources.getSentenceVectors(), w -> context, resources.getSimilarityFunction());
-		final VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
-		TopCandidatesFilter candidates_filter = new TopCandidatesFilter(mentions2candidates, context_weighter::weight, 1, 0.6);
-		DifferentMentionsFilter meanings_filter = new DifferentMentionsFilter(candidates);
-
-		TextPlanner.Options options = new TextPlanner.Options();
-		options.damping_meanings = 0.5;
-		options.sim_threshold = 0.5;
-		TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter::weight, sim::of, options);
+		final Function<String, Double> context_weighter = resources.getMeaningsWeighter(context, candidates);
+		final BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
+		final BiPredicate<String, String> meanings_filter = resources.getMeaningsFilter(candidates);
+		Options options = new Options();
+		final Predicate<Candidate> candidates_filter = resources.getCandidatesFilter(candidates, context_weighter,
+				options.num_first_meanings, options.context_threshold, List.of());
+		TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
 
 		Path output = FileUtils.createOutputPath(graphs_file, graphs_file.getParent(),
 				FilenameUtils.getExtension(graphs_file.toFile().getName()), graphs_ranked_suffix);
@@ -143,7 +138,7 @@ public class Driver
 		log.info("Running from " + graph_file);
 		SemanticGraph graph = (SemanticGraph) Serializer.deserialize(graph_file);
 
-		TextPlanner.Options options = new TextPlanner.Options();
+		Options options = new Options();
 		TextPlanner.rankVertices(graph, options);
 
 		Path output = FileUtils.createOutputPath(graph_file, graph_file.getParent(),
@@ -157,7 +152,7 @@ public class Driver
 		log.info("Running from " + graph_file);
 		SemanticGraph graph = (SemanticGraph) Serializer.deserialize(graph_file);
 
-		TextPlanner.Options options = new TextPlanner.Options();
+		Options options = new Options();
 		final Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(graph, new AMRSemantics(), num_subgraphs, options);
 
 		Path output = FileUtils.createOutputPath(graph_file, graph_file.getParent(),
@@ -170,10 +165,10 @@ public class Driver
 	{
 		log.info("Running from " + subgraphs_file);
 		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
-		VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
+		BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
 
-		TextPlanner.Options options = new TextPlanner.Options();
-		subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, num_subgraphs, (e1, e2) -> sim.of(e1, e2), options);
+		Options options = new Options();
+		subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, num_subgraphs, (e1, e2) -> sim.apply(e1, e2), options);
 
 		Path output = FileUtils.createOutputPath(subgraphs_file, subgraphs_file.getParent(),
 				FilenameUtils.getExtension(subgraphs_file.toFile().getName()), non_redundant_suffix);
@@ -185,10 +180,10 @@ public class Driver
 	{
 		log.info("Running from " + subgraphs_file);
 		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
-		VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
+		BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();;
 
-		TextPlanner.Options options = new TextPlanner.Options();
-		final List<SemanticSubgraph> plan = TextPlanner.sortSubgraphs(subgraphs, (e1, e2) -> sim.of(e1, e2), options);
+		Options options = new Options();
+		final List<SemanticSubgraph> plan = TextPlanner.sortSubgraphs(subgraphs, (e1, e2) -> sim.apply(e1, e2), options);
 
 		Path output = FileUtils.createOutputPath(subgraphs_file, subgraphs_file.getParent(),
 				FilenameUtils.getExtension(subgraphs_file.toFile().getName()), sorted_suffix);
@@ -239,10 +234,10 @@ public class Driver
 		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language,null, resources.getDictionary(), no_stanford);
 		AMRSemanticGraphFactory globalFactory = new AMRSemanticGraphFactory();
 
-		VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
+		BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
 		AmrMain generator = new AmrMain(generation_resources);
 
-		TextPlanner.Options options = new TextPlanner.Options();
+		Options options = new Options();
 		log.info("Options: " + options);
 		log.info("*****Set up took " + timer.stop() + "*****");
 		timer.reset(); timer.start();
@@ -256,7 +251,7 @@ public class Driver
 			log.info("*****Processing " + files.size() + " files in " + amr_bank + "*****");
 
 			final List<Path> failed_files = files.stream()
-					.filter(f -> !summarizeFile(f, reader, factory, globalFactory, e -> 0.0, (e1, e2) -> sim.of(e1, e2), options, num_subgraphs_extract, num_subgraphs, generator, max_words))
+					.filter(f -> !summarizeFile(f, reader, factory, globalFactory, e -> 0.0, (e1, e2) -> sim.apply(e1, e2), options, num_subgraphs_extract, num_subgraphs, generator, max_words))
 					.collect(toList());
 			final int num_success = files.size() - failed_files.size();
 			log.info("Successfully planned " + num_success + " files out of " + files.size());
@@ -267,7 +262,7 @@ public class Driver
 		{
 			log.info("*****Begin processing*****");
 
-			summarizeFile(amr_bank, reader, factory, globalFactory, e -> 0.0, (e1, e2) -> sim.of(e1, e2), options, num_subgraphs_extract, num_subgraphs, generator, max_words);
+			summarizeFile(amr_bank, reader, factory, globalFactory, e -> 0.0, (e1, e2) -> sim.apply(e1, e2), options, num_subgraphs_extract, num_subgraphs, generator, max_words);
 		}
 		else
 			log.error("*****Cannot open " + amr_bank + ", aborting*****");
@@ -277,7 +272,7 @@ public class Driver
 
 	private boolean summarizeFile(Path amr_bank_file, AMRReader reader, AMRGraphListFactory graphListFactory,
 	                              AMRSemanticGraphFactory globalGraphFactory, Function<String, Double> weight,
-	                              BiFunction<String, String, OptionalDouble> similarity, TextPlanner.Options options,
+	                              BiFunction<String, String, OptionalDouble> similarity, Options options,
 	                              int num_subgraphs_extract, int num_subgraphs, AmrMain generator, int max_words)
 	{
 		try
@@ -301,8 +296,8 @@ public class Driver
 					.map(AMRAlignments::getTokens)
 					.flatMap(List::stream)
 					.collect(toList());
-//			final Context context_weighter = new Context(candidates, resources.getSenseContextVectors(),
-//					resources.getSentenceVectors(), w -> context, resources.getSimilarityFunction());
+//			final ContextWeighter context_weighter = new ContextWeighter(candidates, resources.getSenseContextVectors(),
+//					resources.getSentenceVectors(), w -> context, resources.getWordVectorsSimilarityFunction());
 
 //			TopCandidatesFilter candidates_filter = new TopCandidatesFilter(candidates, context_weighter::weight, 5);
 			DifferentMentionsFilter meanings_filter = new DifferentMentionsFilter(candidates);

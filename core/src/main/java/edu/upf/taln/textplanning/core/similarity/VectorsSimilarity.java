@@ -10,7 +10,7 @@ import java.util.function.BiFunction;
  * Computes similarity between items according to precomputed distributional vectors (embeddings) stored in a binary
  * file and accessed with random access glove library: https://github.com/thomasjungblut/glove/blob/master/README.md
  */
-public class VectorsSimilarity
+public class VectorsSimilarity implements BiFunction<String, String, OptionalDouble>
 {
 	private final Vectors vectors;
 	private final BiFunction<double [], double [], Double> sim_function;
@@ -21,14 +21,15 @@ public class VectorsSimilarity
 		this.sim_function = sim_function;
 	}
 
-	public OptionalDouble of(String e1, String e2)
+	@Override
+	public OptionalDouble apply(String e1, String e2)
 	{
 		if (e1.equals(e2))
 			return OptionalDouble.of(1.0);
 
 		final Optional<double[]> ov1 = vectors.getVector(e1);
 		final Optional<double[]> ov2 = vectors.getVector(e2);
-		if (!ov1.isPresent() || !ov2.isPresent())
+		if (ov1.isEmpty() || ov2.isEmpty())
 			return OptionalDouble.empty();
 
 		double[] v1 = ov1.get();

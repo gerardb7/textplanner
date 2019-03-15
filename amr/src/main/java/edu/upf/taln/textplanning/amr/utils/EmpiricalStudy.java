@@ -688,20 +688,20 @@ public class EmpiricalStudy
 									num_valid_pairs.incrementAndGet();
 								return test;
 							})
-							.filter(j -> sim.of(meanings.get(i), meanings.get(j)).isPresent())
+							.filter(j -> sim.apply(meanings.get(i), meanings.get(j)).isPresent())
 							.count())
 					.sum();
 
 			final List<Double> weights = new ArrayList<>();
 			if (num_pairs_meanings_defined > 0)
 			{
-				final double[][] M = MatrixFactory.createMeaningsSimilarityMatrix(meanings, sim::of, filter,
+				final double[][] M = MatrixFactory.createMeaningsSimilarityMatrix(meanings, sim, filter,
 						0.0, false, false, false);
 				final List<Pair<Integer, Integer>> indexes = IntStream.range(0, num_meanings)
 						.mapToObj(i -> IntStream.range(i, num_meanings)
 								.filter(j -> i != j)
 								.filter(j -> filter.test(meanings.get(i), meanings.get(j)))
-								.filter(j -> sim.of(meanings.get(i), meanings.get(j)).isPresent())
+								.filter(j -> sim.apply(meanings.get(i), meanings.get(j)).isPresent())
 								.mapToObj(j -> Pair.of(i, j))
 								.collect(toList()))
 						.flatMap(List::stream)

@@ -7,15 +7,11 @@ import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.ResourcesFactory;
+import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
-import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
-import edu.upf.taln.textplanning.core.ranking.TopCandidatesFilter;
-import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.structures.Mention;
-import edu.upf.taln.textplanning.core.weighting.Context;
 import it.uniroma1.lcl.jlt.util.Files;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,6 +21,9 @@ import java.nio.file.Path;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
@@ -228,22 +227,21 @@ public class Driver
 							.flatMap(l -> l.stream()
 									.flatMap(Set::stream))
 							.collect(toList());
-					final Map<Mention, List<Candidate>> mentions2candidates = candidates.stream()
-							.collect(groupingBy(Candidate::getMention));
 
 					UIMAWrapper uima = new UIMAWrapper(text, language, pipeline);
 					final List<String> context = uima.getNominalTokens().stream()
 							.flatMap(List::stream)
 							.collect(toList());
 
-					final Context context_weighter = new Context(candidates, resources.getSenseContextVectors(),
-							resources.getSentenceVectors(), w -> context, resources.getSimilarityFunction());
-					final VectorsSimilarity sim = new VectorsSimilarity(resources.getSenseVectors(), resources.getSimilarityFunction());
-					TopCandidatesFilter candidates_filter = new TopCandidatesFilter(mentions2candidates, context_weighter::weight, 1, 0.6);
-					DifferentMentionsFilter meanings_filter = new DifferentMentionsFilter(candidates);
-					TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter::weight, sim::of, new TextPlanner.Options());
+					final Function<String, Double> context_weighter = resources.getMeaningsWeighter(context, candidates);
+					final BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
+					final BiPredicate<String, String> meanings_filter = resources.getMeaningsFilter(candidates);
+					Options options = new Options();
+					final Predicate<Candidate> candidates_filter = resources.getCandidatesFilter(candidates, context_weighter,
+							options.num_first_meanings, options.context_threshold, List.of());
+					TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
 
-					candidates.forEach(c -> c.setWeight(context_weighter.weight(c.getMeaning().getReference())));
+					candidates.forEach(c -> c.setWeight(context_weighter.apply(c.getMeaning().getReference())));
 
 					// Let's group and sort the plain list of candidates by sentence and offsets.
 					final List<List<Set<Candidate>>> grouped_candidates = candidates.stream()

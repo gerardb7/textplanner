@@ -13,8 +13,6 @@ import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.math.RoundingMode;
-import java.text.NumberFormat;
 import java.util.Collection;
 import java.util.List;
 import java.util.OptionalDouble;
@@ -32,31 +30,6 @@ import java.util.function.Predicate;
 public final class TextPlanner
 {
 	private final static Logger log = LogManager.getLogger();
-
-	public static class Options
-	{
-		public int num_subgraphs = 1000; // Number of subgraphs to extract
-		public double sim_threshold = 0.1; // Pairs of meanings with sim below this value have their score set to 0
-		public double damping_meanings = 0.2; // controls bias towards weighting function when ranking meanings
-		public double damping_variables = 0.2; // controls bias towards meanings rank when ranking variables
-		public double extraction_lambda = 1.0; // Controls balance between weight of nodes and cost of edges during subgraph extraction
-		public double tree_edit_lambda = 0.1; // Controls impact of roles when calculating similarity between semantic trees
-
-		@Override
-		public String toString()
-		{
-			NumberFormat f = NumberFormat.getInstance();
-			f.setRoundingMode(RoundingMode.UP);
-			//f.setMaximumFractionDigits(10);
-			f.setMinimumFractionDigits(3);
-			return  "num_subgraphs = " + num_subgraphs +
-					" sim_threshold = " + f.format(sim_threshold) +
-					" damping_meanings = " + f.format(damping_meanings) +
-					" damping_variables = " + f.format(damping_variables) +
-					" extraction_lambda = " + f.format(extraction_lambda) +
-					" redundancy lambda = " + f.format(tree_edit_lambda);
-		}
-	}
 
 	/**
 	 * Generates a text plan from a semantic graph
