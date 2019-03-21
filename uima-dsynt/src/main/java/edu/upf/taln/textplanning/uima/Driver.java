@@ -5,7 +5,6 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
-import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.ResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
@@ -25,7 +24,6 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import static edu.upf.taln.textplanning.common.FileUtils.*;
@@ -33,14 +31,11 @@ import static java.util.stream.Collectors.*;
 
 public class Driver
 {
-	private static final String text_suffix = ".story";
-	private static final String gold_suffix = ".gold";
+	private static final String text_suffix = ".txt";
 	private static final String meanings_suffix = ".candidates";
-
 	private static final String get_candidates_command = "candidates";
 	private static final String get_system_UIMA_command = "system_uima";
 	private static final String get_system_command = "system";
-	private static final String get_gold_candidates_command = "gold_candidates";
 
 	private static final ULocale language = ULocale.ENGLISH;
 	private final static Logger log = LogManager.getLogger();
@@ -118,21 +113,6 @@ public class Driver
 		@Parameter(names = {"-st", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1,
 				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
 		private VectorType sense_vector_type = VectorType.Random;
-	}
-
-	@SuppressWarnings("unused")
-	@Parameters(commandDescription = "Get gold candidates from text file")
-	private static class GetGoldCandidatesCommand
-	{
-		@Parameter(names = {"-g", "-gold"}, description = "Path to folder containing gold annotated summaries", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path gold;
-		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where candidate files will be stored", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
-		private Path output;
-		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path dictionary;
 	}
 
 	private static void getCandidates(Path input_folder, Path output_folder, ResourcesFactory resources)
@@ -238,7 +218,7 @@ public class Driver
 					final BiPredicate<String, String> meanings_filter = resources.getMeaningsFilter(candidates);
 					Options options = new Options();
 					final Predicate<Candidate> candidates_filter = resources.getCandidatesFilter(candidates, context_weighter,
-							options.num_first_meanings, options.context_threshold, List.of());
+							options.num_first_meanings, options.context_threshold, Set.of());
 					TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
 
 					candidates.forEach(c -> c.setWeight(context_weighter.apply(c.getMeaning().getReference())));
@@ -261,48 +241,16 @@ public class Driver
 				});
 	}
 
-	private static void getGoldCandidates(Path gold_folder, Path output_folder, ResourcesFactory resources)
-	{
-		log.info("Loading files");
-		final File[] gold_files = getFilesInFolder(gold_folder, gold_suffix);
-
-		final Predicate<String> is_meta = Pattern.compile("^@").asPredicate();
-		assert gold_files != null;
-		final List<String> summaries = Arrays.stream(gold_files)
-				.sorted(Comparator.comparing(File::getName))
-				.map(File::toPath)
-				.map(FileUtils::readTextFile)
-				.map(text ->
-						Pattern.compile("\n+").splitAsStream(text)
-								.filter(l -> !l.isEmpty() && !is_meta.test(l))
-								.collect(joining(" .\n")))
-				.collect(toList());
-
-		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createSpanPipeline(language, false);
-
-		IntStream.range(0, gold_files.length)
-				.forEach(i -> {
-					final UIMAWrapper uimaWrapper = new UIMAWrapper(summaries.get(i), language, pipeline);
-					final List<List<Set<Candidate>>> candidates = uimaWrapper.getCandidates(resources.getDictionary());
-
-					Path out_file = createOutputPath(gold_files[i].toPath(), output_folder, text_suffix, meanings_suffix);
-					log.info("Serializing meanings to  " + out_file);
-					FileUtils.serializeMeanings(candidates, out_file);
-				});
-	}
-
 	public static void main(String[] args) throws Exception
 	{
 		GetCandidatesCommand candidates = new GetCandidatesCommand();
 		GetSystemMeaningsUIMACommand system_uima = new GetSystemMeaningsUIMACommand();
 		GetSystemMeaningsCommand system = new GetSystemMeaningsCommand();
-		GetGoldCandidatesCommand gold_candidates = new GetGoldCandidatesCommand();
 
 		JCommander jc = new JCommander();
 		jc.addCommand(get_candidates_command, candidates);
 		jc.addCommand(get_system_UIMA_command, system_uima);
 		jc.addCommand(get_system_command, system);
-		jc.addCommand(get_gold_candidates_command, gold_candidates);
 		jc.parse(args);
 
 		DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
@@ -332,12 +280,6 @@ public class Driver
 						null, system.sentence_vector_type,
 						system.context_vectors_path,  system.context_vector_type);
 				getSystemMeanings(system.texts, system.candidates, system.output, resources);
-				break;
-			}
-			case get_gold_candidates_command:
-			{
-				final ResourcesFactory resourcesFactory = new ResourcesFactory(language, candidates.dictionary);
-				getGoldCandidates(gold_candidates.gold, gold_candidates.output, resourcesFactory);
 				break;
 			}
 			default:

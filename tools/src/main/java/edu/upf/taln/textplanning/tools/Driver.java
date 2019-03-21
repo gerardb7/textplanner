@@ -5,44 +5,72 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
-import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.ResourcesFactory;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
-import it.uniroma1.lcl.jlt.util.Files;
+import edu.upf.taln.textplanning.tools.evaluation.RankingEvaluation;
+import edu.upf.taln.textplanning.tools.evaluation.SemEvalEvaluation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
-
-import static java.util.stream.Collectors.toList;
+import java.util.Date;
 
 public class Driver
 {
 	private final static ULocale language = ULocale.ENGLISH;
-	private static final String gold_suffix = ".gold";
-	private static final String meanings_suffix = ".candidates";
-	private static final String evaluate_command = "evaluate";
 	private static final String semeval_command = "semeval";
+	private static final String rank_eval_command = "rankeval";
 	private static final String collect_meanings_vectors = "meanings";
 	private static final String create_context_vectors = "context";
 	private final static Logger log = LogManager.getLogger();
 
 
 	@SuppressWarnings("unused")
-	@Parameters(commandDescription = "Run empirical study from serialized file")
-	private static class RunEvaluationCommand
+	@Parameters(commandDescription = "Run evaluation of meanings ranking")
+	private static class RankEvaluationCommand
 	{
-		@Parameter(names = {"-s", "-system"}, description = "Path to folder containing binary files with system meanings", arity = 1, required = true,
+		@Parameter(names = {"-g", "-gold"}, description = "Path to gold file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path gold_file;
+		@Parameter(names = {"-i", "-input"}, description = "Path to XML input file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path input_file;
+		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path system;
-		@Parameter(names = {"-g", "-gold"}, description = "Path to input folder containing text files with gold meanings", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path gold;
+		private Path dictionary;
+		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
+		private Path output;
+		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path freqsFile;
+		@Parameter(names = {"-sv", "-sentence_vectors"}, description = "Path to sentence vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path sentence_vectors_path;
+		@Parameter(names = {"-st", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1, required = true,
+				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
+		private SentenceVectorType sentence_vector_type = SentenceVectorType.Random;
+		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path word_vectors_path;
+		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1, required = true,
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
+		private VectorType word_vector_type = VectorType.Random;
+		@Parameter(names = {"-cv", "-context_vectors"}, description = "Path to sense context vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path context_vectors_path;
+		@Parameter(names = {"-ct", "-context_vectors_type"}, description = "Type of sense context vectors", arity = 1, required = true,
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
+		private VectorType context_vector_type = VectorType.Random;
+		@Parameter(names = {"-sev", "-sense_vectors"}, description = "Path to sense vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path sense_vectors_path;
+		@Parameter(names = {"-set", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
+		private VectorType sense_vector_type = VectorType.Random;
 	}
 
 	@SuppressWarnings("unused")
@@ -136,40 +164,15 @@ public class Driver
 		private int chunk_size = 0;
 	}
 
-	private static void evaluate(Path system_folder, Path gold_folder)
-	{
-		log.info("Loading files");
-		final List<Path> system_files = Arrays.stream(Objects.requireNonNull(FileUtils.getFilesInFolder(system_folder, meanings_suffix)))
-				.sorted(Comparator.comparing(File::getName))
-				.map(File::toPath)
-				.collect(toList());
-		final List<Path> gold_files = Arrays.stream(Objects.requireNonNull(FileUtils.getFilesInFolder(gold_folder, gold_suffix)))
-				.sorted(Comparator.comparing(File::getName))
-				.map(File::toPath)
-				.collect(toList());
-
-		// Check all files are paired
-		assert (system_files.size() == gold_files.size());
-		for (int i = 0; i < system_files.size(); ++i)
-		{
-			final String name1 = Files.removeExtension(system_files.get(i).getFileName().toString());
-			final String name2 = Files.removeExtension(gold_files.get(i).getFileName().toString());
-			assert name1.equals(name2);
-		}
-
-		log.info("running evaluation");
-		Evaluation.evaluate(system_files, gold_files);
-	}
-
 	public static void main(String[] args) throws Exception
 	{
-		RunEvaluationCommand evaluate = new RunEvaluationCommand();
+		RankEvaluationCommand rankEval = new RankEvaluationCommand();
 		SemEvalEvaluationCommand semEval = new SemEvalEvaluationCommand();
 		CollectMeaningsCommand meanings = new CollectMeaningsCommand();
 		CreateContextVectorsCommand context = new CreateContextVectorsCommand();
 
 		JCommander jc = new JCommander();
-		jc.addCommand(evaluate_command, evaluate);
+		jc.addCommand(rank_eval_command, rankEval);
 		jc.addCommand(semeval_command, semEval);
 		jc.addCommand(collect_meanings_vectors, meanings);
 		jc.addCommand(create_context_vectors, context);
@@ -182,9 +185,6 @@ public class Driver
 
 		switch (jc.getParsedCommand())
 		{
-			case evaluate_command:
-				evaluate(evaluate.system, evaluate.gold);
-				break;
 			case semeval_command:
 			{
 				ResourcesFactory resources = new ResourcesFactory(language, semEval.dictionary, semEval.freqsFile,
@@ -196,6 +196,16 @@ public class Driver
 					SemEvalEvaluation.run_batch(semEval.gold_file, semEval.input_file, semEval.output, resources);
 				else
 					SemEvalEvaluation.run(semEval.gold_file, semEval.input_file, semEval.output, resources);
+				break;
+			}
+			case rank_eval_command:
+			{
+				ResourcesFactory resources = new ResourcesFactory(language, rankEval.dictionary, rankEval.freqsFile,
+						rankEval.sense_vectors_path, rankEval.sense_vector_type,
+						rankEval.word_vectors_path, rankEval.word_vector_type,
+						rankEval.sentence_vectors_path, rankEval.sentence_vector_type,
+						rankEval.context_vectors_path, rankEval.context_vector_type);
+				RankingEvaluation.run(rankEval.gold_file, rankEval.input_file, rankEval.output, resources);
 				break;
 			}
 			case collect_meanings_vectors:

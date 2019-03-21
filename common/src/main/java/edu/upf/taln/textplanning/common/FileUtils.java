@@ -37,7 +37,7 @@ public class FileUtils
 		catch (IOException e)
 		{
 			log.error("Cannot read file " + file + ": " + e);
-			return null;
+			return "";
 		}
 	}
 

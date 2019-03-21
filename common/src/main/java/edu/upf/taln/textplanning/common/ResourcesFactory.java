@@ -172,7 +172,7 @@ public class ResourcesFactory
 	}
 
 	public Predicate<Candidate> getCandidatesFilter(List<Candidate> candidates, Function<String, Double> weighter, int num_first_meanings,
-	                                                double context_threshold, List<String> excluded_POS_Tags)
+	                                                double context_threshold, Set<String> excluded_POS_Tags)
 	{
 		final Map<Mention, List<Candidate>> mentions2candidates = candidates.stream()
 				.collect(groupingBy(Candidate::getMention));
