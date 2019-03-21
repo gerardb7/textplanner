@@ -149,7 +149,7 @@ public class DebugUtils
 	{
 		final String meaning = m.map(Meaning::toString).orElse("");
 		final String surface_forms = mentions.stream()
-				.map(Mention::getSurface_form)
+				.map(mention -> mention.getSentenceId() + mention.getSpan() + "-" + mention.getSurface_form())
 				.distinct()
 				.map(f -> "\"" + f + "\"")
 				.collect(Collectors.joining(", "));

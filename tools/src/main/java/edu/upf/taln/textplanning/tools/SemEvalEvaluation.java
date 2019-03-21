@@ -35,7 +35,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static java.util.Comparator.comparingDouble;
-import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
 
 @SuppressWarnings("ALL")
@@ -410,9 +409,12 @@ public class SemEvalEvaluation
 									.flatMap(l2 -> l2.stream()))
 							.collect(toList());
 					final Function<String, Double> weighter = weighters.get(text_i);
+					List<String> excludePos = new ArrayList<>();
+					excludePos.add(other_pos_tag);
+					excludePos.add(adverb_pos_tag);
 					final Predicate<Candidate> candidates_filter = resources.getCandidatesFilter(text_candidates,
 							weighter, options.num_first_meanings, options.context_threshold,
-							List.of(other_pos_tag, adverb_pos_tag));
+							excludePos);
 					final BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
 					final BiPredicate<String, String> meanings_filter = resources.getMeaningsFilter(text_candidates);
 
@@ -437,6 +439,10 @@ public class SemEvalEvaluation
 					// Rank
 					TextPlanner.rankMeanings(text_candidates, candidates_filter, meanings_filter, weighter, sim, options);
 				});
+	}
+	
+	private static <T> Predicate<T> not(Predicate<T> t) { 
+		return t.negate(); 
 	}
 
 	private static List<List<List<Candidate>>> chooseRandom(List<List<List<List<Candidate>>>> candidates)
@@ -485,7 +491,8 @@ public class SemEvalEvaluation
 									.filter(not(List::isEmpty))
 									.map(mention_candidates -> mention_candidates.stream()
 											.max(comparingDouble(c -> weighter.apply(c.getMeaning().getReference()))))
-									.flatMap(Optional::stream)
+									.filter(Optional::isPresent)
+									.map(Optional::get)
 									.collect(toList()))
 							.collect(toList());
 				})
@@ -507,7 +514,8 @@ public class SemEvalEvaluation
 									.map(mention_candidates -> mention_candidates.stream()
 											.max(comparingDouble(c -> weighter.apply(c.getMeaning().getReference())))
 											.map(c -> weighter.apply(c.getMeaning().getReference()) >= threshold ? c : mention_candidates.get(0)))
-									.flatMap(Optional::stream)
+									.filter(Optional::isPresent)
+									.map(Optional::get)
 									.collect(toList()))
 							.collect(toList());
 				})
@@ -540,7 +548,8 @@ public class SemEvalEvaluation
 								.map(mention_candidates -> mention_candidates.stream()
 											.max(comparingDouble(Candidate::getWeight))
 											.map(c -> c.getWeight() > 0.0 ? c : mention_candidates.get(0)))
-								.flatMap(Optional::stream)
+								.filter(Optional::isPresent)
+								.map(Optional::get)
 								.collect(toList()))
 						.collect(toList()))
 				.collect(toList());

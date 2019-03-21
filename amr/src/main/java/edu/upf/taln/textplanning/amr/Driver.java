@@ -110,7 +110,7 @@ public class Driver
 		final BiPredicate<String, String> meanings_filter = resources.getMeaningsFilter(candidates);
 		Options options = new Options();
 		final Predicate<Candidate> candidates_filter = resources.getCandidatesFilter(candidates, context_weighter,
-				options.num_first_meanings, options.context_threshold, List.of());
+				options.num_first_meanings, options.context_threshold, Collections.emptyList());
 		TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
 
 		Path output = FileUtils.createOutputPath(graphs_file, graphs_file.getParent(),
