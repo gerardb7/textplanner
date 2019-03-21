@@ -41,6 +41,10 @@ public class TopCandidatesFilter implements Predicate<Candidate>
 				.flatMap(List::stream)
 				.collect(Collectors.toList());
 	}
+	
+	private static <T> Predicate<T> not(Predicate<T> t) {
+	    return t.negate();
+	}
 
 	private static List<Candidate> limit(List<Candidate> candidates, Function<String, Double> eval, int top_k, double threshold)
 	{

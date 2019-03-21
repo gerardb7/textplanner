@@ -29,7 +29,7 @@ public class VectorsSimilarity implements BiFunction<String, String, OptionalDou
 
 		final Optional<double[]> ov1 = vectors.getVector(e1);
 		final Optional<double[]> ov2 = vectors.getVector(e2);
-		if (ov1.isEmpty() || ov2.isEmpty())
+		if (!ov1.isPresent() || !ov2.isPresent())
 			return OptionalDouble.empty();
 
 		double[] v1 = ov1.get();

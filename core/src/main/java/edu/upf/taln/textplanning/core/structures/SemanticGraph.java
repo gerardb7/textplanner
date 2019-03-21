@@ -46,6 +46,7 @@ public class SemanticGraph extends SimpleDirectedGraph<String, Role> implements 
 		assert meanings.keySet().equals(weights.keySet()); // all vertices have a meaning and a weight
 		assert meanings.keySet().equals(mentions.keySet()); // all vertices have mentions
 
+		meanings.keySet().forEach(this::addVertex);
 		meanings.keySet().forEach(v1 ->
 				meanings.keySet().stream()
 						.filter(v2 -> adjacency_function.test(v1, v2))
