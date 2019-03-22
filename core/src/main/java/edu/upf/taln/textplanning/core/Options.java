@@ -7,6 +7,7 @@ import java.text.NumberFormat;
 
 public class Options
 {
+	public int min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
 	public double context_threshold = 0.8;
 	public int num_first_meanings = 1;
 	public double sim_threshold = 0.6; // Pairs of meanings with sim below this value have their score set to 0
@@ -24,6 +25,7 @@ public class Options
 		//f.setMaximumFractionDigits(10);
 		f.setMinimumFractionDigits(3);
 		return  "Options:" +
+				"\n\tmin_context_freq = " + min_context_freq +
 				"\n\tcontext_threshold = " + context_threshold +
 				"\n\tnum_first_meanings = " + num_first_meanings +
 				"\n\tsim_threshold = " + f.format(sim_threshold) +
@@ -36,7 +38,8 @@ public class Options
 
 	public String toShortString()
 	{
-		return  "test.ct" + DebugUtils.printDouble(context_threshold) +
+		return  "test.cf" + min_context_freq +
+				".ct" + DebugUtils.printDouble(context_threshold) +
 				".nf" + num_first_meanings +
 				".st" + DebugUtils.printDouble(sim_threshold) +
 				".dm" + DebugUtils.printDouble(damping_meanings) +

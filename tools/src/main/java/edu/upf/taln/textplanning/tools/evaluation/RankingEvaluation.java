@@ -4,6 +4,7 @@ import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.ResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
+import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.ranking.StopWordsFilter;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
@@ -49,10 +50,11 @@ public class RankingEvaluation
 
 	public static void run(Path gold_folder, Path xml_file, Path output_path, ResourcesFactory resources_factory) throws Exception
 	{
+		final Options options = new Options();
 		final List<Set<AlternativeMeanings>> goldMeanings = getGoldMeanings(gold_folder);
 		final Set<String> excludedPOSTags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
 		final Resources test_resources = EvaluationTools.loadResources(xml_file, output_path,
-				resources_factory, language, max_span_size, excludedPOSTags);
+				resources_factory, language, max_span_size, excludedPOSTags, options.min_context_freq);
 		assert goldMeanings.size() == test_resources.candidates.size();
 
 		{
@@ -72,8 +74,7 @@ public class RankingEvaluation
 		}
 		{
 			log.info("********************************");
-			final Options options = new Options();
-			log.info("Testing full rank: " + options);
+			log.info("Testing full rank");
 			final List<List<Meaning>> system_meanings = fullRank(options, test_resources, resources_factory, excludedPOSTags);
 			final double map = evaluate(system_meanings, goldMeanings);
 			log.info("MAP = " + DebugUtils.printDouble(map));
@@ -163,12 +164,13 @@ public class RankingEvaluation
 		List<List<Meaning>> meanings = new ArrayList<>();
 		for (int i = 0; i < test_resources.corpus.texts.size(); ++i)
 		{
-			final StopWordsFilter stop_filter = new StopWordsFilter(language);
+			// use same filters as in ResourcesFactory::getCandidatesFilter
+			Predicate<Candidate> function_words_filter = (c) -> FunctionWordsFilter.test(c.getMention().getSurface_form(), language);
 			final Predicate<Candidate> pos_filter =	c ->  !excludedPOSTags.contains(c.getMention().getPOS());
 			final List<Candidate> text_candidates = test_resources.candidates.get(i).stream()
 					.flatMap(l -> l.stream()
 							.flatMap(Collection::stream))
-					.filter(stop_filter.and(pos_filter))
+					.filter(function_words_filter.and(pos_filter))
 					.collect(toList());
 
 			final Function<String, Double> weighter = test_resources.weighters.get(i);

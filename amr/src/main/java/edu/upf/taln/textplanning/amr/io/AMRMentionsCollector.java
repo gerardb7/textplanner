@@ -6,7 +6,7 @@ import com.google.common.collect.Multimap;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.amr.structures.AMRAlignments;
 import edu.upf.taln.textplanning.amr.structures.AMRGraph;
-import edu.upf.taln.textplanning.core.ranking.StopWordsFilter;
+import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -54,8 +54,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 			AMRAlignments a = g.getAlignments();
 			List<String> tokens = a.getTokens();
 
-			Predicate<String> is_punct = (str) -> Pattern.matches("\\p{Punct}", str);
-
+			Predicate<String> is_punct = (str) -> Pattern.matches("\\p{Punct}+", str);
 			IntStream.range(0, tokens.size())
 					.forEach(i -> IntStream.range(i + 1, min(i + max_tokens + 1, tokens.size() + 1))
 							.mapToObj(j -> Pair.of(i, j))
@@ -96,7 +95,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 						return Mention.get(g.getSource(), span, a.getSurfaceForm(span), a.getLemma(i), a.getPOS(i),
 								isName(span, g), getType(span, g));
 					})
-					.filter(m -> StopWordsFilter.filter(m, language))
+					.filter(m -> FunctionWordsFilter.test(m, language)) // use list of non-ambiguous function words
 					.forEach(m -> vertices2Mentions.put(v, m)));
 		});
 		return vertices2Mentions;

@@ -35,11 +35,12 @@ public class SemEvalEvaluation
 
 	public static void run(Path gold_file, Path xml_file, Path output_path, ResourcesFactory resources_factory) throws Exception
 	{
+		final Options options = new Options();
 		final Map<String, String> gold = parseGoldFile(gold_file);
 		final Set<String> excludedPOSTags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
 		final Resources test_resources = EvaluationTools.loadResources(xml_file, output_path, resources_factory,
-				language, max_span_size, excludedPOSTags);
-		EvaluationTools.full_rank(new Options(), test_resources.candidates, test_resources.weighters, resources_factory,
+				language, max_span_size, excludedPOSTags, options.num_first_meanings);
+		EvaluationTools.full_rank(options, test_resources.candidates, test_resources.weighters, resources_factory,
 				excludedPOSTags);
 
 		log.info("********************************");
@@ -107,10 +108,11 @@ public class SemEvalEvaluation
 
 	public static void run_batch(Path gold_file, Path xml_file, Path output_path, ResourcesFactory resources_factory) throws JAXBException, IOException, ClassNotFoundException
 	{
+		Options base_options = new Options();
 		final Map<String, String> gold = parseGoldFile(gold_file);
 		final Set<String> excludedPOSTags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
 		final Resources test_resources = EvaluationTools.loadResources(xml_file, output_path,
-				resources_factory, language, max_span_size, excludedPOSTags);
+				resources_factory, language, max_span_size, excludedPOSTags, base_options.min_context_freq);
 
 		log.info("Ranking meanings (full)");
 		final int num_values = 11; final double min_value = 0.0; final double max_value = 1.0;

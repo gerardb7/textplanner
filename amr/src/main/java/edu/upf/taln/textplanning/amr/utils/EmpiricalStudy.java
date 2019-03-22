@@ -881,7 +881,7 @@ public class EmpiricalStudy
 						}))
 				.collect(toList());
 
-		Predicate<String> is_punct = (str) -> Pattern.matches("\\p{Punct}", str);
+		Predicate<String> is_punct = (str) -> Pattern.matches("\\p{Punct}+", str);
 		final List<CoreLabel> tokens = document.tokens();
 
 		return IntStream.range(0, tokens.size())

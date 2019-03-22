@@ -27,14 +27,13 @@ public class Driver
 	private static final String create_context_vectors = "context";
 	private final static Logger log = LogManager.getLogger();
 
-
 	@SuppressWarnings("unused")
 	@Parameters(commandDescription = "Run evaluation of meanings ranking")
 	private static class RankEvaluationCommand
 	{
 		@Parameter(names = {"-g", "-gold"}, description = "Path to gold file", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path gold_file;
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path gold_folder;
 		@Parameter(names = {"-i", "-input"}, description = "Path to XML input file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path input_file;
@@ -205,7 +204,7 @@ public class Driver
 						rankEval.word_vectors_path, rankEval.word_vector_type,
 						rankEval.sentence_vectors_path, rankEval.sentence_vector_type,
 						rankEval.context_vectors_path, rankEval.context_vector_type);
-				RankingEvaluation.run(rankEval.gold_file, rankEval.input_file, rankEval.output, resources);
+				RankingEvaluation.run(rankEval.gold_folder, rankEval.input_file, rankEval.output, resources);
 				break;
 			}
 			case collect_meanings_vectors:

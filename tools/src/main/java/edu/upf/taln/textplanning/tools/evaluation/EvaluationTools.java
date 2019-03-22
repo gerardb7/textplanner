@@ -79,9 +79,9 @@ public class EvaluationTools
 
 	public static class Resources
 	{
-		EvaluationTools.Corpus corpus;
-		List<List<List<List<Candidate>>>> candidates;
-		List<Function<String, Double>> weighters;
+		EvaluationTools.Corpus corpus = null;
+		List<List<List<List<Candidate>>>> candidates = new ArrayList<>();
+		List<Function<String, Double>> weighters = new ArrayList<>();
 	}
 
 	public static final String noun_pos_tag = "N";
@@ -95,7 +95,8 @@ public class EvaluationTools
 
 
 	public static Resources loadResources(Path xml_file, Path output_path, ResourcesFactory resource_factory,
-	                                      ULocale language, int max_span_size, Set<String> exclude_pos_tags)
+	                                      ULocale language, int max_span_size, Set<String> exclude_pos_tags,
+	                                      int context_size)
 			throws IOException, ClassNotFoundException, JAXBException
 	{
 		Resources test_resources = new Resources();
@@ -105,7 +106,7 @@ public class EvaluationTools
 
 		final Path candidates_path = output_path.resolve(candidates_file);
 		final Path contexts_path = output_path.resolve(contexts_file);
-		if (Files.exists(candidates_path) && Files.exists(contexts_path))
+		if (Files.exists(candidates_path))
 		{
 			log.info("Loading candidates from " + candidates_path);
 			test_resources.candidates =
@@ -118,8 +119,6 @@ public class EvaluationTools
 											.collect(toList()))
 									.collect(toList()))
 							.collect(toList());
-			log.info("Loading contexts from " + contexts_path);
-			test_resources.weighters = (List<Function<String, Double>>) Serializer.deserialize(contexts_path);
 		}
 		else
 		{
@@ -145,9 +144,17 @@ public class EvaluationTools
 
 			Serializer.serialize(test_resources.candidates, candidates_path);
 			log.info("Candidates saved in " + candidates_path);
+		}
 
+		if (Files.exists(contexts_path))
+		{
+			log.info("Loading contexts from " + contexts_path);
+			test_resources.weighters = (List<Function<String, Double>>) Serializer.deserialize(contexts_path);
+		}
+		else
+		{
 			log.info("Creating context weighters");
-			timer.reset(); timer.start();
+			Stopwatch timer = Stopwatch.createStarted();
 			for (int i=0; i < test_resources.corpus.texts.size(); ++i)
 			{
 				final List<String> text_tokens = test_resources.corpus.texts.get(i).sentences.stream()
@@ -159,7 +166,7 @@ public class EvaluationTools
 								.flatMap(Collection::stream))
 						.collect(toList());
 
-				final Function<String, Double> weigther = resource_factory.getMeaningsWeighter(text_tokens, text_candidates);
+				final Function<String, Double> weigther = resource_factory.getMeaningsWeighter(text_tokens, text_candidates, context_size);
 				test_resources.weighters.add(weigther);
 			}
 			log.info("Contexts created in " + timer.stop());
@@ -254,7 +261,7 @@ public class EvaluationTools
 													final String id = tokens.size() == 1 ? start_id : start_id + "-" + end_id;
 													return Mention.get(id, Pair.of(start, end), form, lemma, pos, false, "");
 												})
-										/*.filter(m -> StopWordsFilter.filter(m, language))*/)
+										/*.filter(m -> FunctionWordsFilter.filter(m, language))*/)
 								.flatMap(stream -> stream)
 								.collect(toList()))
 						.collect(toList()))

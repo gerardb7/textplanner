@@ -213,10 +213,10 @@ public class Driver
 							.flatMap(List::stream)
 							.collect(toList());
 
-					final Function<String, Double> context_weighter = resources.getMeaningsWeighter(context, candidates);
+					Options options = new Options();
+					final Function<String, Double> context_weighter = resources.getMeaningsWeighter(context, candidates, options.num_first_meanings);
 					final BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
 					final BiPredicate<String, String> meanings_filter = resources.getMeaningsFilter(candidates);
-					Options options = new Options();
 					final Predicate<Candidate> candidates_filter = resources.getCandidatesFilter(candidates, context_weighter,
 							options.num_first_meanings, options.context_threshold, Set.of());
 					TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
