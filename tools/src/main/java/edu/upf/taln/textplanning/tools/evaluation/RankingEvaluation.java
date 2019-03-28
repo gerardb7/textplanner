@@ -52,7 +52,8 @@ public class RankingEvaluation
 	{
 		final Options options = new Options();
 		final List<Set<AlternativeMeanings>> goldMeanings = getGoldMeanings(gold_folder);
-		final Set<String> excludedPOSTags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
+		final Set<String> excludedPOSTags = new HashSet<>(Arrays.asList(EvaluationTools.other_pos_tag, adverb_pos_tag));
+		//excludedPOSTags = Collections.unmodifiableSet(excludedPOSTags);
 		final Resources test_resources = EvaluationTools.loadResources(xml_file, output_path,
 				resources_factory, language, max_span_size, excludedPOSTags, options.min_context_freq);
 		assert goldMeanings.size() == test_resources.candidates.size();

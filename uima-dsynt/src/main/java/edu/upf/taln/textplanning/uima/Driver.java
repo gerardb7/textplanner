@@ -218,7 +218,7 @@ public class Driver
 					final BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
 					final BiPredicate<String, String> meanings_filter = resources.getMeaningsFilter(candidates);
 					final Predicate<Candidate> candidates_filter = resources.getCandidatesFilter(candidates, context_weighter,
-							options.num_first_meanings, options.context_threshold, Set.of());
+							options.num_first_meanings, options.context_threshold, new HashSet<>());
 					TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
 
 					candidates.forEach(c -> c.setWeight(context_weighter.apply(c.getMeaning().getReference())));

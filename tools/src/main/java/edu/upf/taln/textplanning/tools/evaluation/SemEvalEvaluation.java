@@ -18,12 +18,12 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 import static edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.adverb_pos_tag;
 import static edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.other_pos_tag;
 import static java.util.Comparator.comparingDouble;
-import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
 
 @SuppressWarnings("ALL")
@@ -37,7 +37,8 @@ public class SemEvalEvaluation
 	{
 		final Options options = new Options();
 		final Map<String, String> gold = parseGoldFile(gold_file);
-		final Set<String> excludedPOSTags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
+		Set<String> excludedPOSTags = new HashSet<>(Arrays.asList(other_pos_tag, adverb_pos_tag));
+		excludedPOSTags = Collections.unmodifiableSet(excludedPOSTags);
 		final Resources test_resources = EvaluationTools.loadResources(xml_file, output_path, resources_factory,
 				language, max_span_size, excludedPOSTags, options.num_first_meanings);
 		EvaluationTools.full_rank(options, test_resources.candidates, test_resources.weighters, resources_factory,
@@ -110,7 +111,8 @@ public class SemEvalEvaluation
 	{
 		Options base_options = new Options();
 		final Map<String, String> gold = parseGoldFile(gold_file);
-		final Set<String> excludedPOSTags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
+		Set<String> excludedPOSTags = new HashSet<>(Arrays.asList(other_pos_tag, adverb_pos_tag));
+		excludedPOSTags = Collections.unmodifiableSet(excludedPOSTags);
 		final Resources test_resources = EvaluationTools.loadResources(xml_file, output_path,
 				resources_factory, language, max_span_size, excludedPOSTags, base_options.min_context_freq);
 
@@ -132,7 +134,7 @@ public class SemEvalEvaluation
 		{
 			resetRanks(test_resources.candidates);
 			EvaluationTools.full_rank(options, test_resources.candidates, test_resources.weighters, resources_factory,
-					Set.of(other_pos_tag, adverb_pos_tag));
+					excludedPOSTags);
 			log.info("********************************");
 			{
 				final List<List<List<Candidate>>> ranked_candidates = chooseTopRankOrFirst(test_resources.candidates);
@@ -159,6 +161,10 @@ public class SemEvalEvaluation
 
 		return gold;
 	}
+	
+	private static <T> Predicate<T> not(Predicate<T> t) {  
+		return t.negate();  
+	} 
 
 	private static List<List<List<Candidate>>> chooseRandom(List<List<List<List<Candidate>>>> candidates)
 	{
@@ -206,7 +212,8 @@ public class SemEvalEvaluation
 									.filter(not(List::isEmpty))
 									.map(mention_candidates -> mention_candidates.stream()
 											.max(comparingDouble(c -> weighter.apply(c.getMeaning().getReference()))))
-									.flatMap(Optional::stream)
+									.filter(Optional::isPresent)
+									.map(Optional::get) 
 									.collect(toList()))
 							.collect(toList());
 				})
@@ -228,7 +235,8 @@ public class SemEvalEvaluation
 									.map(mention_candidates -> mention_candidates.stream()
 											.max(comparingDouble(c -> weighter.apply(c.getMeaning().getReference())))
 											.map(c -> weighter.apply(c.getMeaning().getReference()) >= threshold ? c : mention_candidates.get(0)))
-									.flatMap(Optional::stream)
+									.filter(Optional::isPresent)
+									.map(Optional::get) 
 									.collect(toList()))
 							.collect(toList());
 				})
@@ -261,7 +269,8 @@ public class SemEvalEvaluation
 								.map(mention_candidates -> mention_candidates.stream()
 											.max(comparingDouble(Candidate::getWeight))
 											.map(c -> c.getWeight() > 0.0 ? c : mention_candidates.get(0)))
-								.flatMap(Optional::stream)
+								.filter(Optional::isPresent)
+								.map(Optional::get) 
 								.collect(toList()))
 						.collect(toList()))
 				.collect(toList());
