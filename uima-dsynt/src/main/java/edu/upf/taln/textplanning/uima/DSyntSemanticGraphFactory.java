@@ -21,7 +21,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.stream.Collectors;
 
-public class DSyntSemanticGraphListFactory implements SemanticGraphFactory<JCas>
+public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 {
 	private final static Logger log = LogManager.getLogger();
 

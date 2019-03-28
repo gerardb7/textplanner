@@ -603,7 +603,7 @@ public class Driver
 		Driver driver = new Driver();
 		if (jc.getParsedCommand().equals(create_graphs_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(language, create_graphs.dictionary, null,
+			ResourcesFactory resources = new ResourcesFactory(language, create_graphs.dictionary, null, null,
 					null, null,
 					null,  null,
 					null,  null,
@@ -612,7 +612,7 @@ public class Driver
 		}
 		else if (jc.getParsedCommand().equals(rank_meanings_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(language, null, rank_meanings.freqsFile,
+			ResourcesFactory resources = new ResourcesFactory(language, null, null, rank_meanings.freqsFile,
 					rank_meanings.sense_vectors_path,  rank_meanings.sense_vector_type,
 					rank_meanings.word_vectors_path,  rank_meanings.word_vector_type,
 					null, rank_meanings.sentence_vector_type,
@@ -628,7 +628,7 @@ public class Driver
 			driver.extract_subgraphs(extract_subgraphs.inputFile, extract_subgraphs.num_subgraphs);
 		else if (jc.getParsedCommand().equals(remove_redundancy_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(language, null, null,
+			ResourcesFactory resources = new ResourcesFactory(language, null, null, null,
 					remove_redundancy.vectorsPath, remove_redundancy.vectorType,
 					null, null,
 					null, null,
@@ -637,7 +637,7 @@ public class Driver
 		}
 		else if (jc.getParsedCommand().equals(sort_subgraphs_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(language, null, null,
+			ResourcesFactory resources = new ResourcesFactory(language, null, null, null,
 					sort_subgraphs.vectorsPath, sort_subgraphs.vectorType,
 					null, null,
 					null, null,
@@ -651,7 +651,7 @@ public class Driver
 		/* --- */
 		else if (jc.getParsedCommand().equals(summarize_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(language, summarize.dictionary, summarize.freqsFile,
+			ResourcesFactory resources = new ResourcesFactory(language, summarize.dictionary, null, summarize.freqsFile,
 					summarize.vectorsPath, summarize.vectorType,
 					null, null,
 					null, null,

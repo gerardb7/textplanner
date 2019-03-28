@@ -5,7 +5,6 @@ import edu.upf.taln.textplanning.core.structures.Mention;
 
 import java.io.Serializable;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -32,7 +31,7 @@ public class CoreferenceChain implements Serializable
 	{
 		return "Chain of size " + getSize() + ": " + coreferents.values().stream()
 				.sorted()
-				.map(m ->  m + " in sentence " + m.getSentenceId())
+				.map(m ->  m + " in " + m.getContextId())
 				.collect(Collectors.joining(","));
 	}
 }

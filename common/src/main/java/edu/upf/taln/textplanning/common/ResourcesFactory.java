@@ -26,7 +26,6 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.regex.Pattern;
 
 import static edu.upf.taln.textplanning.core.utils.DebugUtils.LOGGING_STEP_SIZE;
 import static java.util.stream.Collectors.*;
@@ -35,6 +34,7 @@ public class ResourcesFactory
 {
 	private final ULocale language;
 	private final MeaningDictionary dictionary;
+	private final BiFunction<String, ULocale, List<String>> glosses;
 	private final SentenceVectors sentence_vectors;
 	private final Vectors meaning_context_vectors;
 	private final BiFunction<double[], double[], Double> word_vectors_similarity_function;
@@ -44,10 +44,11 @@ public class ResourcesFactory
 
 	public ResourcesFactory(ULocale language, Path dictionary_config) throws Exception
 	{
-		this(language, dictionary_config, null, null, null, null, null, null, null, null, null);
+		this(language, dictionary_config, null, null, null, null, null, null, null, null, null, null);
 	}
 
-	public ResourcesFactory(ULocale language, Path dictionary_config, Path idf_file,
+	public ResourcesFactory(ULocale language, Path dictionary_config,
+	                        Map<String, List<String>> glosses, Path idf_file,
 	                        Path meaning_vectors_path, VectorType meaning_vectors_type,
 	                        Path word_vectors_path, VectorType word_vectors_type,
 	                        Path sentence_vectors_path, SentenceVectorType sentence_vectors_type,
@@ -62,9 +63,16 @@ public class ResourcesFactory
 		else
 			dictionary = null;
 
+		if (glosses != null)
+			this.glosses = (s, l) -> glosses.get(s);
+		else if (dictionary != null)
+			this.glosses = dictionary::getGlosses;
+		else
+			this.glosses = (s, l) -> Collections.emptyList();
+
 		if (meaning_vectors_type != null)
 		{
-			final Vectors meaning_vectors = get(meaning_vectors_path, meaning_vectors_type, 300);
+			final Vectors meaning_vectors = getVectors(meaning_vectors_path, meaning_vectors_type, 300);
 			meanings_similarity_function = new VectorsSimilarity(meaning_vectors, new CosineSimilarity());
 		}
 		else
@@ -72,7 +80,7 @@ public class ResourcesFactory
 
 		Vectors word_vectors = null;
 		if (word_vectors_type != null)
-			word_vectors = get(word_vectors_path, word_vectors_type, 300);
+			word_vectors = getVectors(word_vectors_path, word_vectors_type, 300);
 
 		if (sentence_vectors_type != null)
 		{
@@ -117,14 +125,12 @@ public class ResourcesFactory
 		}
 
 		if (meaning_context_vectors_type != null)
-			meaning_context_vectors = get(meaning_context_vectors_path, meaning_context_vectors_type, 300);
+			meaning_context_vectors = getVectors(meaning_context_vectors_path, meaning_context_vectors_type, 300);
 		else
 			meaning_context_vectors = null;
-
-
 	}
 
-	public Vectors get(Path location, VectorType type, int num_dimensions) throws Exception
+	private Vectors getVectors(Path location, VectorType type, int num_dimensions) throws Exception
 	{
 		switch (type)
 		{
@@ -136,7 +142,7 @@ public class ResourcesFactory
 			case Binary_RandomAccess:
 				return new RandomAccessFileVectors(location, num_dimensions);
 			case SenseGlosses:
-				return new SenseGlossesVectors(dictionary, language, sentence_vectors);
+				return new SenseGlossesVectors(glosses, language, sentence_vectors);
 			case Random:
 			default:
 				return new RandomVectors();

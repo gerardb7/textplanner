@@ -13,7 +13,8 @@ import java.util.Objects;
  */
 public final class Mention implements Comparable<Mention>, Serializable
 {
-	private final String sentence_id; // Identifies sentence and, if necessary, document
+	private final String id;
+	private final String source_id; // Identifies context in which mention occurs, e.g. sentence, document, etc.
 	private final Pair<Integer, Integer> span; // Token-based offsets
 	private final String surface_form;
 	private final String lemma;
@@ -24,22 +25,23 @@ public final class Mention implements Comparable<Mention>, Serializable
 	private final static long serialVersionUID = 1L;
 
 	// Factory method
-	public static Mention get(String sentence_id, Pair<Integer, Integer> tokens_span, String surface_form, String lemma,
+	public static Mention get(String context_id, Pair<Integer, Integer> tokens_span, String surface_form, String lemma,
 	                          String POS, boolean isNE, String type)
 	{
-		final String id = sentence_id + tokens_span.toString();
+		final String id = context_id + "_" + tokens_span.toString();
 		if (mentions.containsKey(id))
 			return mentions.get(id);
 
-		Mention m = new Mention(sentence_id, tokens_span, surface_form, lemma, POS, isNE, type);
+		Mention m = new Mention(id, context_id, tokens_span, surface_form, lemma, POS, isNE, type);
 		mentions.put(id, m);
 		return m;
 	}
 
-	private Mention(String sentence_id, Pair<Integer, Integer> tokens_span, String surface_form, String lemma,
-	               String POS, boolean isNE, String type)
+	private Mention(String id, String context_id, Pair<Integer, Integer> tokens_span, String surface_form, String lemma,
+	                String POS, boolean isNE, String type)
 	{
-		this.sentence_id = sentence_id;
+		this.id = id;
+		this.source_id = context_id;
 		this.span = tokens_span;
 		this.surface_form = surface_form;
 		this.lemma = lemma;
@@ -48,7 +50,8 @@ public final class Mention implements Comparable<Mention>, Serializable
 		this.type = type;
 	}
 
-	public String getSentenceId() { return sentence_id; }
+	public String getId() { return id;}
+	public String getContextId() { return source_id; }
 	public Pair<Integer, Integer> getSpan() { return span; }
 	public String getSurface_form() { return surface_form; }
 	public String getLemma() { return lemma; }
@@ -69,12 +72,12 @@ public final class Mention implements Comparable<Mention>, Serializable
 	@Override
 	public int hashCode()
 	{
-		return Objects.hash(sentence_id, span);
+		return Objects.hash(source_id, span);
 	}
 
 	@Override
 	public int compareTo( Mention o)
 	{
-		return Comparator.comparing(Mention::getSentenceId).thenComparing(Mention::getSpan).compare(this, o);
+		return Comparator.comparing(Mention::getId).compare(this, o);
 	}
 }
