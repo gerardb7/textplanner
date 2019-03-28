@@ -48,7 +48,7 @@ public class ResourcesFactory
 	}
 
 	public ResourcesFactory(ULocale language, Path dictionary_config,
-	                        Map<String, List<String>> glosses, Path idf_file,
+	                        BiFunction<String, ULocale, List<String>> glosses, Path idf_file,
 	                        Path meaning_vectors_path, VectorType meaning_vectors_type,
 	                        Path word_vectors_path, VectorType word_vectors_type,
 	                        Path sentence_vectors_path, SentenceVectorType sentence_vectors_type,
@@ -64,7 +64,7 @@ public class ResourcesFactory
 			dictionary = null;
 
 		if (glosses != null)
-			this.glosses = (s, l) -> glosses.get(s);
+			this.glosses = glosses;
 		else if (dictionary != null)
 			this.glosses = dictionary::getGlosses;
 		else
