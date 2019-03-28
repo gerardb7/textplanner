@@ -10,14 +10,14 @@ import java.util.Collection;
 public class AMRGraph extends DirectedAcyclicGraph<String, Role> implements Serializable
 {
 	private AMRAlignments alignments = null;
-	private final String source; // source can be a sentence or document id, or a combination of both
+	private final String context_id; // Identifies context of text aligned with graph, e.g. sentence, document, etc.
 	private String root;
 	private final static long serialVersionUID = 1L;
 
-	public AMRGraph(String source, String root)
+	public AMRGraph(String context_id, String root)
 	{
 		super(Role.class);
-		this.source = source;
+		this.context_id = context_id;
 		this.root = root;
 		addVertex(root);
 	}
@@ -32,7 +32,7 @@ public class AMRGraph extends DirectedAcyclicGraph<String, Role> implements Seri
 		this.alignments = alignments;
 	}
 
-	public String getSource() { return source; }
+	public String getContextId() { return context_id; }
 	public String getRoot() { return root; }
 
 	public int getDepth(String v)

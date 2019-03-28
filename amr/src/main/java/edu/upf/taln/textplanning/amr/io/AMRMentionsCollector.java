@@ -65,7 +65,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 									.mapToObj(index -> a.getTokens().get(index))
 									.noneMatch(is_punct)) // no punctuation marks please
 							.map(span -> Mention.get(
-									g.getSource(),
+									g.getContextId(),
 									span,
 									a.getSurfaceForm(span),
 									a.getLemma(span).orElse(a.getSurfaceForm(span)),
@@ -92,7 +92,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 					.map(i ->
 					{
 						Pair<Integer, Integer> span = Pair.of(i, i + 1);
-						return Mention.get(g.getSource(), span, a.getSurfaceForm(span), a.getLemma(i), a.getPOS(i),
+						return Mention.get(g.getContextId(), span, a.getSurfaceForm(span), a.getLemma(i), a.getPOS(i),
 								isName(span, g), getType(span, g));
 					})
 					.filter(m -> FunctionWordsFilter.test(m, language)) // use list of non-ambiguous function words

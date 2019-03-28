@@ -49,7 +49,7 @@ public class AMRWriter implements DocumentWriter
 		dags.forEach(this::rootGraph);
 
 		return dags.stream()
-				.map(dag -> "# ::id " + dag.getSource() + "\n" +
+				.map(dag -> "# ::id " + dag.getContextId() + "\n" +
 							printVertex(dag.getRoot(), 1, new HashSet<>(), dag, base))
 				.collect(Collectors.joining("\n\n"));
 	}

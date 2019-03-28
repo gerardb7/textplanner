@@ -133,8 +133,8 @@ public class Driver
 					{
 						log.info("Processing " + f);
 						final String text = readTextFile(f);
-						UIMAWrapper uima = new UIMAWrapper(text, language, pipeline);
-						final List<List<Set<Candidate>>> candidates = uima.getCandidates(resources.getDictionary());
+						UIMAWrapper uima = new UIMAWrapper(text, pipeline);
+						final List<List<Set<Candidate>>> candidates = uima.getDisambiguatedCandidates();
 
 						Path out_file = createOutputPath(f, output_folder, text_suffix, meanings_suffix);
 						log.info("Serializing meanings to  " + out_file);
@@ -162,7 +162,7 @@ public class Driver
 					{
 						log.info("Processing " + f);
 						final String text = readTextFile(f);
-						UIMAWrapper uima = new UIMAWrapper(text, language, pipeline);
+						UIMAWrapper uima = new UIMAWrapper(text, pipeline);
 						final List<List<Set<Candidate>>> candidates = uima.getDisambiguatedCandidates();
 
 						Path out_file = createOutputPath(f, output_folder, text_suffix, meanings_suffix);
@@ -208,7 +208,7 @@ public class Driver
 									.flatMap(Set::stream))
 							.collect(toList());
 
-					UIMAWrapper uima = new UIMAWrapper(text, language, pipeline);
+					UIMAWrapper uima = new UIMAWrapper(text, pipeline);
 					final List<String> context = uima.getNominalTokens().stream()
 							.flatMap(List::stream)
 							.collect(toList());
@@ -225,7 +225,7 @@ public class Driver
 
 					// Let's group and sort the plain list of candidates by sentence and offsets.
 					final List<List<Set<Candidate>>> grouped_candidates = candidates.stream()
-							.collect(groupingBy(c -> c.getMention().getSentenceId(), groupingBy(c -> c.getMention().getSpan(), toSet())))
+							.collect(groupingBy(c -> c.getMention().getContextId(), groupingBy(c -> c.getMention().getSpan(), toSet())))
 							.entrySet().stream()
 							.sorted(Comparator.comparing(Map.Entry::getKey))
 							.map(Map.Entry::getValue)
@@ -274,7 +274,7 @@ public class Driver
 			}
 			case get_system_command:
 			{
-				ResourcesFactory resources = new ResourcesFactory(language, null,  system.freqsFile,
+				ResourcesFactory resources = new ResourcesFactory(language, null,  null, system.freqsFile,
 						system.sense_vectors_path,  system.sense_vector_type,
 						system.word_vectors_path,  system.word_vector_type,
 						null, system.sentence_vector_type,

@@ -41,10 +41,10 @@ public class AMRGraphList implements Serializable
 		vertices2mentions.putAll(mentions);
 
 		Map<String, AMRGraph> graph_ids = graphs.stream()
-				.collect(Collectors.toMap(AMRGraph::getSource, Function.identity()));
+				.collect(Collectors.toMap(AMRGraph::getContextId, Function.identity()));
 		candidates.forEach(c ->
 		{
-			final AMRGraph g = graph_ids.get(c.getMention().getSentenceId());
+			final AMRGraph g = graph_ids.get(c.getMention().getContextId());
 			final Optional<String> ov = g.getAlignments().getSpanTopVertex(c.getMention().getSpan());
 			ov.ifPresent(v -> 	candidate_meanings.put(v, c));
 			if (!ov.isPresent())

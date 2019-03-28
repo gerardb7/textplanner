@@ -88,6 +88,11 @@
             </artifactId>
             <version>20130117.1</version>
         </dependency>
+        <dependency>
+            <groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
+            <artifactId>de.tudarmstadt.ukp.dkpro.core.nlp4j-asl</artifactId>
+            <version>${dkpro.version}</version>
+        </dependency>
 
         <!-- DKPRO and UIMA TALN -->
         <dependency>

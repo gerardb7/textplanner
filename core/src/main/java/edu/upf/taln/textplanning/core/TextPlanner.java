@@ -82,7 +82,7 @@ public final class TextPlanner
 
 
 	/**
-	 * 	Ranks variables in a semantic graph
+	 * 	Ranks nodes of a semantic graph
 	 */
 	public static void rankVertices(SemanticGraph graph, Options o)
 	{

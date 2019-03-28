@@ -186,7 +186,7 @@ public class Driver
 		{
 			case semeval_command:
 			{
-				ResourcesFactory resources = new ResourcesFactory(language, semEval.dictionary, semEval.freqsFile,
+				ResourcesFactory resources = new ResourcesFactory(language, semEval.dictionary, null, semEval.freqsFile,
 						semEval.sense_vectors_path,  semEval.sense_vector_type,
 						semEval.word_vectors_path,  semEval.word_vector_type,
 						semEval.sentence_vectors_path, semEval.sentence_vector_type,
@@ -199,7 +199,7 @@ public class Driver
 			}
 			case rank_eval_command:
 			{
-				ResourcesFactory resources = new ResourcesFactory(language, rankEval.dictionary, rankEval.freqsFile,
+				ResourcesFactory resources = new ResourcesFactory(language, rankEval.dictionary, null, rankEval.freqsFile,
 						rankEval.sense_vectors_path, rankEval.sense_vector_type,
 						rankEval.word_vectors_path, rankEval.word_vector_type,
 						rankEval.sentence_vectors_path, rankEval.sentence_vector_type,
@@ -215,7 +215,7 @@ public class Driver
 			}
 			case create_context_vectors:
 			{
-				ResourcesFactory resources = new ResourcesFactory(language, null, context.freqsFile,
+				ResourcesFactory resources = new ResourcesFactory(language, null, null, context.freqsFile,
 						null, null,
 						context.word_vectors_path,  context.word_vector_type,
 						null, context.sentence_vector_type,

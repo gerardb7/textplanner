@@ -52,7 +52,7 @@ public class AMRGraphListFactory
 		// Make variable ids unique across graphs
 		for (AMRGraph g : graphs)
 		{
-			String prefix = g.getSource() + "_";
+			String prefix = g.getContextId() + "_";
 			List<String> nodes_to_rename = g.vertexSet().stream()
 					.filter(v -> g.outgoingEdgesOf(v).stream().anyMatch(e -> e.toString().equals(AMRSemantics.instance)))
 					.collect(toList());
