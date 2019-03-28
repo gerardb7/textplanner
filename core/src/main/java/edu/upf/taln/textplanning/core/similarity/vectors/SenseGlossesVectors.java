@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.core.similarity.vectors;
 
 import com.ibm.icu.util.ULocale;
+import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.ranking.StopWordsFilter;
 import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 
@@ -48,7 +49,7 @@ public class SenseGlossesVectors extends Vectors
 					final List<Object> list = Collections.list(stringTokenizer);
 					return list.stream().map(Object::toString);
 				})
-				.filter(t -> StopWordsFilter.filter(t.toLowerCase(), language))
+				.filter(t -> StopWordsFilter.test(t, language)) // exclude both function and frequent words
 				.collect(Collectors.toList());
 		if (tokens.isEmpty())
 			return Optional.empty();

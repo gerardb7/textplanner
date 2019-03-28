@@ -204,7 +204,7 @@ public class UIMAWrapper
 	{
 		log.info("Collecting candidates");
 		DebugUtils.ThreadReporter reporter = new DebugUtils.ThreadReporter(log);
-		Predicate<String> is_punct = (str) -> false; //Pattern.matches("\\p{Punct}", str);
+		Predicate<String> is_punct = (str) -> false; //Pattern.matches("\\p{Punct}+", str);
 		final List<Sentence> sentences = new ArrayList<>(JCasUtil.select(doc, Sentence.class));
 		return sentences.stream()
 				.parallel()

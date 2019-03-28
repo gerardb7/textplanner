@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.common;
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
+import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.ranking.StopWordsFilter;
 import edu.upf.taln.textplanning.core.ranking.TopCandidatesFilter;
 import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
@@ -25,6 +26,7 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 import static edu.upf.taln.textplanning.core.utils.DebugUtils.LOGGING_STEP_SIZE;
 import static java.util.stream.Collectors.*;
@@ -154,16 +156,17 @@ public class ResourcesFactory
 		return meanings_similarity_function;
 	}
 
-	public Function<String, Double> getMeaningsWeighter(List<String> tokens, List<Candidate> candidates)
+	public Function<String, Double> getMeaningsWeighter(List<String> tokens, List<Candidate> candidates, int min_frequency)
 	{
-		final List<String> filtered_tokens = tokens.stream()
-				.filter(m -> StopWordsFilter.filter(m, language))
+		Predicate<String> function_words_filter = (str) -> StopWordsFilter.test(str, language); // filter function and frequent words
+		final List<String> context_tokens = tokens.stream()
+				.distinct()
+				.filter(function_words_filter)
 				.collect(toList());
-		tokens.removeIf(t -> Collections.frequency(filtered_tokens, t) < 3);
-		final List<String> context = filtered_tokens.stream().distinct().collect(toList());
-		log.info("Context set to: " + context);
+		context_tokens.removeIf(t -> Collections.frequency(tokens, t) < min_frequency);
+		log.info("Context set to: " + context_tokens);
 
-		return new ContextWeighter(candidates, meaning_context_vectors, sentence_vectors, w -> context, word_vectors_similarity_function);
+		return new ContextWeighter(candidates, meaning_context_vectors, sentence_vectors, w -> context_tokens, word_vectors_similarity_function);
 	}
 
 	public BiPredicate<String, String> getMeaningsFilter(List<Candidate> candidates)
@@ -172,17 +175,18 @@ public class ResourcesFactory
 	}
 
 	public Predicate<Candidate> getCandidatesFilter(List<Candidate> candidates, Function<String, Double> weighter, int num_first_meanings,
-	                                                double context_threshold, List<String> excluded_POS_Tags)
+	                                                double context_threshold, Set<String> excluded_POS_Tags)
 	{
 		final Map<Mention, List<Candidate>> mentions2candidates = candidates.stream()
 				.collect(groupingBy(Candidate::getMention));
 
-		final StopWordsFilter stop_filter = new StopWordsFilter(language);
+		// exclude function words for ranking, but be careful not to remove words just because they're frequent -e.g. stop words
+		Predicate<Candidate> function_words_filter = (c) -> FunctionWordsFilter.test(c.getMention().getSurface_form(), language);
 		final TopCandidatesFilter top_filter =
 				new TopCandidatesFilter(mentions2candidates, weighter, num_first_meanings, context_threshold);
 		final Predicate<Candidate> pos_filter =	c ->  !excluded_POS_Tags.contains(c.getMention().getPOS());
 
-		return top_filter.and(pos_filter).and(stop_filter);
+		return top_filter.and(pos_filter).and(function_words_filter);
 	}
 
 	// Reads text-based IDF file

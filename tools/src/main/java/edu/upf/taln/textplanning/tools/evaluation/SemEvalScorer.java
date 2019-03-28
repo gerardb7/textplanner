@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.tools;
+package edu.upf.taln.textplanning.tools.evaluation;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -18,7 +18,8 @@ import java.util.Set;
  * task web page http://alt.qcri.org/semeval2015/task13/
  *
  */
-public class Scorer {
+public class SemEvalScorer
+{
 
 	public static void main(String[] args) throws IOException {
 		// Check commoand-line arguments.

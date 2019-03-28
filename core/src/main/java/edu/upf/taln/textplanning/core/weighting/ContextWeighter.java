@@ -53,7 +53,7 @@ public class ContextWeighter implements Function<String, Double>, Serializable
 
 
 		log.info(weights.size() + " meanings with weights out of " + candidates.size());
-		log.info("Set up completed in " + timer.stop());
+		log.info("Weights calculated in " + timer.stop());
 	}
 
 	@Override
