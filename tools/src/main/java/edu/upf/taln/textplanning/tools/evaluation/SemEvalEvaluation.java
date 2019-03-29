@@ -2,7 +2,7 @@ package edu.upf.taln.textplanning.tools.evaluation;
 
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.FileUtils;
-import edu.upf.taln.textplanning.common.ResourcesFactory;
+import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
@@ -34,14 +34,15 @@ public class SemEvalEvaluation
 	private static final ULocale language = ULocale.ENGLISH;
 	private final static Logger log = LogManager.getLogger();
 
-	public static void run(Path gold_file, Path xml_file, Path output_path, ResourcesFactory resources_factory) throws Exception
+	public static void run(Path gold_file, Path xml_file, Path output_path, InitialResourcesFactory resources_factory) throws Exception
 	{
 		final Options options = new Options();
+		options.excluded_POS_Tags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
+
 		final Map<String, String> gold = parseGoldFile(gold_file);
-		final Set<String> excludedPOSTags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
 		final Corpus corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path, resources_factory,
-				language, max_span_size, excludedPOSTags, options.num_first_meanings);
-		EvaluationTools.rankMeanings(options, corpus, resources_factory, excludedPOSTags);
+				language, max_span_size, options);
+		EvaluationTools.rankMeanings(options, corpus, resources_factory);
 
 		log.info("********************************");
 		{
@@ -103,13 +104,13 @@ public class SemEvalEvaluation
 		});
 	}
 
-	public static void run_batch(Path gold_file, Path xml_file, Path output_path, ResourcesFactory resources_factory) throws JAXBException, IOException, ClassNotFoundException
+	public static void run_batch(Path gold_file, Path xml_file, Path output_path, InitialResourcesFactory resources_factory) throws JAXBException, IOException, ClassNotFoundException
 	{
 		Options base_options = new Options();
 		final Map<String, String> gold = parseGoldFile(gold_file);
 		final Set<String> excludedPOSTags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
 		final Corpus corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path,
-				resources_factory, language, max_span_size, excludedPOSTags, base_options.min_context_freq);
+				resources_factory, language, max_span_size, base_options);
 
 		log.info("Ranking meanings (full)");
 		final int num_values = 11; final double min_value = 0.0; final double max_value = 1.0;
@@ -128,8 +129,8 @@ public class SemEvalEvaluation
 		for (Options options : batch_options)
 		{
 			resetRanks(corpus);
-			EvaluationTools.rankMeanings(options, corpus, resources_factory,
-					Set.of(other_pos_tag, adverb_pos_tag));
+			options.excluded_POS_Tags = Set.of(other_pos_tag, adverb_pos_tag);
+			EvaluationTools.rankMeanings(options, corpus, resources_factory);
 			log.info("********************************");
 			{
 				final List<List<List<Candidate>>> ranked_candidates = chooseTopRankOrFirst(corpus);

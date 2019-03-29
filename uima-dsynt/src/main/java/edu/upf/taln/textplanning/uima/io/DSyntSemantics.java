@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.uima;
+package edu.upf.taln.textplanning.uima.io;
 
 import edu.upf.taln.textplanning.core.io.GraphSemantics;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;

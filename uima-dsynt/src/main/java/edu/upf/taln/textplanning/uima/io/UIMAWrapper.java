@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.uima;
+package edu.upf.taln.textplanning.uima.io;
 
 import com.ibm.icu.util.ULocale;
 import de.tudarmstadt.ukp.dkpro.core.api.metadata.type.DocumentMetaData;
@@ -22,6 +22,8 @@ import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
+import edu.upf.taln.textplanning.uima.TextPlanningAnnotator;
+import edu.upf.taln.textplanning.uima.io.DSyntSemanticGraphFactory;
 import edu.upf.taln.uima.flask_wrapper.ConceptExtractorAnnotator;
 import edu.upf.taln.uima.wsd.annotation_extender.core.WSDResultExtender;
 import edu.upf.taln.uima.wsd.candidateDetection.BabelNetCandidateIdentification;
@@ -34,10 +36,10 @@ import org.apache.logging.log4j.Logger;
 import org.apache.uima.UIMAException;
 import org.apache.uima.analysis_engine.AnalysisEngine;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
+import org.apache.uima.fit.factory.AnalysisEngineFactory;
 import org.apache.uima.fit.factory.JCasFactory;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
-import org.apache.uima.jcas.tcas.Annotation;
 import org.apache.uima.resource.ExternalResourceDescription;
 
 import java.nio.file.Path;
@@ -45,7 +47,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.*;
 import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngine;
@@ -158,7 +159,7 @@ public class UIMAWrapper
 					WSDResultExtender.PARAM_BABELNET, babelnet,
 					WSDResultExtender.PARAM_LANGUAGES, new Language[]{Language.EN, Language.ES, Language.IT, Language.EL});
 
-			AnalysisEngineDescription textplanner = createEngineDescription(TextPlanningAnnotator.class);
+			AnalysisEngineDescription textplanner = AnalysisEngineFactory.createEngineDescription(TextPlanningAnnotator.class);
 
 			ArrayList<AnalysisEngineDescription> components = new ArrayList<>();
 			components.add(segmenter);

@@ -5,7 +5,7 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
-import edu.upf.taln.textplanning.common.ResourcesFactory;
+import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.tools.evaluation.RankingEvaluation;
@@ -186,7 +186,7 @@ public class Driver
 		{
 			case semeval_command:
 			{
-				ResourcesFactory resources = new ResourcesFactory(language, semEval.dictionary, null, semEval.freqsFile,
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, semEval.dictionary, semEval.freqsFile,
 						semEval.sense_vectors_path,  semEval.sense_vector_type,
 						semEval.word_vectors_path,  semEval.word_vector_type,
 						semEval.sentence_vectors_path, semEval.sentence_vector_type,
@@ -199,7 +199,7 @@ public class Driver
 			}
 			case rank_eval_command:
 			{
-				ResourcesFactory resources = new ResourcesFactory(language, rankEval.dictionary, null, rankEval.freqsFile,
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, rankEval.dictionary, rankEval.freqsFile,
 						rankEval.sense_vectors_path, rankEval.sense_vector_type,
 						rankEval.word_vectors_path, rankEval.word_vector_type,
 						rankEval.sentence_vectors_path, rankEval.sentence_vector_type,
@@ -209,13 +209,13 @@ public class Driver
 			}
 			case collect_meanings_vectors:
 			{
-				ResourcesFactory resources = new ResourcesFactory(language, meanings.dictionary);
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, meanings.dictionary);
 				MeaningsCollector.collectMeanings(meanings.output, resources, meanings.max_meanings);
 				break;
 			}
 			case create_context_vectors:
 			{
-				ResourcesFactory resources = new ResourcesFactory(language, null, null, context.freqsFile,
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, null, context.freqsFile,
 						null, null,
 						context.word_vectors_path,  context.word_vector_type,
 						null, context.sentence_vector_type,

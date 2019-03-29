@@ -5,12 +5,13 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.FileUtils;
-import edu.upf.taln.textplanning.common.ResourcesFactory;
+import edu.upf.taln.textplanning.common.InitialResourcesFactory;
+import edu.upf.taln.textplanning.common.ProcessResourcesFactory;
 import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.structures.*;
-import edu.upf.taln.textplanning.uima.UIMAWrapper;
+import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.logging.log4j.LogManager;
@@ -37,7 +38,8 @@ public class EvaluationTools
 {
 	@XmlRootElement(name = "corpus")
 	@XmlAccessorType(XmlAccessType.FIELD)
-	public static class Corpus
+	public static class
+	Corpus
 	{
 		@XmlAttribute
 		public String lang;
@@ -89,9 +91,8 @@ public class EvaluationTools
 	private static final String contexts_file = "contexts.bin";
 	private final static Logger log = LogManager.getLogger();
 
-	public static Corpus loadResourcesFromText(Path text_files, Path output_path, ResourcesFactory resource_factory,
-	                                      ULocale language, int max_span_size, Set<String> exclude_pos_tags,
-	                                      int context_size)
+	public static Corpus loadResourcesFromText(Path text_files, Path output_path, InitialResourcesFactory resource_factory,
+	                                      ULocale language, int max_span_size, Options options)
 	{
 		final File[] filesInFolder = FileUtils.getFilesInFolder(text_files, text_suffix);
 		if (filesInFolder == null)
@@ -132,12 +133,11 @@ public class EvaluationTools
 
 		});
 
-		return loadResources(corpus, output_path, resource_factory, language, max_span_size, exclude_pos_tags, context_size);
+		return loadResources(corpus, output_path, resource_factory, language, max_span_size, options);
 	}
 
-	public static Corpus loadResourcesFromXML(Path xml_file, Path output_path, ResourcesFactory resource_factory,
-	                                      ULocale language, int max_span_size, Set<String> exclude_pos_tags,
-	                                      int context_size)
+	public static Corpus loadResourcesFromXML(Path xml_file, Path output_path, InitialResourcesFactory resource_factory,
+	                                      ULocale language, int max_span_size, Options options)
 	{
 		log.info("Parsing XML file");
 
@@ -149,7 +149,7 @@ public class EvaluationTools
 			JAXBElement<Corpus> je1 = unmarshaller.unmarshal(xml, Corpus.class);
 			final Corpus corpus = je1.getValue();
 
-			return loadResources(corpus, output_path, resource_factory, language, max_span_size, exclude_pos_tags, context_size);
+			return loadResources(corpus, output_path, resource_factory, language, max_span_size, options);
 
 		}
 		catch (JAXBException e)
@@ -161,9 +161,8 @@ public class EvaluationTools
 	}
 
 
-	private static Corpus loadResources(Corpus corpus, Path output_path, ResourcesFactory resource_factory,
-	                                      ULocale language, int max_span_size, Set<String> exclude_pos_tags,
-	                                      int context_size)
+	private static Corpus loadResources(Corpus corpus, Path output_path, InitialResourcesFactory resources,
+	                                      ULocale language, int max_span_size, Options options)
 	{
 		try
 		{
@@ -179,13 +178,13 @@ public class EvaluationTools
 			{
 				log.info("Collecting mentions");
 				Stopwatch timer = Stopwatch.createStarted();
-				final List<Mention> mentions = collectMentions(corpus, max_span_size, exclude_pos_tags);
+				final List<Mention> mentions = collectMentions(corpus, max_span_size, options.excluded_POS_Tags);
 				log.info("Mentions collected in " + timer.stop());
 
 				log.info("Looking up meanings");
 				timer.reset();
 				timer.start();
-				candidates = collectCandidates(resource_factory.getDictionary(), mentions, language);
+				candidates = collectCandidates(resources.getDictionary(), mentions, language);
 				log.info("Meanings looked up in " + timer.stop());
 
 				Serializer.serialize(candidates, candidates_path);
@@ -223,8 +222,8 @@ public class EvaluationTools
 					final List<Candidate> text_candidates = corpus.texts.get(i).sentences.stream()
 							.flatMap(s -> s.candidates.values().stream().flatMap(List::stream))
 							.collect(toList());
-
-					corpus.texts.get(i).weighter = resource_factory.getMeaningsWeighter(text_tokens, text_candidates, context_size);
+					ProcessResourcesFactory process = new ProcessResourcesFactory(resources, options, text_candidates, text_tokens, null);
+					corpus.texts.get(i).weighter = process.getMeaningsWeighter();
 				}
 				log.info("Contexts created in " + timer.stop());
 				Serializer.serialize(corpus.texts.stream().map(t -> t.weighter).collect(toList()), contexts_path);
@@ -239,7 +238,7 @@ public class EvaluationTools
 		return corpus;
 	}
 
-	public static void rankMeanings(Options options, Corpus corpus, ResourcesFactory resources, Set<String> exclude_pos_tags)
+	public static void rankMeanings(Options options, Corpus corpus, InitialResourcesFactory resources)
 	{
 		log.info(options);
 
@@ -252,11 +251,16 @@ public class EvaluationTools
 							.flatMap(s -> s.candidates.values().stream()
 									.flatMap(Collection::stream))
 							.collect(toList());
+					final List<String> tokens = sentences.stream()
+							.flatMap(sentence -> sentence.tokens.stream()
+									.map(t -> t.wf))
+							.collect(toList());
+
 					final Function<String, Double> weighter = corpus.texts.get(i).weighter;
-					final Predicate<Candidate> candidates_filter = resources.getCandidatesFilter(text_candidates,
-							weighter, options.num_first_meanings, options.context_threshold, exclude_pos_tags);
+					ProcessResourcesFactory process = new ProcessResourcesFactory(resources, options, text_candidates, tokens, null);
+					final Predicate<Candidate> candidates_filter = process.getCandidatesFilter(weighter);
 					final BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
-					final BiPredicate<String, String> meanings_filter = resources.getMeaningsFilter(text_candidates);
+					final BiPredicate<String, String> meanings_filter = process.getMeaningsFilter();
 
 					// Log stats
 					final int num_mentions = sentences.stream()

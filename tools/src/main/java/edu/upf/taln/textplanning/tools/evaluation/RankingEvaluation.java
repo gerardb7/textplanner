@@ -2,7 +2,7 @@ package edu.upf.taln.textplanning.tools.evaluation;
 
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.FileUtils;
-import edu.upf.taln.textplanning.common.ResourcesFactory;
+import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.structures.Candidate;
@@ -46,13 +46,13 @@ public class RankingEvaluation
 	private static final String gold_suffix = ".gold";
 	private final static Logger log = LogManager.getLogger();
 
-	public static void run(Path gold_folder, Path xml_file, Path output_path, ResourcesFactory resources_factory) throws Exception
+	public static void run(Path gold_folder, Path xml_file, Path output_path, InitialResourcesFactory resources_factory) throws Exception
 	{
 		final Options options = new Options();
 		final List<Set<AlternativeMeanings>> goldMeanings = getGoldMeanings(gold_folder);
-		final Set<String> excludedPOSTags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
+		options.excluded_POS_Tags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
 		final Corpus corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path,
-				resources_factory, language, max_span_size, excludedPOSTags, options.min_context_freq);
+				resources_factory, language, max_span_size, options);
 		assert goldMeanings.size() == corpus.texts.size();
 
 		{
@@ -66,14 +66,14 @@ public class RankingEvaluation
 		{
 			log.info("********************************");
 			log.info("Testing context rank");
-			final List<List<Meaning>> system_meanings = contextRank(corpus, excludedPOSTags);
+			final List<List<Meaning>> system_meanings = contextRank(corpus, options.excluded_POS_Tags);
 			final double map = evaluate(system_meanings, goldMeanings);
 			log.info("MAP = " + DebugUtils.printDouble(map));
 		}
 		{
 			log.info("********************************");
 			log.info("Testing full rank");
-			final List<List<Meaning>> system_meanings = fullRank(options, corpus, resources_factory, excludedPOSTags);
+			final List<List<Meaning>> system_meanings = fullRank(options, corpus, resources_factory);
 			final double map = evaluate(system_meanings, goldMeanings);
 			log.info("MAP = " + DebugUtils.printDouble(map));
 		}
@@ -158,7 +158,7 @@ public class RankingEvaluation
 	{
 		return corpus.texts.stream()
 				.map(t -> {
-					// use same filters as in ResourcesFactory::getCandidatesFilter
+					// use same filters as in InitialResourcesFactory::getCandidatesFilter
 					Predicate<Candidate> function_words_filter = (c) -> FunctionWordsFilter.test(c.getMention().getSurface_form(), language);
 					final Predicate<Candidate> pos_filter =	c ->  !excludedPOSTags.contains(c.getMention().getPOS());
 
@@ -181,9 +181,9 @@ public class RankingEvaluation
 	}
 
 	private static List<List<Meaning>> fullRank(Options options, Corpus corpus,
-	                                            ResourcesFactory resources_factory, Set<String> excludedPOSTags)
+	                                            InitialResourcesFactory resources_factory)
 	{
-		EvaluationTools.rankMeanings(options, corpus, resources_factory, excludedPOSTags);
+		EvaluationTools.rankMeanings(options, corpus, resources_factory);
 
 		return corpus.texts.stream()
 				.map(t -> {

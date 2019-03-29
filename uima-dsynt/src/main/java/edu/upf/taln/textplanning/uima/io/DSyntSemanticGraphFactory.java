@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.uima;
+package edu.upf.taln.textplanning.uima.io;
 
 import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Lemma;
 import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Sentence;
@@ -7,7 +7,10 @@ import de.tudarmstadt.ukp.dkpro.wsd.type.WSDResult;
 import edu.upf.taln.parser.deep_parser.types.DeepDependency;
 import edu.upf.taln.parser.deep_parser.types.DeepToken;
 import edu.upf.taln.textplanning.core.io.SemanticGraphFactory;
-import edu.upf.taln.textplanning.core.structures.*;
+import edu.upf.taln.textplanning.core.structures.Meaning;
+import edu.upf.taln.textplanning.core.structures.Mention;
+import edu.upf.taln.textplanning.core.structures.Role;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.uima.types.ConceptRelevance;
 import edu.upf.taln.uima.wsd.types.BabelNetSense;
 import org.apache.commons.lang3.tuple.Pair;
@@ -55,26 +58,18 @@ public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 
 	private static String createVertex(SemanticGraph graph, JCas jcas, Sentence sentence, DeepToken deep_token)
 	{
-		final String id = createVertexId(deep_token, sentence);
-		if (!graph.containsVertex(id))
-		{
-			final Mention mention = createMention(jcas, sentence, deep_token);
-			final Optional<Pair<Meaning, Double>> meaning = createMeaning(jcas, deep_token);
+		final Mention mention = createMention(jcas, sentence, deep_token);
+		final String id = mention.getId();
+		final Optional<Pair<Meaning, Double>> meaning = createMeaning(jcas, deep_token);
 
-			graph.addVertex(id);
-			graph.addMention(id, mention);
-			meaning.ifPresent(p -> graph.setMeaning(id, p.getLeft()));
-			meaning.ifPresent(p -> graph.setWeight(id, p.getRight()));
-			graph.addSource(id, sentence.getId());
-			// TODO decide if type needs setting
-		}
+		graph.addVertex(id);
+		graph.addMention(id, mention);
+		meaning.ifPresent(p -> graph.setMeaning(id, p.getLeft()));
+		meaning.ifPresent(p -> graph.setWeight(id, p.getRight()));
+		graph.addSource(id, sentence.getId());
+		// TODO decide if type needs setting
 
 		return id;
-	}
-
-	private static String createVertexId(DeepToken deep_token, Sentence sentence)
-	{
-		return "s" + sentence.getId() + "_t" + deep_token.getBegin() + "-" + deep_token.getEnd();
 	}
 
 	private static Mention createMention(JCas jcas, Sentence sentence, DeepToken deep_token)

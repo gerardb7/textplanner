@@ -5,12 +5,14 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
-import edu.upf.taln.textplanning.common.ResourcesFactory;
+import edu.upf.taln.textplanning.common.InitialResourcesFactory;
+import edu.upf.taln.textplanning.common.ProcessResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import it.uniroma1.lcl.jlt.util.Files;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -115,7 +117,7 @@ public class Driver
 		private VectorType sense_vector_type = VectorType.Random;
 	}
 
-	private static void getCandidates(Path input_folder, Path output_folder, ResourcesFactory resources)
+	private static void getCandidates(Path input_folder, Path output_folder)
 	{
 		log.info("Loading files");
 		final File[] text_files = getFilesInFolder(input_folder, text_suffix);
@@ -172,7 +174,7 @@ public class Driver
 		}
 	}
 
-	private static void getSystemMeanings(Path text_folder, Path candidate_folder, Path output_folder, ResourcesFactory resources)
+	private static void getSystemMeanings(Path text_folder, Path candidate_folder, Path output_folder, InitialResourcesFactory resources)
 	{
 		log.info("Loading files");
 		final List<Path> text_files = Arrays.stream(Objects.requireNonNull(getFilesInFolder(text_folder, text_suffix)))
@@ -209,16 +211,16 @@ public class Driver
 							.collect(toList());
 
 					UIMAWrapper uima = new UIMAWrapper(text, pipeline);
-					final List<String> context = uima.getNominalTokens().stream()
+					final List<String> tokens = uima.getNominalTokens().stream()
 							.flatMap(List::stream)
 							.collect(toList());
 
 					Options options = new Options();
-					final Function<String, Double> context_weighter = resources.getMeaningsWeighter(context, candidates, options.num_first_meanings);
+					ProcessResourcesFactory process = new ProcessResourcesFactory(resources, options, candidates, tokens, null);
+					final Function<String, Double> context_weighter = process.getMeaningsWeighter();
 					final BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
-					final BiPredicate<String, String> meanings_filter = resources.getMeaningsFilter(candidates);
-					final Predicate<Candidate> candidates_filter = resources.getCandidatesFilter(candidates, context_weighter,
-							options.num_first_meanings, options.context_threshold, Set.of());
+					final BiPredicate<String, String> meanings_filter = process.getMeaningsFilter();
+					final Predicate<Candidate> candidates_filter = process.getCandidatesFilter(context_weighter);
 					TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
 
 					candidates.forEach(c -> c.setWeight(context_weighter.apply(c.getMeaning().getReference())));
@@ -263,8 +265,7 @@ public class Driver
 		{
 			case get_candidates_command:
 			{
-				final ResourcesFactory resourcesFactory = new ResourcesFactory(language, candidates.dictionary);
-				getCandidates(candidates.texts, candidates.output, resourcesFactory);
+				getCandidates(candidates.texts, candidates.output);
 				break;
 			}
 			case get_system_UIMA_command:
@@ -274,7 +275,7 @@ public class Driver
 			}
 			case get_system_command:
 			{
-				ResourcesFactory resources = new ResourcesFactory(language, null,  null, system.freqsFile,
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, null, system.freqsFile,
 						system.sense_vectors_path,  system.sense_vector_type,
 						system.word_vectors_path,  system.word_vector_type,
 						null, system.sentence_vector_type,

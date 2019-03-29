@@ -10,10 +10,7 @@ import edu.upf.taln.textplanning.amr.structures.AMRAlignments;
 import edu.upf.taln.textplanning.amr.structures.AMRGraph;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.amr.utils.EmpiricalStudy;
-import edu.upf.taln.textplanning.common.CMLCheckers;
-import edu.upf.taln.textplanning.common.FileUtils;
-import edu.upf.taln.textplanning.common.ResourcesFactory;
-import edu.upf.taln.textplanning.common.Serializer;
+import edu.upf.taln.textplanning.common.*;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
@@ -76,7 +73,7 @@ public class Driver
 	private static final String process_command = "process";
 	private static final String stats_command = "stats";
 
-	private void create_graphs(Path amr_bank_file, ResourcesFactory resources, boolean no_stanford)
+	private void create_graphs(Path amr_bank_file, InitialResourcesFactory resources, boolean no_stanford)
 			throws IOException
 	{
 		log.info("Running from " + amr_bank_file);
@@ -92,13 +89,13 @@ public class Driver
 		log.info("Graphs serialized to " + output);
 	}
 
-	private void rank_meanings(Path graphs_file, ResourcesFactory resources) throws Exception
+	private void rank_meanings(Path graphs_file, InitialResourcesFactory resources) throws Exception
 	{
 		log.info("Running from " + graphs_file);
 		AMRGraphList graphs = (AMRGraphList) Serializer.deserialize(graphs_file);
 
 		// We'll use the whole text as a context
-		final List<String> context = graphs.getGraphs().stream()
+		final List<String> tokens = graphs.getGraphs().stream()
 				.map(AMRGraph::getAlignments)
 				.map(AMRAlignments::getTokens)
 				.flatMap(List::stream)
@@ -106,11 +103,12 @@ public class Driver
 
 		Options options = new Options();
 		final List<Candidate> candidates = new ArrayList<>(graphs.getCandidates());
-		final Function<String, Double> context_weighter = resources.getMeaningsWeighter(context, candidates, options.min_context_freq);
+		ProcessResourcesFactory process = new ProcessResourcesFactory(resources, options, candidates, tokens, null);
+
+		final Function<String, Double> context_weighter = process.getMeaningsWeighter();
 		final BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
-		final BiPredicate<String, String> meanings_filter = resources.getMeaningsFilter(candidates);
-		final Predicate<Candidate> candidates_filter = resources.getCandidatesFilter(candidates, context_weighter,
-				options.num_first_meanings, options.context_threshold, Set.of());
+		final BiPredicate<String, String> meanings_filter = process.getMeaningsFilter();
+		final Predicate<Candidate> candidates_filter = process.getCandidatesFilter(context_weighter);
 		TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
 
 		Path output = FileUtils.createOutputPath(graphs_file, graphs_file.getParent(),
@@ -161,7 +159,7 @@ public class Driver
 		log.info("Subgraphs serialized to " + output);
 	}
 
-	private void remove_redundancy(Path subgraphs_file, int num_subgraphs, ResourcesFactory resources) throws Exception
+	private void remove_redundancy(Path subgraphs_file, int num_subgraphs, InitialResourcesFactory resources) throws Exception
 	{
 		log.info("Running from " + subgraphs_file);
 		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
@@ -176,7 +174,7 @@ public class Driver
 		log.info("Non-redundant subgraphs serialized to " + output);
 	}
 
-	private void sort_subgraphs(Path subgraphs_file, ResourcesFactory resources) throws Exception
+	private void sort_subgraphs(Path subgraphs_file, InitialResourcesFactory resources) throws Exception
 	{
 		log.info("Running from " + subgraphs_file);
 		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
@@ -220,7 +218,7 @@ public class Driver
 		log.info("Summary text writen to " + output);
 	}
 
-	private void summarize(Path amr_bank, ResourcesFactory resources,
+	private void summarize(Path amr_bank, InitialResourcesFactory resources,
 	                       boolean no_stanford, int num_subgraphs_extract, int num_subgraphs,
 	                       Path generation_resources, int max_words) throws Exception
 	{
@@ -603,7 +601,7 @@ public class Driver
 		Driver driver = new Driver();
 		if (jc.getParsedCommand().equals(create_graphs_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(language, create_graphs.dictionary, null, null,
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, create_graphs.dictionary, null,
 					null, null,
 					null,  null,
 					null,  null,
@@ -612,7 +610,7 @@ public class Driver
 		}
 		else if (jc.getParsedCommand().equals(rank_meanings_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(language, null, null, rank_meanings.freqsFile,
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, rank_meanings.freqsFile,
 					rank_meanings.sense_vectors_path,  rank_meanings.sense_vector_type,
 					rank_meanings.word_vectors_path,  rank_meanings.word_vector_type,
 					null, rank_meanings.sentence_vector_type,
@@ -628,7 +626,7 @@ public class Driver
 			driver.extract_subgraphs(extract_subgraphs.inputFile, extract_subgraphs.num_subgraphs);
 		else if (jc.getParsedCommand().equals(remove_redundancy_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(language, null, null, null,
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, null,
 					remove_redundancy.vectorsPath, remove_redundancy.vectorType,
 					null, null,
 					null, null,
@@ -637,7 +635,7 @@ public class Driver
 		}
 		else if (jc.getParsedCommand().equals(sort_subgraphs_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(language, null, null, null,
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, null,
 					sort_subgraphs.vectorsPath, sort_subgraphs.vectorType,
 					null, null,
 					null, null,
@@ -651,7 +649,7 @@ public class Driver
 		/* --- */
 		else if (jc.getParsedCommand().equals(summarize_command))
 		{
-			ResourcesFactory resources = new ResourcesFactory(language, summarize.dictionary, null, summarize.freqsFile,
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, summarize.dictionary, summarize.freqsFile,
 					summarize.vectorsPath, summarize.vectorType,
 					null, null,
 					null, null,

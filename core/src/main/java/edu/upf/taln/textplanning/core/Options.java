@@ -4,9 +4,12 @@ import edu.upf.taln.textplanning.core.utils.DebugUtils;
 
 import java.math.RoundingMode;
 import java.text.NumberFormat;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Options
 {
+	public Set<String> excluded_POS_Tags = new HashSet<>(); // candidates meanings for words with these POS aren't ranked
 	public int min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
 	public double context_threshold = 0.8;
 	public int num_first_meanings = 1;
@@ -25,6 +28,7 @@ public class Options
 		//f.setMaximumFractionDigits(10);
 		f.setMinimumFractionDigits(3);
 		return  "Options:" +
+				"\n\texcluded_POS_Tags = " + excluded_POS_Tags +
 				"\n\tmin_context_freq = " + min_context_freq +
 				"\n\tcontext_threshold = " + context_threshold +
 				"\n\tnum_first_meanings = " + num_first_meanings +

@@ -131,7 +131,7 @@ public class GraphRankingTest
 		final Path vectors_path = Paths.get("/home/gerard/data/NASARIembed+UMBC_w2v_bin");
 		MeaningDictionary bn = new BabelNetDictionary(babel_config_path, false);
 		GloveKeysReader reader = new GloveKeysReader(vectors_path);
-		final Vectors vectors = null; // ResourcesFactory.get(vectors_path, Vectors.VectorType.Binary_RandomAccess, 300);
+		final Vectors vectors = null; // InitialResourcesFactory.get(vectors_path, Vectors.VectorType.Binary_RandomAccess, 300);
 		final VectorsSimilarity sim = new VectorsSimilarity(vectors, new CosineSimilarity());
 
 		music.keySet().stream()

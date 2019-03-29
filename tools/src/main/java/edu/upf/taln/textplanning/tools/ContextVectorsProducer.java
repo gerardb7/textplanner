@@ -4,7 +4,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.core.structures.MeaningDictionary.Info;
-import edu.upf.taln.textplanning.common.ResourcesFactory;
+import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
@@ -27,7 +27,7 @@ public class ContextVectorsProducer
 	private final static Logger log = LogManager.getLogger();
 
 	// Utility method to create context vectors out of a file with meanings, an idf file and a set of word vectors
-	public static void createVectors(Path meanings_path, int chunk_size, Path output_file, ResourcesFactory resources,
+	public static void createVectors(Path meanings_path, int chunk_size, Path output_file, InitialResourcesFactory resources,
 	                                 boolean glosses_only) throws Exception
 	{
 		log.info("Collecting context vectors with " +  Runtime.getRuntime().availableProcessors() + " cores available");

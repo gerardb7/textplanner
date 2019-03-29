@@ -7,26 +7,26 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.StringTokenizer;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class SenseGlossesVectors extends Vectors
 {
-	private final BiFunction<String, ULocale, List<String>> glosses;
 	private final ULocale language;
+	private final Function<String, List<String>> glosses;
 	private final SentenceVectors sentence_vectors;
 
-	public SenseGlossesVectors(BiFunction<String, ULocale, List<String>> glosses, ULocale language, SentenceVectors sentence_vectors)
+	public SenseGlossesVectors(ULocale language, Function<String, List<String>> glosses, SentenceVectors sentence_vectors)
 	{
-		this.glosses = glosses;
 		this.language = language;
+		this.glosses = glosses;
 		this.sentence_vectors = sentence_vectors;
 	}
 
 	@Override
 	public boolean isDefinedFor(String item)
 	{
-		return !glosses.apply(item, language).isEmpty();
+		return !glosses.apply(item).isEmpty();
 	}
 
 	@Override
@@ -38,7 +38,7 @@ public class SenseGlossesVectors extends Vectors
 	@Override
 	public Optional<double[]> getVector(String item)
 	{
-		final List<String> item_glosses = glosses.apply(item, language);
+		final List<String> item_glosses = glosses.apply(item);
 		if (item_glosses.isEmpty())
 			return Optional.empty();
 
