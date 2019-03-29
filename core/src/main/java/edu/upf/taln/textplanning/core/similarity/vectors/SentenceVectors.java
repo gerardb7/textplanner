@@ -9,5 +9,5 @@ public interface SentenceVectors
 	int getNumDimensions();
 	Optional<double[]> getVector(List<String> tokens);
 
-	enum SentenceVectorType {BoW, SIF, Precomputed, Random}
+	public enum SentenceVectorType {BoW, SIF, Precomputed, Random}
 }
