@@ -40,19 +40,13 @@ public class ProcessResourcesFactory
 		log.info("Loading process resources");
 		this.factory = factory;
 		this.options = options;
-
-		if (factory.getMeaningContextVectorsPath() != null)
-			meaning_context_vectors = getVectors(factory.getMeaningContextVectorsPath(), factory.getMeaningContextVectorsType(), 300);
-		else
-			meaning_context_vectors = null;
-
 		this.candidates = candidates;
 		this.tokens = tokens;
-
 		if (glosses == null)
 			this.glosses = s -> factory.getDictionary().getGlosses(s, factory.getLanguage());
 		else
 			this.glosses = s -> glosses.computeIfAbsent(s, k -> List.of());
+		this.meaning_context_vectors = getVectors(factory.getMeaningContextVectorsPath(), factory.getMeaningContextVectorsType(), 300);
 	}
 
 	private Vectors getVectors(Path location, Vectors.VectorType type, int num_dimensions)
