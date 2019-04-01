@@ -19,12 +19,12 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 import static edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.adverb_pos_tag;
 import static edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.other_pos_tag;
 import static java.util.Comparator.comparingDouble;
-import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
 
 @SuppressWarnings("ALL")
@@ -37,8 +37,8 @@ public class SemEvalEvaluation
 	public static void run(Path gold_file, Path xml_file, Path output_path, InitialResourcesFactory resources_factory) throws Exception
 	{
 		final Options options = new Options();
-		options.excluded_POS_Tags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
-
+		options.excluded_POS_Tags = new HashSet<>(Arrays.asList(other_pos_tag, adverb_pos_tag)); 
+		//options.excluded_POS_Tags = Collections.unmodifiableSet(options.excluded_POS_Tags); 
 		final Map<String, String> gold = parseGoldFile(gold_file);
 		final Corpus corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path, resources_factory,
 				language, max_span_size, options);
@@ -108,7 +108,8 @@ public class SemEvalEvaluation
 	{
 		Options base_options = new Options();
 		final Map<String, String> gold = parseGoldFile(gold_file);
-		final Set<String> excludedPOSTags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
+		Set<String> excludedPOSTags = new HashSet<>(Arrays.asList(other_pos_tag, adverb_pos_tag)); 
+	    excludedPOSTags = Collections.unmodifiableSet(excludedPOSTags);
 		final Corpus corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path,
 				resources_factory, language, max_span_size, base_options);
 
@@ -129,7 +130,7 @@ public class SemEvalEvaluation
 		for (Options options : batch_options)
 		{
 			resetRanks(corpus);
-			options.excluded_POS_Tags = Set.of(other_pos_tag, adverb_pos_tag);
+			options.excluded_POS_Tags = excludedPOSTags;
 			EvaluationTools.rankMeanings(options, corpus, resources_factory);
 			log.info("********************************");
 			{
@@ -157,6 +158,10 @@ public class SemEvalEvaluation
 
 		return gold;
 	}
+	
+	private static <T> Predicate<T> not(Predicate<T> t) {   
+		return t.negate();   
+	}  
 
 	private static List<List<List<Candidate>>> chooseRandom(Corpus corpus)
 	{
@@ -198,7 +203,8 @@ public class SemEvalEvaluation
 								.filter(not(List::isEmpty))
 								.map(mention_candidates -> mention_candidates.stream()
 										.max(comparingDouble(c -> t.weighter.apply(c.getMeaning().getReference()))))
-								.flatMap(Optional::stream)
+								.filter(Optional::isPresent) 
+				                .map(Optional::get)
 								.collect(toList()))
 						.collect(toList()))
 				.collect(toList());
@@ -214,7 +220,8 @@ public class SemEvalEvaluation
 								.map(mention_candidates -> mention_candidates.stream()
 										.max(comparingDouble(c -> t.weighter.apply(c.getMeaning().getReference())))
 										.map(c -> t.weighter.apply(c.getMeaning().getReference()) >= threshold ? c : mention_candidates.get(0)))
-								.flatMap(Optional::stream)
+								.filter(Optional::isPresent) 
+				                .map(Optional::get)
 								.collect(toList()))
 						.collect(toList()))
 				.collect(toList());
@@ -229,7 +236,8 @@ public class SemEvalEvaluation
 								.filter(not(List::isEmpty))
 								.map(mention_candidates -> mention_candidates.stream()
 										.max(comparingDouble(Candidate::getWeight)))
-								.flatMap(Optional::stream)
+								.filter(Optional::isPresent) 
+				                .map(Optional::get)
 								.filter(c -> c.getWeight() > 0.0) // If top candidates has weight 0, then there really isn't a top candidate
 								.collect(toList()))
 						.collect(toList()))
@@ -246,7 +254,8 @@ public class SemEvalEvaluation
 								.map(mention_candidates -> mention_candidates.stream()
 										.max(comparingDouble(Candidate::getWeight))
 										.map(c -> c.getWeight() > 0.0 ? c : mention_candidates.get(0)))
-								.flatMap(Optional::stream)
+								.filter(Optional::isPresent) 
+				                .map(Optional::get)
 								.collect(toList()))
 						.collect(toList()))
 				.collect(toList());

@@ -16,6 +16,7 @@ import java.util.*;
 import java.util.function.BiPredicate;
 
 import static edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.adverb_pos_tag;
+import static edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.other_pos_tag;
 import static java.util.Comparator.comparingDouble;
 import static java.util.stream.Collectors.*;
 
@@ -29,7 +30,8 @@ public class ExtractiveEvaluation
 	public static void run(Path gold_folder, Path input_folder, Path output_path, InitialResourcesFactory resources_factory) throws Exception
 	{
 		final Options options = new Options();
-		options.excluded_POS_Tags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
+		options.excluded_POS_Tags = new HashSet<>(Arrays.asList(other_pos_tag, adverb_pos_tag)); 
+		//options.excluded_POS_Tags = Collections.unmodifiableSet(options.excluded_POS_Tags); 
 		final Corpus corpus  = EvaluationTools.loadResourcesFromText(input_folder, output_path, resources_factory, language, max_span_size,
 				options);
 		EvaluationTools.rankMeanings(options, corpus, resources_factory);
