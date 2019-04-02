@@ -1,8 +1,6 @@
 package edu.upf.taln.textplanning.tools.evaluation;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
@@ -294,8 +292,9 @@ public class EvaluationTools
 				.collect(toMap(createVertexId, Candidate::getMeaning));
 		final Map<String, Double> weights = candidates.stream()
 				.collect(groupingBy(createVertexId, averagingDouble(Candidate::getWeight)));
-		final Multimap<String, Mention> mentions = HashMultimap.create();
-		candidates.forEach(c -> mentions.put(createVertexId.apply(c), c.getMention()));
+		final Map<String, List<Mention>> mentions = candidates.stream()
+				.map(Candidate::getMention)
+				.collect(groupingBy(Mention::getId));
 		final SemanticGraph g = new SemanticGraph(meanings, weights, mentions, adjacency_function, labelling_function);
 		TextPlanner.rankVertices(g, options);
 

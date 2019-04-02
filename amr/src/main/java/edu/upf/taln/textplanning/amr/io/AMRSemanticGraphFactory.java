@@ -3,16 +3,16 @@ package edu.upf.taln.textplanning.amr.io;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.core.io.SemanticGraphFactory;
-import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.amr.structures.AMRGraph;
-import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.structures.SemanticGraph;
+import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
+import edu.upf.taln.textplanning.amr.structures.CoreferenceChain;
+import edu.upf.taln.textplanning.core.io.SemanticGraphFactory;
+import edu.upf.taln.textplanning.core.ranking.Disambiguation;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Role;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jgrapht.alg.ConnectivityInspector;
@@ -20,7 +20,8 @@ import org.jgrapht.alg.ConnectivityInspector;
 import java.util.*;
 
 import static java.util.Comparator.comparingDouble;
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 
 // Creates a single semantic graph from a lists of AMR-like semantic graphs
 public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphList>
@@ -32,21 +33,27 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 		Stopwatch timer = Stopwatch.createStarted();
 		log.info("*Creating semantic graph*");
 
+		// 1- pre-process AMR graphs
 		remove_names(graphs); // <- won't work unless executed before remove_concepts
 		Map<String, String> concepts = remove_concepts(graphs);
-		disambiguate_candidates(graphs);
-		collapse_multiwords(graphs);
-		SemanticGraph merge = merge(graphs, concepts);
+
+		// 2- create merged graph and assign to it disambiguated meanings
+		SemanticGraph graph = mergeAMRGraphs(graphs, concepts);
+		Disambiguation.disambiguate(graph, List.copyOf(graphs.getCandidates()));
+
+		// 3- post-process semantic graph
+		mergeCorefenceChains(graph, graphs.getChains());
+		mergeNEs(graph);
 		resolve_arguments();
 
 		// log some info
-		ConnectivityInspector<String, Role> conn = new ConnectivityInspector<>(merge);
+		ConnectivityInspector<String, Role> conn = new ConnectivityInspector<>(graph);
 		final List<Set<String>> sets = conn.connectedSets();
 		log.info("Merged graph has " + sets.size() + " components");
-		log.debug(DebugUtils.printSets(merge, sets));
+		log.debug(DebugUtils.printSets(graph, sets));
 
 		log.info("Semantic graph created in " + timer.stop());
-		return merge;
+		return graph;
 	}
 
 	/**
@@ -103,102 +110,7 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 		return concepts;
 	}
 
-	private static void disambiguate_candidates(AMRGraphList graphs)
-	{
-		log.info("Disambiguating candidates");
-		// Use vertex weights to choose best candidate for each vertex
-		graphs.getGraphs().forEach(g ->
-				g.vertexSet().forEach(v ->
-				{
-					final List<Candidate> candidates = graphs.getCandidates(v).stream()
-							.sorted(comparingDouble(Candidate::getWeight).reversed())
-							.collect(toList());
-					if (!candidates.isEmpty())
-					{
-						final Candidate max = candidates.get(0);
-						final Optional<Candidate> max_multiword = candidates.stream()
-								.filter(c -> c.getMention().isMultiWord())
-								.findFirst();
-
-						// Multiwords get priority if within highest scored candidates
-						Candidate selected = max;
-						if (max_multiword.isPresent())
-						{
-							final double max_multiword_weigth = max_multiword.get().getWeight();
-							DescriptiveStatistics stats = new DescriptiveStatistics(candidates.stream()
-									.mapToDouble(Candidate::getWeight)
-									.toArray());
-
-							if (max_multiword_weigth >= stats.getMean())
-								selected = max_multiword.get();
-						}
-						graphs.chooseCandidate(v, selected);
-					}
-				}));
-	}
-
-	/**
-	 * Subsumers: vertices with a multiword meaning and at least one descendant
-	 * Remember:    - vertices have 1 or 2 spans, one for the aligned token and one covering all descendants
-	 * 	              - candidates are assigned to vertices matching the span of their mentions
-	 * 	              - after disambiguation each vertex has a single candidate
-	 * 	              - multiword candidates subsume all descendants of the vertex they're associated with
-	 */
-	private static void collapse_multiwords(AMRGraphList graphs)
-	{
-		log.info("Collapsing multiwords");
-		LinkedList<Pair<AMRGraph, String>> subsumers = graphs.getGraphs().stream()
-				.flatMap(g -> g.vertexSet().stream()
-						.filter(v -> !graphs.getCandidates(v).isEmpty())
-						.filter(v -> graphs.getCandidates(v).iterator().next().getMention().isMultiWord())
-						.filter( v -> !g.getDescendants(v).isEmpty())
-						.map(v -> Pair.of(g, v)))
-				.collect(toCollection(LinkedList::new));
-
-		while(!subsumers.isEmpty())
-		{
-			// Pop a subsumer from the queue
-			final Pair<AMRGraph, String> subsumer = subsumers.pop();
-			final AMRGraph g = subsumer.getLeft();
-			final String v = subsumer.getRight();
-
-			Candidate c = graphs.getCandidates(v).iterator().next();
-			// v_value = value of highest scored meaning of v
-			double v_value = c.getWeight();
-
-			// s_max -> value of highest scored subsumed meaning
-			final Set<String> subsumed = g.getAlignments().getSpanVertices(c.getMention().getSpan());
-			subsumed.remove(v); // do not include v itself!
-			double s_max = subsumed.stream()
-					.map(graphs::getCandidates)
-					.flatMap(Collection::stream)
-					.mapToDouble(Candidate::getWeight)
-					.max().orElse(0.0);
-
-			// Is there a descendant with a highest scored meaning?
-			if (v_value >= s_max)
-			{
-				// this also updates meanings and coreference
-				graphs.vertexContraction(g, v, subsumed);
-
-				// Update remaining subsumers affected by this contraction
-				final List<Pair<AMRGraph, String>> renamed_multiwords = subsumers.stream()
-						.filter(p -> subsumed.contains(p.getRight()))
-						.collect(toList());
-				renamed_multiwords.forEach(p ->
-				{
-					subsumers.remove(p);
-					subsumers.add(Pair.of(p.getLeft(), v)); // subsumer node has been replaced by v
-				});
-
-				log.debug("Collapsed multiword \"" + c.getMention().getSurface_form() + "\"\t" + c.getMeaning());
-			}
-			else
-				log.debug("Kept separate words \"" + c.getMention().getSurface_form() + "\"\t" + c.getMeaning());
-		}
-	}
-
-	private static SemanticGraph merge(AMRGraphList graphs, Map<String, String> concepts)
+	private static SemanticGraph mergeAMRGraphs(AMRGraphList graphs, Map<String, String> concepts)
 	{
 		log.info("Merging graphs");
 
@@ -228,24 +140,32 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 
 		}));
 
+		return merged;
+	}
+
+	private static void mergeCorefenceChains(SemanticGraph graph, List<CoreferenceChain> chains)
+	{
 		// Merge all coreferent vertices
-		graphs.getChains().stream()
+		chains.stream()
 				.filter(c -> c.getSize() > 1)
 				.forEach(c ->
 				{
 					Collection<String> C = c.getVertices();
 					// v node, whose meaning is kept, corresponds to that with the highest scored meaning
 					String v = C.stream()
-							.max(comparingDouble(merged::getWeight)).orElse(null);
+							.max(comparingDouble(graph::getWeight)).orElse(null);
 					C.remove(v);
-					log.debug(DebugUtils.printCorefMerge(v, C, merged));
+					log.debug(DebugUtils.printCorefMerge(v, C, graph));
 
-					merged.vertexContraction(v, C);
+					graph.vertexContraction(v, C);
 				});
+	}
 
+	private static void mergeNEs(SemanticGraph graph)
+	{
 		// Merge all vertices referring to the same NE
 		Multimap<String, String> vertices_to_NEs = HashMultimap.create();
-		merged.vertexSet().forEach(v -> merged.getMeaning(v)
+		graph.vertexSet().forEach(v -> graph.getMeaning(v)
 				.filter(Meaning::isNE)
 				.map(Meaning::getReference)
 				.ifPresent(r -> vertices_to_NEs.put(r, v)));
@@ -259,10 +179,8 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 					String v = it.next();
 					List<String> C = new ArrayList<>();
 					it.forEachRemaining(C::add);
-					merged.vertexContraction(v, C); // keeps v's meaning, which is ok as all in C share same meaning
+					graph.vertexContraction(v, C); // keeps v's meaning, which is ok as all in C share same meaning
 				});
-
-		return merged;
 	}
 
 	private static void resolve_arguments() {}

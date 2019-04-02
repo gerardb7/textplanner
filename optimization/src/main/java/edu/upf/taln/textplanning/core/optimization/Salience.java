@@ -38,7 +38,7 @@ public class Salience implements Function
 		// Don't normalize vector, normalization is part of the optimizable softmax function
 		// Store relevance values for each pair
 
-		relevanceValues = MatrixFactory.createMeaningsBiasVector(meanings, weighting, false);
+		relevanceValues = MatrixFactory.createBiasVector(meanings, weighting, false, false);
 	}
 
 	@Override

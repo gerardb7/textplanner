@@ -37,9 +37,8 @@ public class SemEvalEvaluation
 	public static void run(Path gold_file, Path xml_file, Path output_path, InitialResourcesFactory resources_factory) throws Exception
 	{
 		final Options options = new Options();
-		options.excluded_POS_Tags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
-
 		final Map<String, String> gold = parseGoldFile(gold_file);
+		options.excluded_POS_Tags = Set.of(other_pos_tag, adverb_pos_tag);
 		final Corpus corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path, resources_factory,
 				language, max_span_size, options);
 		EvaluationTools.rankMeanings(options, corpus, resources_factory);
@@ -108,7 +107,7 @@ public class SemEvalEvaluation
 	{
 		Options base_options = new Options();
 		final Map<String, String> gold = parseGoldFile(gold_file);
-		final Set<String> excludedPOSTags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
+		base_options.excluded_POS_Tags = Set.of(other_pos_tag, adverb_pos_tag);
 		final Corpus corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path,
 				resources_factory, language, max_span_size, base_options);
 
@@ -129,7 +128,6 @@ public class SemEvalEvaluation
 		for (Options options : batch_options)
 		{
 			resetRanks(corpus);
-			options.excluded_POS_Tags = Set.of(other_pos_tag, adverb_pos_tag);
 			EvaluationTools.rankMeanings(options, corpus, resources_factory);
 			log.info("********************************");
 			{

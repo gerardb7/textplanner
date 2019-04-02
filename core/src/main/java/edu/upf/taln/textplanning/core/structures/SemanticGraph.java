@@ -8,6 +8,7 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.BinaryOperator;
+import java.util.stream.Collectors;
 
 public class SemanticGraph extends SimpleDirectedGraph<String, Role> implements Serializable
 {
@@ -34,14 +35,14 @@ public class SemanticGraph extends SimpleDirectedGraph<String, Role> implements 
 	 */
 	public SemanticGraph(Map<String, Meaning> meanings,
 	                     Map<String, Double> weights,
-	                     Multimap<String, Mention> mentions,
+	                     Map<String, List<Mention>> mentions,
 	                     BiPredicate<String, String> adjacency_function,
 	                     BinaryOperator<String> labelling_function)
 	{
 		super(Role.class);
 		this.meanings.putAll(meanings);
 		this.weights.putAll(weights);
-		this.mentions.putAll(mentions);
+		mentions.forEach((key, value) -> value.forEach(m -> this.mentions.put(key, m)));
 
 		assert meanings.keySet().equals(weights.keySet()); // all vertices have a meaning and a weight
 		assert meanings.keySet().equals(mentions.keySet()); // all vertices have mentions

@@ -9,6 +9,8 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.stream.IntStream;
 
+import static java.util.stream.Collectors.toList;
+
 /**
  * Simple type function based on matching NE class associated with mentions with the semantic type of candidate senses.
  */
@@ -21,7 +23,20 @@ public class SimpleType implements Function
 	{
 		this.candidates = candidates;
 		// Don't normalize vector, normalization is part of the optimizable softmax function
-		type_vector = MatrixFactory.createTypeVector(candidates, false, false);
+		final List<String> items = candidates.stream()
+				.map(Candidate::toString)
+				.collect(toList());
+		java.util.function.Function<String, Double> type_match = (id) -> {
+			final Candidate c = candidates.get(items.indexOf(id));
+			String mtype = c.getMention().getType();
+			String etype = c.getMeaning().getType();
+			boolean indicator = !mtype.isEmpty() && mtype.equals(etype);
+			return indicator ? 1.0 : 0.0; // avoid zeros
+		};
+
+
+		// Mention and candidate type match and are different to
+		type_vector = MatrixFactory.createBiasVector(items, type_match,false, false);
 	}
 
 	@Override
