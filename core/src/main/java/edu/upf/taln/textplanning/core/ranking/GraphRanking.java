@@ -1,18 +1,16 @@
 package edu.upf.taln.textplanning.core.ranking;
 
 import Jama.Matrix;
-
-import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.Meaning;
-import edu.upf.taln.textplanning.core.structures.Mention;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
-import edu.upf.taln.textplanning.core.weighting.WeightingFunction;
-import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -36,40 +34,22 @@ import static java.util.stream.Collectors.*;
  */
 public class GraphRanking
 {
-	// Accept references which are not candidates of exactly the same set of mentions
-	public static class DifferentMentions implements BiPredicate<String, String>
-	{
-
-		private final Set<Pair<String, String>> different_mention_pairs;
-		public DifferentMentions(Collection<Candidate> candidates)
-		{
-			final Map<String, List<Mention>> references2mentions = candidates.stream()
-					.collect(Collectors.groupingBy(c -> c.getMeaning().getReference(), mapping(Candidate::getMention, toList())));
-
-			different_mention_pairs = references2mentions.keySet().stream()
-					.flatMap(r1 -> references2mentions.keySet().stream()
-							.filter(r2 -> !references2mentions.get(r1).equals(references2mentions.get(r2)))
-							.map(r2 -> Pair.of(r1, r2)))
-					.collect(toSet());
-		}
-
-		@Override
-		public boolean test(String r1, String r2)
-		{
-			return different_mention_pairs.contains(Pair.of(r1, r2)); // should differ in at least one mention
-		}
-	}
-
-	public static void rankMeanings(Collection<Candidate> candidates, WeightingFunction weighting, SimilarityFunction similarity,
+	public static void rankMeanings(Collection<Candidate> candidates,
+	                                Predicate<Candidate> candidates_filter,
+	                                BiPredicate<String, String> meanings_filter,
+	                                Function<String, Double> weighting,
+	                                BiFunction<String, String, OptionalDouble> similarity,
 	                                double meaning_similarity_threshold, double damping_factor_meanings)
 	{
-		weighting.setContents(candidates);
-		final List<String> references = candidates.stream()
+		final List<Candidate> filtered_candidates = candidates.stream()
+				.filter(candidates_filter)
+				.collect(toList());
+		final List<String> references = filtered_candidates.stream()
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
 				.distinct()
 				.collect(Collectors.toList());
-		final List<String> labels = candidates.stream() // for debugging purposes
+		final List<String> labels = filtered_candidates.stream() // for debugging purposes
 				.map(Candidate::getMeaning)
 				.map(Meaning::toString)
 				.distinct()
@@ -78,9 +58,8 @@ public class GraphRanking
 		if (references.isEmpty())
 			return;
 
-		DifferentMentions filter = new DifferentMentions(candidates);
-		double[][] ranking_arrays = MatrixFactory.createMeaningRankingMatrix(references, weighting, similarity, filter,
-				meaning_similarity_threshold, damping_factor_meanings);
+		double[][] ranking_arrays = MatrixFactory.createMeaningRankingMatrix(references, weighting, similarity,
+				meanings_filter, meaning_similarity_threshold, damping_factor_meanings);
 		Matrix ranking_matrix = new Matrix(ranking_arrays);
 
 		JamaPowerIteration alg = new JamaPowerIteration();
@@ -88,14 +67,11 @@ public class GraphRanking
 		double[] ranking = final_distribution.getColumnPackedCopy();
 
 		// Assign ranking values to meanings
-		candidates.stream()
-				.map(Candidate::getMeaning)
-				.distinct()
-				.forEach(m ->
-				{
-					int i = references.indexOf(m.getReference());
-					m.setWeight(ranking[i]);
-				});
+		filtered_candidates.forEach(m ->
+		{
+			int i = references.indexOf(m.getMeaning().getReference());
+			m.setWeight(ranking[i]);
+		});
 	}
 
 	public static void rankVariables(SemanticGraph graph, double damping_factor_variables)

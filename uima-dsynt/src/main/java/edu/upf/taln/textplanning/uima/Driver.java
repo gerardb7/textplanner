@@ -3,438 +3,73 @@ package edu.upf.taln.textplanning.uima;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
-import com.google.common.base.Charsets;
-import edu.upf.taln.textplanning.common.BabelNetWrapper;
+import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
-import edu.upf.taln.textplanning.core.similarity.VectorsCosineSimilarity;
-import edu.upf.taln.textplanning.core.similarity.vectors.RandomAccessVectors;
+import edu.upf.taln.textplanning.common.InitialResourcesFactory;
+import edu.upf.taln.textplanning.common.ProcessResourcesFactory;
+import edu.upf.taln.textplanning.core.Options;
+import edu.upf.taln.textplanning.core.TextPlanner;
+import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
+import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.common.Serializer;
-import edu.upf.taln.textplanning.common.VisualizationUtils;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.tuple.Pair;
+import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
+import it.uniroma1.lcl.jlt.util.Files;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static edu.upf.taln.textplanning.common.FileUtils.*;
 import static java.util.stream.Collectors.*;
 
 public class Driver
 {
-	private static final String text_suffix = ".story";
-	private static final String gold_suffix = ".gold";
-	private static final String candidates_suffix = ".candidates";
+	private static final String text_suffix = ".txt";
+	private static final String meanings_suffix = ".candidates";
 	private static final String get_candidates_command = "candidates";
+	private static final String get_system_UIMA_command = "system_uima";
 	private static final String get_system_command = "system";
-	private static final String get_gold_candidates_command = "gold_candidates";
-	private static final String evaluate_command = "evaluate";
-	private static final String visualize_command = "visualize";
+
+	private static final ULocale language = ULocale.ENGLISH;
 	private final static Logger log = LogManager.getLogger();
 
-	private static void getCandidates(Path input_folder, Path output_folder, Path babelnet_config)
-	{
-		log.info("Loading files");
-		final File[] text_files = getFilesInFolder(input_folder, text_suffix);
-
-		BabelNetWrapper bn = new BabelNetWrapper(babelnet_config);
-
-		log.info("Processing texts with UIMA and looking up candidate meanings");
-		final UIMAPipelines uima = UIMAPipelines.createSpanPipeline(false);
-		if (uima == null)
-			System.exit(-1);
-
-		Arrays.stream(text_files)
-				.sorted(Comparator.comparing(File::getName))
-				.forEach(f ->
-				{
-					final String text = readTextFile(f);
-					final List<List<Map<Candidate, Double>>> candidates = uima.getCandidates(text, bn).stream()
-							.map(file_candidates -> file_candidates.stream()
-									.map(set -> set.stream()
-											.collect(toMap(c -> c, c -> 0.0)))
-									.collect(toList()))
-							.collect(Collectors.toList());
-					serializeCandidates(candidates, f, output_folder);
-				});
-	}
-
-	private static void getSystemMeanings(Path input_folder, Path output_folder, Path babel_config, Path freqs_file, Path vectors)
-	{
-		log.info("Loading files");
-		final File[] text_files = getFilesInFolder(input_folder, text_suffix);
-
-		log.info("Processing texts with UIMA and collecting system meanings");
-		final UIMAPipelines uima = UIMAPipelines.createRankingPipeline(false, babel_config, freqs_file, vectors);
-		if (uima == null)
-			System.exit(-1);
-
-		Arrays.stream(text_files)
-				.sorted(Comparator.comparing(File::getName))
-				.forEach(f ->
-				{
-					final String text = readTextFile(f);
-					final List<List<Map<Candidate, Double>>> candidates = uima.getDisambiguatedCandidates(text);
-					serializeCandidates(candidates, f, output_folder);
-				});
-	}
-
-	private static void getGoldCandidates(Path gold_folder, Path output_folder, Path babelnet_config)
-	{
-		log.info("Loading files");
-		final File[] gold_files = getFilesInFolder(gold_folder, gold_suffix);
-
-		BabelNetWrapper bn = new BabelNetWrapper(babelnet_config);
-
-
-		final Predicate<String> is_meta = Pattern.compile("^@").asPredicate();
-		final List<String> summaries = Arrays.stream(gold_files)
-				.sorted(Comparator.comparing(File::getName))
-				.map(Driver::readTextFile)
-				.map(text ->
-						Pattern.compile("\n+").splitAsStream(text)
-								.filter(l -> !l.isEmpty() && !is_meta.test(l))
-								.collect(joining(" .\n")))
-				.collect(toList());
-
-		final UIMAPipelines uima = UIMAPipelines.createSpanPipeline(false);
-		if (uima == null)
-			System.exit(-1);
-
-		IntStream.range(0, gold_files.length)
-				.forEach(i -> {
-					final List<List<Map<Candidate, Double>>> candidates = uima.getCandidates(summaries.get(i), bn).stream()
-							.map(file_candidates -> file_candidates.stream()
-									.map(set -> set.stream()
-											.collect(toMap(c -> c, c -> 0.0)))
-									.collect(toList()))
-							.collect(Collectors.toList());;
-
-					serializeCandidates(candidates, gold_files[i], output_folder);
-				});
-	}
-
-	private static void visualize(Path gold_folder, Path gold_candidates_folder, Path system_folder, Path candidates_folder,
-	                              Path freqs_file, Path vectors_path)
-	{
-		log.info("Loading files");
-		final File[] gold_files = getFilesInFolder(gold_folder, gold_suffix);
-		final File[] gold_candidates_files = getFilesInFolder(gold_candidates_folder, candidates_suffix);
-		final File[] system_files = getFilesInFolder(system_folder, candidates_suffix);
-		final File[] candidates_files = getFilesInFolder(candidates_folder, candidates_suffix);
-
-		if (gold_files.length != system_files.length)
-		{
-			log.error("Mismatch between number of text and meanings files");
-			System.exit(1);
-		}
-
-		final List<List<Pair<String, String>>> all_gold_meanings = readGoldMeanings(gold_files).stream()
-				.map(l -> l.stream()
-						.flatMap(List::stream)
-						.flatMap(Set::stream)
-						.distinct()
-						.collect(toList()))
-				.collect(toList());
-
-		final List<List<Pair<String, String>>> all_gold_candidates = deserializeCandidates(gold_candidates_files).stream()
-				.map(l -> l.stream()
-						.flatMap(List::stream)
-						.flatMap(m -> m.keySet().stream())
-						.map(Candidate::getMeaning)
-						.map(m -> Pair.of(m.getReference(), m.toString()))
-						.distinct()
-						.collect(toList()))
-				.collect(toList());
-
-		final List<List<Pair<String, String>>> all_system_meanings = deserializeCandidates(system_files).stream()
-				.map(l -> l.stream()
-						.flatMap(List::stream)
-						.flatMap(m -> m.keySet().stream())
-						.map(Candidate::getMeaning)
-						.map(m -> Pair.of(m.getReference(), m.toString()))
-						.distinct()
-						.collect(toList()))
-				.collect(toList());
-
-		final List<List<Pair<String, String>>> all_candidate_meanings = deserializeCandidates(candidates_files).stream()
-				.map(l -> l.stream()
-						.flatMap(List::stream)
-						.flatMap(m -> m.keySet().stream())
-						.map(Candidate::getMeaning)
-						.map(m -> Pair.of(m.getReference(), m.toString()))
-						.distinct()
-						.collect(toList()))
-				.collect(toList());
-
-		log.info("Visualizing similarity matrices");
-		IntStream.range(0, gold_files.length).forEach(i -> {
-			final List<Pair<String, String>> gold_meanings = all_gold_meanings.get(i);
-			final List<Pair<String, String>> gold_candidates = all_gold_candidates.get(i);
-			final List<Pair<String, String>> system_meanings = all_system_meanings.get(i);
-			final List<Pair<String, String>> candidate_meanings = all_candidate_meanings.get(i);
-			log.info("Creating matrix for file "+ gold_files[i].getName() + " with size " + candidate_meanings.size() + gold_meanings.size());
-
-//			List<Pair<String, String>> candidates_with_system = new ArrayList<>(candidate_meanings);
-//			candidates_with_system.removeAll(system_meanings);
-//			candidates_with_system.addAll(system_meanings);
-//
-//			final List<String> cws_meanings = candidates_with_system.stream()
-//					.map(Pair::getLeft)
-//					.collect(Collectors.toList());
-//			final List<String> cws_labels = candidates_with_system.stream()
-//					.map(Pair::getRight)
-//					.collect(Collectors.toList());
-			VectorsCosineSimilarity sim = null;
-			try
-			{
-				RandomAccessVectors vectors = new RandomAccessVectors(vectors_path);
-				sim = new VectorsCosineSimilarity(vectors);
-			}
-			catch (Exception e)
-			{
-				throw new RuntimeException(e);
-			}
-//			VisualizationUtils.visualizeSimilarityMatrix("Candidate and system meanings", cws_meanings, cws_labels, sim);
-
-			List<Pair<String, String>> gold_and_candidates = new ArrayList<>(gold_meanings);
-			gold_candidates.stream()
-					.filter(p -> !gold_and_candidates.contains(p))
-					.map(p -> Pair.of(p.getLeft(), "cand-" + p.getRight()))
-					.forEach(gold_and_candidates::add);
-
-			final List<String> cwg_meanings = gold_and_candidates.stream()
-					.map(Pair::getLeft)
-					.collect(Collectors.toList());
-			final List<String> cwg_labels = gold_and_candidates.stream()
-					.map(Pair::getRight)
-					.collect(Collectors.toList());
-			VisualizationUtils.visualizeSimilarityMatrix("Gold meanings and candidates", cwg_meanings, cwg_labels, sim);
-		});
-	}
-
-	private static List<List<List<Set<Pair<String, String>>>>> readGoldMeanings(File[] gold_files)
-	{
-		return Arrays.stream(gold_files)
-				.map(Driver::readTextFile)
-				.map(text ->
-				{
-					final String regex = "(bn:\\d+[r|a|v|n](\\|bn:\\d+[r|a|v|n])*)-\"([^\"]+)\"";
-					final Pattern pattern = Pattern.compile(regex);
-					final Predicate<String> is_meanings = Pattern.compile("^@bn:.*").asPredicate();
-
-					return Pattern.compile("\n+").splitAsStream(text)
-							.filter(is_meanings)
-							.map(pattern::matcher)
-							.map(m ->
-							{
-								final List<Set<Pair<String, String>>> meanings = new ArrayList<>();
-								while (m.find())
-								{
-									final String meanings_string = m.group(1);
-									final String[] meanings_parts = meanings_string.split("\\|");
-									final Set<String> alternatives = Arrays.stream(meanings_parts)
-											.map(p -> p.startsWith("\"") && p.endsWith("\"") ? p.substring(1, p.length() - 1) : p)
-											.collect(toSet());
-									final String covered_text = m.group(3);
-									meanings.add(alternatives.stream()
-											.map(a -> Pair.of(a, covered_text))
-											.collect(toSet()));
-								}
-
-								return meanings;
-							})
-							.collect(toList());
-				})
-				.collect(toList());
-	}
-
-	private static void serializeCandidates(List<List<Map<Candidate, Double>>> candidates, File text_file, Path output_folder)
-	{
-		log.info("Serializing candidates for  " + text_file);
-		try
-		{
-			Path out_file = createOutputPath(text_file.toPath(), output_folder, text_suffix, candidates_suffix);
-			Serializer.serialize(candidates, out_file);
-		}
-		catch (Exception e)
-		{
-			log.error("Cannot store candidates for file " + text_file);
-		}
-	}
-
-	private static List<List<List<Map<Candidate, Double>>>> deserializeCandidates(File[] files)
-	{
-		List<List<List<Map<Candidate, Double>>>> candidates = new ArrayList<>();
-		Arrays.stream(files).forEach(f ->
-		{
-			try
-			{
-				@SuppressWarnings("unchecked")
-				List<List<Map<Candidate, Double>>> c = (List<List<Map<Candidate, Double>>>)Serializer.deserialize(f.toPath());
-				candidates.add(c);
-			}
-			catch (Exception e)
-			{
-				log.error("Cannot store candidates for file " + f);
-			}
-		});
-
-		return candidates;
-	}
-
-	private static File[] getFilesInFolder(Path input_folder, String suffix)
-	{
-		final File[] text_files = input_folder.toFile().listFiles(pathname -> pathname.getName().toLowerCase().endsWith(suffix));
-		if (text_files == null)
-		{
-			log.error("Failed to find in any text files in " + input_folder);
-			System.exit(1);
-		}
-
-		return text_files;
-	}
-
-	private static String readTextFile(File file)
-	{
-		try
-		{
-			return FileUtils.readFileToString(file, Charsets.UTF_8);
-		}
-		catch (IOException e)
-		{
-			log.error("Cannot read file " + file + ": " + e);
-			return "";
-		}
-	}
-
-	private static Path createOutputPath(Path input_file, Path output_folder, String old_suffix, String new_suffix) throws IOException
-	{
-		if (!Files.exists(output_folder))
-			Files.createDirectories(output_folder);
-
-		final String basename = input_file.getFileName().toString();
-		final String out_filename = basename.substring(0, basename.length() - old_suffix.length()) + new_suffix;
-
-		return output_folder.resolve(out_filename);
-	}
-
-	private static void evaluate(Path text_folder, Path gold_folder)
-	{
-//		log.info("Loading files");
-//		final File[] text_files = gold_folder.toFile().listFiles(pathname -> pathname.getName().toLowerCase().endsWith(text_suffix));
-//		final File[] meanings_files = gold_folder.toFile().listFiles(pathname -> pathname.getName().toLowerCase().endsWith(candidates_suffix));
-//		assert text_files != null && meanings_files != null;
-//		if (text_files.length != meanings_files.length)
-//		{
-//			log.error("Mismatch between number of text and meanings files");
-//			System.exit(1);
-//		}
-//
-//
-//		log.info("Creating pipeline");
-//		final AnalysisEngine ranking_pipeline = createRankingPipeline(babel_config, freqs_file, vectors);
-//
-//		log.info("Analyzing texts and collecting system meanings");
-//		final List<JCas> documents = Arrays.stream(text_files)
-//				.sorted(Comparator.comparing(File::getName))
-//				.limit(1)
-//				.map(f -> createAnalyzedDocument(f, ranking_pipeline))
-//				.collect(Collectors.toList());
-//
-//		final List<List<Pair<String, String>>> system_meanings = documents.stream()
-//				.map(Driver::readSystemMeanings)
-//				.flatMap(List::stream)
-//				.collect(Collectors.toList());
-//
-//		log.info("running evaluation");
-//		Evaluation.evaluate(system_meanings, gold);
-//
-//		log.info("Collecting candidate meanings");
-//		final ResourceManager resourceManager = ranking_pipeline.getResourceManager();
-//		BabelnetSenseInventoryResource babelnet = (BabelnetSenseInventoryResource)resourceManager.getResource(BabelnetSenseInventoryResource.class.getName());
-//		final List<Pair<String, String>> candidates = documents.stream()
-//				.map(d -> getCandidateMeanings(d, babelnet))
-//				.flatMap(List::stream)
-//				.flatMap(List::stream)
-//				.sorted(Comparator.comparing(Pair::getRight))
-//				.collect(Collectors.toList());
-//
-//		final List<Pair<String, String>> system_meanings_list = system_meanings.stream()
-//				.flatMap(List::stream)
-//				.sorted(Comparator.comparing(Pair::getRight))
-//				.collect(Collectors.toList());
-//
-//		log.info("Visualizing similarity matrices");
-//		List<Pair<String, String>> candidates_with_system = new ArrayList<>(candidates);
-//		candidates_with_system.removeAll(system_meanings_list);
-//		candidates_with_system.addAll(system_meanings_list);
-//
-//		final List<String> cws_meanings = candidates_with_system.stream()
-//				.map(Pair::getLeft)
-//				.collect(Collectors.toList());
-//		final List<String> cws_labels = candidates_with_system.stream()
-//				.map(Pair::getRight)
-//				.collect(Collectors.toList());
-//		VectorsCosineSimilarity sim = VectorsCosineSimilarity.create(vectors);
-//		VisualizationUtils.visualizeSimilarityMatrix("Candidate and system meanings", cws_meanings, cws_labels, sim);
-//
-//		List<Pair<String, String>> candidates_with_gold = new ArrayList<>(candidates);
-//		candidates_with_system.removeAll(system_meanings_list);
-//		candidates_with_system.addAll(system_meanings_list);
-//
-//		final List<String> cwg_meanings = candidates_with_gold.stream()
-//				.map(Pair::getLeft)
-//				.collect(Collectors.toList());
-//		final List<String> cwg_labels = candidates_with_gold.stream()
-//				.map(Pair::getRight)
-//				.collect(Collectors.toList());
-//		VisualizationUtils.visualizeSimilarityMatrix("Candidate and gold meanings", cwg_meanings, cwg_labels, sim);
-//
-//		Path output = createOutputPath(graph_file, global_ranked_suffix, false);
-//		Serializer.serialize(graph, output);
-	}
-
-
-
 	@SuppressWarnings("unused")
-	@Parameters(commandDescription = "Run empirical study from serialized file")
+	@Parameters(commandDescription = "Get candidates from text files using a dictionary")
 	private static class GetCandidatesCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Path to input folder containing text files", arity = 1, required = true,
+		@Parameter(names = {"-t", "-texts"}, description = "ath to folder containing text files", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path input;
+		private Path texts;
 		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where candidate files will be stored", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
-		@Parameter(names = {"-b", "-babelconfig"}, description = "Path to BabelNet configuration folder", arity = 1, required = true,
+		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path babelnet;
+		private Path dictionary;
 	}
 
 	@SuppressWarnings("unused")
-	@Parameters(commandDescription = "Run empirical study from serialized file")
-	private static class GetSystemMeaningsCommand
+	@Parameters(commandDescription = "Get meanings chosen by the system (using UIMA modules only)")
+	private static class GetSystemMeaningsUIMACommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Path to input folder containing text files", arity = 1, required = true,
+		@Parameter(names = {"-t", "-texts"}, description = "Path to folder containing text files", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path input;
+		private Path texts;
 		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
-		@Parameter(names = {"-b", "-babelconfig"}, description = "Path to BabelNet configuration folder", arity = 1, required = true,
+		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path babelConfigPath;
+		private Path dictionary;
 		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
@@ -444,75 +79,180 @@ public class Driver
 	}
 
 	@SuppressWarnings("unused")
-	@Parameters(commandDescription = "Run empirical study from serialized file")
-	private static class GetGoldCandidatesCommand
+	@Parameters(commandDescription = "Get meanings chosen by the system (using text planning classes directly)")
+	private static class GetSystemMeaningsCommand
 	{
-		@Parameter(names = {"-g", "-gold"}, description = "Path to folder containing gold annotated summaries", arity = 1, required = true,
+		@Parameter(names = {"-t", "-texts"}, description = "Path to folder containing text files", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path gold;
-		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where candidate files will be stored", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
-		private Path output;
-		@Parameter(names = {"-b", "-babelconfig"}, description = "Path to BabelNet configuration folder", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path babelnet;
-	}
-
-	@SuppressWarnings("unused")
-	@Parameters(commandDescription = "Run empirical study from serialized file")
-	private static class RunEvaluationCommand
-	{
-		@Parameter(names = {"-g", "-gold"}, description = "Path to input folder containing text files with gold meanings", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path gold;
-		@Parameter(names = {"-s", "-system"}, description = "Path to folder containing binary files with system meanings", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path system;
-	}
-
-	@SuppressWarnings("unused")
-	@Parameters(commandDescription = "Run empirical study from serialized file")
-	private static class VisualizeVectorsCommand
-	{
-		@Parameter(names = {"-g", "-gold"}, description = "Path to input folder containing text files with gold meanings", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path gold;
-		@Parameter(names = {"-gc", "-gold_candidates"}, description = "Path to folder containing binary files with candidate meanings for gold summaries", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path gold_candidates;
-		@Parameter(names = {"-s", "-system"}, description = "Path to folder containing binary files with system meanings", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path system;
+		private Path texts;
 		@Parameter(names = {"-c", "-candidates"}, description = "Path to folder containing binary files with candidate meanings", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
 		private Path candidates;
+		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
+		private Path output;
 		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
-		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
+		@Parameter(names = {"-svt", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1,
+				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
+		private SentenceVectorType sentence_vector_type = SentenceVectorType.Random;
+		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path vectorsPath;
+		private Path word_vectors_path;
+		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1,
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
+		private VectorType word_vector_type = VectorType.Random;
+		@Parameter(names = {"-cv", "-context_vectors"}, description = "Path to sense context vectors", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path context_vectors_path;
+		@Parameter(names = {"-ct", "-context_vectors_type"}, description = "Type of sense context vectors", arity = 1,
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
+		private VectorType context_vector_type = VectorType.Random;
+		@Parameter(names = {"-sv", "-sense_vectors"}, description = "Path to sense vectors", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path sense_vectors_path;
+		@Parameter(names = {"-st", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1,
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
+		private VectorType sense_vector_type = VectorType.Random;
 	}
 
-	public static void main(String[] args) throws IOException
+	private static void getCandidates(Path input_folder, Path output_folder)
 	{
-//		String corpus_folder = "/home/gerard/ownCloud/varis_tesi/deep_mind_annotated/development_set";
-//		String babelnet = "/home/gerard/data/babelconfig";
-//		String freqs = "/home/gerard/data/freqs.bin";
-//		String vectors = "/home/gerard/data/sew-embed.nasari_bin";
+		log.info("Loading files");
+		final File[] text_files = getFilesInFolder(input_folder, text_suffix);
+		if (text_files == null)
+			log.error("No files found");
+		else
+		{
+			log.info("Processing texts with UIMA and looking up candidate meanings");
+			final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createSpanPipeline(language, false);
 
+			Arrays.stream(text_files)
+					.sorted(Comparator.comparing(File::getName))
+					.map(File::toPath)
+					.forEach(f ->
+					{
+						log.info("Processing " + f);
+						final String text = readTextFile(f);
+						UIMAWrapper uima = new UIMAWrapper(text, pipeline);
+						final List<List<Set<Candidate>>> candidates = uima.getDisambiguatedCandidates();
+
+						Path out_file = createOutputPath(f, output_folder, text_suffix, meanings_suffix);
+						log.info("Serializing meanings to  " + out_file);
+						serializeMeanings(candidates, out_file);
+					});
+		}
+	}
+
+	private static void getSystemMeaningsUIMA(Path input_folder, Path output_folder, Path babel_config, Path freqs_file, Path vectors)
+	{
+		log.info("Loading files");
+		final File[] text_files = getFilesInFolder(input_folder, text_suffix);
+		if (text_files == null)
+			log.error("No files found");
+		else
+		{
+			log.info("Processing texts with UIMA and collecting system meanings");
+			final UIMAWrapper.Pipeline pipeline =
+					UIMAWrapper.createRankingPipeline(language, false, babel_config, freqs_file, vectors);
+
+			Arrays.stream(text_files)
+					.sorted(Comparator.comparing(File::getName))
+					.map(File::toPath)
+					.forEach(f ->
+					{
+						log.info("Processing " + f);
+						final String text = readTextFile(f);
+						UIMAWrapper uima = new UIMAWrapper(text, pipeline);
+						final List<List<Set<Candidate>>> candidates = uima.getDisambiguatedCandidates();
+
+						Path out_file = createOutputPath(f, output_folder, text_suffix, meanings_suffix);
+						log.info("Serializing meanings to  " + out_file);
+						serializeMeanings(candidates, out_file);
+					});
+		}
+	}
+
+	private static void getSystemMeanings(Path text_folder, Path candidate_folder, Path output_folder, InitialResourcesFactory resources)
+	{
+		log.info("Loading files");
+		final List<Path> text_files = Arrays.stream(Objects.requireNonNull(getFilesInFolder(text_folder, text_suffix)))
+				.sorted(Comparator.comparing(File::getName))
+				.map(File::toPath)
+				.collect(toList());
+		final List<Path> candidate_files = Arrays.stream(Objects.requireNonNull(getFilesInFolder(candidate_folder, meanings_suffix)))
+				.sorted(Comparator.comparing(File::getName))
+				.map(File::toPath)
+				.collect(toList());
+
+		// Check all files are paired
+		assert (text_files.size() == candidate_files.size());
+		for (int i = 0; i < text_files.size(); ++i)
+		{
+			final String name1 = Files.removeExtension(text_files.get(i).getFileName().toString());
+			final String name2 = Files.removeExtension(candidate_files.get(i).getFileName().toString());
+			assert name1.equals(name2);
+		}
+
+		log.info("Setting up UIMA pipeline");
+		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createSpanPipeline(language, false);
+
+		log.info("Processing text files");
+		IntStream.range(0, text_files.size())
+				.forEach(i ->
+				{
+					final Path file = text_files.get(i);
+					log.info("Processing " + file);
+					final String text = readTextFile(file);
+					final List<Candidate> candidates = deserializeMeanings(candidate_files.get(i)).stream()
+							.flatMap(l -> l.stream()
+									.flatMap(Set::stream))
+							.collect(toList());
+
+					UIMAWrapper uima = new UIMAWrapper(text, pipeline);
+					final List<String> tokens = uima.getNominalTokens().stream()
+							.flatMap(List::stream)
+							.collect(toList());
+
+					Options options = new Options();
+					ProcessResourcesFactory process = new ProcessResourcesFactory(resources, options, candidates, tokens, null);
+					final Function<String, Double> context_weighter = process.getMeaningsWeighter();
+					final BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
+					final BiPredicate<String, String> meanings_filter = process.getMeaningsFilter();
+					final Predicate<Candidate> candidates_filter = process.getCandidatesFilter(context_weighter);
+					TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
+
+					candidates.forEach(c -> c.setWeight(context_weighter.apply(c.getMeaning().getReference())));
+
+					// Let's group and sort the plain list of candidates by sentence and offsets.
+					final List<List<Set<Candidate>>> grouped_candidates = candidates.stream()
+							.collect(groupingBy(c -> c.getMention().getContextId(), groupingBy(c -> c.getMention().getSpan(), toSet())))
+							.entrySet().stream()
+							.sorted(Comparator.comparing(Map.Entry::getKey))
+							.map(Map.Entry::getValue)
+							.map(e -> e.entrySet().stream()
+									.sorted(Comparator.comparingInt(e2 -> e2.getKey().getLeft()))
+									.map(Map.Entry::getValue)
+									.collect(toList()))
+							.collect(toList());
+
+					Path out_file = createOutputPath(file, output_folder, text_suffix, meanings_suffix);
+					log.info("Serializing meanings to  " + out_file);
+					serializeMeanings(grouped_candidates, out_file);
+				});
+	}
+
+	public static void main(String[] args) throws Exception
+	{
 		GetCandidatesCommand candidates = new GetCandidatesCommand();
+		GetSystemMeaningsUIMACommand system_uima = new GetSystemMeaningsUIMACommand();
 		GetSystemMeaningsCommand system = new GetSystemMeaningsCommand();
-		GetGoldCandidatesCommand gold_candidates = new GetGoldCandidatesCommand();
-		RunEvaluationCommand evaluate = new RunEvaluationCommand();
-		VisualizeVectorsCommand visualize = new VisualizeVectorsCommand();
 
 		JCommander jc = new JCommander();
 		jc.addCommand(get_candidates_command, candidates);
+		jc.addCommand(get_system_UIMA_command, system_uima);
 		jc.addCommand(get_system_command, system);
-		jc.addCommand(get_gold_candidates_command, gold_candidates);
-		jc.addCommand(evaluate_command, evaluate);
-		jc.addCommand(visualize_command, visualize);
 		jc.parse(args);
 
 		DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
@@ -524,20 +264,25 @@ public class Driver
 		switch (jc.getParsedCommand())
 		{
 			case get_candidates_command:
-				getCandidates(candidates.input, candidates.output, candidates.babelnet);
+			{
+				getCandidates(candidates.texts, candidates.output);
 				break;
+			}
+			case get_system_UIMA_command:
+			{
+				getSystemMeaningsUIMA(system_uima.texts, system_uima.output, candidates.dictionary, system_uima.freqsFile, system_uima.vectorsPath);
+				break;
+			}
 			case get_system_command:
-				getSystemMeanings(system.input, system.output, system.babelConfigPath, system.freqsFile, system.vectorsPath);
+			{
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, null, system.freqsFile,
+						system.sense_vectors_path,  system.sense_vector_type,
+						system.word_vectors_path,  system.word_vector_type,
+						null, system.sentence_vector_type,
+						system.context_vectors_path,  system.context_vector_type);
+				getSystemMeanings(system.texts, system.candidates, system.output, resources);
 				break;
-			case get_gold_candidates_command:
-				getGoldCandidates(gold_candidates.gold, gold_candidates.output, gold_candidates.babelnet);
-				break;
-			case evaluate_command:
-				evaluate(evaluate.gold, evaluate.system);
-				break;
-			case visualize_command:
-				visualize(visualize.gold, visualize.gold_candidates, visualize.system, visualize.candidates, visualize.freqsFile, visualize.vectorsPath);
-				break;
+			}
 			default:
 				jc.usage();
 				break;

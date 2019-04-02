@@ -3,7 +3,8 @@ package edu.upf.taln.textplanning.amr.io;
 import com.google.common.base.Stopwatch;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import edu.upf.taln.textplanning.common.BabelNetWrapper;
+import edu.upf.taln.textplanning.common.BabelNetDictionary;
+import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import org.apache.commons.io.FileUtils;
@@ -23,13 +24,13 @@ import static java.util.stream.Collectors.toSet;
 class TypesCollector
 {
 	private final DBPediaType dbpedia = new DBPediaType();
-	private final BabelNetWrapper babelnet;
+	private final MeaningDictionary dictionary;
 	private final Map<String, Candidate.Type> types = new HashMap<>();
 	private final static Logger log = LogManager.getLogger();
 
-	TypesCollector(Path types_file, BabelNetWrapper babelnet) throws IOException
+	TypesCollector(Path types_file, MeaningDictionary dictionary) throws IOException
 	{
-		this.babelnet = babelnet;
+		this.dictionary = dictionary;
 
 		log.info("Reading DBPedia types");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -66,7 +67,7 @@ class TypesCollector
 		refs2query.forEach(r -> {
 			try
 			{
-				List<String> dbPediaURIs  = babelnet.getdbPediaURIs(r);
+				List<String> dbPediaURIs  = ((BabelNetDictionary) dictionary).getdbPediaURIs(r);
 				Candidate.Type t = Candidate.Type.Other;
 				if (!dbPediaURIs.isEmpty())
 				{

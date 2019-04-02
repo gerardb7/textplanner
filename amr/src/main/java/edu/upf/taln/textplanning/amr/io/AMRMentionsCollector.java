@@ -3,8 +3,10 @@ package edu.upf.taln.textplanning.amr.io;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.amr.structures.AMRAlignments;
 import edu.upf.taln.textplanning.amr.structures.AMRGraph;
+import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -23,13 +25,13 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 	private static final int max_tokens = 5;
 	private final static Logger log = LogManager.getLogger();
 
-	public static Multimap<String, Mention> collectMentions(Collection<AMRGraph> graphs)
+	public static Multimap<String, Mention> collectMentions(Collection<AMRGraph> graphs, ULocale language)
 	{
 		log.info("Collecting mentions");
 		Stopwatch timer = Stopwatch.createStarted();
 
 		final Multimap<String, Mention> multiwords = collectMultiwordMentions(graphs);
-		final Multimap<String, Mention> singlewords = collectoSingleWordMentions(graphs);
+		final Multimap<String, Mention> singlewords = collectoSingleWordMentions(graphs, language);
 		Multimap<String, Mention> mentions = HashMultimap.create(multiwords);
 		mentions.putAll(singlewords);
 
@@ -52,8 +54,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 			AMRAlignments a = g.getAlignments();
 			List<String> tokens = a.getTokens();
 
-			Predicate<String> is_punct = (str) -> Pattern.matches("\\p{Punct}", str);
-
+			Predicate<String> is_punct = (str) -> Pattern.matches("\\p{Punct}+", str);
 			IntStream.range(0, tokens.size())
 					.forEach(i -> IntStream.range(i + 1, min(i + max_tokens + 1, tokens.size() + 1))
 							.mapToObj(j -> Pair.of(i, j))
@@ -64,7 +65,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 									.mapToObj(index -> a.getTokens().get(index))
 									.noneMatch(is_punct)) // no punctuation marks please
 							.map(span -> Mention.get(
-									g.getSource(),
+									g.getContextId(),
 									span,
 									a.getSurfaceForm(span),
 									a.getLemma(span).orElse(a.getSurfaceForm(span)),
@@ -79,7 +80,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 	/**
 	 * Returns a mention for every individual token
 	 */
-	private static Multimap<String, Mention> collectoSingleWordMentions(Collection<AMRGraph> graphs)
+	private static Multimap<String, Mention> collectoSingleWordMentions(Collection<AMRGraph> graphs, ULocale language)
 	{
 		Multimap<String, Mention> vertices2Mentions = HashMultimap.create();
 		graphs.forEach(g ->
@@ -91,9 +92,10 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 					.map(i ->
 					{
 						Pair<Integer, Integer> span = Pair.of(i, i + 1);
-						return Mention.get(g.getSource(), span, a.getSurfaceForm(span), a.getLemma(i), a.getPOS(i),
+						return Mention.get(g.getContextId(), span, a.getSurfaceForm(span), a.getLemma(i), a.getPOS(i),
 								isName(span, g), getType(span, g));
 					})
+					.filter(m -> FunctionWordsFilter.test(m, language)) // use list of non-ambiguous function words
 					.forEach(m -> vertices2Mentions.put(v, m)));
 		});
 		return vertices2Mentions;

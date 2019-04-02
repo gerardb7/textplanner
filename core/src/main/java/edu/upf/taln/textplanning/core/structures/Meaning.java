@@ -14,7 +14,6 @@ public final class Meaning implements Serializable
 	private final String label; // human-readable label
 	private final boolean is_NE; // refers to the meaning itself (e.g. synset for Chicago is a NE)
 	private String type = ""; // specific NE type
-	private double weight = 0.0; // used when ranking meaning for disambiguation
 	private static final Map<String, Meaning> references = new HashMap<>(); // to ensure unique Meaning objects per id
 	private final static long serialVersionUID = 1L;
 
@@ -42,8 +41,7 @@ public final class Meaning implements Serializable
 	public boolean isNE() { return is_NE; }
 	public String getType() { return type; }
 	public void setType(String type) { this.type = type; }
-	public double getWeight() { return weight; }
-	public void setWeight(double weight) { this.weight = weight; }
+
 
 	@Override
 	public String toString() { return reference + "-" + this.label; }

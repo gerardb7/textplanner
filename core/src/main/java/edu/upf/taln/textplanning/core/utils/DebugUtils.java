@@ -2,20 +2,40 @@ package edu.upf.taln.textplanning.core.utils;
 
 import Jama.Matrix;
 import edu.upf.taln.textplanning.core.structures.*;
-import edu.upf.taln.textplanning.core.structures.Candidate;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.Logger;
 
 import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.joining;
 
 public class DebugUtils
 {
+	public static final int LOGGING_STEP_SIZE = 100000;
+
+	public static class ThreadReporter
+	{
+		private final AtomicBoolean reported = new AtomicBoolean(false);
+		private final Logger log;
+
+		public ThreadReporter(Logger log)
+		{
+			this.log = log;
+		}
+
+		public void report()
+		{
+			if (!reported.getAndSet(true))
+				log.info("Number of threads: " + Thread.activeCount());
+		}
+	}
+
 	private final static NumberFormat format = NumberFormat.getInstance();
 	static {
 		format.setRoundingMode(RoundingMode.UP);
@@ -44,11 +64,11 @@ public class DebugUtils
 				.map(DebugUtils::printCandidate)
 				.collect(joining(", "));
 		return "Disambiguated \"" + chosen.getMention().getSurface_form() +
-				"\" to " + chosen.getMeaning() + " " + printDouble(chosen.getMeaning().getWeight()) +
+				"\" to " + chosen.getMeaning() + " " + printDouble(chosen.getWeight()) +
 				"\t\t" + other.stream()
 				.filter(c2 -> c2 != chosen)
 				.map(Candidate::getMeaning)
-				.map(m -> m.toString()  + " " + printDouble(chosen.getMeaning().getWeight()))
+				.map(m -> m.toString()  + " " + printDouble(chosen.getWeight()))
 				.collect(joining(", ")) +
 				(accepted_multiword.isEmpty() ? "" : "\n\tDetected multiword " + accepted_multiword) +
 				(rejected_multiwords.isEmpty() ? "" : "\n\tDiscarded multiwords " + rejected_multiwords);
@@ -129,7 +149,7 @@ public class DebugUtils
 	{
 		final String meaning = m.map(Meaning::toString).orElse("");
 		final String surface_forms = mentions.stream()
-				.map(Mention::getSurface_form)
+				.map(mention -> mention.getId() + "-" + mention.getSurface_form())
 				.distinct()
 				.map(f -> "\"" + f + "\"")
 				.collect(Collectors.joining(", "));

@@ -41,11 +41,11 @@ public class DBPediaType
 //			BooleanQuery isOrganizationQuery = conn.prepareBooleanQuery(isOrganization.replace("$r", r2));
 //
 //			if (isPersonQuery.evaluate())
-//				return Candidate.Type.Person;
+//				return Candidate.FunctionType.Person;
 //			else if (isPlaceQuery.evaluate())
-//				return Candidate.Type.Location;
+//				return Candidate.FunctionType.Location;
 //			else if (isOrganizationQuery.evaluate())
-//				return Candidate.Type.Organization;
+//				return Candidate.FunctionType.Organization;
 //			else
 				return Candidate.Type.Other;
 		}

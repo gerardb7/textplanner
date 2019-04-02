@@ -74,11 +74,13 @@ public class POSConverter
 			put("EX", null); //think
 			put("FW", BabelPOS.NOUN); //think
 			put("IN", BabelPOS.PREPOSITION);
+			put("J", BabelPOS.ADJECTIVE); // simplified tagset
 			put("JJ", BabelPOS.ADJECTIVE);
 			put("JJR", BabelPOS.ADJECTIVE);
 			put("JJS", BabelPOS.ADJECTIVE);
 			put("LS", null); //think
 			put("MD", BabelPOS.VERB);
+			put("N", BabelPOS.NOUN); // simplified tagset
 			put("NN", BabelPOS.NOUN);
 			put("NNS", BabelPOS.NOUN);
 			put("NNP", BabelPOS.NOUN);
@@ -87,6 +89,7 @@ public class POSConverter
 			put("POS", null); //think
 			put("PRP", BabelPOS.PRONOUN);
 			put("PRP$", BabelPOS.PRONOUN);
+			put("R", BabelPOS.ADVERB); // simplified tagset
 			put("RB", BabelPOS.ADVERB);
 			put("RBR", BabelPOS.ADVERB);
 			put("RBS", BabelPOS.ADVERB);
@@ -94,6 +97,7 @@ public class POSConverter
 			put("SYM", null); //think
 			put("TO", BabelPOS.PREPOSITION);
 			put("UH", BabelPOS.INTERJECTION);
+			put("V", BabelPOS.VERB); // simplified tagset
 			put("VB", BabelPOS.VERB);
 			put("VBD", BabelPOS.VERB);
 			put("VBG", BabelPOS.VERB);
@@ -111,11 +115,13 @@ public class POSConverter
 			put("ex", null); //think
 			put("fw", BabelPOS.NOUN); //think
 			put("in", BabelPOS.PREPOSITION);
+			put("j", BabelPOS.ADJECTIVE); // simplified tagset
 			put("jj", BabelPOS.ADJECTIVE);
 			put("jjr", BabelPOS.ADJECTIVE);
 			put("jjs", BabelPOS.ADJECTIVE);
 			put("ls", null); //think
 			put("md", BabelPOS.VERB);
+			put("n", BabelPOS.NOUN); // simplified tagset
 			put("nn", BabelPOS.NOUN);
 			put("nns", BabelPOS.NOUN);
 			put("nnp", BabelPOS.NOUN);
@@ -124,6 +130,7 @@ public class POSConverter
 			put("pos", null); //think
 			put("prp", BabelPOS.PRONOUN);
 			put("prp$", BabelPOS.PRONOUN);
+			put("r", BabelPOS.ADVERB); // simplified tagset
 			put("rb", BabelPOS.ADVERB);
 			put("rbr", BabelPOS.ADVERB);
 			put("rbs", BabelPOS.ADVERB);
@@ -131,6 +138,7 @@ public class POSConverter
 			put("sym", null); //think
 			put("to", BabelPOS.PREPOSITION);
 			put("uh", BabelPOS.INTERJECTION);
+			put("v", BabelPOS.VERB); // simplified tagset
 			put("vb", BabelPOS.VERB);
 			put("vbd", BabelPOS.VERB);
 			put("vbg", BabelPOS.VERB);

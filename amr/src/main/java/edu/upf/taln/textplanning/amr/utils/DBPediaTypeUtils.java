@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.amr.utils;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.google.gson.Gson;
+import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.amr.io.DBPediaType;
 import edu.upf.taln.textplanning.amr.io.AMRGraphListFactory;
 import edu.upf.taln.textplanning.amr.io.AMRReader;
@@ -35,12 +36,13 @@ import static org.apache.commons.io.FileUtils.readFileToString;
 
 public class DBPediaTypeUtils
 {
+	private final static ULocale language = ULocale.ENGLISH;
 	private final static Logger log = LogManager.getLogger();
 
 	private static void getTypes(Path amrPath, String extension, Path o, Path babel_config) throws IOException
 	{
 		log.info("Reading structures");
-		AMRGraphListFactory factory = new AMRGraphListFactory(new AMRReader(), null, babel_config, false, false);
+		AMRGraphListFactory factory = new AMRGraphListFactory(new AMRReader(), language, null, null, false);
 		List<AMRGraphList> graphs = Files.walk(amrPath.toAbsolutePath())
 				.filter(Files::isRegularFile)
 				.filter(p -> p.toString().endsWith(extension))

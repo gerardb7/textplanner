@@ -1,24 +1,25 @@
 package edu.upf.taln.textplanning.core;
 
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.core.extraction.*;
 import edu.upf.taln.textplanning.core.discourse.DiscoursePlanner;
+import edu.upf.taln.textplanning.core.extraction.*;
+import edu.upf.taln.textplanning.core.io.GraphSemantics;
 import edu.upf.taln.textplanning.core.ranking.GraphRanking;
 import edu.upf.taln.textplanning.core.redundancy.RedundancyRemover;
 import edu.upf.taln.textplanning.core.similarity.SemanticTreeSimilarity;
-import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
-import edu.upf.taln.textplanning.core.io.GraphSemantics;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
-import edu.upf.taln.textplanning.core.weighting.WeightingFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.math.RoundingMode;
-import java.text.NumberFormat;
 import java.util.Collection;
 import java.util.List;
+import java.util.OptionalDouble;
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 
 /**
@@ -30,36 +31,11 @@ public final class TextPlanner
 {
 	private final static Logger log = LogManager.getLogger();
 
-	public static class Options
-	{
-		public int num_subgraphs = 1000; // Number of subgraphs to extract
-		public double sim_threshold = 0.1; // Pairs of meanings with sim below this value have their score set to 0
-		public double damping_meanings = 0.2; // controls bias towards weighting function when ranking meanings
-		public double damping_variables = 0.2; // controls bias towards meanings rank when ranking variables
-		public double extraction_lambda = 1.0; // Controls balance between weight of nodes and cost of edges during subgraph extraction
-		public double tree_edit_lambda = 0.1; // Controls impact of roles when calculating similarity between semantic trees
-
-		@Override
-		public String toString()
-		{
-			NumberFormat f = NumberFormat.getInstance();
-			f.setRoundingMode(RoundingMode.UP);
-			//f.setMaximumFractionDigits(10);
-			f.setMinimumFractionDigits(3);
-			return  "num_subgraphs = " + num_subgraphs +
-					" sim_threshold = " + f.format(sim_threshold) +
-					" damping_meanings = " + f.format(damping_meanings) +
-					" damping_variables = " + f.format(damping_variables) +
-					" extraction_lambda = " + f.format(extraction_lambda) +
-					" redundancy lambda = " + f.format(tree_edit_lambda);
-		}
-	}
-
 	/**
 	 * Generates a text plan from a semantic graph
 	 */
 	public static List<SemanticSubgraph> plan(SemanticGraph graph, GraphSemantics semantics,
-	                                          SimilarityFunction similarity, int num_graphs, Options o)
+	                                          BiFunction<String, String, OptionalDouble> similarity, int num_graphs, Options o)
 	{
 		try
 		{
@@ -92,19 +68,21 @@ public final class TextPlanner
 	 * Ranks set of candidate meanings associated with a collection of semantic graphs, and stores the resulting ranks as
 	 * candidate weights.
 	 */
-	public static void rankMeanings(Collection<Candidate> candidates, WeightingFunction weighting, SimilarityFunction similarity,
-	                                Options o)
+	public static void rankMeanings(Collection<Candidate> candidates, Predicate<Candidate> candidates_filter,
+	                                BiPredicate<String, String> meanings_filter, Function<String, Double> weighting,
+	                                BiFunction<String, String, OptionalDouble> similarity, Options o)
 	{
 		log.info("*Ranking meanings*");
 		Stopwatch timer = Stopwatch.createStarted();
 
-		GraphRanking.rankMeanings(candidates, weighting, similarity, o.sim_threshold, o.damping_meanings);
+		GraphRanking.rankMeanings(candidates, candidates_filter, meanings_filter, weighting, similarity, o.sim_threshold,
+				o.damping_meanings);
 		log.info("Ranking completed in " + timer.stop());
 	}
 
 
 	/**
-	 * 	Ranks variables in a semantic graph
+	 * 	Ranks nodes of a semantic graph
 	 */
 	public static void rankVertices(SemanticGraph graph, Options o)
 	{
@@ -136,7 +114,8 @@ public final class TextPlanner
 	 * 	Remove redundant subgraphs
 	 */
 	public static Collection<SemanticSubgraph> removeRedundantSubgraphs(Collection<SemanticSubgraph> subgraphs, int num_graphs,
-	                                                     SimilarityFunction similarity, Options o)
+	                                                                    BiFunction<String, String, OptionalDouble> similarity,
+	                                                                    Options o)
 	{
 		log.info("*Removing redundant subgraphs*");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -151,8 +130,9 @@ public final class TextPlanner
 	/**
 	 * 	Sort subgraphs
 	 */
-	public static List<SemanticSubgraph> sortSubgraphs(Collection<SemanticSubgraph> subgraphs, SimilarityFunction similarity,
-	                                            Options o)
+	public static List<SemanticSubgraph> sortSubgraphs( Collection<SemanticSubgraph> subgraphs,
+	                                                    BiFunction<String, String, OptionalDouble> similarity,
+	                                                    Options o)
 	{
 		log.info("*Sorting subgraphs*");
 		Stopwatch timer = Stopwatch.createStarted();

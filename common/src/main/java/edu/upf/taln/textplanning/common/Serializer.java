@@ -23,8 +23,8 @@ public class Serializer
 //					return ObjectStreamClass.lookup(edu.upf.taln.textplanning.io.GraphList.class);
 //				case "edu.upf.taln.textplanning.structures.io.Candidate":
 //					return ObjectStreamClass.lookup(edu.upf.taln.textplanning.io.Candidate.class);
-//				case "edu.upf.taln.textplanning.structures.io.Candidate$Type":
-//					return ObjectStreamClass.lookup(edu.upf.taln.textplanning.io.Candidate.Type.class);
+//				case "edu.upf.taln.textplanning.structures.io.Candidate$FunctionType":
+//					return ObjectStreamClass.lookup(edu.upf.taln.textplanning.io.Candidate.FunctionType.class);
 //				case "edu.upf.taln.textplanning.structures.io.CoreferenceChain":
 //					return ObjectStreamClass.lookup(edu.upf.taln.textplanning.io.CoreferenceChain.class);
 //				case "edu.upf.taln.textplanning.structures.io.SemanticGraph":

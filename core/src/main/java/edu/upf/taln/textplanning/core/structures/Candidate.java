@@ -10,23 +10,35 @@ public class Candidate implements Serializable
 {
 	public enum Type {Location, Organization, Person, Other}
 
-	private final Meaning meaning;
 	private final Mention mention;
+	private final Meaning meaning;
+	private double weight = 0.0;
 	private final static long serialVersionUID = 1L;
 
-	public Candidate(Meaning e, Mention m)
+	public Candidate(Mention m, Meaning e)
 	{
-		this.meaning = e;
 		this.mention = m;
+		this.meaning = e;
 	}
 
-	public Meaning getMeaning() { return meaning; }
 	public Mention getMention() { return mention; }
+	public Meaning getMeaning() { return meaning; }
+
+	public double getWeight()
+	{
+		return weight;
+	}
+
+	public void setWeight(double weight)
+	{
+		this.weight = weight;
+	}
+
 
 	@Override
 	public String toString()
 	{
-		return "s" + mention.getSentenceId() + " " + mention.getSpan() + " " + meaning;
+		return mention.getId() + "-" + meaning;
 	}
 
 	// Two candidates are the same if they have same vertex and meaning. Mentions are ignored!
@@ -36,12 +48,12 @@ public class Candidate implements Serializable
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
 		Candidate candidate = (Candidate) o;
-		return Objects.equals(meaning, candidate.meaning) && Objects.equals(mention, candidate.mention);
+		return Objects.equals(mention, candidate.mention) && Objects.equals(meaning, candidate.meaning);
 	}
 
 	@Override
 	public int hashCode()
 	{
-		return Objects.hash(meaning, mention);
+		return Objects.hash(mention, meaning);
 	}
 }

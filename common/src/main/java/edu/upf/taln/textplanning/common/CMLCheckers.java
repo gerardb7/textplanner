@@ -3,6 +3,8 @@ package edu.upf.taln.textplanning.common;
 import com.beust.jcommander.IParameterValidator;
 import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.ParameterException;
+import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
+import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,6 +25,12 @@ public class CMLCheckers
 	{
 		@Override
 		public Integer convert(String value) { return Integer.parseInt(value); }
+	}
+
+	public static class DoubleConverter implements IStringConverter<Double>
+	{
+		@Override
+		public Double convert(String value) { return Double.parseDouble(value); }
 	}
 
 	public static class ValidPathToFile implements IParameterValidator
@@ -103,7 +111,19 @@ public class CMLCheckers
 		}
 	}
 
-	public static class GreaterThanZero implements IParameterValidator
+	public static class IntegerGreaterOrEqualThanZero implements IParameterValidator
+	{
+
+		@Override
+		public void validate(String name, String value) throws ParameterException
+		{
+			int n = Integer.parseInt(value);
+			if (n < 0)
+				throw new ParameterException("Value must be greater or equal to 0: " + value);
+		}
+	}
+
+	public static class IntegerGreaterThanZero implements IParameterValidator
 	{
 
 		@Override
@@ -111,7 +131,75 @@ public class CMLCheckers
 		{
 			int n = Integer.parseInt(value);
 			if (n < 1)
-				throw new ParameterException("Invalid number of subgraphs " + value);
+				throw new ParameterException("Value must be greater than 0: " + value);
+		}
+	}
+
+	public static class DoubleGreaterOrEqualThanZero implements IParameterValidator
+	{
+
+		@Override
+		public void validate(String name, String value) throws ParameterException
+		{
+			double n = Double.parseDouble(value);
+			if (n < 0)
+				throw new ParameterException("Value must be greater or equal to 0.0: " + value);
+		}
+	}
+
+	public static class NormalizedDouble implements IParameterValidator
+	{
+
+		@Override
+		public void validate(String name, String value) throws ParameterException
+		{
+			double n = Double.parseDouble(value);
+			if (n < 0.0 || n > 1.0)
+				throw new ParameterException("Value must be in the range [0.0, 1.0]: " + value);
+		}
+	}
+
+	public static class VectorTypeConverter implements IStringConverter<VectorType>
+	{
+		@Override
+		public VectorType convert(String value)
+		{
+			return VectorType.valueOf(value);
+		}
+	}
+
+	public static class SentenceVectorTypeConverter implements IStringConverter<SentenceVectorType>
+	{
+		@Override
+		public SentenceVectorType convert(String value)
+		{
+			return SentenceVectorType.valueOf(value);
+		}
+	}
+
+	public static class VectorTypeValidator implements IParameterValidator
+	{
+		@Override
+		public void validate(String name, String value) throws ParameterException
+		{
+			try{ VectorType.valueOf(value); }
+			catch (Exception e)
+			{
+				throw new ParameterException("Parameter " + name + " has invalid valued " + value);
+			}
+		}
+	}
+
+	public static class SentenceVectorTypeValidator implements IParameterValidator
+	{
+		@Override
+		public void validate(String name, String value) throws ParameterException
+		{
+			try{ SentenceVectorType.valueOf(value); }
+			catch (Exception e)
+			{
+				throw new ParameterException("Parameter " + name + " has invalid valued " + value);
+			}
 		}
 	}
 

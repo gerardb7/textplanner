@@ -12,10 +12,10 @@ import java.util.function.BinaryOperator;
 public class SemanticGraph extends SimpleDirectedGraph<String, Role> implements Serializable
 {
 	private final Map<String, Meaning> meanings = new HashMap<>(); // from vertices to meanings
+	private final Map<String, Double> weights = new HashMap<>(); // from vertices to weights
 	private final Multimap<String, Mention> mentions = HashMultimap.create(); // from vertices to mentions
 	private final Multimap<String, String> sources = HashMultimap.create(); // from vertices to sources, e.g. sentences
 	private final Multimap<String, String> types = HashMultimap.create(); // from vertices to types, eg. amr concepts
-	private final Map<String, Double> weights = new HashMap<>();
 	private final static long serialVersionUID = 1L;
 
 	// Default constructor
@@ -32,17 +32,23 @@ public class SemanticGraph extends SimpleDirectedGraph<String, Role> implements 
 	 * 	    - One or more mentions (text annotations)
 	 * 	    - A weight indicating the importance or relevance of each instance
 	 */
-	public SemanticGraph(Map<String, Candidate> candidates,
+	public SemanticGraph(Map<String, Meaning> meanings,
+	                     Map<String, Double> weights,
+	                     Multimap<String, Mention> mentions,
 	                     BiPredicate<String, String> adjacency_function,
 	                     BinaryOperator<String> labelling_function)
 	{
 		super(Role.class);
+		this.meanings.putAll(meanings);
+		this.weights.putAll(weights);
+		this.mentions.putAll(mentions);
 
-		candidates.keySet().forEach(this::addVertex);
-		candidates.forEach((key, value) -> meanings.put(key, value.getMeaning())); // only one meaning per key
-		candidates.forEach((key, value) -> mentions.put(key, value.getMention())); // one or more mentions per key
-		candidates.keySet().forEach(v1 ->
-				candidates.keySet().stream()
+		assert meanings.keySet().equals(weights.keySet()); // all vertices have a meaning and a weight
+		assert meanings.keySet().equals(mentions.keySet()); // all vertices have mentions
+
+		meanings.keySet().forEach(this::addVertex);
+		meanings.keySet().forEach(v1 ->
+				meanings.keySet().stream()
 						.filter(v2 -> adjacency_function.test(v1, v2))
 						.forEach(v2 -> addNewEdge(v1, v2, labelling_function.apply(v1, v2))));
 	}

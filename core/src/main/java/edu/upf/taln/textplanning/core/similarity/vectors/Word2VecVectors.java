@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
+import java.util.Optional;
 
 //import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
 //import org.deeplearning4j.models.word2vec.Word2Vec;
@@ -12,7 +13,7 @@ import java.nio.file.Path;
 /**
  *
  */
-public class Word2VecVectors implements Vectors
+public class Word2VecVectors extends Vectors
 {
 //	private final Word2Vec vectors;
 	private final static Logger log = LogManager.getLogger();
@@ -32,8 +33,14 @@ public class Word2VecVectors implements Vectors
 	}
 
 	@Override
-	public double[] getVector(String item)
+	public Optional<double[]> getVector(String item)
 	{
-		return new double[0];
+		return Optional.empty();
+	}
+
+	@Override
+	public int getNumDimensions()
+	{
+		return 0;
 	}
 }

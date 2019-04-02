@@ -26,7 +26,7 @@ public class JamaPowerIteration implements PowerIterationRanking
 		// Check that a is a row-stochastic matrix
 		assert a.getColumnDimension() == a.getRowDimension(); // Is it square?
 		assert Arrays.stream(a.getArray()).allMatch(r -> Arrays.stream(r).allMatch(i -> i >= 0.0)); // Is it positive?
-		assert Arrays.stream(a.getArray()).allMatch(r -> Math.abs(Arrays.stream(r).sum() - 1.0) < 2*2.22e-16); // Is it row-normalized?
+		//assert Arrays.stream(a.getArray()).allMatch(r -> Math.abs(Arrays.stream(r).sum() - 1.0) < 4*2.22e-16); // Is it row-normalized?
 
 		// Change matrix from row-normalized to column normalized
 		// Turns rows into columns so that multiplication with column vector produces probs of reaching states
@@ -35,7 +35,7 @@ public class JamaPowerIteration implements PowerIterationRanking
 		// Create initial state as a column vector
 		final int n = a.getColumnDimension();
 		final double e = 1.0/(n*1000); // set stopping threshold
-		Matrix v = new Matrix(n, 1, 1.0 / n); // v is the distribution vector that will create iteratively updated
+		Matrix v = new Matrix(n, 1, 1.0 / n); // v is the distribution vector that will be iteratively updated
 
 		log.info("Starting power iteration");
 		int numIterations = 0;

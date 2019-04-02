@@ -4,7 +4,6 @@ import org.jgrapht.graph.SimpleDirectedGraph;
 
 import java.util.*;
 
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
 public class SemanticTree extends SimpleDirectedGraph<String, Role>

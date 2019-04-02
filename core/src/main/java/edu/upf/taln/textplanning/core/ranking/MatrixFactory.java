@@ -1,19 +1,18 @@
 package edu.upf.taln.textplanning.core.ranking;
 
 import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
-import edu.upf.taln.textplanning.core.structures.Meaning;
-import edu.upf.taln.textplanning.core.weighting.WeightingFunction;
+import edu.upf.taln.textplanning.core.utils.DebugUtils.ThreadReporter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 
 public class MatrixFactory
@@ -23,9 +22,10 @@ public class MatrixFactory
 	/**
 	 * Creates a row-stochastic matrix to rank a set of meanings
 	 */
-	public static double[][] createMeaningRankingMatrix(List<String> meanings, WeightingFunction weighting,
-	                                             SimilarityFunction sim, BiPredicate<String, String> filter,
-	                                             double sim_threshold, double d)
+	public static double[][] createMeaningRankingMatrix(List<String> meanings, Function<String, Double> weighting,
+	                                                    BiFunction<String, String, OptionalDouble> sim,
+	                                                    BiPredicate<String, String> filter,
+	                                                    double sim_threshold, double d)
 	{
 		log.info("Creating ranking matrix for " + meanings.size() + " meanings");
 		int n = meanings.size();
@@ -43,7 +43,7 @@ public class MatrixFactory
 
 		// Bias each row in X using bias L and d factor d
 		// Ruv = d*Lu + (1.0-d)*Xuv
-		IntStream.range(0, n).forEach(u ->
+		IntStream.range(0, n).parallel().forEach(u ->
 				IntStream.range(0, n).forEach(v -> {
 					double Lu = L[u]; // bias towards relevance of v
 					double Xuv = X[u][v]; // similarity
@@ -77,7 +77,7 @@ public class MatrixFactory
 
 		// Bias each row in Y using bias T and d factor d
 		// Prob index->j = a*T(j) + b*t(j) + (1.0-a-b)*Y(index,j)
-		IntStream.range(0, n).forEach(u ->
+		IntStream.range(0, n).parallel().forEach(u ->
 				IntStream.range(0, n).forEach(v -> {
 					double tu = T[u]; // bias towards meanings of u
 					double Yuv = Y[u][v]; // adjacency
@@ -92,12 +92,13 @@ public class MatrixFactory
 	}
 
 	// Creates normalized *strictly positive* bias row vector by applying the weighting function to a set of meanings
-	public static double[] createMeaningsBiasVector(List<String> meanings, WeightingFunction weighting,
+	public static double[] createMeaningsBiasVector(List<String> meanings, Function<String, Double> weighting,
 	                                                boolean normalize)
 	{
 		int num_entities = meanings.size();
 		double[] v = meanings.stream()
-				.mapToDouble(weighting::weight)
+				.parallel()
+				.mapToDouble(weighting::apply)
 				.toArray();
 
 		if (normalize)
@@ -119,8 +120,8 @@ public class MatrixFactory
 	private static double[] createVariablesBiasVector(List<String> variables, SemanticGraph graph)
 	{
 		final double[] weights = variables.stream()
-				.map(graph::getMeaning)
-				.mapToDouble(om -> om.map(Meaning::getWeight).orElse(0.0))
+				.parallel()
+				.mapToDouble(graph::getWeight)
 				.toArray();
 
 		double alpha = Arrays.stream(weights)
@@ -137,7 +138,8 @@ public class MatrixFactory
 	}
 
 	// Creates row-normalized symmetric non-negative similarity matrix
-	public static double[][] createMeaningsSimilarityMatrix(List<String> meanings, SimilarityFunction sim,
+	public static double[][] createMeaningsSimilarityMatrix(List<String> meanings,
+	                                                        BiFunction<String, String, OptionalDouble> sim,
 	                                                        BiPredicate<String, String> filter,
 	                                                        double sim_threshold, boolean set_undefined_to_avg,
 	                                                        boolean normalize, boolean report_stats)
@@ -150,14 +152,13 @@ public class MatrixFactory
 		AtomicLong num_filtered = new AtomicLong(0);
 		AtomicLong num_defined = new AtomicLong(0);
 		AtomicLong num_negative = new AtomicLong(0);
-
-		final Boolean[] defined_meanings = meanings.stream()
-			.map(sim::isDefinedFor)
-			.toArray(Boolean[]::new);
+		ThreadReporter reporter = new ThreadReporter(log);
 
 		// Calculate similarity values
-		IntStream.range(0, n).forEach(i ->
-				IntStream.range(i, n).forEach(j ->
+		IntStream.range(0, n)
+				.parallel()
+				.peek(i -> reporter.report())
+				.forEach(i -> IntStream.range(i, n).forEach(j ->
 				{
 					double simij = 0.0;
 					if (i == j)
@@ -166,12 +167,11 @@ public class MatrixFactory
 					{
 						String e1 = meanings.get(i);
 						String e2 = meanings.get(j);
-						boolean filtered_in = filter.test(e1, e2);
-						boolean pair_defined = defined_meanings[i] && defined_meanings[j];
 
-						if (filtered_in && pair_defined )
+						if (filter.test(e1, e2))
 						{
-							final Optional<Double> osim = sim.getSimilarity(e1, e2);
+							num_filtered.incrementAndGet();
+							final OptionalDouble osim = sim.apply(e1, e2);
 							if (osim.isPresent())
 								num_defined.incrementAndGet();
 
@@ -181,9 +181,6 @@ public class MatrixFactory
 							else
 								simij = sim_value;
 						}
-
-						if (filtered_in)
-							num_filtered.incrementAndGet();
 					}
 
 					if (simij < sim_threshold)
@@ -232,13 +229,16 @@ public class MatrixFactory
 	private static double[][] createVariablesAdjacencyMatrix(List<String> variables, SemanticGraph graph)
 	{
 		int n = variables.size();
+		ThreadReporter reporter = new ThreadReporter(log);
 
 		// Create symmetric non-negative similarity matrix from sim function
 //		AtomicLong counter = new AtomicLong(0);
 //		long num_calculations1 = ((((long)n * (long)n) - n)  / 2) + n;
 		double[][] m = new double[n][n];
-		IntStream.range(0, n).forEach(i ->
-				IntStream.range(i, n)
+		IntStream.range(0, n)
+				.parallel()
+				.peek(i -> reporter.report())
+				.forEach(i -> IntStream.range(i, n)
 						.filter(j -> i != j)
 						.forEach(j ->
 						{
@@ -262,7 +262,11 @@ public class MatrixFactory
 	// Creates normalized *strictly positive* type row vector for the candidate set
 	public static double[] createTypeVector(List<Candidate> candidates, boolean smooth, boolean normalize)
 	{
+		ThreadReporter reporter = new ThreadReporter(log);
+
 		double[] v = candidates.stream()
+				.parallel()
+				.peek(c -> reporter.report())
 				.mapToDouble(c -> {
 					String mtype = c.getMention().getType();
 					String etype = c.getMeaning().getType();
@@ -294,7 +298,7 @@ public class MatrixFactory
 		int r = m.length;
 		int c = m[0].length;
 
-		IntStream.range(0, r).forEach(i ->
+		IntStream.range(0, r).parallel().forEach(i ->
 		{
 			double accum = Arrays.stream(m[i]).sum();
 			IntStream.range(0, c).forEach(j -> m[i][j] = m[i][j] / accum);

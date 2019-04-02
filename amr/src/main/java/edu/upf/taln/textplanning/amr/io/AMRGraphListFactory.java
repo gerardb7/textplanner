@@ -3,10 +3,11 @@ package edu.upf.taln.textplanning.amr.io;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import edu.upf.taln.textplanning.amr.structures.CoreferenceChain;
-import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
+import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.amr.structures.AMRGraph;
-import edu.upf.taln.textplanning.common.BabelNetWrapper;
+import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
+import edu.upf.taln.textplanning.amr.structures.CoreferenceChain;
+import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import org.apache.logging.log4j.LogManager;
@@ -24,19 +25,20 @@ import static java.util.stream.Collectors.toList;
 public class AMRGraphListFactory
 {
 	private final AMRReader reader;
+	private final ULocale language;
 	private final StanfordWrapper stanford;
 	private final CandidatesCollector candidate_collector;
 	private final TypesCollector types_collector;
 	private final static Logger log = LogManager.getLogger();
 
-	public AMRGraphListFactory(AMRReader reader, Path types_file, Path bn_config_folder, boolean no_stanford,
-	                           boolean no_babelnet) throws IOException
+	public AMRGraphListFactory(AMRReader reader, ULocale language, Path types_file, MeaningDictionary dictionary,
+	                           boolean no_stanford) throws IOException
 	{
 		this.reader = reader;
+		this.language = language;
 		stanford = new StanfordWrapper(no_stanford);
-		BabelNetWrapper babelnet = new BabelNetWrapper(bn_config_folder, no_babelnet);
-		this.candidate_collector = new CandidatesCollector(babelnet);
-		this.types_collector = (types_file != null) ? new TypesCollector(types_file, babelnet) : null;
+		this.candidate_collector = new CandidatesCollector(dictionary, language);
+		this.types_collector = (types_file != null) ? new TypesCollector(types_file, dictionary) : null;
 	}
 
 	public AMRGraphList create(String graph_bank)
@@ -50,7 +52,7 @@ public class AMRGraphListFactory
 		// Make variable ids unique across graphs
 		for (AMRGraph g : graphs)
 		{
-			String prefix = g.getSource() + "_";
+			String prefix = g.getContextId() + "_";
 			List<String> nodes_to_rename = g.vertexSet().stream()
 					.filter(v -> g.outgoingEdgesOf(v).stream().anyMatch(e -> e.toString().equals(AMRSemantics.instance)))
 					.collect(toList());
@@ -61,7 +63,7 @@ public class AMRGraphListFactory
 		List<CoreferenceChain> chains = stanford.process(graphs);
 
 		// Collect and classify mentions
-		final Multimap<String, Mention> mentions = AMRMentionsCollector.collectMentions(graphs);
+		final Multimap<String, Mention> mentions = AMRMentionsCollector.collectMentions(graphs, language);
 		final Multimap<String, Mention> singlewords = HashMultimap.create();
 		mentions.entries().stream().filter(e -> !e.getValue().isMultiWord()).forEach(e -> singlewords.put(e.getKey(), e.getValue()));
 		final Multimap<String, Mention> multiwords = HashMultimap.create();
