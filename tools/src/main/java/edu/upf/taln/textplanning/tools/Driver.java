@@ -8,6 +8,7 @@ import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
+import edu.upf.taln.textplanning.tools.evaluation.ExtractiveEvaluation;
 import edu.upf.taln.textplanning.tools.evaluation.RankingEvaluation;
 import edu.upf.taln.textplanning.tools.evaluation.SemEvalEvaluation;
 import org.apache.logging.log4j.LogManager;
@@ -23,54 +24,10 @@ public class Driver
 	private final static ULocale language = ULocale.ENGLISH;
 	private static final String semeval_command = "semeval";
 	private static final String rank_eval_command = "rankeval";
+	private static final String extract_eval_command = "extracteval";
 	private static final String collect_meanings_vectors = "meanings";
 	private static final String create_context_vectors = "context";
 	private final static Logger log = LogManager.getLogger();
-
-	@SuppressWarnings("unused")
-	@Parameters(commandDescription = "Run evaluation of meanings ranking")
-	private static class RankEvaluationCommand
-	{
-		@Parameter(names = {"-g", "-gold"}, description = "Path to gold file", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path gold_folder;
-		@Parameter(names = {"-i", "-input"}, description = "Path to XML input file", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path input_file;
-		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path dictionary;
-		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
-		private Path output;
-		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path freqsFile;
-		@Parameter(names = {"-sv", "-sentence_vectors"}, description = "Path to sentence vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path sentence_vectors_path;
-		@Parameter(names = {"-st", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1, required = true,
-				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
-		private SentenceVectorType sentence_vector_type = SentenceVectorType.Random;
-		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path word_vectors_path;
-		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1, required = true,
-				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private VectorType word_vector_type = VectorType.Random;
-		@Parameter(names = {"-cv", "-context_vectors"}, description = "Path to sense context vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path context_vectors_path;
-		@Parameter(names = {"-ct", "-context_vectors_type"}, description = "Type of sense context vectors", arity = 1, required = true,
-				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private VectorType context_vector_type = VectorType.Random;
-		@Parameter(names = {"-sev", "-sense_vectors"}, description = "Path to sense vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path sense_vectors_path;
-		@Parameter(names = {"-set", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
-				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private VectorType sense_vector_type = VectorType.Random;
-	}
 
 	@SuppressWarnings("unused")
 	@Parameters(commandDescription = "Run SemEval WSD/EL evaluation")
@@ -120,6 +77,96 @@ public class Driver
 	}
 
 	@SuppressWarnings("unused")
+	@Parameters(commandDescription = "Run evaluation of meanings ranking")
+	private static class RankEvaluationCommand
+	{
+		@Parameter(names = {"-g", "-gold"}, description = "Path to gold file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path gold_folder;
+		@Parameter(names = {"-i", "-input"}, description = "Path to XML input file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path input_file;
+		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path dictionary;
+		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
+		private Path output;
+		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path freqsFile;
+		@Parameter(names = {"-sv", "-sentence_vectors"}, description = "Path to sentence vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path sentence_vectors_path;
+		@Parameter(names = {"-st", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1, required = true,
+				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
+		private SentenceVectorType sentence_vector_type = SentenceVectorType.Random;
+		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path word_vectors_path;
+		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1, required = true,
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
+		private VectorType word_vector_type = VectorType.Random;
+		@Parameter(names = {"-cv", "-context_vectors"}, description = "Path to sense context vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path context_vectors_path;
+		@Parameter(names = {"-ct", "-context_vectors_type"}, description = "Type of sense context vectors", arity = 1, required = true,
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
+		private VectorType context_vector_type = VectorType.Random;
+		@Parameter(names = {"-sev", "-sense_vectors"}, description = "Path to sense vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path sense_vectors_path;
+		@Parameter(names = {"-set", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
+		private VectorType sense_vector_type = VectorType.Random;
+	}
+
+	@SuppressWarnings("unused")
+	@Parameters(commandDescription = "Run evaluation of ranking-based extractive summarization")
+	private static class ExtractiveEvaluationCommand
+	{
+		@Parameter(names = {"-g", "-gold"}, description = "Path to folder with text files containing gold summaries", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path gold_folder;
+		@Parameter(names = {"-i", "-input"}, description = "Path to folder with text files containing texts to summarize", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path input_file;
+		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path dictionary;
+		@Parameter(names = {"-o", "-output"}, description = "Path to folder where text files will be created containing system summaries", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
+		private Path output;
+		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path freqsFile;
+		@Parameter(names = {"-sv", "-sentence_vectors"}, description = "Path to sentence vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path sentence_vectors_path;
+		@Parameter(names = {"-st", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1, required = true,
+				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
+		private SentenceVectorType sentence_vector_type = SentenceVectorType.Random;
+		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path word_vectors_path;
+		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1, required = true,
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
+		private VectorType word_vector_type = VectorType.Random;
+		@Parameter(names = {"-cv", "-context_vectors"}, description = "Path to sense context vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path context_vectors_path;
+		@Parameter(names = {"-ct", "-context_vectors_type"}, description = "Type of sense context vectors", arity = 1, required = true,
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
+		private VectorType context_vector_type = VectorType.Random;
+		@Parameter(names = {"-sev", "-sense_vectors"}, description = "Path to sense vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path sense_vectors_path;
+		@Parameter(names = {"-set", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
+		private VectorType sense_vector_type = VectorType.Random;
+	}
+
+	@SuppressWarnings("unused")
 	@Parameters(commandDescription = "Collect meanings info from a dictionary and stores them into a binary file")
 	private static class CollectMeaningsCommand
 	{
@@ -165,14 +212,16 @@ public class Driver
 
 	public static void main(String[] args) throws Exception
 	{
-		RankEvaluationCommand rankEval = new RankEvaluationCommand();
 		SemEvalEvaluationCommand semEval = new SemEvalEvaluationCommand();
+		RankEvaluationCommand rankEval = new RankEvaluationCommand();
+		ExtractiveEvaluationCommand extractEval = new ExtractiveEvaluationCommand();
 		CollectMeaningsCommand meanings = new CollectMeaningsCommand();
 		CreateContextVectorsCommand context = new CreateContextVectorsCommand();
 
 		JCommander jc = new JCommander();
-		jc.addCommand(rank_eval_command, rankEval);
 		jc.addCommand(semeval_command, semEval);
+		jc.addCommand(rank_eval_command, rankEval);
+		jc.addCommand(extract_eval_command, extractEval);
 		jc.addCommand(collect_meanings_vectors, meanings);
 		jc.addCommand(create_context_vectors, context);
 		jc.parse(args);
@@ -205,6 +254,16 @@ public class Driver
 						rankEval.sentence_vectors_path, rankEval.sentence_vector_type,
 						rankEval.context_vectors_path, rankEval.context_vector_type);
 				RankingEvaluation.run(rankEval.gold_folder, rankEval.input_file, rankEval.output, resources);
+				break;
+			}
+			case extract_eval_command:
+			{
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, extractEval.dictionary, extractEval.freqsFile,
+						extractEval.sense_vectors_path, extractEval.sense_vector_type,
+						extractEval.word_vectors_path, extractEval.word_vector_type,
+						extractEval.sentence_vectors_path, extractEval.sentence_vector_type,
+						extractEval.context_vectors_path, extractEval.context_vector_type);
+				ExtractiveEvaluation.run(extractEval.gold_folder, extractEval.input_file, extractEval.output, resources);
 				break;
 			}
 			case collect_meanings_vectors:

@@ -8,7 +8,6 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.BinaryOperator;
-import java.util.stream.Collectors;
 
 public class SemanticGraph extends SimpleDirectedGraph<String, Role> implements Serializable
 {
@@ -64,12 +63,12 @@ public class SemanticGraph extends SimpleDirectedGraph<String, Role> implements 
 		C.stream()
 				.map(this::incomingEdgesOf)
 				.flatMap(Collection::stream)
-				.filter(e -> !v.equals(getEdgeSource(e)) && !C.contains(getEdgeSource(e)))
+				.filter(e -> !v.equals(getEdgeSource(e)) && !C.contains(getEdgeSource(e))) // prevents loops
 				.forEach(e -> addNewEdge(this.getEdgeSource(e), v, e.getLabel()));
 		C.stream()
 				.map(this::outgoingEdgesOf)
 				.flatMap(Collection::stream)
-				.filter(e -> !v.equals(getEdgeTarget(e)) && !C.contains(getEdgeTarget(e)))
+				.filter(e -> !v.equals(getEdgeTarget(e)) && !C.contains(getEdgeTarget(e))) // prevents loops
 				.forEach(e -> addNewEdge(v, this.getEdgeTarget(e), e.getLabel()));
 
 		// Remove meanings of C (v's meaning is kept)

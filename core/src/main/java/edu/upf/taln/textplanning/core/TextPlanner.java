@@ -7,18 +7,12 @@ import edu.upf.taln.textplanning.core.io.GraphSemantics;
 import edu.upf.taln.textplanning.core.ranking.Ranker;
 import edu.upf.taln.textplanning.core.redundancy.RedundancyRemover;
 import edu.upf.taln.textplanning.core.similarity.SemanticTreeSimilarity;
-import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.structures.Meaning;
-import edu.upf.taln.textplanning.core.structures.SemanticGraph;
-import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
+import edu.upf.taln.textplanning.core.structures.*;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.OptionalDouble;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
@@ -26,7 +20,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.*;
 
 
 /**
@@ -39,7 +33,7 @@ public final class TextPlanner
 	private final static Logger log = LogManager.getLogger();
 
 	/**
-	 * Generates a text plan from a semantic graph
+	 * Generates a text plan from a weighted semantic graph
 	 */
 	public static List<SemanticSubgraph> plan(SemanticGraph graph, GraphSemantics semantics,
 	                                          BiFunction<String, String, OptionalDouble> similarity, int num_graphs, Options o)
@@ -49,16 +43,13 @@ public final class TextPlanner
 			log.info("*Planning started*");
 			Stopwatch timer = Stopwatch.createStarted();
 
-			// 1- Rank vertices
-			rankVertices(graph, o);
-
-			// 2- Extract subgraphs from graph
+			// 1- Extract subgraphs from graph
 			Collection<SemanticSubgraph> subgraphs = extractSubgraphs(graph, semantics, num_graphs, o);
 
-			// 3- Remove redundant subgraphs
+			// 2- Remove redundant subgraphs
 			subgraphs = removeRedundantSubgraphs(subgraphs, num_graphs, similarity, o);
 
-			// 4- Sort the trees into a discourse-optimized list
+			// 3- Sort the trees into a discourse-optimized list
 			final List<SemanticSubgraph> text_plan = sortSubgraphs(subgraphs, similarity, o);
 
 			log.info("Planning took " + timer.stop());
@@ -72,10 +63,9 @@ public final class TextPlanner
 	}
 
 	/**
-	 * Ranks set of candidate meanings associated with a collection of semantic graphs, and stores the resulting ranks as
-	 * candidate weights.
+	 * Ranks set of candidate meanings
 	 */
-	public static void rankMeanings(Collection<Candidate> candidates, Predicate<Candidate> candidates_filter,
+	public static void rankMeanings(List<Candidate> candidates, Predicate<Candidate> candidates_filter,
 	                                BiPredicate<String, String> meanings_filter, Function<String, Double> weighting,
 	                                BiFunction<String, String, OptionalDouble> similarity, Options o)
 	{
@@ -113,29 +103,53 @@ public final class TextPlanner
 
 
 	/**
-	 * 	Ranks nodes of a semantic graph
+	 * 	Ranks mentions according to their initial weights and an adjacency function
 	 */
-	public static void rankVertices(SemanticGraph graph, Options o)
+	public static void rankMentions(List<Candidate> candidates, BiPredicate<Mention, Mention> adjacency_function,
+	                                Options o)
 	{
-		log.info("*Ranking vertices*");
+		log.info("*Ranking mentions*");
 		Stopwatch timer = Stopwatch.createStarted();
 
-		List<String> variables = graph.vertexSet().stream()
-				.sorted(Comparator.naturalOrder())
-				.collect(toList());
-		final List<String> labels = variables.stream() // for debugging purposes
-				.map(v -> DebugUtils.createLabelForVariable(v, graph.getMeaning(v), graph.getMentions(v)))
-				.collect(Collectors.toList());
+		if (!candidates.isEmpty())
+		{
+			final Map<Mention, Candidate> mentions2meanings = candidates.stream()
+				.collect(toMap(Candidate::getMention, c -> c, (c1, c2) ->
+				{
+					log.error("Duplicate candidates for mention " + c1.getMention().getId());
+					return c1;
+				}));
 
-		if (variables.isEmpty())
-			return;
+			// One variable per mention
+			final Map<String, Mention> variables2mentions = mentions2meanings.keySet().stream()
+					.collect(toMap(Mention::getId, m -> m));
+			final Map<String, Double> variables2weights = mentions2meanings.keySet().stream()
+					.collect(toMap(Mention::getId, m -> mentions2meanings.get(m).getWeight()));
+			List<String> variables = List.copyOf(variables2mentions.keySet());
 
-		BiFunction<String, String, OptionalDouble> similarity =
-				(v1, v2) -> OptionalDouble.of(graph.containsEdge(v1, v2) || graph.containsEdge(v2, v1) ? 1.0 : 0.0);
-		double[] ranking = Ranker.rank(variables, labels, graph::getWeight, similarity, false, (v1, v2) -> true, 0.0, o.damping_variables);
+			final List<String> labels = variables.stream() // for debugging purposes
+					.map(v ->
+					{
+						final Mention mention = variables2mentions.get(v);
+						final Meaning meaning = mentions2meanings.get(mention).getMeaning();
+						return DebugUtils.createLabelForVariable(v, meaning, List.of(mention));
+					})
+					.collect(Collectors.toList());
 
-		IntStream.range(0, variables.size()).boxed()
-				.forEach(i -> graph.setWeight(variables.get(i),  ranking[i]));
+
+			BiFunction<String, String, OptionalDouble> similarity =
+					(v1, v2) ->
+					{
+						final Mention m1 = variables2mentions.get(v1);
+						final Mention m2 = variables2mentions.get(v2);
+						return OptionalDouble.of(adjacency_function.test(m1, m2) || adjacency_function.test(m2, m1) ? 1.0 : 0.0);
+					};
+			double[] ranking = Ranker.rank(variables, labels, variables2weights::get, similarity, false,
+					(v1, v2) -> true, 0.0, o.damping_variables);
+
+			IntStream.range(0, variables.size()).boxed()
+					.forEach(i -> mentions2meanings.get(variables2mentions.get(variables.get(i))).setWeight(ranking[i]));
+		}
 
 		log.info("Ranking completed in " + timer.stop());
 	}

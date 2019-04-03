@@ -44,4 +44,5 @@ public interface MeaningDictionary
 	Optional<Boolean> isNE(String id);
 	List<String> getGlosses(String id, ULocale language);
 	List<String> getLemmas(String id, ULocale language);
+	long getNumQueries();
 }

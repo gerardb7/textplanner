@@ -62,7 +62,16 @@ public class AMRGraphList implements Serializable
 	}
 
 	public List<AMRGraph> getGraphs() { return graphs; }
+
+	public Optional<AMRGraph> getGraph(String v)
+	{
+		return graphs.stream()
+				.filter(g -> g.containsVertex(v))
+				.findFirst();
+	}
+
 	public Collection<Mention> getMentions() { return vertices2mentions.values(); }
+
 	public Collection<Mention> getMentions(String v)
 	{
 		return vertices2mentions.get(v);
@@ -71,9 +80,34 @@ public class AMRGraphList implements Serializable
 	{
 		return candidate_meanings.values();
 	}
+
+	public List<Candidate> getCandidates(AMRGraph g)
+	{
+		return candidate_meanings.keySet().stream()
+				.filter(g::containsVertex)
+				.map(candidate_meanings::get)
+				.flatMap(Collection::stream)
+				.collect(Collectors.toList());
+	}
+
 	public Collection<Candidate> getCandidates(String v)
 	{
 		return candidate_meanings.get(v);
+	}
+
+	public List<String> getVertices(Mention m)
+	{
+		return vertices2mentions.keySet().stream()
+				.filter(v -> vertices2mentions.get(v).contains(m))
+				.collect(Collectors.toList());
+	}
+
+	public boolean adjacent(Mention m1, Mention m2)
+	{
+		return getVertices(m1).stream()
+				.anyMatch(v1 -> getVertices(m2).stream()
+						.anyMatch(v2 -> getGraphs().stream()
+								.anyMatch(g -> g.containsEdge(v1, v2))));
 	}
 
 	// assigns candidate c as node v only candidate

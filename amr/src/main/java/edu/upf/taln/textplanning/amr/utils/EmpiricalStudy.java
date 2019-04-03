@@ -12,7 +12,7 @@ import edu.stanford.nlp.pipeline.CoreDocument;
 import edu.stanford.nlp.pipeline.CoreEntityMention;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.util.logging.RedwoodConfiguration;
-import edu.upf.taln.textplanning.amr.io.CandidatesCollector;
+import edu.upf.taln.textplanning.core.io.CandidatesCollector;
 import edu.upf.taln.textplanning.common.BabelNetDictionary;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
@@ -367,11 +367,10 @@ public class EmpiricalStudy
 					(l1, l2) -> l1 + l2));
 			log.info("CoreNLP processing done");
 
-			final Set<Mention> mentions = getMentions(document);
+			final List<Mention> mentions = getMentions(document);
 			log.info(mentions.size() + " mentions collected");
 
-			CandidatesCollector candidates_collector = new CandidatesCollector(bn, language);
-			final List<Candidate> candidates = candidates_collector.getCandidateMeanings(mentions);
+			final List<Candidate> candidates = CandidatesCollector.collect(bn, language, mentions);
 			final Map<String, List<Candidate>> candidates_by_pos = candidates.stream()
 					.collect(groupingBy(c -> simplifyTag(c.getMention().getPOS())));
 			candidates_by_pos.put(content, candidates); // Add a new category for all (content) mentions
@@ -515,12 +514,12 @@ public class EmpiricalStudy
 	{
 		final List<Mention> mentions = candidates.stream()
 				.map(Candidate::getMention)
-				.collect(Collectors.toList());
+				.collect(toList());
 		final List<List<Integer>> mentions_tokens = mentions.stream()
 				.map(m -> IntStream.range(m.getSpan().getLeft(), m.getSpan().getRight())
 						.boxed()
 						.collect(toList()))
-				.collect(Collectors.toList());
+				.collect(toList());
 
 		return mentions_tokens.stream()
 				.flatMap(List::stream)
@@ -542,12 +541,12 @@ public class EmpiricalStudy
 		// Calculate average polysemy of each token (average number of all_candidates of all mentions spanning over it)
 		final List<Mention> mentions = candidates.stream()
 				.map(Candidate::getMention)
-				.collect(Collectors.toList());
+				.collect(toList());
 		final List<List<Integer>> mentions_tokens = mentions.stream()
 				.map(m -> IntStream.range(m.getSpan().getLeft(), m.getSpan().getRight())
 						.boxed()
 						.collect(toList()))
-				.collect(Collectors.toList());
+				.collect(toList());
 
 		final Map<Mention, Long> mentions2num_meanings = candidates.stream()
 				.collect(Collectors.groupingBy(Candidate::getMention, counting()));
@@ -668,7 +667,7 @@ public class EmpiricalStudy
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
 				.distinct()
-				.collect(Collectors.toList());
+				.collect(toList());
 
 		final int num_meanings = meanings.size();
 		final long num_meanings_defined = 0;
@@ -854,7 +853,7 @@ public class EmpiricalStudy
 ////		return new FrequencyStats(meanings.size(), counts, doc_counts, corpus_counts, corpus_doc_counts, functions_counts);
 ////	}
 
-	private static Set<Mention> getMentions(CoreDocument document)
+	private static List<Mention> getMentions(CoreDocument document)
 	{
 		final List<Pair<Integer, Integer>> ne_offsets = document.entityMentions().stream()
 				.map(e -> Pair.of(e.coreMap().get(CoreAnnotations.TokenBeginAnnotation.class),
@@ -932,7 +931,7 @@ public class EmpiricalStudy
 									ne.toString());
 						}))
 				.flatMap(stream -> stream)
-				.collect(toSet());
+				.collect(toList());
 	}
 
 	private static String printStats(DescriptiveStatistics stats)

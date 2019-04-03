@@ -13,7 +13,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +45,7 @@ public class ProcessResourcesFactory
 		if (glosses == null)
 			this.glosses = s -> factory.getDictionary().getGlosses(s, factory.getLanguage());
 		else
-			this.glosses = s -> glosses.computeIfAbsent(s, k -> new ArrayList<>());
+			this.glosses = s -> glosses.computeIfAbsent(s, k -> List.of());
 		this.meaning_context_vectors = getVectors(factory.getMeaningContextVectorsPath(), factory.getMeaningContextVectorsType(), 300);
 	}
 

@@ -7,17 +7,17 @@ import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.amr.structures.AMRGraph;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.amr.structures.CoreferenceChain;
-import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
+import edu.upf.taln.textplanning.core.io.CandidatesCollector;
 import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import static java.util.stream.Collectors.toList;
 
@@ -27,7 +27,7 @@ public class AMRGraphListFactory
 	private final AMRReader reader;
 	private final ULocale language;
 	private final StanfordWrapper stanford;
-	private final CandidatesCollector candidate_collector;
+	private final MeaningDictionary dictionary;
 	private final TypesCollector types_collector;
 	private final static Logger log = LogManager.getLogger();
 
@@ -36,8 +36,8 @@ public class AMRGraphListFactory
 	{
 		this.reader = reader;
 		this.language = language;
+		this.dictionary = dictionary;
 		stanford = new StanfordWrapper(no_stanford);
-		this.candidate_collector = new CandidatesCollector(dictionary, language);
 		this.types_collector = (types_file != null) ? new TypesCollector(types_file, dictionary) : null;
 	}
 
@@ -72,9 +72,9 @@ public class AMRGraphListFactory
 		singlewords.entries().stream().filter(e -> e.getValue().isNominal()).forEach(e -> nominal_words.put(e.getKey(), e.getValue()));
 
 		// Collect candidates for mentions. Current behaviour is to lookup nouns and multiwords only
-		final Set<Mention> mentions_to_lookup = new HashSet<>(multiwords.values());
+		final List<Mention> mentions_to_lookup = new ArrayList<>(multiwords.values());
 		mentions_to_lookup.addAll(nominal_words.values());
-		List<Candidate> candidate_meanings = candidate_collector.getCandidateMeanings(mentions_to_lookup);
+		List<Candidate> candidate_meanings = CandidatesCollector.collect(dictionary, language, mentions_to_lookup);
 
 		// Assign types to candidates
 		if (types_collector != null)

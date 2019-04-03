@@ -82,7 +82,7 @@ public class DebugUtils
 	public static String printCorefMerge(String v, Collection<String> C, SemanticGraph g)
 	{
 		return "Coreferent vertices in chain " + C + " merged to " +
-				DebugUtils.createLabelForVariable(v, g.getMeaning(v), g.getMentions(v));
+				DebugUtils.createLabelForVariable(v, g.getMeaning(v).orElse(null), g.getMentions(v));
 	}
 
 	public static String printRank(Matrix v, int n, List<String> labels)
@@ -105,7 +105,7 @@ public class DebugUtils
 		AtomicInteger i = new AtomicInteger(1);
 		return sets.stream()
 				.map(s -> "Connected set " + i.getAndIncrement() + " of semantic graph\n" + s.stream()
-						.map(v -> "\t" + DebugUtils.createLabelForVariable(v, g.getMeaning(v), g.getMentions(v)))
+						.map(v -> "\t" + DebugUtils.createLabelForVariable(v, g.getMeaning(v).orElse(null), g.getMentions(v)))
 						.collect(Collectors.joining("\n")))
 				.collect(Collectors.joining("\n"));
 	}
@@ -137,7 +137,7 @@ public class DebugUtils
 		final String tabs = IntStream.range(0, depth)
 				.mapToObj(i -> "\t")
 				.collect(Collectors.joining());
-		String s = tabs + role + " -> " + DebugUtils.createLabelForVariable(v, t.getMeaning(v), t.getMentions(v)) +
+		String s = tabs + role + " -> " + DebugUtils.createLabelForVariable(v, t.getMeaning(v).orElse(null), t.getMentions(v)) +
 				" " + format.format(t.getWeight(v)) + "\n";
 
 		return s + t.outgoingEdgesOf(v).stream()
@@ -145,9 +145,9 @@ public class DebugUtils
 				.collect(Collectors.joining());
 	}
 
-	public static String createLabelForVariable(String v, Optional<Meaning> m, Collection<Mention> mentions)
+	public static String createLabelForVariable(String v, Meaning m, Collection<Mention> mentions)
 	{
-		final String meaning = m.map(Meaning::toString).orElse("");
+		final String meaning = m != null ? m.toString() : "";
 		final String surface_forms = mentions.stream()
 				.map(mention -> mention.getId() + "-" + mention.getSurface_form())
 				.distinct()

@@ -8,10 +8,11 @@ import edu.upf.taln.textplanning.common.ProcessResourcesFactory;
 import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
+import edu.upf.taln.textplanning.core.io.CandidatesCollector;
+import edu.upf.taln.textplanning.core.ranking.Disambiguation;
 import edu.upf.taln.textplanning.core.structures.*;
 import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.commons.lang3.tuple.Triple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -27,9 +28,9 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.*;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
 
 public class EvaluationTools
@@ -182,7 +183,7 @@ public class EvaluationTools
 				log.info("Looking up meanings");
 				timer.reset();
 				timer.start();
-				candidates = collectCandidates(resources.getDictionary(), mentions, language);
+				candidates = CandidatesCollector.collect(resources.getDictionary(), language, mentions);
 				log.info("Meanings looked up in " + timer.stop());
 
 				Serializer.serialize(candidates, candidates_path);
@@ -283,27 +284,38 @@ public class EvaluationTools
 				});
 	}
 
-	public static Map<Mention, Double> rankMentions(Options options, List<Candidate> candidates,
-	                                BiPredicate<String, String> adjacency_function,
-	                                BinaryOperator<String> labelling_function)
+	public static void disambiguate(Corpus corpus)
 	{
-		Function<Candidate, String> createVertexId = c -> c.getMention().getId();
-		final Map<String, Meaning> meanings = candidates.stream()
-				.collect(toMap(createVertexId, Candidate::getMeaning));
-		final Map<String, Double> weights = candidates.stream()
-				.collect(groupingBy(createVertexId, averagingDouble(Candidate::getWeight)));
-		final Map<String, List<Mention>> mentions = candidates.stream()
-				.map(Candidate::getMention)
-				.collect(groupingBy(Mention::getId));
-		final SemanticGraph g = new SemanticGraph(meanings, weights, mentions, adjacency_function, labelling_function);
-		TextPlanner.rankVertices(g, options);
+		corpus.texts.forEach(text ->
+		{
+			final List<Candidate> text_candidates = text.sentences.stream()
+					.flatMap(sentence -> sentence.candidates.values().stream())
+					.flatMap(List::stream)
+					.collect(toList());
+			final Map<Mention, Candidate> selected_candidates = Disambiguation.disambiguate(text_candidates);
+			text.sentences.forEach(sentence ->
+					sentence.candidates.replaceAll((mention, old_candidates) -> List.of(selected_candidates.get(mention))));
+		});
+	}
 
-		final Map<Mention, Double> weighted_mentions = new HashMap<>();
-		mentions.keySet().forEach(v ->
-				mentions.get(v).forEach(m ->
-						weighted_mentions.put(m, g.getWeight(v))));
+	public static void rankMentions(Options options, Corpus corpus)
+	{
+		final int context_size = 3;
+		corpus.texts.forEach(text ->
+				text.sentences.forEach(sentence ->
+				{
+					final List<Candidate> candidates = sentence.candidates.values().stream()
+							.flatMap(List::stream)
+							.collect(toList());
+					final List<Mention> mentions = candidates.stream().map(Candidate::getMention).collect(toList());
+					BiPredicate<Mention, Mention> adjacency_function =
+							(m1, m2) -> Math.abs(mentions.indexOf(m1) - mentions.indexOf(m2)) <= context_size;
+					BiPredicate<Mention, Mention> adjacency_function2 =
+							(m1, m2) -> corpus.graph.containsEdge(m1.getId(), m2.getId());
 
-		return weighted_mentions;
+					// rank mentions
+					TextPlanner.rankMentions(candidates, adjacency_function, options);
+				}));
 	}
 
 	public static List<Mention> collectMentions(Corpus corpus, int max_span_size, Set<String> exclude_pos_tags)
@@ -344,56 +356,5 @@ public class EvaluationTools
 						.flatMap(stream -> stream))
 				.flatMap(stream -> stream)
 				.collect(toList());
-	}
-
-	public static List<Candidate> collectCandidates(MeaningDictionary bn, List<Mention> mentions, ULocale language)
-	{
-		log.info("Collecting mentions");
-		final Map<Triple<String, String, String>, List<Mention>> forms2mentions = mentions.stream()
-				.collect(Collectors.groupingBy(m -> Triple.of(m.getSurface_form(), m.getLemma(), m.getPOS())));
-
-		log.info("\tQuerying " + forms2mentions.keySet().size() + " forms");
-		final Map<Triple<String, String, String>, List<Meaning>> forms2meanings = forms2mentions.keySet().stream()
-				.collect(toMap(t -> t, t -> getSynsets(bn, t, language).stream()
-						.map(meaning -> Meaning.get(meaning, bn.getLabel(meaning, language).orElse(""), false))
-						.collect(toList())));
-
-		// use traditional loops to make sure that the order of lists of candidates is preserved
-		final List<Candidate> candidates = new ArrayList<>();
-		for (Triple<String, String, String> t : forms2mentions.keySet())
-		{
-			final List<Mention> form_mentions = forms2mentions.get(t);
-			final List<Meaning> form_meanings = forms2meanings.get(t);
-			for (Mention mention : form_mentions)
-			{
-				final List<Candidate> mention_candidates = form_meanings.stream().map(meaning -> new Candidate(mention, meaning)).collect(toList());
-				candidates.addAll(mention_candidates);
-			}
-		}
-
-		return candidates;
-	}
-
-	/**
-	 * Returns sorted list of meanings for mention using lemma and form
-	 */
-	private static List<String> getSynsets(MeaningDictionary bn, Triple<String, String, String> mention, ULocale language)
-	{
-		// Use surface form of mention as label
-		String form = mention.getLeft();
-		String lemma = mention.getMiddle();
-		String pos = mention.getRight();
-		// Lemma meanings first, sorted by dictionary criteria (BabelNet -> best sense)
-		List<String> synsets = bn.getMeanings(lemma, pos, language);
-
-		// Form meanings go after
-		if (!lemma.equalsIgnoreCase(form))
-		{
-			List<String> lemma_synsets = bn.getMeanings(form, pos, language);
-			lemma_synsets.removeAll(synsets);
-			synsets.addAll(lemma_synsets);
-		}
-
-		return synsets;
 	}
 }

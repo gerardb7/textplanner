@@ -8,9 +8,7 @@ import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.amr.structures.CoreferenceChain;
 import edu.upf.taln.textplanning.core.io.SemanticGraphFactory;
 import edu.upf.taln.textplanning.core.ranking.Disambiguation;
-import edu.upf.taln.textplanning.core.structures.Meaning;
-import edu.upf.taln.textplanning.core.structures.Role;
-import edu.upf.taln.textplanning.core.structures.SemanticGraph;
+import edu.upf.taln.textplanning.core.structures.*;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -37,11 +35,13 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 		remove_names(graphs); // <- won't work unless executed before remove_concepts
 		Map<String, String> concepts = remove_concepts(graphs);
 
-		// 2- create merged graph and assign to it disambiguated meanings
-		SemanticGraph graph = mergeAMRGraphs(graphs, concepts);
-		Disambiguation.disambiguate(graph, List.copyOf(graphs.getCandidates()));
+		// 2- disambiguate candidates
+		final Map<Mention, Candidate> selected_candidates = Disambiguation.disambiguate(List.copyOf(graphs.getCandidates()));
 
-		// 3- post-process semantic graph
+		// 3- create merged graph and assign to it disambiguated meanings
+		SemanticGraph graph = mergeAMRGraphs(graphs, selected_candidates, concepts);
+
+		// 4- post-process semantic graph
 		mergeCorefenceChains(graph, graphs.getChains());
 		mergeNEs(graph);
 		resolve_arguments();
@@ -110,7 +110,8 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 		return concepts;
 	}
 
-	private static SemanticGraph mergeAMRGraphs(AMRGraphList graphs, Map<String, String> concepts)
+	private static SemanticGraph mergeAMRGraphs(AMRGraphList graphs, Map<Mention, Candidate> candidates,
+	                                            Map<String, String> concepts)
 	{
 		log.info("Merging graphs");
 
@@ -129,9 +130,14 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 			graphs.getMentions(v1).forEach(m -> merged.addMention(v1, m));
 			graphs.getMentions(v2).forEach(m -> merged.addMention(v2, m));
 
-			// There should be just one candidate, but anyway...
-			graphs.getCandidates(v1).forEach(c -> merged.setMeaning(v1, c.getMeaning()));
-			graphs.getCandidates(v2).forEach(c -> merged.setMeaning(v2, c.getMeaning()));
+			// There should be just one mention per vertex!
+			merged.vertexSet().forEach(v ->
+					merged.getMentions(v).stream()
+							.map(candidates::get)
+							.forEach(c -> {
+								merged.setMeaning(v, c.getMeaning());
+								merged.setWeight(v, c.getWeight());
+							}));
 
 			if (concepts.containsKey(v1))
 				merged.addType(v1, concepts.get(v1));

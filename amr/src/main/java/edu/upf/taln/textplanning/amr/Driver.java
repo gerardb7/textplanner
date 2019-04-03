@@ -47,23 +47,23 @@ public class Driver
 	private final static String output_folder = "out/";
 	private final static String process_suffix = ".processed.bin";
 	private final static String graphs_suffix = ".graphs.bin";
-	private final static String graphs_ranked_suffix = ".graphs_ranked.bin";
+	private final static String graphs_ranked1_suffix = ".graphs_ranked1.bin";
+	private final static String graphs_ranked2_suffix = ".graphs_ranked2.bin";
 	private final static String global_suffix = ".global.bin";
-	private final static String global_ranked_suffix = ".global_ranked.bin";
 	private final static String subgraphs_suffix = ".subgraphs.bin";
 	private final static String non_redundant_suffix = ".non_redundant.bin";
 	private final static String sorted_suffix = ".sorted.bin";
 	private final static String plan_suffix = ".plan.amr";
 	private final static String summary_suffix = ".summary.txt";
 	private final static String truncated_summary_suffix = ".trunc_summary.txt";
-	private final static List<String> suffixes = Arrays.asList(process_suffix, graphs_suffix, graphs_ranked_suffix,
-			global_suffix, global_ranked_suffix, subgraphs_suffix, non_redundant_suffix, sorted_suffix, plan_suffix);
+	private final static List<String> suffixes = Arrays.asList(process_suffix, graphs_suffix, graphs_ranked1_suffix,
+			graphs_ranked2_suffix, global_suffix, subgraphs_suffix, non_redundant_suffix, sorted_suffix, plan_suffix);
 
 	private final static Logger log = LogManager.getLogger();
 	private static final String create_graphs_command = "create_graphs";
 	private static final String rank_meanings_command = "rank_meanings";
 	private static final String create_global_command = "create_global";
-	private static final String rank_variables_command = "rank_variables";
+	private static final String rank_variables_command = "rank_mentions";
 	private static final String extract_subgraphs_command = "extract_subgraphs";
 	private static final String remove_redundancy_command = "remove_redundancy";
 	private static final String sort_subgraphs_command = "sort_subgraphs";
@@ -112,9 +112,27 @@ public class Driver
 		TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
 
 		Path output = FileUtils.createOutputPath(graphs_file, graphs_file.getParent(),
-				FilenameUtils.getExtension(graphs_file.toFile().getName()), graphs_ranked_suffix);
+				FilenameUtils.getExtension(graphs_file.toFile().getName()), graphs_ranked1_suffix);
 		Serializer.serialize(graphs, output);
-		log.info("Ranked graphs serialized to " + output);
+		log.info("Graphs with ranked meanings serialized to " + output);
+	}
+
+	private void rank_mentions(Path graphs_file) throws IOException, ClassNotFoundException
+	{
+		log.info("Running from " + graphs_file);
+		AMRGraphList graphs = (AMRGraphList) Serializer.deserialize(graphs_file);
+
+		Options options = new Options();
+		graphs.getGraphs().forEach(g ->
+		{
+			final List<Candidate> graph_candidates = graphs.getCandidates(g);
+			TextPlanner.rankMentions(graph_candidates, graphs::adjacent, options);
+		});
+
+		Path output = FileUtils.createOutputPath(graphs_file, graphs_file.getParent(),
+				FilenameUtils.getExtension(graphs_file.toFile().getName()), graphs_ranked2_suffix);
+		Serializer.serialize(graphs, output);
+		log.info("Graphs with ranked mentions serialized to " + output);
 	}
 
 	private void create_global(Path graphs_file) throws IOException, ClassNotFoundException
@@ -129,20 +147,6 @@ public class Driver
 				FilenameUtils.getExtension(graphs_file.toFile().getName()), global_suffix);
 		Serializer.serialize(graph, output);
 		log.info("Global semantic graph serialized to " + output);
-	}
-
-	private void rank_variables(Path graph_file) throws IOException, ClassNotFoundException
-	{
-		log.info("Running from " + graph_file);
-		SemanticGraph graph = (SemanticGraph) Serializer.deserialize(graph_file);
-
-		Options options = new Options();
-		TextPlanner.rankVertices(graph, options);
-
-		Path output = FileUtils.createOutputPath(graph_file, graph_file.getParent(),
-				FilenameUtils.getExtension(graph_file.toFile().getName()), global_ranked_suffix);
-		Serializer.serialize(graph, output);
-		log.info("Ranked global semantic graph serialized to " + output);
 	}
 
 	private void extract_subgraphs(Path graph_file, int num_subgraphs) throws IOException, ClassNotFoundException
@@ -302,19 +306,23 @@ public class Driver
 
 //			TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, weight, similarity, options);
 			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
-					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), graphs_ranked_suffix);
+					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), graphs_ranked1_suffix);
 			Serializer.serialize(graphs, output_path);
 
-			// 3- Create global graph
+			// 3- Rank mentions in each sentence
+			graphs.getGraphs().forEach(g ->
+			{
+				final List<Candidate> graph_candidates = graphs.getCandidates(g);
+				TextPlanner.rankMentions(graph_candidates, graphs::adjacent, options);
+			});
+			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
+					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), graphs_ranked2_suffix);
+			Serializer.serialize(graphs, output_path);
+
+			// 4- Create global graph
 			SemanticGraph graph = globalGraphFactory.create(graphs);
 			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
 					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), global_suffix);
-			Serializer.serialize(graph, output_path);
-
-			// 4- Rank variables
-			TextPlanner.rankVertices(graph, options);
-			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
-					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), global_ranked_suffix);
 			Serializer.serialize(graph, output_path);
 
 			// 5- Extract subgraphs
@@ -621,7 +629,7 @@ public class Driver
 			else if (jc.getParsedCommand().equals(create_global_command))
 			driver.create_global(create_global.inputFile);
 		else if (jc.getParsedCommand().equals(rank_variables_command))
-			driver.rank_variables(rank_variables.inputFile);
+			driver.rank_mentions(rank_variables.inputFile);
 		else if (jc.getParsedCommand().equals(extract_subgraphs_command))
 			driver.extract_subgraphs(extract_subgraphs.inputFile, extract_subgraphs.num_subgraphs);
 		else if (jc.getParsedCommand().equals(remove_redundancy_command))

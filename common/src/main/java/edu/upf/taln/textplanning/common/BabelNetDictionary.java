@@ -25,7 +25,7 @@ import static java.util.stream.Collectors.toList;
 public class BabelNetDictionary implements MeaningDictionary
 {
 	private final it.uniroma1.lcl.babelnet.BabelNet bn;
-	public static final AtomicLong num_queries = new AtomicLong();
+	private static final AtomicLong num_queries = new AtomicLong();
 	private final static Logger log = LogManager.getLogger();
 
 	public BabelNetDictionary(Path config_folder)
@@ -283,5 +283,11 @@ public class BabelNetDictionary implements MeaningDictionary
 			return Collections.emptyList();
 		}
 
+	}
+
+	@Override
+	public long getNumQueries()
+	{
+		return num_queries.get();
 	}
 }
