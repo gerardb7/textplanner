@@ -155,7 +155,8 @@ public class Driver
 		SemanticGraph graph = (SemanticGraph) Serializer.deserialize(graph_file);
 
 		Options options = new Options();
-		final Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(graph, new AMRSemantics(), num_subgraphs, options);
+		options.num_subgraphs_extract = num_subgraphs;
+		final Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(graph, new AMRSemantics(), options);
 
 		Path output = FileUtils.createOutputPath(graph_file, graph_file.getParent(),
 				FilenameUtils.getExtension(graph_file.toFile().getName()), subgraphs_suffix);
@@ -170,7 +171,8 @@ public class Driver
 		BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
 
 		Options options = new Options();
-		subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, num_subgraphs, (e1, e2) -> sim.apply(e1, e2), options);
+		options.num_subgraphs = num_subgraphs;
+		subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, (e1, e2) -> sim.apply(e1, e2), options);
 
 		Path output = FileUtils.createOutputPath(subgraphs_file, subgraphs_file.getParent(),
 				FilenameUtils.getExtension(subgraphs_file.toFile().getName()), non_redundant_suffix);
@@ -240,6 +242,8 @@ public class Driver
 		AmrMain generator = new AmrMain(generation_resources);
 
 		Options options = new Options();
+		options.num_subgraphs_extract = num_subgraphs_extract;
+		options.num_subgraphs = num_subgraphs;
 		log.info("Options: " + options);
 		log.info("*****Set up took " + timer.stop() + "*****");
 		timer.reset(); timer.start();
@@ -326,13 +330,13 @@ public class Driver
 			Serializer.serialize(graph, output_path);
 
 			// 5- Extract subgraphs
-			Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(graph, new AMRSemantics(), num_subgraphs_extract, options);
+			Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(graph, new AMRSemantics(), options);
 			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
 					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), subgraphs_suffix);
 			Serializer.serialize(subgraphs, output_path);
 
 			// 6- Remove redundancy
-			subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, num_subgraphs, similarity, options);
+			subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, similarity, options);
 			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
 					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), non_redundant_suffix);
 			Serializer.serialize(subgraphs, output_path);

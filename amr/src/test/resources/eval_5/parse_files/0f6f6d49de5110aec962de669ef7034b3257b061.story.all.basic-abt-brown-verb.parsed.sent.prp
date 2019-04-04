@@ -1,0 +1,573 @@
+----------------------------------------
+(CNN)  -- I am Shane Stanford.
+
+Sentence #1 (9 tokens):
+(CNN)  -- I am Shane Stanford.
+[Text=-LRB- CharacterOffsetBegin=0 CharacterOffsetEnd=1 PartOfSpeech=-LRB- Lemma=-lrb- NamedEntityTag=O]
+[Text=CNN CharacterOffsetBegin=1 CharacterOffsetEnd=4 PartOfSpeech=NNP Lemma=CNN NamedEntityTag=ORGANIZATION]
+[Text=-RRB- CharacterOffsetBegin=4 CharacterOffsetEnd=5 PartOfSpeech=-RRB- Lemma=-rrb- NamedEntityTag=O]
+[Text=-- CharacterOffsetBegin=7 CharacterOffsetEnd=9 PartOfSpeech=: Lemma=-- NamedEntityTag=O]
+[Text=I CharacterOffsetBegin=10 CharacterOffsetEnd=11 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=am CharacterOffsetBegin=12 CharacterOffsetEnd=14 PartOfSpeech=VBP Lemma=be NamedEntityTag=O]
+[Text=Shane CharacterOffsetBegin=15 CharacterOffsetEnd=20 PartOfSpeech=NNP Lemma=Shane NamedEntityTag=PERSON]
+[Text=Stanford CharacterOffsetBegin=21 CharacterOffsetEnd=29 PartOfSpeech=NNP Lemma=Stanford NamedEntityTag=PERSON]
+[Text=. CharacterOffsetBegin=29 CharacterOffsetEnd=30 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> NLP> ----------------------------------------
+To my family, I am a husband of 20 years and the boastful father of three.
+
+Sentence #1 (18 tokens):
+To my family, I am a husband of 20 years and the boastful father of three.
+[Text=To CharacterOffsetBegin=0 CharacterOffsetEnd=2 PartOfSpeech=TO Lemma=to NamedEntityTag=O]
+[Text=my CharacterOffsetBegin=3 CharacterOffsetEnd=5 PartOfSpeech=PRP$ Lemma=my NamedEntityTag=O]
+[Text=family CharacterOffsetBegin=6 CharacterOffsetEnd=12 PartOfSpeech=NN Lemma=family NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=12 CharacterOffsetEnd=13 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=I CharacterOffsetBegin=14 CharacterOffsetEnd=15 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=am CharacterOffsetBegin=16 CharacterOffsetEnd=18 PartOfSpeech=VBP Lemma=be NamedEntityTag=O]
+[Text=a CharacterOffsetBegin=19 CharacterOffsetEnd=20 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=husband CharacterOffsetBegin=21 CharacterOffsetEnd=28 PartOfSpeech=NN Lemma=husband NamedEntityTag=O]
+[Text=of CharacterOffsetBegin=29 CharacterOffsetEnd=31 PartOfSpeech=IN Lemma=of NamedEntityTag=O]
+[Text=20 CharacterOffsetBegin=32 CharacterOffsetEnd=34 PartOfSpeech=CD Lemma=20 NamedEntityTag=DURATION NormalizedNamedEntityTag=P20Y Timex=<TIMEX3 tid="t1" functionType="DURATION" value="P20Y">20 years</TIMEX3>]
+[Text=years CharacterOffsetBegin=35 CharacterOffsetEnd=40 PartOfSpeech=NNS Lemma=year NamedEntityTag=DURATION NormalizedNamedEntityTag=P20Y Timex=<TIMEX3 tid="t1" functionType="DURATION" value="P20Y">20 years</TIMEX3>]
+[Text=and CharacterOffsetBegin=41 CharacterOffsetEnd=44 PartOfSpeech=CC Lemma=and NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=45 CharacterOffsetEnd=48 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=boastful CharacterOffsetBegin=49 CharacterOffsetEnd=57 PartOfSpeech=JJ Lemma=boastful NamedEntityTag=O]
+[Text=father CharacterOffsetBegin=58 CharacterOffsetEnd=64 PartOfSpeech=NN Lemma=father NamedEntityTag=O]
+[Text=of CharacterOffsetBegin=65 CharacterOffsetEnd=67 PartOfSpeech=IN Lemma=of NamedEntityTag=O]
+[Text=three CharacterOffsetBegin=68 CharacterOffsetEnd=73 PartOfSpeech=CD Lemma=three NamedEntityTag=NUMBER NormalizedNamedEntityTag=3.0]
+[Text=. CharacterOffsetBegin=73 CharacterOffsetEnd=74 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> NLP> ----------------------------------------
+To my congregation of nearly 5,000, I am a pastor.
+Sentence #1 (12 tokens):
+To my congregation of nearly 5,000, I am a pastor.
+[Text=To CharacterOffsetBegin=0 CharacterOffsetEnd=2 PartOfSpeech=TO Lemma=to NamedEntityTag=O]
+[Text=my CharacterOffsetBegin=3 CharacterOffsetEnd=5 PartOfSpeech=PRP$ Lemma=my NamedEntityTag=O]
+[Text=congregation CharacterOffsetBegin=6 CharacterOffsetEnd=18 PartOfSpeech=NN Lemma=congregation NamedEntityTag=O]
+[Text=of CharacterOffsetBegin=19 CharacterOffsetEnd=21 PartOfSpeech=IN Lemma=of NamedEntityTag=O]
+[Text=nearly CharacterOffsetBegin=22 CharacterOffsetEnd=28 PartOfSpeech=RB Lemma=nearly NamedEntityTag=O]
+[Text=5,000 CharacterOffsetBegin=29 CharacterOffsetEnd=34 PartOfSpeech=CD Lemma=5,000 NamedEntityTag=NUMBER NormalizedNamedEntityTag=~5000.0]
+[Text=, CharacterOffsetBegin=34 CharacterOffsetEnd=35 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=I CharacterOffsetBegin=36 CharacterOffsetEnd=37 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=am CharacterOffsetBegin=38 CharacterOffsetEnd=40 PartOfSpeech=VBP Lemma=be NamedEntityTag=O]
+[Text=a CharacterOffsetBegin=41 CharacterOffsetEnd=42 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=pastor CharacterOffsetBegin=43 CharacterOffsetEnd=49 PartOfSpeech=NN Lemma=pastor NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=49 CharacterOffsetEnd=50 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+To my readers, I am the author of nine Christian books.
+Sentence #1 (13 tokens):
+To my readers, I am the author of nine Christian books.
+[Text=To CharacterOffsetBegin=0 CharacterOffsetEnd=2 PartOfSpeech=TO Lemma=to NamedEntityTag=O]
+[Text=my CharacterOffsetBegin=3 CharacterOffsetEnd=5 PartOfSpeech=PRP$ Lemma=my NamedEntityTag=O]
+[Text=readers CharacterOffsetBegin=6 CharacterOffsetEnd=13 PartOfSpeech=NNS Lemma=reader NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=13 CharacterOffsetEnd=14 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=I CharacterOffsetBegin=15 CharacterOffsetEnd=16 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=am CharacterOffsetBegin=17 CharacterOffsetEnd=19 PartOfSpeech=VBP Lemma=be NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=20 CharacterOffsetEnd=23 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=author CharacterOffsetBegin=24 CharacterOffsetEnd=30 PartOfSpeech=NN Lemma=author NamedEntityTag=O]
+[Text=of CharacterOffsetBegin=31 CharacterOffsetEnd=33 PartOfSpeech=IN Lemma=of NamedEntityTag=O]
+[Text=nine CharacterOffsetBegin=34 CharacterOffsetEnd=38 PartOfSpeech=CD Lemma=nine NamedEntityTag=NUMBER NormalizedNamedEntityTag=9.0]
+[Text=Christian CharacterOffsetBegin=39 CharacterOffsetEnd=48 PartOfSpeech=JJ Lemma=christian NamedEntityTag=MISC]
+[Text=books CharacterOffsetBegin=49 CharacterOffsetEnd=54 PartOfSpeech=NNS Lemma=book NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=54 CharacterOffsetEnd=55 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+To my friends, I am one of the guys.
+Sentence #1 (11 tokens):
+To my friends, I am one of the guys.
+[Text=To CharacterOffsetBegin=0 CharacterOffsetEnd=2 PartOfSpeech=TO Lemma=to NamedEntityTag=O]
+[Text=my CharacterOffsetBegin=3 CharacterOffsetEnd=5 PartOfSpeech=PRP$ Lemma=my NamedEntityTag=O]
+[Text=friends CharacterOffsetBegin=6 CharacterOffsetEnd=13 PartOfSpeech=NNS Lemma=friend NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=13 CharacterOffsetEnd=14 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=I CharacterOffsetBegin=15 CharacterOffsetEnd=16 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=am CharacterOffsetBegin=17 CharacterOffsetEnd=19 PartOfSpeech=VBP Lemma=be NamedEntityTag=O]
+[Text=one CharacterOffsetBegin=20 CharacterOffsetEnd=23 PartOfSpeech=CD Lemma=one NamedEntityTag=NUMBER NormalizedNamedEntityTag=1.0]
+[Text=of CharacterOffsetBegin=24 CharacterOffsetEnd=26 PartOfSpeech=IN Lemma=of NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=27 CharacterOffsetEnd=30 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=guys CharacterOffsetBegin=31 CharacterOffsetEnd=35 PartOfSpeech=NNS Lemma=guy NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=35 CharacterOffsetEnd=36 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+And, to so many over the years who have known my story, I am a man in a race -- a race against illness, against fear, against discrimination.
+
+Sentence #1 (33 tokens):
+And, to so many over the years who have known my story, I am a man in a race -- a race against illness, against fear, against discrimination.
+[Text=And CharacterOffsetBegin=0 CharacterOffsetEnd=3 PartOfSpeech=CC Lemma=and NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=3 CharacterOffsetEnd=4 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=to CharacterOffsetBegin=5 CharacterOffsetEnd=7 PartOfSpeech=TO Lemma=to NamedEntityTag=O]
+[Text=so CharacterOffsetBegin=8 CharacterOffsetEnd=10 PartOfSpeech=RB Lemma=so NamedEntityTag=O]
+[Text=many CharacterOffsetBegin=11 CharacterOffsetEnd=15 PartOfSpeech=JJ Lemma=many NamedEntityTag=O]
+[Text=over CharacterOffsetBegin=16 CharacterOffsetEnd=20 PartOfSpeech=IN Lemma=over NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=21 CharacterOffsetEnd=24 PartOfSpeech=DT Lemma=the NamedEntityTag=DURATION NormalizedNamedEntityTag=PXY Timex=<TIMEX3 tid="t1" functionType="DURATION" value="PXY">the years</TIMEX3>]
+[Text=years CharacterOffsetBegin=25 CharacterOffsetEnd=30 PartOfSpeech=NNS Lemma=year NamedEntityTag=DURATION NormalizedNamedEntityTag=PXY Timex=<TIMEX3 tid="t1" functionType="DURATION" value="PXY">the years</TIMEX3>]
+[Text=who CharacterOffsetBegin=31 CharacterOffsetEnd=34 PartOfSpeech=WP Lemma=who NamedEntityTag=O]
+[Text=have CharacterOffsetBegin=35 CharacterOffsetEnd=39 PartOfSpeech=VBP Lemma=have NamedEntityTag=O]
+[Text=known CharacterOffsetBegin=40 CharacterOffsetEnd=45 PartOfSpeech=VBN Lemma=know NamedEntityTag=O]
+[Text=my CharacterOffsetBegin=46 CharacterOffsetEnd=48 PartOfSpeech=PRP$ Lemma=my NamedEntityTag=O]
+[Text=story CharacterOffsetBegin=49 CharacterOffsetEnd=54 PartOfSpeech=NN Lemma=story NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=54 CharacterOffsetEnd=55 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=I CharacterOffsetBegin=56 CharacterOffsetEnd=57 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=am CharacterOffsetBegin=58 CharacterOffsetEnd=60 PartOfSpeech=VBP Lemma=be NamedEntityTag=O]
+[Text=a CharacterOffsetBegin=61 CharacterOffsetEnd=62 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=man CharacterOffsetBegin=63 CharacterOffsetEnd=66 PartOfSpeech=NN Lemma=man NamedEntityTag=O]
+[Text=in CharacterOffsetBegin=67 CharacterOffsetEnd=69 PartOfSpeech=IN Lemma=in NamedEntityTag=O]
+[Text=a CharacterOffsetBegin=70 CharacterOffsetEnd=71 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=race CharacterOffsetBegin=72 CharacterOffsetEnd=76 PartOfSpeech=NN Lemma=race NamedEntityTag=O]
+[Text=-- CharacterOffsetBegin=77 CharacterOffsetEnd=79 PartOfSpeech=: Lemma=-- NamedEntityTag=O]
+[Text=a CharacterOffsetBegin=80 CharacterOffsetEnd=81 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=race CharacterOffsetBegin=82 CharacterOffsetEnd=86 PartOfSpeech=NN Lemma=race NamedEntityTag=O]
+[Text=against CharacterOffsetBegin=87 CharacterOffsetEnd=94 PartOfSpeech=IN Lemma=against NamedEntityTag=O]
+[Text=illness CharacterOffsetBegin=95 CharacterOffsetEnd=102 PartOfSpeech=NN Lemma=illness NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=102 CharacterOffsetEnd=103 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=against CharacterOffsetBegin=104 CharacterOffsetEnd=111 PartOfSpeech=IN Lemma=against NamedEntityTag=O]
+[Text=fear CharacterOffsetBegin=112 CharacterOffsetEnd=116 PartOfSpeech=NN Lemma=fear NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=116 CharacterOffsetEnd=117 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=against CharacterOffsetBegin=118 CharacterOffsetEnd=125 PartOfSpeech=IN Lemma=against NamedEntityTag=O]
+[Text=discrimination CharacterOffsetBegin=126 CharacterOffsetEnd=140 PartOfSpeech=NN Lemma=discrimination NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=140 CharacterOffsetEnd=141 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> NLP> ----------------------------------------
+A race against my own body.
+Sentence #1 (7 tokens):
+A race against my own body.
+[Text=A CharacterOffsetBegin=0 CharacterOffsetEnd=1 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=race CharacterOffsetBegin=2 CharacterOffsetEnd=6 PartOfSpeech=NN Lemma=race NamedEntityTag=O]
+[Text=against CharacterOffsetBegin=7 CharacterOffsetEnd=14 PartOfSpeech=IN Lemma=against NamedEntityTag=O]
+[Text=my CharacterOffsetBegin=15 CharacterOffsetEnd=17 PartOfSpeech=PRP$ Lemma=my NamedEntityTag=O]
+[Text=own CharacterOffsetBegin=18 CharacterOffsetEnd=21 PartOfSpeech=JJ Lemma=own NamedEntityTag=O]
+[Text=body CharacterOffsetBegin=22 CharacterOffsetEnd=26 PartOfSpeech=NN Lemma=body NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=26 CharacterOffsetEnd=27 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+A race against time.
+Sentence #1 (5 tokens):
+A race against time.
+[Text=A CharacterOffsetBegin=0 CharacterOffsetEnd=1 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=race CharacterOffsetBegin=2 CharacterOffsetEnd=6 PartOfSpeech=NN Lemma=race NamedEntityTag=O]
+[Text=against CharacterOffsetBegin=7 CharacterOffsetEnd=14 PartOfSpeech=IN Lemma=against NamedEntityTag=O]
+[Text=time CharacterOffsetBegin=15 CharacterOffsetEnd=19 PartOfSpeech=NN Lemma=time NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=19 CharacterOffsetEnd=20 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+A hemophiliac since birth, I discovered my HIV status at 16.
+Sentence #1 (13 tokens):
+A hemophiliac since birth, I discovered my HIV status at 16.
+[Text=A CharacterOffsetBegin=0 CharacterOffsetEnd=1 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=hemophiliac CharacterOffsetBegin=2 CharacterOffsetEnd=13 PartOfSpeech=NN Lemma=hemophiliac NamedEntityTag=O]
+[Text=since CharacterOffsetBegin=14 CharacterOffsetEnd=19 PartOfSpeech=IN Lemma=since NamedEntityTag=O]
+[Text=birth CharacterOffsetBegin=20 CharacterOffsetEnd=25 PartOfSpeech=NN Lemma=birth NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=25 CharacterOffsetEnd=26 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=I CharacterOffsetBegin=27 CharacterOffsetEnd=28 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=discovered CharacterOffsetBegin=29 CharacterOffsetEnd=39 PartOfSpeech=VBD Lemma=discover NamedEntityTag=O]
+[Text=my CharacterOffsetBegin=40 CharacterOffsetEnd=42 PartOfSpeech=PRP$ Lemma=my NamedEntityTag=O]
+[Text=HIV CharacterOffsetBegin=43 CharacterOffsetEnd=46 PartOfSpeech=NN Lemma=hiv NamedEntityTag=MISC]
+[Text=status CharacterOffsetBegin=47 CharacterOffsetEnd=53 PartOfSpeech=NN Lemma=status NamedEntityTag=O]
+[Text=at CharacterOffsetBegin=54 CharacterOffsetEnd=56 PartOfSpeech=IN Lemma=at NamedEntityTag=O]
+[Text=16 CharacterOffsetBegin=57 CharacterOffsetEnd=59 PartOfSpeech=CD Lemma=16 NamedEntityTag=NUMBER NormalizedNamedEntityTag=16.0]
+[Text=. CharacterOffsetBegin=59 CharacterOffsetEnd=60 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+It was life-changing news, the result of a contaminated blood supply.
+Sentence #1 (13 tokens):
+It was life-changing news, the result of a contaminated blood supply.
+[Text=It CharacterOffsetBegin=0 CharacterOffsetEnd=2 PartOfSpeech=PRP Lemma=it NamedEntityTag=O]
+[Text=was CharacterOffsetBegin=3 CharacterOffsetEnd=6 PartOfSpeech=VBD Lemma=be NamedEntityTag=O]
+[Text=life-changing CharacterOffsetBegin=7 CharacterOffsetEnd=20 PartOfSpeech=JJ Lemma=life-changing NamedEntityTag=O]
+[Text=news CharacterOffsetBegin=21 CharacterOffsetEnd=25 PartOfSpeech=NN Lemma=news NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=25 CharacterOffsetEnd=26 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=27 CharacterOffsetEnd=30 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=result CharacterOffsetBegin=31 CharacterOffsetEnd=37 PartOfSpeech=NN Lemma=result NamedEntityTag=O]
+[Text=of CharacterOffsetBegin=38 CharacterOffsetEnd=40 PartOfSpeech=IN Lemma=of NamedEntityTag=O]
+[Text=a CharacterOffsetBegin=41 CharacterOffsetEnd=42 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=contaminated CharacterOffsetBegin=43 CharacterOffsetEnd=55 PartOfSpeech=VBN Lemma=contaminate NamedEntityTag=O]
+[Text=blood CharacterOffsetBegin=56 CharacterOffsetEnd=61 PartOfSpeech=NN Lemma=blood NamedEntityTag=O]
+[Text=supply CharacterOffsetBegin=62 CharacterOffsetEnd=68 PartOfSpeech=NN Lemma=supply NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=68 CharacterOffsetEnd=69 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+And, so, the race began.
+Sentence #1 (8 tokens):
+And, so, the race began.
+[Text=And CharacterOffsetBegin=0 CharacterOffsetEnd=3 PartOfSpeech=CC Lemma=and NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=3 CharacterOffsetEnd=4 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=so CharacterOffsetBegin=5 CharacterOffsetEnd=7 PartOfSpeech=RB Lemma=so NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=7 CharacterOffsetEnd=8 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=9 CharacterOffsetEnd=12 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=race CharacterOffsetBegin=13 CharacterOffsetEnd=17 PartOfSpeech=NN Lemma=race NamedEntityTag=O]
+[Text=began CharacterOffsetBegin=18 CharacterOffsetEnd=23 PartOfSpeech=VBD Lemma=begin NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=23 CharacterOffsetEnd=24 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+It has included many twists and turns: from the joy of marrying my high school sweetheart to the sorrow of being rejected by the first church to which I was appointed as pastor.
+
+Sentence #1 (35 tokens):
+It has included many twists and turns: from the joy of marrying my high school sweetheart to the sorrow of being rejected by the first church to which I was appointed as pastor.
+[Text=It CharacterOffsetBegin=0 CharacterOffsetEnd=2 PartOfSpeech=PRP Lemma=it NamedEntityTag=O]
+[Text=has CharacterOffsetBegin=3 CharacterOffsetEnd=6 PartOfSpeech=VBZ Lemma=have NamedEntityTag=O]
+[Text=included CharacterOffsetBegin=7 CharacterOffsetEnd=15 PartOfSpeech=VBN Lemma=include NamedEntityTag=O]
+[Text=many CharacterOffsetBegin=16 CharacterOffsetEnd=20 PartOfSpeech=JJ Lemma=many NamedEntityTag=O]
+[Text=twists CharacterOffsetBegin=21 CharacterOffsetEnd=27 PartOfSpeech=NNS Lemma=twist NamedEntityTag=O]
+[Text=and CharacterOffsetBegin=28 CharacterOffsetEnd=31 PartOfSpeech=CC Lemma=and NamedEntityTag=O]
+[Text=turns CharacterOffsetBegin=32 CharacterOffsetEnd=37 PartOfSpeech=VBZ Lemma=turn NamedEntityTag=O]
+[Text=: CharacterOffsetBegin=37 CharacterOffsetEnd=38 PartOfSpeech=: Lemma=: NamedEntityTag=O]
+[Text=from CharacterOffsetBegin=39 CharacterOffsetEnd=43 PartOfSpeech=IN Lemma=from NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=44 CharacterOffsetEnd=47 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=joy CharacterOffsetBegin=48 CharacterOffsetEnd=51 PartOfSpeech=NN Lemma=joy NamedEntityTag=O]
+[Text=of CharacterOffsetBegin=52 CharacterOffsetEnd=54 PartOfSpeech=IN Lemma=of NamedEntityTag=O]
+[Text=marrying CharacterOffsetBegin=55 CharacterOffsetEnd=63 PartOfSpeech=VBG Lemma=marry NamedEntityTag=O]
+[Text=my CharacterOffsetBegin=64 CharacterOffsetEnd=66 PartOfSpeech=PRP$ Lemma=my NamedEntityTag=O]
+[Text=high CharacterOffsetBegin=67 CharacterOffsetEnd=71 PartOfSpeech=JJ Lemma=high NamedEntityTag=O]
+[Text=school CharacterOffsetBegin=72 CharacterOffsetEnd=78 PartOfSpeech=NN Lemma=school NamedEntityTag=O]
+[Text=sweetheart CharacterOffsetBegin=79 CharacterOffsetEnd=89 PartOfSpeech=NN Lemma=sweetheart NamedEntityTag=O]
+[Text=to CharacterOffsetBegin=90 CharacterOffsetEnd=92 PartOfSpeech=TO Lemma=to NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=93 CharacterOffsetEnd=96 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=sorrow CharacterOffsetBegin=97 CharacterOffsetEnd=103 PartOfSpeech=NN Lemma=sorrow NamedEntityTag=O]
+[Text=of CharacterOffsetBegin=104 CharacterOffsetEnd=106 PartOfSpeech=IN Lemma=of NamedEntityTag=O]
+[Text=being CharacterOffsetBegin=107 CharacterOffsetEnd=112 PartOfSpeech=VBG Lemma=be NamedEntityTag=O]
+[Text=rejected CharacterOffsetBegin=113 CharacterOffsetEnd=121 PartOfSpeech=VBN Lemma=reject NamedEntityTag=O]
+[Text=by CharacterOffsetBegin=122 CharacterOffsetEnd=124 PartOfSpeech=IN Lemma=by NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=125 CharacterOffsetEnd=128 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=first CharacterOffsetBegin=129 CharacterOffsetEnd=134 PartOfSpeech=JJ Lemma=first NamedEntityTag=ORDINAL NormalizedNamedEntityTag=1.0]
+[Text=church CharacterOffsetBegin=135 CharacterOffsetEnd=141 PartOfSpeech=NN Lemma=church NamedEntityTag=O]
+[Text=to CharacterOffsetBegin=142 CharacterOffsetEnd=144 PartOfSpeech=TO Lemma=to NamedEntityTag=O]
+[Text=which CharacterOffsetBegin=145 CharacterOffsetEnd=150 PartOfSpeech=WDT Lemma=which NamedEntityTag=O]
+[Text=I CharacterOffsetBegin=151 CharacterOffsetEnd=152 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=was CharacterOffsetBegin=153 CharacterOffsetEnd=156 PartOfSpeech=VBD Lemma=be NamedEntityTag=O]
+[Text=appointed CharacterOffsetBegin=157 CharacterOffsetEnd=166 PartOfSpeech=VBN Lemma=appoint NamedEntityTag=O]
+[Text=as CharacterOffsetBegin=167 CharacterOffsetEnd=169 PartOfSpeech=IN Lemma=as NamedEntityTag=O]
+[Text=pastor CharacterOffsetBegin=170 CharacterOffsetEnd=176 PartOfSpeech=NN Lemma=pastor NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=176 CharacterOffsetEnd=177 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> NLP> ----------------------------------------
+Certainly, the race has never been easy.
+Sentence #1 (9 tokens):
+Certainly, the race has never been easy.
+[Text=Certainly CharacterOffsetBegin=0 CharacterOffsetEnd=9 PartOfSpeech=RB Lemma=certainly NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=9 CharacterOffsetEnd=10 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=11 CharacterOffsetEnd=14 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=race CharacterOffsetBegin=15 CharacterOffsetEnd=19 PartOfSpeech=NN Lemma=race NamedEntityTag=O]
+[Text=has CharacterOffsetBegin=20 CharacterOffsetEnd=23 PartOfSpeech=VBZ Lemma=have NamedEntityTag=O]
+[Text=never CharacterOffsetBegin=24 CharacterOffsetEnd=29 PartOfSpeech=RB Lemma=never NamedEntityTag=O]
+[Text=been CharacterOffsetBegin=30 CharacterOffsetEnd=34 PartOfSpeech=VBN Lemma=be NamedEntityTag=O]
+[Text=easy CharacterOffsetBegin=35 CharacterOffsetEnd=39 PartOfSpeech=JJ Lemma=easy NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=39 CharacterOffsetEnd=40 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+It is often long and difficult.
+Sentence #1 (7 tokens):
+It is often long and difficult.
+[Text=It CharacterOffsetBegin=0 CharacterOffsetEnd=2 PartOfSpeech=PRP Lemma=it NamedEntityTag=O]
+[Text=is CharacterOffsetBegin=3 CharacterOffsetEnd=5 PartOfSpeech=VBZ Lemma=be NamedEntityTag=O]
+[Text=often CharacterOffsetBegin=6 CharacterOffsetEnd=11 PartOfSpeech=RB Lemma=often NamedEntityTag=O]
+[Text=long CharacterOffsetBegin=12 CharacterOffsetEnd=16 PartOfSpeech=JJ Lemma=long NamedEntityTag=O]
+[Text=and CharacterOffsetBegin=17 CharacterOffsetEnd=20 PartOfSpeech=CC Lemma=and NamedEntityTag=O]
+[Text=difficult CharacterOffsetBegin=21 CharacterOffsetEnd=30 PartOfSpeech=JJ Lemma=difficult NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=30 CharacterOffsetEnd=31 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+However, the race now impacts me in so many ways.
+Sentence #1 (12 tokens):
+However, the race now impacts me in so many ways.
+[Text=However CharacterOffsetBegin=0 CharacterOffsetEnd=7 PartOfSpeech=RB Lemma=however NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=7 CharacterOffsetEnd=8 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=9 CharacterOffsetEnd=12 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=race CharacterOffsetBegin=13 CharacterOffsetEnd=17 PartOfSpeech=NN Lemma=race NamedEntityTag=O]
+[Text=now CharacterOffsetBegin=18 CharacterOffsetEnd=21 PartOfSpeech=RB Lemma=now NamedEntityTag=DATE NormalizedNamedEntityTag=PRESENT_REF Timex=<TIMEX3 tid="t1" functionType="DATE" value="PRESENT_REF">now</TIMEX3>]
+[Text=impacts CharacterOffsetBegin=22 CharacterOffsetEnd=29 PartOfSpeech=VBZ Lemma=impact NamedEntityTag=O]
+[Text=me CharacterOffsetBegin=30 CharacterOffsetEnd=32 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=in CharacterOffsetBegin=33 CharacterOffsetEnd=35 PartOfSpeech=IN Lemma=in NamedEntityTag=O]
+[Text=so CharacterOffsetBegin=36 CharacterOffsetEnd=38 PartOfSpeech=RB Lemma=so NamedEntityTag=O]
+[Text=many CharacterOffsetBegin=39 CharacterOffsetEnd=43 PartOfSpeech=JJ Lemma=many NamedEntityTag=O]
+[Text=ways CharacterOffsetBegin=44 CharacterOffsetEnd=48 PartOfSpeech=NNS Lemma=way NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=48 CharacterOffsetEnd=49 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+And, oddly enough, I would not trade it with anyone.
+Sentence #1 (13 tokens):
+And, oddly enough, I would not trade it with anyone.
+[Text=And CharacterOffsetBegin=0 CharacterOffsetEnd=3 PartOfSpeech=CC Lemma=and NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=3 CharacterOffsetEnd=4 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=oddly CharacterOffsetBegin=5 CharacterOffsetEnd=10 PartOfSpeech=RB Lemma=oddly NamedEntityTag=O]
+[Text=enough CharacterOffsetBegin=11 CharacterOffsetEnd=17 PartOfSpeech=RB Lemma=enough NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=17 CharacterOffsetEnd=18 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=I CharacterOffsetBegin=19 CharacterOffsetEnd=20 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=would CharacterOffsetBegin=21 CharacterOffsetEnd=26 PartOfSpeech=MD Lemma=would NamedEntityTag=O]
+[Text=not CharacterOffsetBegin=27 CharacterOffsetEnd=30 PartOfSpeech=RB Lemma=not NamedEntityTag=O]
+[Text=trade CharacterOffsetBegin=31 CharacterOffsetEnd=36 PartOfSpeech=VB Lemma=trade NamedEntityTag=O]
+[Text=it CharacterOffsetBegin=37 CharacterOffsetEnd=39 PartOfSpeech=PRP Lemma=it NamedEntityTag=O]
+[Text=with CharacterOffsetBegin=40 CharacterOffsetEnd=44 PartOfSpeech=IN Lemma=with NamedEntityTag=O]
+[Text=anyone CharacterOffsetBegin=45 CharacterOffsetEnd=51 PartOfSpeech=NN Lemma=anyone NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=51 CharacterOffsetEnd=52 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+Instead, the journey affords me a glimpse into the best of what each of us can become.
+Sentence #1 (19 tokens):
+Instead, the journey affords me a glimpse into the best of what each of us can become.
+[Text=Instead CharacterOffsetBegin=0 CharacterOffsetEnd=7 PartOfSpeech=RB Lemma=instead NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=7 CharacterOffsetEnd=8 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=9 CharacterOffsetEnd=12 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=journey CharacterOffsetBegin=13 CharacterOffsetEnd=20 PartOfSpeech=NN Lemma=journey NamedEntityTag=O]
+[Text=affords CharacterOffsetBegin=21 CharacterOffsetEnd=28 PartOfSpeech=VBZ Lemma=afford NamedEntityTag=O]
+[Text=me CharacterOffsetBegin=29 CharacterOffsetEnd=31 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=a CharacterOffsetBegin=32 CharacterOffsetEnd=33 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=glimpse CharacterOffsetBegin=34 CharacterOffsetEnd=41 PartOfSpeech=NN Lemma=glimpse NamedEntityTag=O]
+[Text=into CharacterOffsetBegin=42 CharacterOffsetEnd=46 PartOfSpeech=IN Lemma=into NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=47 CharacterOffsetEnd=50 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=best CharacterOffsetBegin=51 CharacterOffsetEnd=55 PartOfSpeech=JJS Lemma=best NamedEntityTag=O]
+[Text=of CharacterOffsetBegin=56 CharacterOffsetEnd=58 PartOfSpeech=IN Lemma=of NamedEntityTag=O]
+[Text=what CharacterOffsetBegin=59 CharacterOffsetEnd=63 PartOfSpeech=WP Lemma=what NamedEntityTag=O]
+[Text=each CharacterOffsetBegin=64 CharacterOffsetEnd=68 PartOfSpeech=DT Lemma=each NamedEntityTag=O]
+[Text=of CharacterOffsetBegin=69 CharacterOffsetEnd=71 PartOfSpeech=IN Lemma=of NamedEntityTag=O]
+[Text=us CharacterOffsetBegin=72 CharacterOffsetEnd=74 PartOfSpeech=PRP Lemma=we NamedEntityTag=O]
+[Text=can CharacterOffsetBegin=75 CharacterOffsetEnd=78 PartOfSpeech=MD Lemma=can NamedEntityTag=O]
+[Text=become CharacterOffsetBegin=79 CharacterOffsetEnd=85 PartOfSpeech=VB Lemma=become NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=85 CharacterOffsetEnd=86 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+The race has made me a student, and no day goes by that it doesn't teach me a lesson.
+Sentence #1 (22 tokens):
+The race has made me a student, and no day goes by that it doesn't teach me a lesson.
+[Text=The CharacterOffsetBegin=0 CharacterOffsetEnd=3 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=race CharacterOffsetBegin=4 CharacterOffsetEnd=8 PartOfSpeech=NN Lemma=race NamedEntityTag=O]
+[Text=has CharacterOffsetBegin=9 CharacterOffsetEnd=12 PartOfSpeech=VBZ Lemma=have NamedEntityTag=O]
+[Text=made CharacterOffsetBegin=13 CharacterOffsetEnd=17 PartOfSpeech=VBN Lemma=make NamedEntityTag=O]
+[Text=me CharacterOffsetBegin=18 CharacterOffsetEnd=20 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=a CharacterOffsetBegin=21 CharacterOffsetEnd=22 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=student CharacterOffsetBegin=23 CharacterOffsetEnd=30 PartOfSpeech=NN Lemma=student NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=30 CharacterOffsetEnd=31 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=and CharacterOffsetBegin=32 CharacterOffsetEnd=35 PartOfSpeech=CC Lemma=and NamedEntityTag=O]
+[Text=no CharacterOffsetBegin=36 CharacterOffsetEnd=38 PartOfSpeech=DT Lemma=no NamedEntityTag=O]
+[Text=day CharacterOffsetBegin=39 CharacterOffsetEnd=42 PartOfSpeech=NN Lemma=day NamedEntityTag=DURATION NormalizedNamedEntityTag=P1D Timex=<TIMEX3 tid="t1" functionType="DURATION" value="P1D">day</TIMEX3>]
+[Text=goes CharacterOffsetBegin=43 CharacterOffsetEnd=47 PartOfSpeech=VBZ Lemma=go NamedEntityTag=O]
+[Text=by CharacterOffsetBegin=48 CharacterOffsetEnd=50 PartOfSpeech=IN Lemma=by NamedEntityTag=O]
+[Text=that CharacterOffsetBegin=51 CharacterOffsetEnd=55 PartOfSpeech=IN Lemma=that NamedEntityTag=O]
+[Text=it CharacterOffsetBegin=56 CharacterOffsetEnd=58 PartOfSpeech=PRP Lemma=it NamedEntityTag=O]
+[Text=does CharacterOffsetBegin=59 CharacterOffsetEnd=63 PartOfSpeech=VBZ Lemma=do NamedEntityTag=O]
+[Text=n't CharacterOffsetBegin=63 CharacterOffsetEnd=66 PartOfSpeech=RB Lemma=not NamedEntityTag=O]
+[Text=teach CharacterOffsetBegin=67 CharacterOffsetEnd=72 PartOfSpeech=VB Lemma=teach NamedEntityTag=O]
+[Text=me CharacterOffsetBegin=73 CharacterOffsetEnd=75 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=a CharacterOffsetBegin=76 CharacterOffsetEnd=77 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=lesson CharacterOffsetBegin=78 CharacterOffsetEnd=84 PartOfSpeech=NN Lemma=lesson NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=84 CharacterOffsetEnd=85 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+About time: A privilege afforded to us to make a difference in this world.
+Sentence #1 (16 tokens):
+About time: A privilege afforded to us to make a difference in this world.
+[Text=About CharacterOffsetBegin=0 CharacterOffsetEnd=5 PartOfSpeech=IN Lemma=about NamedEntityTag=O]
+[Text=time CharacterOffsetBegin=6 CharacterOffsetEnd=10 PartOfSpeech=NN Lemma=time NamedEntityTag=O]
+[Text=: CharacterOffsetBegin=10 CharacterOffsetEnd=11 PartOfSpeech=: Lemma=: NamedEntityTag=O]
+[Text=A CharacterOffsetBegin=12 CharacterOffsetEnd=13 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=privilege CharacterOffsetBegin=14 CharacterOffsetEnd=23 PartOfSpeech=NN Lemma=privilege NamedEntityTag=O]
+[Text=afforded CharacterOffsetBegin=24 CharacterOffsetEnd=32 PartOfSpeech=VBN Lemma=afford NamedEntityTag=O]
+[Text=to CharacterOffsetBegin=33 CharacterOffsetEnd=35 PartOfSpeech=TO Lemma=to NamedEntityTag=O]
+[Text=us CharacterOffsetBegin=36 CharacterOffsetEnd=38 PartOfSpeech=PRP Lemma=we NamedEntityTag=O]
+[Text=to CharacterOffsetBegin=39 CharacterOffsetEnd=41 PartOfSpeech=TO Lemma=to NamedEntityTag=O]
+[Text=make CharacterOffsetBegin=42 CharacterOffsetEnd=46 PartOfSpeech=VB Lemma=make NamedEntityTag=O]
+[Text=a CharacterOffsetBegin=47 CharacterOffsetEnd=48 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=difference CharacterOffsetBegin=49 CharacterOffsetEnd=59 PartOfSpeech=NN Lemma=difference NamedEntityTag=O]
+[Text=in CharacterOffsetBegin=60 CharacterOffsetEnd=62 PartOfSpeech=IN Lemma=in NamedEntityTag=O]
+[Text=this CharacterOffsetBegin=63 CharacterOffsetEnd=67 PartOfSpeech=DT Lemma=this NamedEntityTag=O]
+[Text=world CharacterOffsetBegin=68 CharacterOffsetEnd=73 PartOfSpeech=NN Lemma=world NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=73 CharacterOffsetEnd=74 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+About relationships: The most important things we do are not done alone.
+Sentence #1 (14 tokens):
+About relationships: The most important things we do are not done alone.
+[Text=About CharacterOffsetBegin=0 CharacterOffsetEnd=5 PartOfSpeech=IN Lemma=about NamedEntityTag=O]
+[Text=relationships CharacterOffsetBegin=6 CharacterOffsetEnd=19 PartOfSpeech=NNS Lemma=relationship NamedEntityTag=O]
+[Text=: CharacterOffsetBegin=19 CharacterOffsetEnd=20 PartOfSpeech=: Lemma=: NamedEntityTag=O]
+[Text=The CharacterOffsetBegin=21 CharacterOffsetEnd=24 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=most CharacterOffsetBegin=25 CharacterOffsetEnd=29 PartOfSpeech=RBS Lemma=most NamedEntityTag=O]
+[Text=important CharacterOffsetBegin=30 CharacterOffsetEnd=39 PartOfSpeech=JJ Lemma=important NamedEntityTag=O]
+[Text=things CharacterOffsetBegin=40 CharacterOffsetEnd=46 PartOfSpeech=NNS Lemma=thing NamedEntityTag=O]
+[Text=we CharacterOffsetBegin=47 CharacterOffsetEnd=49 PartOfSpeech=PRP Lemma=we NamedEntityTag=O]
+[Text=do CharacterOffsetBegin=50 CharacterOffsetEnd=52 PartOfSpeech=VBP Lemma=do NamedEntityTag=O]
+[Text=are CharacterOffsetBegin=53 CharacterOffsetEnd=56 PartOfSpeech=VBP Lemma=be NamedEntityTag=O]
+[Text=not CharacterOffsetBegin=57 CharacterOffsetEnd=60 PartOfSpeech=RB Lemma=not NamedEntityTag=O]
+[Text=done CharacterOffsetBegin=61 CharacterOffsetEnd=65 PartOfSpeech=VBN Lemma=do NamedEntityTag=O]
+[Text=alone CharacterOffsetBegin=66 CharacterOffsetEnd=71 PartOfSpeech=RB Lemma=alone NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=71 CharacterOffsetEnd=72 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+About simplicity: More, bigger, nicer, pale in comparison to gifts like sunsets and the laughter of children at play.
+Sentence #1 (24 tokens):
+About simplicity: More, bigger, nicer, pale in comparison to gifts like sunsets and the laughter of children at play.
+[Text=About CharacterOffsetBegin=0 CharacterOffsetEnd=5 PartOfSpeech=IN Lemma=about NamedEntityTag=O]
+[Text=simplicity CharacterOffsetBegin=6 CharacterOffsetEnd=16 PartOfSpeech=NN Lemma=simplicity NamedEntityTag=O]
+[Text=: CharacterOffsetBegin=16 CharacterOffsetEnd=17 PartOfSpeech=: Lemma=: NamedEntityTag=O]
+[Text=More CharacterOffsetBegin=18 CharacterOffsetEnd=22 PartOfSpeech=RBR Lemma=more NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=22 CharacterOffsetEnd=23 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=bigger CharacterOffsetBegin=24 CharacterOffsetEnd=30 PartOfSpeech=JJR Lemma=bigger NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=30 CharacterOffsetEnd=31 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=nicer CharacterOffsetBegin=32 CharacterOffsetEnd=37 PartOfSpeech=JJR Lemma=nicer NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=37 CharacterOffsetEnd=38 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=pale CharacterOffsetBegin=39 CharacterOffsetEnd=43 PartOfSpeech=JJ Lemma=pale NamedEntityTag=O]
+[Text=in CharacterOffsetBegin=44 CharacterOffsetEnd=46 PartOfSpeech=IN Lemma=in NamedEntityTag=O]
+[Text=comparison CharacterOffsetBegin=47 CharacterOffsetEnd=57 PartOfSpeech=NN Lemma=comparison NamedEntityTag=O]
+[Text=to CharacterOffsetBegin=58 CharacterOffsetEnd=60 PartOfSpeech=TO Lemma=to NamedEntityTag=O]
+[Text=gifts CharacterOffsetBegin=61 CharacterOffsetEnd=66 PartOfSpeech=NNS Lemma=gift NamedEntityTag=O]
+[Text=like CharacterOffsetBegin=67 CharacterOffsetEnd=71 PartOfSpeech=IN Lemma=like NamedEntityTag=O]
+[Text=sunsets CharacterOffsetBegin=72 CharacterOffsetEnd=79 PartOfSpeech=NNS Lemma=sunset NamedEntityTag=O]
+[Text=and CharacterOffsetBegin=80 CharacterOffsetEnd=83 PartOfSpeech=CC Lemma=and NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=84 CharacterOffsetEnd=87 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=laughter CharacterOffsetBegin=88 CharacterOffsetEnd=96 PartOfSpeech=NN Lemma=laughter NamedEntityTag=O]
+[Text=of CharacterOffsetBegin=97 CharacterOffsetEnd=99 PartOfSpeech=IN Lemma=of NamedEntityTag=O]
+[Text=children CharacterOffsetBegin=100 CharacterOffsetEnd=108 PartOfSpeech=NNS Lemma=child NamedEntityTag=O]
+[Text=at CharacterOffsetBegin=109 CharacterOffsetEnd=111 PartOfSpeech=IN Lemma=at NamedEntityTag=O]
+[Text=play CharacterOffsetBegin=112 CharacterOffsetEnd=116 PartOfSpeech=NN Lemma=play NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=116 CharacterOffsetEnd=117 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+About real meaning... and about myself: Life is more a mosaic than a measurable frame of joys and sorrows, laughter and tears.
+Sentence #1 (26 tokens):
+About real meaning... and about myself: Life is more a mosaic than a measurable frame of joys and sorrows, laughter and tears.
+[Text=About CharacterOffsetBegin=0 CharacterOffsetEnd=5 PartOfSpeech=IN Lemma=about NamedEntityTag=O]
+[Text=real CharacterOffsetBegin=6 CharacterOffsetEnd=10 PartOfSpeech=JJ Lemma=real NamedEntityTag=O]
+[Text=meaning CharacterOffsetBegin=11 CharacterOffsetEnd=18 PartOfSpeech=NN Lemma=meaning NamedEntityTag=O]
+[Text=... CharacterOffsetBegin=18 CharacterOffsetEnd=21 PartOfSpeech=: Lemma=... NamedEntityTag=O]
+[Text=and CharacterOffsetBegin=22 CharacterOffsetEnd=25 PartOfSpeech=CC Lemma=and NamedEntityTag=O]
+[Text=about CharacterOffsetBegin=26 CharacterOffsetEnd=31 PartOfSpeech=IN Lemma=about NamedEntityTag=O]
+[Text=myself CharacterOffsetBegin=32 CharacterOffsetEnd=38 PartOfSpeech=PRP Lemma=myself NamedEntityTag=O]
+[Text=: CharacterOffsetBegin=38 CharacterOffsetEnd=39 PartOfSpeech=: Lemma=: NamedEntityTag=O]
+[Text=Life CharacterOffsetBegin=40 CharacterOffsetEnd=44 PartOfSpeech=NNP Lemma=Life NamedEntityTag=O]
+[Text=is CharacterOffsetBegin=45 CharacterOffsetEnd=47 PartOfSpeech=VBZ Lemma=be NamedEntityTag=O]
+[Text=more CharacterOffsetBegin=48 CharacterOffsetEnd=52 PartOfSpeech=RBR Lemma=more NamedEntityTag=O]
+[Text=a CharacterOffsetBegin=53 CharacterOffsetEnd=54 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=mosaic CharacterOffsetBegin=55 CharacterOffsetEnd=61 PartOfSpeech=NN Lemma=mosaic NamedEntityTag=O]
+[Text=than CharacterOffsetBegin=62 CharacterOffsetEnd=66 PartOfSpeech=IN Lemma=than NamedEntityTag=O]
+[Text=a CharacterOffsetBegin=67 CharacterOffsetEnd=68 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=measurable CharacterOffsetBegin=69 CharacterOffsetEnd=79 PartOfSpeech=JJ Lemma=measurable NamedEntityTag=O]
+[Text=frame CharacterOffsetBegin=80 CharacterOffsetEnd=85 PartOfSpeech=NN Lemma=frame NamedEntityTag=O]
+[Text=of CharacterOffsetBegin=86 CharacterOffsetEnd=88 PartOfSpeech=IN Lemma=of NamedEntityTag=O]
+[Text=joys CharacterOffsetBegin=89 CharacterOffsetEnd=93 PartOfSpeech=NNS Lemma=joy NamedEntityTag=O]
+[Text=and CharacterOffsetBegin=94 CharacterOffsetEnd=97 PartOfSpeech=CC Lemma=and NamedEntityTag=O]
+[Text=sorrows CharacterOffsetBegin=98 CharacterOffsetEnd=105 PartOfSpeech=NNS Lemma=sorrow NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=105 CharacterOffsetEnd=106 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=laughter CharacterOffsetBegin=107 CharacterOffsetEnd=115 PartOfSpeech=NN Lemma=laughter NamedEntityTag=O]
+[Text=and CharacterOffsetBegin=116 CharacterOffsetEnd=119 PartOfSpeech=CC Lemma=and NamedEntityTag=O]
+[Text=tears CharacterOffsetBegin=120 CharacterOffsetEnd=125 PartOfSpeech=NNS Lemma=tear NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=125 CharacterOffsetEnd=126 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+Real meaning is discovered through the composition of life's diversity.
+Sentence #1 (12 tokens):
+Real meaning is discovered through the composition of life's diversity.
+[Text=Real CharacterOffsetBegin=0 CharacterOffsetEnd=4 PartOfSpeech=JJ Lemma=real NamedEntityTag=O]
+[Text=meaning CharacterOffsetBegin=5 CharacterOffsetEnd=12 PartOfSpeech=NN Lemma=meaning NamedEntityTag=O]
+[Text=is CharacterOffsetBegin=13 CharacterOffsetEnd=15 PartOfSpeech=VBZ Lemma=be NamedEntityTag=O]
+[Text=discovered CharacterOffsetBegin=16 CharacterOffsetEnd=26 PartOfSpeech=VBN Lemma=discover NamedEntityTag=O]
+[Text=through CharacterOffsetBegin=27 CharacterOffsetEnd=34 PartOfSpeech=IN Lemma=through NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=35 CharacterOffsetEnd=38 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=composition CharacterOffsetBegin=39 CharacterOffsetEnd=50 PartOfSpeech=NN Lemma=composition NamedEntityTag=O]
+[Text=of CharacterOffsetBegin=51 CharacterOffsetEnd=53 PartOfSpeech=IN Lemma=of NamedEntityTag=O]
+[Text=life CharacterOffsetBegin=54 CharacterOffsetEnd=58 PartOfSpeech=NN Lemma=life NamedEntityTag=O]
+[Text='s CharacterOffsetBegin=58 CharacterOffsetEnd=60 PartOfSpeech=POS Lemma='s NamedEntityTag=O]
+[Text=diversity CharacterOffsetBegin=61 CharacterOffsetEnd=70 PartOfSpeech=NN Lemma=diversity NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=70 CharacterOffsetEnd=71 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+No color can adequately define a mosaic, any more than one hardship, failure or achievement can define a person's life.
+Sentence #1 (24 tokens):
+No color can adequately define a mosaic, any more than one hardship, failure or achievement can define a person's life.
+[Text=No CharacterOffsetBegin=0 CharacterOffsetEnd=2 PartOfSpeech=DT Lemma=no NamedEntityTag=O]
+[Text=color CharacterOffsetBegin=3 CharacterOffsetEnd=8 PartOfSpeech=NN Lemma=color NamedEntityTag=O]
+[Text=can CharacterOffsetBegin=9 CharacterOffsetEnd=12 PartOfSpeech=MD Lemma=can NamedEntityTag=O]
+[Text=adequately CharacterOffsetBegin=13 CharacterOffsetEnd=23 PartOfSpeech=RB Lemma=adequately NamedEntityTag=O]
+[Text=define CharacterOffsetBegin=24 CharacterOffsetEnd=30 PartOfSpeech=VB Lemma=define NamedEntityTag=O]
+[Text=a CharacterOffsetBegin=31 CharacterOffsetEnd=32 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=mosaic CharacterOffsetBegin=33 CharacterOffsetEnd=39 PartOfSpeech=NN Lemma=mosaic NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=39 CharacterOffsetEnd=40 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=any CharacterOffsetBegin=41 CharacterOffsetEnd=44 PartOfSpeech=DT Lemma=any NamedEntityTag=O]
+[Text=more CharacterOffsetBegin=45 CharacterOffsetEnd=49 PartOfSpeech=JJR Lemma=more NamedEntityTag=O]
+[Text=than CharacterOffsetBegin=50 CharacterOffsetEnd=54 PartOfSpeech=IN Lemma=than NamedEntityTag=O]
+[Text=one CharacterOffsetBegin=55 CharacterOffsetEnd=58 PartOfSpeech=CD Lemma=one NamedEntityTag=NUMBER NormalizedNamedEntityTag=>1.0]
+[Text=hardship CharacterOffsetBegin=59 CharacterOffsetEnd=67 PartOfSpeech=NN Lemma=hardship NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=67 CharacterOffsetEnd=68 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=failure CharacterOffsetBegin=69 CharacterOffsetEnd=76 PartOfSpeech=NN Lemma=failure NamedEntityTag=O]
+[Text=or CharacterOffsetBegin=77 CharacterOffsetEnd=79 PartOfSpeech=CC Lemma=or NamedEntityTag=O]
+[Text=achievement CharacterOffsetBegin=80 CharacterOffsetEnd=91 PartOfSpeech=NN Lemma=achievement NamedEntityTag=O]
+[Text=can CharacterOffsetBegin=92 CharacterOffsetEnd=95 PartOfSpeech=MD Lemma=can NamedEntityTag=O]
+[Text=define CharacterOffsetBegin=96 CharacterOffsetEnd=102 PartOfSpeech=VB Lemma=define NamedEntityTag=O]
+[Text=a CharacterOffsetBegin=103 CharacterOffsetEnd=104 PartOfSpeech=DT Lemma=a NamedEntityTag=O]
+[Text=person CharacterOffsetBegin=105 CharacterOffsetEnd=111 PartOfSpeech=NN Lemma=person NamedEntityTag=O]
+[Text='s CharacterOffsetBegin=111 CharacterOffsetEnd=113 PartOfSpeech=POS Lemma='s NamedEntityTag=O]
+[Text=life CharacterOffsetBegin=114 CharacterOffsetEnd=118 PartOfSpeech=NN Lemma=life NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=118 CharacterOffsetEnd=119 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+The diversity of these images brought together unveil who I really am.
+Sentence #1 (13 tokens):
+The diversity of these images brought together unveil who I really am.
+[Text=The CharacterOffsetBegin=0 CharacterOffsetEnd=3 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=diversity CharacterOffsetBegin=4 CharacterOffsetEnd=13 PartOfSpeech=NN Lemma=diversity NamedEntityTag=O]
+[Text=of CharacterOffsetBegin=14 CharacterOffsetEnd=16 PartOfSpeech=IN Lemma=of NamedEntityTag=O]
+[Text=these CharacterOffsetBegin=17 CharacterOffsetEnd=22 PartOfSpeech=DT Lemma=these NamedEntityTag=O]
+[Text=images CharacterOffsetBegin=23 CharacterOffsetEnd=29 PartOfSpeech=NNS Lemma=image NamedEntityTag=O]
+[Text=brought CharacterOffsetBegin=30 CharacterOffsetEnd=37 PartOfSpeech=VBN Lemma=bring NamedEntityTag=O]
+[Text=together CharacterOffsetBegin=38 CharacterOffsetEnd=46 PartOfSpeech=RB Lemma=together NamedEntityTag=O]
+[Text=unveil CharacterOffsetBegin=47 CharacterOffsetEnd=53 PartOfSpeech=VBP Lemma=unveil NamedEntityTag=O]
+[Text=who CharacterOffsetBegin=54 CharacterOffsetEnd=57 PartOfSpeech=WP Lemma=who NamedEntityTag=O]
+[Text=I CharacterOffsetBegin=58 CharacterOffsetEnd=59 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=really CharacterOffsetBegin=60 CharacterOffsetEnd=66 PartOfSpeech=RB Lemma=really NamedEntityTag=O]
+[Text=am CharacterOffsetBegin=67 CharacterOffsetEnd=69 PartOfSpeech=VBP Lemma=be NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=69 CharacterOffsetEnd=70 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+No matter how I try to describe myself, I am more than the sum of what I can say.
+Sentence #1 (21 tokens):
+No matter how I try to describe myself, I am more than the sum of what I can say.
+[Text=No CharacterOffsetBegin=0 CharacterOffsetEnd=2 PartOfSpeech=DT Lemma=no NamedEntityTag=O]
+[Text=matter CharacterOffsetBegin=3 CharacterOffsetEnd=9 PartOfSpeech=NN Lemma=matter NamedEntityTag=O]
+[Text=how CharacterOffsetBegin=10 CharacterOffsetEnd=13 PartOfSpeech=WRB Lemma=how NamedEntityTag=O]
+[Text=I CharacterOffsetBegin=14 CharacterOffsetEnd=15 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=try CharacterOffsetBegin=16 CharacterOffsetEnd=19 PartOfSpeech=VBP Lemma=try NamedEntityTag=O]
+[Text=to CharacterOffsetBegin=20 CharacterOffsetEnd=22 PartOfSpeech=TO Lemma=to NamedEntityTag=O]
+[Text=describe CharacterOffsetBegin=23 CharacterOffsetEnd=31 PartOfSpeech=VB Lemma=describe NamedEntityTag=O]
+[Text=myself CharacterOffsetBegin=32 CharacterOffsetEnd=38 PartOfSpeech=PRP Lemma=myself NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=38 CharacterOffsetEnd=39 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=I CharacterOffsetBegin=40 CharacterOffsetEnd=41 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=am CharacterOffsetBegin=42 CharacterOffsetEnd=44 PartOfSpeech=VBP Lemma=be NamedEntityTag=O]
+[Text=more CharacterOffsetBegin=45 CharacterOffsetEnd=49 PartOfSpeech=JJR Lemma=more NamedEntityTag=O]
+[Text=than CharacterOffsetBegin=50 CharacterOffsetEnd=54 PartOfSpeech=IN Lemma=than NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=55 CharacterOffsetEnd=58 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=sum CharacterOffsetBegin=59 CharacterOffsetEnd=62 PartOfSpeech=NN Lemma=sum NamedEntityTag=O]
+[Text=of CharacterOffsetBegin=63 CharacterOffsetEnd=65 PartOfSpeech=IN Lemma=of NamedEntityTag=O]
+[Text=what CharacterOffsetBegin=66 CharacterOffsetEnd=70 PartOfSpeech=WP Lemma=what NamedEntityTag=O]
+[Text=I CharacterOffsetBegin=71 CharacterOffsetEnd=72 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=can CharacterOffsetBegin=73 CharacterOffsetEnd=76 PartOfSpeech=MD Lemma=can NamedEntityTag=O]
+[Text=say CharacterOffsetBegin=77 CharacterOffsetEnd=80 PartOfSpeech=VB Lemma=say NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=80 CharacterOffsetEnd=81 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+So, I run ... for those I love and, even, for those I have never met.
+Sentence #1 (20 tokens):
+So, I run ... for those I love and, even, for those I have never met.
+[Text=So CharacterOffsetBegin=0 CharacterOffsetEnd=2 PartOfSpeech=RB Lemma=so NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=2 CharacterOffsetEnd=3 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=I CharacterOffsetBegin=4 CharacterOffsetEnd=5 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=run CharacterOffsetBegin=6 CharacterOffsetEnd=9 PartOfSpeech=VBP Lemma=run NamedEntityTag=O]
+[Text=... CharacterOffsetBegin=10 CharacterOffsetEnd=13 PartOfSpeech=: Lemma=... NamedEntityTag=O]
+[Text=for CharacterOffsetBegin=14 CharacterOffsetEnd=17 PartOfSpeech=IN Lemma=for NamedEntityTag=O]
+[Text=those CharacterOffsetBegin=18 CharacterOffsetEnd=23 PartOfSpeech=DT Lemma=those NamedEntityTag=O]
+[Text=I CharacterOffsetBegin=24 CharacterOffsetEnd=25 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=love CharacterOffsetBegin=26 CharacterOffsetEnd=30 PartOfSpeech=VBP Lemma=love NamedEntityTag=O]
+[Text=and CharacterOffsetBegin=31 CharacterOffsetEnd=34 PartOfSpeech=CC Lemma=and NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=34 CharacterOffsetEnd=35 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=even CharacterOffsetBegin=36 CharacterOffsetEnd=40 PartOfSpeech=RB Lemma=even NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=40 CharacterOffsetEnd=41 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=for CharacterOffsetBegin=42 CharacterOffsetEnd=45 PartOfSpeech=IN Lemma=for NamedEntityTag=O]
+[Text=those CharacterOffsetBegin=46 CharacterOffsetEnd=51 PartOfSpeech=DT Lemma=those NamedEntityTag=O]
+[Text=I CharacterOffsetBegin=52 CharacterOffsetEnd=53 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=have CharacterOffsetBegin=54 CharacterOffsetEnd=58 PartOfSpeech=VBP Lemma=have NamedEntityTag=O]
+[Text=never CharacterOffsetBegin=59 CharacterOffsetEnd=64 PartOfSpeech=RB Lemma=never NamedEntityTag=O]
+[Text=met CharacterOffsetBegin=65 CharacterOffsetEnd=68 PartOfSpeech=VBN Lemma=meet NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=68 CharacterOffsetEnd=69 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> ----------------------------------------
+I run to make life matter, seeking more than the right way to go, but actually going there and watching the race mean something.
+Sentence #1 (27 tokens):
+I run to make life matter, seeking more than the right way to go, but actually going there and watching the race mean something.
+[Text=I CharacterOffsetBegin=0 CharacterOffsetEnd=1 PartOfSpeech=PRP Lemma=I NamedEntityTag=O]
+[Text=run CharacterOffsetBegin=2 CharacterOffsetEnd=5 PartOfSpeech=VBP Lemma=run NamedEntityTag=O]
+[Text=to CharacterOffsetBegin=6 CharacterOffsetEnd=8 PartOfSpeech=TO Lemma=to NamedEntityTag=O]
+[Text=make CharacterOffsetBegin=9 CharacterOffsetEnd=13 PartOfSpeech=VB Lemma=make NamedEntityTag=O]
+[Text=life CharacterOffsetBegin=14 CharacterOffsetEnd=18 PartOfSpeech=NN Lemma=life NamedEntityTag=O]
+[Text=matter CharacterOffsetBegin=19 CharacterOffsetEnd=25 PartOfSpeech=NN Lemma=matter NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=25 CharacterOffsetEnd=26 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=seeking CharacterOffsetBegin=27 CharacterOffsetEnd=34 PartOfSpeech=VBG Lemma=seek NamedEntityTag=O]
+[Text=more CharacterOffsetBegin=35 CharacterOffsetEnd=39 PartOfSpeech=JJR Lemma=more NamedEntityTag=O]
+[Text=than CharacterOffsetBegin=40 CharacterOffsetEnd=44 PartOfSpeech=IN Lemma=than NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=45 CharacterOffsetEnd=48 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=right CharacterOffsetBegin=49 CharacterOffsetEnd=54 PartOfSpeech=JJ Lemma=right NamedEntityTag=O]
+[Text=way CharacterOffsetBegin=55 CharacterOffsetEnd=58 PartOfSpeech=NN Lemma=way NamedEntityTag=O]
+[Text=to CharacterOffsetBegin=59 CharacterOffsetEnd=61 PartOfSpeech=TO Lemma=to NamedEntityTag=O]
+[Text=go CharacterOffsetBegin=62 CharacterOffsetEnd=64 PartOfSpeech=VB Lemma=go NamedEntityTag=O]
+[Text=, CharacterOffsetBegin=64 CharacterOffsetEnd=65 PartOfSpeech=, Lemma=, NamedEntityTag=O]
+[Text=but CharacterOffsetBegin=66 CharacterOffsetEnd=69 PartOfSpeech=CC Lemma=but NamedEntityTag=O]
+[Text=actually CharacterOffsetBegin=70 CharacterOffsetEnd=78 PartOfSpeech=RB Lemma=actually NamedEntityTag=O]
+[Text=going CharacterOffsetBegin=79 CharacterOffsetEnd=84 PartOfSpeech=VBG Lemma=go NamedEntityTag=O]
+[Text=there CharacterOffsetBegin=85 CharacterOffsetEnd=90 PartOfSpeech=RB Lemma=there NamedEntityTag=O]
+[Text=and CharacterOffsetBegin=91 CharacterOffsetEnd=94 PartOfSpeech=CC Lemma=and NamedEntityTag=O]
+[Text=watching CharacterOffsetBegin=95 CharacterOffsetEnd=103 PartOfSpeech=VBG Lemma=watch NamedEntityTag=O]
+[Text=the CharacterOffsetBegin=104 CharacterOffsetEnd=107 PartOfSpeech=DT Lemma=the NamedEntityTag=O]
+[Text=race CharacterOffsetBegin=108 CharacterOffsetEnd=112 PartOfSpeech=NN Lemma=race NamedEntityTag=O]
+[Text=mean CharacterOffsetBegin=113 CharacterOffsetEnd=117 PartOfSpeech=VB Lemma=mean NamedEntityTag=O]
+[Text=something CharacterOffsetBegin=118 CharacterOffsetEnd=127 PartOfSpeech=NN Lemma=something NamedEntityTag=O]
+[Text=. CharacterOffsetBegin=127 CharacterOffsetEnd=128 PartOfSpeech=. Lemma=. NamedEntityTag=O]
+NLP> 

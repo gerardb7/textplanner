@@ -36,7 +36,7 @@ public final class TextPlanner
 	 * Generates a text plan from a weighted semantic graph
 	 */
 	public static List<SemanticSubgraph> plan(SemanticGraph graph, GraphSemantics semantics,
-	                                          BiFunction<String, String, OptionalDouble> similarity, int num_graphs, Options o)
+	                                          BiFunction<String, String, OptionalDouble> similarity, Options o)
 	{
 		try
 		{
@@ -44,10 +44,10 @@ public final class TextPlanner
 			Stopwatch timer = Stopwatch.createStarted();
 
 			// 1- Extract subgraphs from graph
-			Collection<SemanticSubgraph> subgraphs = extractSubgraphs(graph, semantics, num_graphs, o);
+			Collection<SemanticSubgraph> subgraphs = extractSubgraphs(graph, semantics, o);
 
 			// 2- Remove redundant subgraphs
-			subgraphs = removeRedundantSubgraphs(subgraphs, num_graphs, similarity, o);
+			subgraphs = removeRedundantSubgraphs(subgraphs, similarity, o);
 
 			// 3- Sort the trees into a discourse-optimized list
 			final List<SemanticSubgraph> text_plan = sortSubgraphs(subgraphs, similarity, o);
@@ -157,16 +157,15 @@ public final class TextPlanner
 	/**
 	 * 	Extract subgraphs from a semantic graph
 	 */
-	public static Collection<SemanticSubgraph> extractSubgraphs(SemanticGraph graph, GraphSemantics semantics,
-	                                                            int num_graphs, Options o)
+	public static Collection<SemanticSubgraph> extractSubgraphs(SemanticGraph graph, GraphSemantics semantics, Options o)
 	{
 		log.info("*Extracting subgraphs*");
 		Stopwatch timer = Stopwatch.createStarted();
 
 		Explorer e = new RequirementsExplorer(semantics, true, Explorer.ExpansionPolicy.Non_core_only);
 		Policy p = new SoftMaxPolicy();
-		SubgraphExtraction extractor = new SubgraphExtraction(e, p, Math.min(num_graphs, o.extraction_lambda));
-		Collection<SemanticSubgraph> subgraphs = extractor.multipleExtraction(graph, o.num_subgraphs);
+		SubgraphExtraction extractor = new SubgraphExtraction(e, p, Math.min(o.num_subgraphs_extract, o.extraction_lambda));
+		Collection<SemanticSubgraph> subgraphs = extractor.multipleExtraction(graph, o.num_subgraphs_extract);
 		log.info("Extraction done in " + timer.stop());
 
 		return subgraphs;
@@ -175,7 +174,7 @@ public final class TextPlanner
 	/**
 	 * 	Remove redundant subgraphs
 	 */
-	public static Collection<SemanticSubgraph> removeRedundantSubgraphs(Collection<SemanticSubgraph> subgraphs, int num_graphs,
+	public static Collection<SemanticSubgraph> removeRedundantSubgraphs(Collection<SemanticSubgraph> subgraphs,
 	                                                                    BiFunction<String, String, OptionalDouble> similarity,
 	                                                                    Options o)
 	{
@@ -183,7 +182,7 @@ public final class TextPlanner
 		Stopwatch timer = Stopwatch.createStarted();
 		SemanticTreeSimilarity tsim = new SemanticTreeSimilarity(similarity, o.tree_edit_lambda);
 		RedundancyRemover remover = new RedundancyRemover(tsim);
-		Collection<SemanticSubgraph> out_subgraphs = remover.filter(subgraphs, num_graphs);
+		Collection<SemanticSubgraph> out_subgraphs = remover.filter(subgraphs, o.num_subgraphs);
 		log.info("Redundancy removal done in " + timer.stop());
 
 		return out_subgraphs;

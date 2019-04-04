@@ -11,6 +11,7 @@ import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.io.CandidatesCollector;
 import edu.upf.taln.textplanning.core.ranking.Disambiguation;
 import edu.upf.taln.textplanning.core.structures.*;
+import edu.upf.taln.textplanning.uima.io.DSyntSemantics;
 import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -44,7 +45,6 @@ public class EvaluationTools
 		public String lang;
 		@XmlElement(name = "text")
 		public List<Text> texts;
-		public SemanticGraph graph = null;
 	}
 
 	@XmlAccessorType(XmlAccessType.FIELD)
@@ -55,6 +55,8 @@ public class EvaluationTools
 		@XmlElement(name = "sentence")
 		public List<Sentence> sentences;
 		public Function<String, Double> weighter;
+		public SemanticGraph graph = null;
+		public List<SemanticSubgraph> subgraphs = null;
 	}
 
 	@XmlAccessorType(XmlAccessType.FIELD)
@@ -110,7 +112,7 @@ public class EvaluationTools
 		docs.forEach(d -> {
 			final Text text = new Text();
 			text.id = "t" + doc_counter.incrementAndGet();
-			corpus.graph = d.getSemanticGraph();
+			text.graph = d.getSemanticGraph();
 			corpus.texts.add(text);
 			AtomicInteger sentence_counter = new AtomicInteger(0);
 
@@ -311,11 +313,21 @@ public class EvaluationTools
 					BiPredicate<Mention, Mention> adjacency_function =
 							(m1, m2) -> Math.abs(mentions.indexOf(m1) - mentions.indexOf(m2)) <= context_size;
 					BiPredicate<Mention, Mention> adjacency_function2 =
-							(m1, m2) -> corpus.graph.containsEdge(m1.getId(), m2.getId());
+							(m1, m2) -> text.graph.containsEdge(m1.getId(), m2.getId());
 
 					// rank mentions
 					TextPlanner.rankMentions(candidates, adjacency_function, options);
 				}));
+	}
+
+	public static void plan(Options options, Corpus corpus, InitialResourcesFactory resources)
+	{
+		corpus.texts.forEach(text ->
+		{
+			final Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(text.graph, new DSyntSemantics(), options);
+			final Collection<SemanticSubgraph> selected_subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, resources.getMeaningsSimilarity(), options);
+			text.subgraphs = TextPlanner.sortSubgraphs(subgraphs, resources.getMeaningsSimilarity(), options);
+		});
 	}
 
 	public static List<Mention> collectMentions(Corpus corpus, int max_span_size, Set<String> exclude_pos_tags)

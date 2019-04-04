@@ -1,0 +1,383 @@
+# ::id 1
+# ::snt (CNN)  -- I am Shane Stanford.
+# ::tok -LRB- CNN -RRB- -- I am Shane Stanford .
+# ::alignments 1-8|0+0.0+0.0.0+0.0.1+0.0.2+0.0.3+0.0.4+0.0.5+0.0.6 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.466
+(x2 / government-organization
+	:name (n / name
+		:op1 "CNN"
+		:op2 "-RRB-"
+		:op3 "--"
+		:op4 "I"
+		:op5 "am"
+		:op6 "Shane"
+		:op7 "Stanford")
+	:domain (x5 / i))
+
+# ::id 2
+# ::snt To my family, I am a husband of 20 years and the boastful father of three.
+# ::tok To my family , I am a husband of 20 years and the boastful father of three .
+# ::alignments 11-12|0 7-8|0.0+0.0.0+0.0.0.0 2-3|0.0.0.1 1-2|0.0.0.2 10-11|0.0.0.3+0.0.0.3.0 9-10|0.0.0.3.1 13-14|0.0.0.4 14-15|0.0.0.4.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.522
+(x12 / and
+	:op2 (xap0 / person
+		:ARG0-of (x8 / have-rel-role-91
+			:ARG2 (h / husband)
+			:ARG3 (x3 / family)
+			:ARG1 (x5 / i)
+			:ARG1 (x11 / temporal-quantity
+				:unit (y / year)
+				:quant 20)
+			:ARG1 (x14 / boastful
+				:ARG0-of (x15 / father)))))
+
+# ::id 3
+# ::snt To my congregation of nearly 5,000, I am a pastor.
+# ::tok To my congregation of nearly 5,000 , I am a pastor .
+# ::alignments 10-11|0 1-2|0.1 4-5|0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.541
+(x11 / pastor
+	:age (x5 / nearly
+		:op1 (x6 / 5,000))
+	:domain (x8 / i))
+
+# ::id 4
+# ::snt To my readers, I am the author of nine Christian books.
+# ::tok To my readers , I am the author of nine Christian books .
+# ::alignments 10-11|0.3.1+0.3.1.0+0.3.1.0.0 7-8|0+0.0 2-3|0.1+0.1.0 1-2|0.2 11-12|0.3 9-10|0.3.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.575
+(x8 / person
+	:ARG0-of (a / author-01)
+	:ARG2 (x3 / person
+		:ARG0-of (r / read-01))
+	:ARG0 (x5 / i)
+	:ARG1 (x12 / book
+		:quant 9
+		:mod (x11 / religious-group
+			:name (n / name
+				:op1 "Christian"))))
+
+# ::id 5
+# ::snt To my friends, I am one of the guys.
+# ::tok To my friends , I am one of the guys .
+# ::alignments 2-3|0+0.0+0.0.0 1-2|0.1 9-10|0.2 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.595
+(xap0 / person
+	:ARG0-of (x3 / have-rel-role-91
+		:ARG2 (f / friend))
+	:ARG0 (x5 / i)
+	:ARG2 (x10 / guy))
+
+# ::id 6
+# ::snt And, to so many over the years who have known my story, I am a man in a race -- a race against illness, against fear, against discrimination.
+# ::tok And , to so many over the years who have known my story , I am a man in a race -- a race against illness , against fear , against discrimination .
+# ::alignments 0-1|0 17-18|0.0 20-21|0.0.2 28-29|0.0.2.1 23-24|0.0.2.0 25-26|0.0.2.0.0 11-12|0.0.1 4-5|0.0.0 5-6|0.0.0.1 7-8|0.0.0.1.0+0.0.0.1.0.0 10-11|0.0.0.1.0.1 12-13|0.0.0.1.0.1.0 3-4|0.0.0.0 31-32|0.0.2.2 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.649
+(x1 / and
+	:op2 (x18 / man
+		:null_edge (x5 / many
+			:degree (x4 / so)
+			:null_edge (x6 / over
+				:op1 (x8 / temporal-quantity
+					:unit (y / year)
+					:ARG1-of (x11 / know-02
+						:ARG1 (x13 / story)))))
+		:domain (x15 / i)
+		:location (x21 / race
+			:domain (x24 / race
+				:prep-against (x26 / illness))
+			:prep-against (x29 / fear-01)
+			:prep-against (x32 / discriminate-02))))
+
+# ::id 7
+# ::snt A race against my own body.
+# ::tok A race against my own body .
+# ::alignments 1-2|0 5-6|0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.655
+(x2 / race
+	:prep-against (x6 / body))
+
+# ::id 8
+# ::snt A race against time.
+# ::tok A race against time .
+# ::alignments 1-2|0 3-4|0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.659
+(x2 / race
+	:time (x4 / time))
+
+# ::id 9
+# ::snt A hemophiliac since birth, I discovered my HIV status at 16.
+# ::tok A hemophiliac since birth , I discovered my HIV status at 16 .
+# ::alignments 8-9|0.2.0+0.2.0.0+0.2.0.0.0 6-7|0 11-12|0.3 9-10|0.2 5-6|0.1 1-2|0.0 2-3|0.0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.680
+(x7 / discover-01
+	:ARG0 (x2 / hemophiliac
+		:time (x3 / since))
+	:ARG0 (x6 / i)
+	:ARG1 (x10 / status
+		:mod (x9 / disease
+			:name (n / name
+				:op1 "HIV")))
+	:null_edge 16)
+
+# ::id 10
+# ::snt It was life-changing news, the result of a contaminated blood supply.
+# ::tok It was life-changing news , the result of a contaminated blood supply .
+# ::alignments 6-7|0 11-12|0.1 10-11|0.1.1 9-10|0.1.0 3-4|0.0 0-1|0.0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.709
+(x7 / result-01
+	:ARG1 (x4 / news
+		:domain (x1 / it))
+	:ARG1 (x12 / supply-01
+		:ARG1-of (x10 / contaminate)
+		:ARG1 (x11 / blood)))
+
+# ::id 11
+# ::snt And, so, the race began.
+# ::tok And , so , the race began .
+# ::alignments 0-1|0 6-7|0.0 5-6|0.0.1 2-3|0.0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.715
+(x1 / and
+	:op2 (x7 / begin-01
+		:degree (x3 / so)
+		:ARG1 (x6 / race)))
+
+# ::id 12
+# ::snt It has included many twists and turns: from the joy of marrying my high school sweetheart to the sorrow of being rejected by the first church to which I was appointed as pastor.
+# ::tok It has included many twists and turns : from the joy of marrying my high school sweetheart to the sorrow of being rejected by the first church to which I was appointed as pastor .
+# ::alignments 2-3|0 5-6|0.1 4-5|0.1.0 10-11|0.1.0.1 12-13|0.1.0.1.0 16-17|0.1.0.1.0.0 19-20|0.1.0.1.0.0.1+0.1.0.1.0.0.1.0 22-23|0.1.0.1.0.0.1.1 26-27|0.1.0.1.0.0.1.1.0 31-32|0.1.0.1.0.0.1.1.0.0 33-34|0.1.0.1.0.0.1.1.0.0.1 13-14|0.1.0.1.0.0.1.1.0.0.0 15-16|0.1.0.1.0.0.0 14-15|0.1.0.1.0.0.0.0 3-4|0.1.0.0 0-1|0.0 6-7|0.1.1 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.743
+(x3 / include-01
+	:ARG2 (x1 / it)
+	:ARG1 (x6 / and
+		:op1 (x5 / twist-01
+			:quant (x4 / many)
+			:source (x11 / joy
+				:ARG1 (x13 / marry-01
+					:ARG1 (x17 / sweetheart
+						:mod (x16 / school
+							:ARG1-of (x15 / high-02))
+						:ARG1-of (x20 / thing
+							:ARG1-of (s / sorrow-01)
+							:ARG0 (x23 / reject-01
+								:ARG0 (x27 / church
+									:ARG1-of (x32 / appoint-01
+										:ARG1 (x30 / i)
+										:ARG2 (x34 / pastor)))))))))
+		:op2 (x7 / turn-out-11)))
+
+# ::id 13
+# ::snt Certainly, the race has never been easy.
+# ::tok Certainly , the race has never been easy .
+# ::alignments 7-8|0 3-4|0.1 0-1|0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.752
+(x8 / easy-05
+	:mod (x1 / certain)
+	:ARG1 (x4 / race))
+
+# ::id 14
+# ::snt It is often long and difficult.
+# ::tok It is often long and difficult .
+# ::alignments 4-5|0 5-6|0.1 3-4|0.0 2-3|0.0.1 0-1|0.0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.759
+(x5 / and
+	:op1 (x4 / long-03
+		:ARG0 (x1 / it)
+		:frequency (x3 / often))
+	:op2 (x6 / difficult
+		:domain x1))
+
+# ::id 15
+# ::snt However, the race now impacts me in so many ways.
+# ::tok However , the race now impacts me in so many ways .
+# ::alignments 5-6|0 10-11|0.2 9-10|0.2.0 8-9|0.2.0.0 4-5|0.1 3-4|0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.767
+(x6 / impact-01
+	:ARG0 (x4 / race)
+	:time (x5 / now)
+	:ARG1 (x11 / way
+		:quant (x10 / many
+			:degree (x9 / so))))
+
+# ::id 16
+# ::snt And, oddly enough, I would not trade it with anyone.
+# ::tok And , oddly enough , I would not trade it with anyone .
+# ::alignments 0-1|0 8-9|0.0 11-12|0.0.3 9-10|0.0.2 5-6|0.0.1 3-4|0.0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.774
+(x1 / and
+	:op2 (x9 / trade-01
+		:degree (x4 / enough)
+		:ARG0 (x6 / i)
+		:ARG1 (x10 / it)
+		:ARG2 (x12 / anyone)))
+
+# ::id 17
+# ::snt Instead, the journey affords me a glimpse into the best of what each of us can become.
+# ::tok Instead , the journey affords me a glimpse into the best of what each of us can become .
+# ::alignments 4-5|0 7-8|0.2 10-11|0.2.0+0.2.0.0 17-18|0.2.0.1 16-17|0.2.0.1.1 13-14|0.2.0.1.0 3-4|0.1 0-1|0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.790
+(x5 / afford-01
+	:ARG1-of (x1 / instead-of-91)
+	:ARG0 (x4 / journey-01)
+	:ARG1 (x8 / glimpse
+		:mod (x11 / good
+			:degree (m / most)
+			:example-of (x18 / become-01
+				:ARG1 (x14 / each)
+				:ARG1-of (x17 / possible-01)))))
+
+# ::id 18
+# ::snt The race has made me a student, and no day goes by that it doesn't teach me a lesson.
+# ::tok The race has made me a student , and no day goes by that it does n't teach me a lesson .
+# ::alignments 8-9|0 10-11|0.1 17-18|0.1.1 20-21|0.1.1.0 3-4|0.0 1-2|0.0.0 6-7|0.0.1+0.0.1.0 9-10|0.1.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.826
+(x9 / and
+	:op1 (x4 / make-02
+		:ARG0 (x2 / race)
+		:ARG1 (x7 / person
+			:ARG0-of (s / study-01)))
+	:time (x11 / day
+		:polarity -
+		:time-of (x18 / teach-01
+			:ARG1 (x21 / lesson))))
+
+# ::id 19
+# ::snt About time: A privilege afforded to us to make a difference in this world.
+# ::tok About time : A privilege afforded to us to make a difference in this world .
+# ::alignments 4-5|0 5-6|0.0 9-10|0.0.0 1-2|0.0.0.0.0 14-15|0.0.0.0.1 13-14|0.0.0.0.1.0 11-12|0.0.0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.852
+(x5 / privilege-01
+	:ARG1-of (x6 / afford-01
+		:ARG1 (x10 / make-02
+			:ARG1 (x12 / differ-02
+				:time (x2 / time)
+				:location (x15 / world
+					:mod (x14 / this))))))
+
+# ::id 20
+# ::snt About relationships: The most important things we do are not done alone.
+# ::tok About relationships : The most important things we do are not done alone .
+# ::alignments 8-9|0.0 12-13|0.0.1 6-7|0.0.0 11-12|0.0.0.1 7-8|0.0.0.1.0 5-6|0.0.0.0 4-5|0.0.0.0.0 1-2|0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.873
+(x2 / relation-03
+	:null_edge (x12 / do-02
+		:ARG1 (x7 / thing
+			:mod (x6 / important
+				:degree (x5 / most))
+			:ARG1-of (x9 / do-02
+				:ARG0 (x8 / we)))
+		:manner (x13 / alone)))
+
+# ::id 21
+# ::snt About simplicity: More, bigger, nicer, pale in comparison to gifts like sunsets and the laughter of children at play.
+# ::tok About simplicity : More , bigger , nicer , pale in comparison to gifts like sunsets and the laughter of children at play .
+# ::alignments 1-2|0.0 13-14|0.1 16-17|0.1.1 18-19|0.1.1.2 22-23|0.1.1.2.1 20-21|0.1.1.2.0 15-16|0.1.1.1 7-8|0.1.1.0 9-10|0.1.0 3-4|0.1.0.0 5-6|0.1.0.0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.896
+(x / xconcept
+	:x (x2 / simplicity)
+	:x (x14 / gift-01
+		:ARG1-of (x10 / pale-03
+			:degree (x4 / more
+				:mod (x6 / big)))
+		:null_edge (x17 / and
+			:op2 (x8 / nicer)
+			:op1 (x16 / sunset)
+			:op2 (x19 / laughter
+				:poss (x21 / child)
+				:ARG1-of (x23 / play-08)))))
+
+# ::id 22
+# ::snt About real meaning... and about myself: Life is more a mosaic than a measurable frame of joys and sorrows, laughter and tears.
+# ::tok About real meaning ... and about myself : Life is more a mosaic than a measurable frame of joys and sorrows , laughter and tears .
+# ::alignments 12-13|0 16-17|0.3 4-5|0.3.1 19-20|0.3.1.2 22-23|0.3.1.2.0 20-21|0.3.1.1+0.3.1.1.0 18-19|0.3.1.0 10-11|0.2 8-9|0.1 2-3|0.0 23-24|0.0.1 0-1|0.0.1.0 1-2|0.0.0 24-25|0.3.1.2.1 15-16|0.3.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.919
+(x13 / mosaic
+	:ARG1-of (x3 / mean-01
+		:mod (x2 / real)
+		:ARG1 (x5 / and
+			:op2 (x6 / about)))
+	:domain (x9 / life)
+	:degree (x11 / more)
+	:ARG1 (x17 / frame
+		:ARG1-of (x16 / measure-01)
+		:ARG1 (x20 / and
+			:op1 (x19 / joy)
+			:op2 (x21 / thing
+				:ARG1-of (s / sorrow-01))
+			:op2 (x24 / and
+				:op2 (x23 / laughter)
+				:op1 (x25 / tear-up-04)))))
+
+# ::id 23
+# ::snt Real meaning is discovered through the composition of life's diversity.
+# ::tok Real meaning is discovered through the composition of life 's diversity .
+# ::alignments 3-4|0 10-11|0.1.0 8-9|0.1.0.0 1-2|0.0 0-1|0.0.0 6-7|0.1 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.928
+(x4 / discover-01
+	:ARG1 (x2 / mean-01
+		:mod (x1 / real))
+	:medium (x7 / compose-01
+		:ARG1 (x11 / diversity
+			:poss (x9 / life))))
+
+# ::id 24
+# ::snt No color can adequately define a mosaic, any more than one hardship, failure or achievement can define a person's life.
+# ::tok No color can adequately define a mosaic , any more than one hardship , failure or achievement can define a person 's life .
+# ::alignments 2-3|0 17-18|0.1 4-5|0.1.0 22-23|0.1.0.1 20-21|0.1.0.1.0 15-16|0.1.0.0 16-17|0.1.0.0.2 12-13|0.1.0.0.0 8-9|0.1.0.0.0.0 18-19|0.0 6-7|0.0.2 14-15|0.1.0.0.1 9-10|0.1.0.0.0.1 3-4|0.0.1 1-2|0.0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.941
+(x3 / possible-01
+	:ARG1 (x5 / define-01
+		:ARG0 (x2 / colour)
+		:manner (x4 / adequate)
+		:ARG1 (x7 / mosaic))
+	:condition (x18 / possible-01
+		:ARG1 (x19 / define-01
+			:ARG1 (x16 / or
+				:op1 (x13 / hardship
+					:mod (x9 / any)
+					:quant (x10 / more-than))
+				:op2 (x15 / fail-01)
+				:op2 (x17 / achievement))
+			:ARG1 (x23 / life
+				:poss (x21 / person)))))
+
+# ::id 25
+# ::snt The diversity of these images brought together unveil who I really am.
+# ::tok The diversity of these images brought together unveil who I really am .
+# ::alignments 5-6|0 7-8|0.2 9-10|0.2.0 10-11|0.2.0.0 6-7|0.1 1-2|0.0 4-5|0.0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.949
+(x6 / bring-01
+	:ARG0 (x2 / diversity
+		:ARG1 (x5 / image))
+	:manner (x7 / together)
+	:ARG2 (x8 / unveil-01
+		:ARG0 x2
+		:ARG0 (x10 / i
+			:mod (x11 / really))))
+
+# ::id 26
+# ::snt No matter how I try to describe myself, I am more than the sum of what I can say.
+# ::tok No matter how I try to describe myself , I am more than the sum of what I can say .
+# ::alignments 1-2|0 11-12|0.1 14-15|0.1.1 19-20|0.1.1.0 18-19|0.1.1.0.1 3-4|0.1.1.0.0 9-10|0.1.0 4-5|0.0 6-7|0.0.1 17-18|0.0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.961
+(x2 / matter-01
+	:domain (x5 / try-01
+		:ARG0 (x4 / i)
+		:ARG1 (x7 / describe-01
+			:ARG0 x4))
+	:degree (x12 / more
+		:ARG0 (x10 / i)
+		:compared-to (x15 / sum
+			:ARG1-of (x20 / say-01
+				:ARG0 (x18 / i)
+				:ARG1-of (x19 / possible-01)))))
+
+# ::id 27
+# ::snt So, I run ... for those I love and, even, for those I have never met.
+# ::tok So , I run ... for those I love and , even , for those I have never met .
+# ::alignments 3-4|0 9-10|0.1 18-19|0.1.2 11-12|0.1.1 8-9|0.1.0 2-3|0.1.0.0 7-8|0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.970
+(x4 / run-04
+	:ARG0 (x3 / i)
+	:ARG1 (x10 / and
+		:op2 (x9 / love-01
+			:ARG0 (x8 / i))
+		:op2 (x12 / even)
+		:ARG1-of (x19 / meet-03)))
+
+# ::id 28
+# ::snt I run to make life matter, seeking more than the right way to go, but actually going there and watching the race mean something.
+# ::tok I run to make life matter , seeking more than the right way to go , but actually going there and watching the race mean something .
+# ::alignments 1-2|0 7-8|0.2 14-15|0.2.1 20-21|0.2.1.0 21-22|0.2.1.0.1 24-25|0.2.1.0.1.0 25-26|0.2.1.0.1.0.1 23-24|0.2.1.0.1.0.0 8-9|0.2.0 12-13|0.2.0.0 11-12|0.2.0.0.0 3-4|0.1 5-6|0.1.0 4-5|0.1.0.0 0-1|0.0 17-18|0.2.1.0.0 ::annotator Aligner v.03 ::date 2018-11-14T11:02:41.984
+(x2 / run-04
+	:ARG0 (x1 / i)
+	:ARG0-of (x4 / make-02
+		:ARG0 x1
+		:ARG1 (x6 / matter-01
+			:ARG1 (x5 / life)))
+	:ARG1 (x8 / seek-01
+		:degree (x9 / more
+			:compared-to (x13 / way
+				:mod (x12 / right)))
+		:ARG1 (x15 / go-02
+			:ARG0 (x21 / and
+				:mod (x18 / actual)
+				:op2 (x22 / watch-01
+					:ARG1 (x25 / mean-01
+						:ARG1 (x24 / race)
+						:ARG2 (x26 / something)))))
+		:ARG1 x21))
+

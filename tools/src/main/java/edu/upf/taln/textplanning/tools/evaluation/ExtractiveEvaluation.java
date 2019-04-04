@@ -37,14 +37,19 @@ public class ExtractiveEvaluation
 		EvaluationTools.disambiguate(corpus);
 		EvaluationTools.rankMentions(options, corpus);
 
-		// create summary
-		final String summary = corpus.graph.vertexSet().stream()
-				.sorted(Comparator.comparingDouble(corpus.graph::getWeight).reversed())
-				.map(corpus.graph::getMentions)
-				.flatMap(Collection::stream)
-				.map(Mention::getSurface_form)
-				.collect(joining(" "));
-		log.info(summary);
+		// create summaries
+		corpus.texts.forEach(text ->
+		{
+			final String summary = text.graph.vertexSet().stream()
+					.sorted(Comparator.comparingDouble(text.graph::getWeight).reversed())
+					.map(text.graph::getMentions)
+					.flatMap(Collection::stream)
+					.map(Mention::getSurface_form)
+					.collect(joining(" "));
+			log.info(summary);
+		});
+
+		EvaluationTools.plan(options, corpus, resources_factory);
 	}
 }
 

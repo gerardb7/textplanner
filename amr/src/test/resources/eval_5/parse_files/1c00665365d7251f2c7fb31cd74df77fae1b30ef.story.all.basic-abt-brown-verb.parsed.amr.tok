@@ -1,0 +1,981 @@
+# ::id 1
+# ::snt LOS ANGELES, California (CNN) -- Heidi Newfield goes into Sunday's Academy of Country Music Awards with five nominations.
+# ::tok LOS ANGELES , California -LRB- CNN -RRB- -- Heidi Newfield goes into Sunday 's Academy of Country Music Awards with five nominations .
+(x1 / country
+	:name (n / name
+		:op1 "LOS"
+		:op2 "ANGELES"
+		:op3 ","
+		:op4 "California"
+		:op5 "-LRB-"
+		:op6 "CNN")
+	:time (xap0 / date-entity
+		:name (x4 / name
+			:op1 "California")
+		:ARG1 (x15 / academy
+			:null_edge (x9 / person
+				:name (n1 / name
+					:op1 "Heidi"
+					:op2 "Newfield"))
+			:part-of (x19 / thing
+				:ARG1-of (a / award-01)
+				:null_edge (x17 / null_tag)
+				:mod (x18 / organization
+					:name (n2 / name
+						:op1 "Music")))
+			:ARG2 (x22 / nominate-01
+				:quant 5)
+			:time (xap1 / date-entity
+				:weekday (x13 / sunday)))))
+
+# ::id 2
+# ::snt It's more than any other female, but she still considers herself the dark horse -- and in many ways, she is, especially since she's up for top female vocalist against such heavyweights as Carrie Underwood and Taylor Swift.
+# ::tok It 's more than any other female , but she still considers herself the dark horse -- and in many ways , she is , especially since she 's up for top female vocalist against such heavyweights as Carrie Underwood and Taylor Swift .
+(x18 / and
+	:op1 (x3 / more
+		:null_edge (x7 / female
+			:mod (x5 / any)
+			:mod (x6 / other))
+		:null_edge (x21 / way
+			:quant (x20 / many)
+			:null_edge (x34 / vocalist
+				:mod (x26 / especially)
+				:mod (x33 / female
+					:mod (x32 / top))
+				:ARG1 (x37 / heavyweight
+					:mod (x36 / such)
+					:example (x41 / and
+						:op1 (x39 / university
+							:name (n / name
+								:op1 "Carrie"
+								:op2 "Underwood"))
+						:op2 (x43 / thing
+							:name (n1 / name
+								:op1 "Swift")
+							:name (x42 / name
+								:op1 "Taylor")))))))
+	:op2 (x12 / consider-01
+		:time (x11 / still)
+		:ARG1 (x16 / horse
+			:ARG1-of (x15 / dark-02))))
+
+# ::id 3
+# ::snt Heidi Newfield says she considers herself an underdog at Sunday's Academy of Country Music Awards.
+# ::tok Heidi Newfield says she considers herself an underdog at Sunday 's Academy of Country Music Awards .
+(x3 / say-01
+	:ARG0 (x1 / person
+		:name (n / name
+			:op1 "Heidi"
+			:op2 "Newfield"))
+	:ARG1 (x5 / consider-01
+		:ARG0 (x4 / she)
+		:ARG1 (x8 / underdog
+			:ARG2 (x12 / academy
+				:null_edge (x16 / thing
+					:ARG1-of (a / award-01)
+					:null_edge (x14 / null_tag)
+					:mod (x15 / organization
+						:name (n1 / name
+							:op1 "Music")))
+				:time (xap0 / date-entity
+					:weekday (x10 / sunday))))))
+
+# ::id 4
+# ::snt For 10 years, Newfield was the lead singer of the honky-tonk trio Trick Pony.
+# ::tok For 10 years , Newfield was the lead singer of the honky-tonk trio Trick Pony .
+(x9 / person
+	:ARG0-of (s / sing-01)
+	:duration (x3 / temporal-quantity
+		:unit (y / year)
+		:quant 10)
+	:domain (x5 / person
+		:name (n / name
+			:op1 "Newfield"))
+	:ARG0-of (x8 / lead-01)
+	:topic-of (x15 / pony
+		:mod (x12 / honky-tonk)
+		:mod (x13 / trio)))
+
+# ::id 5
+# ::snt Her soulful debut solo album, "What Am I Waiting for," was released in August to stellar reviews -- many from critics who scoffed at the high-energy antics of her former band.
+# ::tok Her soulful debut solo album , `` What Am I Waiting for , '' was released in August to stellar reviews -- many from critics who scoffed at the high-energy antics of her former band .
+(x16 / release-01
+	:ARG1 (x5 / album
+		:mod (x2 / soulful)
+		:mod (x3 / debut)
+		:mod (x4 / solo)
+		:manner (x11 / wait-01
+			:ARG1 (x10 / i)))
+	:time (x18 / date-entity)
+	:ARG2 (x21 / review-02
+		:mod (x20 / stellar)
+		:ARG0 (x25 / critic
+			:quant (x23 / many)
+			:ARG0-of (x27 / scoff
+				:ARG2 (x31 / antic
+					:mod (x30 / high-energy)
+					:mod (x35 / band
+						:time (x34 / former)))))))
+
+# ::id 6
+# ::snt If you spend any time with the petite blonde from Northern California, you're struck by how many times she says, "Please" and "Thank you."
+# ::tok If you spend any time with the petite blonde from Northern California , you 're struck by how many times she says , `` Please '' and `` Thank you . ''
+(x16 / person
+	:name (n / name
+		:op1 "struck")
+	:null_edge (x3 / spend-01
+		:ARG0 (x2 / you)
+		:ARG1 (x5 / time
+			:mod (x4 / any))
+		:ARG3 (x9 / blonde
+			:mod (x8 / petite)
+			:null_edge (x12 / state
+				:name (n1 / name
+					:op1 "California")
+				:location (x11 / country
+					:name (n2 / name
+						:op1 "Northern")))))
+	:ARG1 (x14 / you)
+	:ARG0 (x27 / and
+		:op1 (x22 / thing
+			:ARG1-of (s / say-01)
+			:null_edge (x19 / many)
+			:ARG1 (x29 / thank-01
+				:ARG1 (x30 / you)))))
+
+# ::id 7
+# ::snt There's a smile for everyone -- waiters, doormen, cameramen -- and she steers conversation away from herself to ask how others are doing.
+# ::tok There 's a smile for everyone -- waiters , doormen , cameramen -- and she steers conversation away from herself to ask how others are doing .
+(x4 / smile-01
+	:domain (x14 / and
+		:op1 (x8 / waiter
+			:mod (x6 / everyone))
+		:op2 (x16 / steer-01
+			:ARG1 (x17 / converse-01
+				:mod (x18 / away))
+			:ARG1 (x22 / ask-02
+				:ARG1 (x26 / do-02
+					:ARG0 (x24 / other))))))
+
+# ::id 8
+# ::snt Newfield is a nice girl.
+# ::tok Newfield is a nice girl .
+(x5 / girl
+	:domain (x1 / person
+		:name (n / name
+			:op1 "Newfield"))
+	:ARG1-of (x4 / nice-01))
+
+# ::id 9
+# ::snt But her life changed when a fellow musician told her to stop being so nice, as she revealed in the following interview with CNN:  Watch Newfield talk about her nominations »
+# ::tok But her life changed when a fellow musician told her to stop being so nice , as she revealed in the following interview with CNN : Watch Newfield talk about her nominations ''
+(x1 / contrast-01
+	:ARG2 (x4 / change-01
+		:ARG1 (x3 / life)
+		:ARG2 (x9 / tell-01
+			:ARG0 (x8 / musician
+				:mod (x7 / fellow))
+			:ARG1 (x12 / stop-01
+				:ARG0 x8
+				:ARG1 (x15 / nice-01
+					:degree (x14 / so))))
+		:ARG1 (x19 / reveal-01
+			:medium (x23 / interview-01
+				:ARG1-of (x22 / follow-04)
+				:ARG0 (x25 / publication
+					:name (n / name
+						:op1 "CNN")))
+			:ARG0 (x27 / watch-01)
+			:ARG1 (x29 / talk-01
+				:name (x28 / name
+					:op1 "Newfield")
+				:ARG1 (x32 / nominate-01)))))
+
+# ::id 10
+# ::snt CNN: What went through your head when you received five nominations for this year's Academy of Country Music Awards?
+# ::tok CNN : What went through your head when you received five nominations for this year 's Academy of Country Music Awards ?
+(xap0 / go-back-19
+	:ARG1 (x1 / publication
+		:name (n / name
+			:op1 "CNN"))
+	:location (x7 / head)
+	:ARG0 (x10 / receive-01
+		:ARG0 (x9 / you)
+		:ARG1 (x12 / nominate-01
+			:quant 5)
+		:ARG2 (x21 / thing
+			:ARG1-of (a / award-01)
+			:time (x15 / year
+				:mod (x14 / this))
+			:null_edge (x17 / academy)
+			:null_edge (x19 / country)
+			:mod (x20 / country
+				:name (n1 / name
+					:op1 "Music")))))
+
+# ::id 11
+# ::snt Heidi Newfield: I thought one or two would be so fabulous, that would be so great.
+# ::tok Heidi Newfield : I thought one or two would be so fabulous , that would be so great .
+(x5 / think-01
+	:name (x1 / name
+		:op1 "Heidi"
+		:op2 "Newfield")
+	:ARG0 (x4 / i)
+	:ARG2 (x12 / fabulous
+		:domain (x7 / or
+			:op1 (x6 / one)
+			:op2 2)
+		:degree (x11 / so)
+		:null_edge (x18 / great)))
+
+# ::id 12
+# ::snt And they kept calling my name, and you know, I won't lie -- I'm going to tell on my husband -- the tears started flowing, and we were just really happy.
+# ::tok And they kept calling my name , and you know , I wo n't lie -- I 'm going to tell on my husband -- the tears started flowing , and we were just really happy .
+(x1 / and
+	:op2 (x8 / and
+		:op1 (x3 / keep-02
+			:ARG0 (x2 / they)
+			:ARG1 (x4 / call-03
+				:ARG1 (x6 / name)
+				:ARG0 x8)
+			:ARG1 (x31 / and
+				:op2 (x28 / start-01
+					:ARG1 (x27 / tear)
+					:ARG1 (x29 / flow-01))
+				:op2 (x36 / happy
+					:ARG1 (x32 / we)
+					:mod (x34 / just)
+					:mod (x35 / really))))
+		:op2 (x10 / know-01
+			:ARG0 x2
+			:ARG0 (x9 / you)
+			:ARG1 (x15 / lie-08
+				:ARG0 (x12 / i)))
+		:op2 (x21 / tell-01
+			:ARG0 (x17 / i)
+			:ARG1 (xap0 / person
+				:ARG0-of (x24 / have-rel-role-91
+					:ARG2 (h / husband))))))
+
+# ::id 13
+# ::snt All the hard work, all the time, and all the road -- and just the experience over time starts to play back in your mind, just like a movie.This is a really special time.
+# ::tok All the hard work , all the time , and all the road -- and just the experience over time starts to play back in your mind , just like a movie.This is a really special time .
+(x21 / start-01
+	:ARG0 (x4 / work-01
+		:quant (x1 / all)
+		:ARG1-of (x3 / hard-02))
+	:ARG0 (x10 / and
+		:quant (x6 / all)
+		:op1 (x8 / time
+			:null_edge (x15 / and
+				:op1 (x13 / road
+					:quant (x11 / all))
+				:op1 (x18 / experience-01
+					:mod (x16 / just)
+					:time (x20 / time)))))
+	:ARG1 (x23 / play-01
+		:ARG0 x4
+		:direction (x24 / back)
+		:location (x27 / mind)
+		:ARG0 (x32 / movie.this
+			:mod (x29 / just)
+			:ARG1-of (x36 / special-02
+				:degree (x35 / really)))))
+
+# ::id 14
+# ::snt CNN: Was it validation that leaving Trick Pony was the right thing to do?
+# ::tok CNN : Was it validation that leaving Trick Pony was the right thing to do ?
+(x1 / publication
+	:name (n / name
+		:op1 "CNN")
+	:domain (x13 / thing
+		:domain (x5 / validation)
+		:domain (x7 / leave-13
+			:ARG1 (x9 / pony
+				:mod (x8 / trick)))
+		:mod (x12 / right)))
+
+# ::id 15
+# ::snt Newfield: People tell you, "You can't do this."
+# ::tok Newfield : People tell you , `` You ca n't do this . ''
+(x1 / country
+	:name (n / name
+		:op1 "Newfield")
+	:null_edge (x4 / tell-01
+		:ARG2 (x5 / you)
+		:ARG1 (x11 / do-02
+			:ARG0 (x8 / you)
+			:ARG1 (x12 / this))))
+
+# ::id 16
+# ::snt You know in country music oftentimes it does not work when a front person leaves a group.
+# ::tok You know in country music oftentimes it does not work when a front person leaves a group .
+(x2 / know-01
+	:ARG0 (x1 / you)
+	:ARG1 (xap0 / possible-01
+		:ARG1 (x5 / music
+			:mod (x4 / country))
+		:ARG1 (x10 / work-09
+			:ARG0 (x15 / leave-11
+				:ARG0 (x14 / person
+					:mod (x13 / front))
+				:ARG1 (x17 / group)))))
+
+# ::id 17
+# ::snt In other genres -- pop, rock, hip-hop and rap -- people can leave all the time and do amazing things on their own.
+# ::tok In other genres -- pop , rock , hip-hop and rap -- people can leave all the time and do amazing things on their own .
+(x14 / possible-01
+	:ARG1 (x15 / leave-11
+		:purpose (x3 / genre
+			:mod (x2 / other))
+		:ARG1 (x10 / and
+			:op1 (x5 / pop)
+			:op2 (x7 / rock)
+			:op2 (x9 / hip-hop)
+			:op2 (x11 / rap))
+		:ARG1 (x18 / time
+			:mod (x16 / all))
+		:purpose (x19 / and
+			:op2 (x20 / do-02
+				:ARG1 (x22 / thing
+					:mod (x21 / amazing))))))
+
+# ::id 18
+# ::snt Beyonce, Justin Timberlake, Sting -- there's a gazillion people.
+# ::tok Beyonce , Justin Timberlake , Sting -- there 's a gazillion people .
+(x1 / name
+	:op1 "Beyonce"
+	:op2 ","
+	:op3 "Justin"
+	:op4 "Timberlake")
+
+# ::id 19
+# ::snt But in country, we have that tight-knit, almost family relationship with our fans, so when you change something up, they don't always like that very much.
+# ::tok But in country , we have that tight-knit , almost family relationship with our fans , so when you change something up , they do n't always like that very much .
+(x1 / contrast-01
+	:ARG2 (x6 / have-03
+		:location (x3 / country)
+		:ARG0 (x5 / we)
+		:ARG1 (x12 / relation-03
+			:ARG0 (x8 / tight-knit)
+			:ARG0 (x11 / family
+				:mod (x10 / almost))
+			:ARG2 (x15 / fan))
+		:time (x20 / change-01
+			:ARG0 (x19 / you)
+			:ARG1 (x21 / something)
+			:time (x27 / always)
+			:degree (x31 / much
+				:degree (x30 / very)))))
+
+# ::id 20
+# ::snt CNN: Did you feel guilty about leaving Trick Pony?
+# ::tok CNN : Did you feel guilty about leaving Trick Pony ?
+(x1 / publication
+	:name (n / name
+		:op1 "CNN")
+	:null_edge (x5 / feel-01
+		:ARG0 (x4 / you)
+		:ARG1 (x6 / guilty-01)
+		:ARG0 (x8 / leave-11
+			:ARG1 (x10 / pony
+				:mod (x9 / trick)))))
+
+# ::id 21
+# ::snt Newfield: No, not an ounce of guilt.
+# ::tok Newfield : No , not an ounce of guilt .
+(x1 / person
+	:name (n / name
+		:op1 "Newfield")
+	:null_edge (x9 / guilty-01))
+
+# ::id 22
+# ::snt I left Trick Pony with my head held high.
+# ::tok I left Trick Pony with my head held high .
+(x2 / leave-11
+	:ARG0 (x1 / i)
+	:ARG1 (x4 / pony
+		:mod (x3 / trick))
+	:time (x8 / hold-04
+		:ARG0 (x7 / head-01)
+		:mod (x9 / high)))
+
+# ::id 23
+# ::snt I felt like I left with total dignity and class, and I didn't leave anybody hanging.
+# ::tok I felt like I left with total dignity and class , and I did n't leave anybody hanging .
+(x12 / and
+	:op1 (x2 / feel-01
+		:ARG0 (x1 / i))
+	:op1 (x5 / leave-11
+		:ARG0 (x4 / i)
+		:ARG1 (x9 / and
+			:op1 (x8 / dignity
+				:mod (x7 / total-01))
+			:op2 (x10 / class)))
+	:op2 (x16 / leave-11
+		:ARG0 x1
+		:ARG0 (x13 / i)
+		:ARG1 (x18 / hanging-07
+			:ARG0 (x17 / anybody))))
+
+# ::id 24
+# ::snt I fulfilled every obligation, no matter how hard it was -- and it was hard.
+# ::tok I fulfilled every obligation , no matter how hard it was -- and it was hard .
+(x13 / and
+	:op1 (x2 / fulfill-01
+		:ARG0 (x1 / i)
+		:ARG1 (x4 / thing
+			:ARG2-of (o / obligate-01)
+			:mod (x3 / every)
+			:mod (x7 / matter-01
+				:polarity -)
+			:ARG1-of (x9 / hard-02)))
+	:op3 (x16 / hard-02))
+
+# ::id 25
+# ::snt There was a lot of drama, and they weren't exactly happy with me.
+# ::tok There was a lot of drama , and they were n't exactly happy with me .
+(x8 / and
+	:op1 (x6 / drama
+		:quant (x4 / lot))
+	:op2 (x13 / happy
+		:mod (x12 / exact)))
+
+# ::id 26
+# ::snt I don't mind saying this, but it was miserable the last several months.
+# ::tok I do n't mind saying this , but it was miserable the last several months .
+(x8 / contrast-01
+	:ARG1 (x4 / mind-01
+		:ARG0 (x1 / i)
+		:ARG1 (x5 / say-01
+			:ARG0 x1
+			:ARG1 (x6 / this)))
+	:ARG2 (x11 / miserable
+		:quant (x14 / thing
+			:name (n / name
+				:op1 "several"
+				:op2 "months")
+			:mod (x13 / last))))
+
+# ::id 27
+# ::snt But my intuition was saying it's time to make a change.
+# ::tok But my intuition was saying it 's time to make a change .
+(x1 / contrast-01
+	:ARG2 (x5 / say-01
+		:ARG0 (x3 / intuition)
+		:ARG1 (x8 / time
+			:purpose (x10 / make-01
+				:ARG1 (x12 / change-01)))))
+
+# ::id 28
+# ::snt So did I stay too long?
+# ::tok So did I stay too long ?
+(x4 / stay-01
+	:ARG1 (x3 / i)
+	:ARG1-of (x6 / long-03
+		:degree (x5 / too)))
+
+# ::id 29
+# ::snt I don't know.
+# ::tok I do n't know .
+(x4 / know-01
+	:ARG0 (x1 / i))
+
+# ::id 30
+# ::snt I mean, everything happens for a reason.
+# ::tok I mean , everything happens for a reason .
+(x2 / mean-01
+	:ARG0 (x1 / i)
+	:ARG1 (x4 / everything)
+	:ARG2 (x8 / reason))
+
+# ::id 31
+# ::snt Had I left three years ago, maybe I wouldn't have been the same person I am today.
+# ::tok Had I left three years ago , maybe I would n't have been the same person I am today .
+(x16 / person
+	:ARG0-of (x3 / leave-17
+		:ARG0 (x2 / i)
+		:time (xap1 / before
+			:name (xap0 / before
+				:op1 (x4 / date-entity))))
+	:domain (x9 / i)
+	:ARG1-of (x15 / same-01)
+	:time (x19 / today))
+
+# ::id 32
+# ::snt CNN: John Popper from Blues Traveler kind of gave you a kick in the pants.
+# ::tok CNN : John Popper from Blues Traveler kind of gave you a kick in the pants .
+(x1 / publication
+	:name (n / name
+		:op1 "CNN")
+	:null_edge (x10 / give-01
+		:name (x3 / name
+			:op1 "John"
+			:op2 "Popper")
+		:ARG0 (x7 / person
+			:name (n1 / name
+				:op1 "Traveler")
+			:null_edge (x6 / country
+				:name (n2 / name
+					:op1 "Blues")))
+		:mod (x8 / kind)
+		:ARG2 (x11 / you)
+		:ARG1 (x13 / kick-01
+			:ARG1 (x16 / pants))))
+
+# ::id 33
+# ::snt Newfield: Oh, I love Poppy!
+# ::tok Newfield : Oh , I love Poppy !
+(x6 / love-01
+	:op1 (x1 / country
+		:name (n / name
+			:op1 "Newfield"))
+	:mod (x3 / oh)
+	:ARG0 (x5 / i)
+	:ARG1 (x7 / poppy))
+
+# ::id 34
+# ::snt We talk all the time, I kid you not.
+# ::tok We talk all the time , I kid you not .
+(x8 / kid
+	:domain (x2 / talk-01
+		:ARG0 (x1 / we)
+		:ARG1 (x5 / time
+			:quant (x3 / all)))
+	:ARG0 (x7 / i)
+	:ARG2 (x9 / you))
+
+# ::id 35
+# ::snt John was on a USO tour with us for 2½ weeks, so we got to know each other really well.
+# ::tok John was on a USO tour with us for 2 1/2 weeks , so we got to know each other really well .
+(x16 / get-01
+	:time (x6 / tour-01
+		:ARG0 (x1 / person
+			:name (n / name
+				:op1 "John"))
+		:ARG0 (x5 / organization
+			:name (n1 / name
+				:op1 "USO")))
+	:duration (x12 / temporal-quantity
+		:unit (w / week)
+		:quant 1/2
+			:null_edge 2))
+	:ARG0 (x15 / we)
+	:ARG1 (x18 / know-01
+		:ARG1 (x20 / other
+			:mod (x19 / each))
+		:manner (x22 / well
+			:mod (x21 / really))))
+
+# ::id 36
+# ::snt Every night, he would come on stage and do a [harmonica] number with me.
+# ::tok Every night , he would come on stage and do a -LSB- harmonica -RSB- number with me .
+(x9 / and
+	:op1 (x6 / come-01
+		:ARG1 (x4 / he)
+		:ARG4 (x8 / stage)
+		:frequency (xap0 / rate-entity-91
+			:ARG4 (x2 / night)))
+	:op2 (x10 / do-02
+		:ARG1 (x15 / number
+			:mod (x13 / harmonica))))
+
+# ::id 37
+# ::snt On the last night of the tour, we were in Germany, and we were at this pub, and Poppy said to me, "You love this, and it's clear you're a musician -- but you need to learn to stop being so nice.
+# ::tok On the last night of the tour , we were in Germany , and we were at this pub , and Poppy said to me , `` You love this , and it 's clear you 're a musician -- but you need to learn to stop being so nice .
+(x14 / and
+	:time (x7 / tour-01
+		:time (x4 / night
+			:mod (x3 / last)))
+	:null_edge (x9 / we)
+	:location (x12 / country
+		:name (n / name
+			:op1 "Germany"))
+	:location (x19 / pub
+		:ARG0 (x15 / we)
+		:mod (x18 / this))
+	:op2 (x21 / and)
+	:op2 (x23 / say-01
+		:ARG0 (x22 / person
+			:name (n1 / name
+				:op1 "Poppy"))
+		:ARG1 (x32 / and
+			:op1 (x29 / love-01
+				:ARG0 (x28 / you)
+				:ARG1 (x30 / this)
+				:null_edge (x41 / contrast-01))
+			:op2 (x35 / clear-06
+				:ARG1 (x39 / musician
+					:domain (x36 / you)))
+			:op2 (x43 / need-01
+				:ARG0 x28
+				:ARG0 (x42 / you)
+				:ARG1 (x45 / learn-01
+					:ARG0 x42
+					:ARG1 (x47 / stop-01
+						:ARG1 (x50 / nice-01
+							:degree (x49 / so))))))))
+
+# ::id 38
+# ::snt You need to speak your mind and step up and step up for yourself."
+# ::tok You need to speak your mind and step up and step up for yourself . ''
+(x2 / need-01
+	:ARG0 (x1 / you)
+	:ARG1 (x7 / and
+		:op1 (x4 / speak-01
+			:ARG1 (x6 / mind-05)
+			:manner (x10 / and
+				:op2 (x11 / step-up-03)))
+		:op2 (x8 / step-up-03)))
+
+# ::id 39
+# ::snt His actual words were, "When you learn to be a b----," that's what he told me.
+# ::tok His actual words were , `` When you learn to be a b -- , '' that 's what he told me .
+(x3 / word-01
+	:ARG1-of (x2 / actual-02)
+	:ARG0-of (x21 / tell-01
+		:time (x9 / learn-01
+			:ARG0 (x8 / you)
+			:ARG1 (x13 / b))
+		:ARG0 (x20 / he)))
+
+# ::id 40
+# ::snt And I thought, "Well, my philosophy is I don't think you ever, ever, ever have to be a diva or a prima donna to make it to a certain level."
+# ::tok And I thought , `` Well , my philosophy is I do n't think you ever , ever , ever have to be a diva or a prima donna to make it to a certain level . ''
+(x1 / and
+	:op2 (x3 / think-01
+		:ARG0 (x2 / i)
+		:ARG1 (x9 / philosophy
+			:mod (x6 / well)
+			:domain (x14 / think-01
+				:ARG0 (x11 / i)
+				:ARG1 (x21 / have-03
+					:null_edge (x15 / you)
+					:null_edge (x16 / ever)
+					:null_edge (x18 / ever)
+					:time (x20 / ever)
+					:ARG1 (x26 / or
+						:op1 (x25 / diva
+							:prep-to (x36 / level
+								:mod (x35 / certain)))
+						:op2 (x28 / prima)))))))
+
+# ::id 41
+# ::snt I think you can always treat people with respect and be nice, and I always plan on doing that.
+# ::tok I think you can always treat people with respect and be nice , and I always plan on doing that .
+(x2 / think-01
+	:ARG0 (x1 / i)
+	:ARG1 (x4 / possible-01
+		:ARG1 (x6 / treat-03
+			:time (x5 / always)
+			:ARG2 (x9 / respect-01)
+			:ARG1 (x12 / nice-01)
+			:ARG1 (x17 / plan-01
+				:ARG0 (x15 / i)
+				:time (x16 / always)
+				:ARG1 (x19 / do-02
+					:ARG0 x15)))))
+
+# ::id 42
+# ::snt But what he said was right.
+# ::tok But what he said was right .
+(x / xconcept
+	:x (x1 / contrast-01
+		:ARG2 (x6 / right))
+	:x (x4 / say-01
+		:ARG0 (x3 / he)))
+
+# ::id 43
+# ::snt When you start to believe in yourself, that's when there's no limit to what you can do.
+# ::tok When you start to believe in yourself , that 's when there 's no limit to what you can do .
+(x3 / start-01
+	:ARG0 (x2 / you)
+	:ARG1 (x5 / believe-01
+		:ARG0 x2
+		:ARG0 (x9 / that))
+	:ARG1 x9
+	:ARG1 (x15 / limit-01
+		:polarity -
+		:ARG2 (x20 / thing
+			:ARG1-of (d / do-02)
+			:ARG0 (x18 / you)
+			:ARG1-of (x19 / possible-01))))
+
+# ::id 44
+# ::snt CNN: Your debut solo album, "What Am I Waiting for," shows a lot of growth.
+# ::tok CNN : Your debut solo album , `` What Am I Waiting for , '' shows a lot of growth .
+(x1 / publication
+	:name (n / name
+		:op1 "CNN")
+	:null_edge (x16 / show-01
+		:ARG1 (x12 / wait-01
+			:ARG1 (x6 / album
+				:mod (x5 / solo
+					:mod (x4 / debut)))
+			:ARG1 (x11 / i))
+		:ARG1 (x20 / grow-01
+			:quant (x18 / lot))))
+
+# ::id 45
+# ::snt It's much more introspective and mature, whereas Trick Pony's music was brash and not as multidimensional.
+# ::tok It 's much more introspective and mature , whereas Trick Pony 's music was brash and not as multidimensional .
+(x6 / and
+	:op1 (x5 / introspective
+		:ARG0 (x1 / it)
+		:degree (x4 / more
+			:degree (x3 / much))
+		:ARG1 (x16 / and
+			:op1 (x15 / brash
+				:ARG1 (x13 / music
+					:poss (x11 / pony)))
+			:op2 (x19 / multidimensional)))
+	:op2 (x7 / mature-02
+		:domain x1))
+
+# ::id 46
+# ::snt Newfield: When my producer Tony Brown and I first sat down to talk about making this album, one of the first things that came out of his mouth was, "We have to show people who you really are.
+# ::tok Newfield : When my producer Tony Brown and I first sat down to talk about making this album , one of the first things that came out of his mouth was , `` We have to show people who you really are .
+(x24 / thing
+	:example (x8 / and
+		:op1 (x1 / person
+			:name (n / name
+				:op1 "Newfield"))
+		:op1 (x6 / person
+			:name (n1 / name
+				:op1 "Tony"
+				:op2 "Brown")
+			:ARG0-of (x5 / thing
+				:ARG0-of (p / produce-01)))
+		:op2 (x9 / i)
+		:time (x10 / first))
+	:quant (x20 / one)
+	:ARG1-of (x21 / include-91)
+	:ARG1-of (x26 / come-out-09
+		:ARG3 (x30 / mouth))
+	:ARG0-of (x37 / show-01
+		:ARG0 (x34 / we)
+		:ARG0 (x40 / you
+			:mod (x41 / really))))
+
+# ::id 47
+# ::snt We need to cut songs, and you need to explore parts of your vocals that you never got a change to showcase."
+# ::tok We need to cut songs , and you need to explore parts of your vocals that you never got a change to showcase . ''
+(x7 / and
+	:op1 (x2 / need-01
+		:ARG0 (x1 / we)
+		:ARG1 (x4 / cut-02
+			:ARG0 x1
+			:ARG1 (x5 / song)))
+	:op2 (x9 / need-01
+		:ARG0 x1
+		:ARG0 (x8 / you)
+		:ARG1 (x11 / explore-01
+			:ARG0 x8
+			:ARG1 (x21 / change-01
+				:ARG1 (x15 / vocal)
+				:ARG0 (x17 / you)
+				:ARG1 (x23 / showcase)))))
+
+# ::id 48
+# ::snt All the ACM nominations are validation that we are on the path to doing just that and being taken seriously as an artist -- as a singer, as a songwriter and as a musician.
+# ::tok All the ACM nominations are validation that we are on the path to doing just that and being taken seriously as an artist -- as a singer , as a songwriter and as a musician .
+(x6 / validation
+	:ARG1 (x4 / nominate-01
+		:quant (x1 / all)
+		:ARG0 (x3 / country
+			:name (n / name
+				:op1 "ACM")))
+	:ARG1 (x12 / path
+		:poss (x8 / we))
+	:ARG1 (x17 / and
+		:op1 (x14 / do-02
+			:mod (x15 / just)
+			:manner (x23 / artist
+				:mod (x20 / serious)
+				:ARG2 (x27 / sing-01)
+				:ARG2 (x31 / songwriter)
+				:ARG2 (x35 / musician)))))
+
+# ::id 49
+# ::snt We made a record that made people say, "Hey, this girl can sing."
+# ::tok We made a record that made people say , `` Hey , this girl can sing . ''
+(x2 / make-02
+	:ARG0 (x1 / we)
+	:ARG1 (x4 / record
+		:ARG0-of (x6 / make-02
+			:ARG1 (x8 / say-01
+				:ARG1 (x15 / possible-01
+					:ARG1 (x16 / sing-01
+						:ARG0 (x11 / hey)
+						:ARG0 (x14 / girl
+							:mod (x13 / this))))))))
+
+# ::id 50
+# ::snt And that's what I had always hoped.
+# ::tok And that 's what I had always hoped .
+(x1 / and
+	:op2 (x8 / hope-01
+		:mod (x2 / that)
+		:ARG0 (x5 / i)
+		:time (x7 / always)))
+
+# ::id 51
+# ::snt CNN: Still, it's a building process, and in a lot of ways, you're starting from scratch.
+# ::tok CNN : Still , it 's a building process , and in a lot of ways , you 're starting from scratch .
+(x1 / publication
+	:name (n / name
+		:op1 "CNN")
+	:null_edge (x11 / and
+		:op1 (x9 / process-01
+			:mod (x3 / still)
+			:ARG1 (x8 / build-01))
+		:op2 (x20 / start-01
+			:manner (x16 / way
+				:quant (x14 / lot))
+			:ARG1 (x22 / scratch-02))))
+
+# ::id 52
+# ::snt Newfield: At this one fair that I went to, they had my name spelled H-e-d-y instead of H-e-i-d-i.
+# ::tok Newfield : At this one fair that I went to , they had my name spelled H-e-d-y instead of H-e-i-d-i .
+(x1 / country
+	:name (n / name
+		:op1 "Newfield")
+	:null_edge (x6 / fair
+		:mod (x4 / this)
+		:quant 1
+		:ARG1-of (x9 / go-02
+			:ARG0 (x8 / i))
+		:ARG1 (x12 / they)
+		:domain (x16 / spell-01
+			:ARG0 (x15 / name)
+			:ARG1-of (x18 / instead-of-91)
+			:null_edge (x20 / h-e-i-d-i))))
+
+# ::id 53
+# ::snt Hedy Newfield.
+# ::tok Hedy Newfield .
+(x1 / name
+	:op1 "Hedy"
+	:op2 "Newfield")
+
+# ::id 54
+# ::snt And I thought, "Oh, that's just great."
+# ::tok And I thought , `` Oh , that 's just great . ''
+(x1 / and
+	:op2 (x3 / think-01
+		:ARG0 (x2 / i)
+		:mod (x6 / oh)
+		:mod (x11 / great
+			:domain (x8 / that)
+			:mod (x10 / just))))
+
+# ::id 55
+# ::snt And, of course, you go up to the promoter and say, "Come on, hook a sister up here."
+# ::tok And , of course , you go up to the promoter and say , `` Come on , hook a sister up here . ''
+(x12 / and
+	:op1 (x7 / go-02
+		:null_edge (x1 / and)
+		:ARG0 (x6 / you)
+		:ARG4 (x11 / person
+			:ARG0-of (p / promote-02))
+		:null_edge (x19 / hook
+			:location (x23 / here)
+			:ARG1 (xap0 / person
+				:ARG0-of (x21 / have-rel-role-91
+					:ARG2 (s / sister)))))
+	:op2 (x13 / say-01
+		:ARG0 x6
+		:ARG1 (x16 / come-01)))
+
+# ::id 56
+# ::snt So we're fixing that.
+# ::tok So we 're fixing that .
+(x4 / fix-02
+	:ARG0 (x2 / we))
+
+# ::id 57
+# ::snt CNN: Of the five awards you're up for at the ACMs, you have to be most thrilled about top female vocalist.
+# ::tok CNN : Of the five awards you 're up for at the ACMs , you have to be most thrilled about top female vocalist .
+(xap0 / obligate-01
+	:ARG1 (x1 / publication
+		:name (n / name
+			:op1 "CNN"))
+	:ARG1 (x6 / thing
+		:ARG1-of (a / award-01)
+		:quant 5
+		:ARG0 (x7 / you
+			:null_edge (x13 / acm)))
+	:op2 (x20 / thrill-01
+		:ARG0 (x15 / you)
+		:degree (x19 / most)
+		:ARG0 (x24 / vocalist
+			:mod (x23 / female
+				:mod (x22 / top)))))
+
+# ::id 58
+# ::snt [Newfield is up against Underwood, Swift, Lee Ann Womack and Miranda Lambert.)
+# ::tok -LSB- Newfield is up against Underwood , Swift , Lee Ann Womack and Miranda Lambert . -RRB-
+(x2 / person
+	:name (n / name
+		:op1 "Newfield")
+	:prep-against (x13 / and
+		:op2 (x8 / thing
+			:name (n1 / name
+				:op1 "Swift"))
+		:op2 (x10 / name
+			:op1 "Lee"
+			:op2 "Ann"
+			:op3 "Womack")
+		:op2 (x15 / person
+			:name (n2 / name
+				:op1 "Lambert")
+			:name (x14 / name
+				:op1 "Miranda"))))
+
+# ::id 59
+# ::snt Newfield: I'm the biggest dark horse ever.
+# ::tok Newfield : I 'm the biggest dark horse ever .
+(x1 / country
+	:name (n / name
+		:op1 "Newfield")
+	:null_edge (x8 / horse
+		:domain (x3 / i)
+		:mod (x6 / big
+			:degree (m / most))
+		:ARG1-of (x7 / dark-02)
+		:time (x9 / ever)))
+
+# ::id 60
+# ::snt I'm the big underdog, but I like to be the underdog.
+# ::tok I 'm the big underdog , but I like to be the underdog .
+(x7 / contrast-01
+	:ARG1 (x5 / underdog
+		:domain (x1 / i)
+		:mod (x4 / big))
+	:ARG2 (x9 / like-01
+		:ARG0 x1
+		:ARG0 (x8 / i)
+		:ARG1 (x13 / underdog)))
+
+# ::id 61
+# ::snt I hope the makeup's rockin'.
+# ::tok I hope the makeup 's rockin ' .
+(x2 / hope-01
+	:ARG0 (x1 / i)
+	:ARG1 (x4 / makeup
+		:ARG0-of (x6 / rockin)))
+
+# ::id 62
+# ::snt I hope I look good at that moment when they call out, "Carrie Underwood."
+# ::tok I hope I look good at that moment when they call out , `` Carrie Underwood . ''
+(x2 / hope-01
+	:ARG0 (x1 / i)
+	:ARG1 (x4 / look-02
+		:ARG0 (x3 / i)
+		:ARG1 (x5 / good)
+		:ARG1 (x8 / moment
+			:mod (x7 / that))
+		:name (x15 / name
+			:op1 "Carrie"
+			:op2 "Underwood")))
+

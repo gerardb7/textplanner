@@ -1,0 +1,836 @@
+# ::id 1
+# ::snt Rome (CNN) -- Five people were convicted of multiple manslaughter and causing personal injury Saturday over the deadly wreck of the Costa Concordia cruise liner off the Italian coast last year -- but only two may serve any prison time under the plea bargain accepted by the judge.
+# ::tok Rome -LRB- CNN -RRB- -- Five people were convicted of multiple manslaughter and causing personal injury Saturday over the deadly wreck of the Costa Concordia cruise liner off the Italian coast last year -- but only two may serve any prison time under the plea bargain accepted by the judge .
+(x13 / and
+	:op1 (x1 / country
+		:name (n / name
+			:op1 "Rome"
+			:op2 "-LRB-"
+			:op3 "CNN"))
+	:op1 (x9 / convict-01
+		:quant 5
+		:ARG2 (x12 / manslaughter
+			:quant (x11 / multiple)))
+	:op2 (x14 / cause-01
+		:ARG1 (x16 / injure-01
+			:ARG1-of (x15 / personal-02))
+		:ARG1 (x21 / wreck
+			:ARG0-of (x20 / kill-01
+				:op (d / deadly))
+			:ARG1 (x27 / liner
+				:null_edge (x24 / null_tag)
+				:poss (x25 / organization
+					:name (n1 / name
+						:op1 "Concordia"))
+				:mod (x26 / cruise)
+				:location (x28 / off
+					:op1 (x31 / coast
+						:mod (x30 / country
+							:name (n2 / name
+								:op1 "Italy"))))
+				:time (x33 / year
+					:mod (x32 / last))))
+		:time (xap0 / date-entity
+			:weekday (x17 / saturday)))
+	:op2 (x38 / possible-01
+		:ARG1 (x39 / serve-01
+			:null_edge (x36 / only
+				:null_edge 2)
+			:ARG1 (x42 / time
+				:mod (x40 / any)
+				:mod (x41 / prison))
+			:manner (x46 / bargain-01
+				:mod (x45 / plead-02)
+				:ARG1-of (x47 / accept-01
+					:ARG3 (x50 / judge-01))))))
+
+# ::id 2
+# ::snt The convictions, the first in the case, came after Judge Pietro Molino accepted their plea bargain Saturday morning.
+# ::tok The convictions , the first in the case , came after Judge Pietro Molino accepted their plea bargain Saturday morning .
+(x10 / come-01
+	:ARG1 (x2 / conviction-02
+		:time (x8 / case-03))
+	:time (x11 / after
+		:op1 (x15 / accept-01
+			:ARG0 (x14 / person
+				:name (n / name
+					:op1 "Molino")
+				:name (x13 / name
+					:op1 "Pietro"))
+			:ARG1 (x18 / bargain-01
+				:mod (x17 / plead-02))
+			:time (x20 / morning)))
+	:null_edge (x19 / saturday)
+	:ARG0-of (xap0 / have-org-role-91
+		:ARG3 (x12 / judge-01)))
+
+# ::id 3
+# ::snt The five were originally co-defendants with the cruise ship's captain, Francesco Schettino.
+# ::tok The five were originally co-defendants with the cruise ship 's captain , Francesco Schettino .
+(x5 / co-defendant
+	:quant 5
+	:mod (x4 / original)
+	:ARG0-of (x11 / have-org-role-91
+		:ARG2 (c / captain)
+		:ARG1 (x9 / ship
+			:mod (x8 / cruise))
+		:name (x13 / name
+			:op1 "Francesco"
+			:op2 "Schettino")))
+
+# ::id 4
+# ::snt But he is now being tried separately on charges of multiple manslaughter in the wreck and abandoning ship.
+# ::tok But he is now being tried separately on charges of multiple manslaughter in the wreck and abandoning ship .
+(x1 / contrast-01
+	:ARG2 (x6 / try-01
+		:ARG1 (x2 / he)
+		:time (x4 / now)
+		:manner (x7 / separate-02)
+		:ARG2 (x9 / charge-05
+			:ARG2 (x12 / manslaughter
+				:quant (x11 / multiple)))
+		:manner (x15 / wreck))
+	:ARG2 (x16 / and)
+	:ARG2 (x17 / abandon-01
+		:ARG0 x2
+		:ARG1 (x18 / ship)))
+
+# ::id 5
+# ::snt Court proceedings in his case began this week.
+# ::tok Court proceedings in his case began this week .
+(x6 / begin-01
+	:ARG1 (x2 / proceeding-02
+		:mod (x1 / court)
+		:time (x5 / case-03))
+	:time (x8 / week
+		:mod (x7 / this)))
+
+# ::id 6
+# ::snt Thirty-two people died when the Costa Concordia, a luxury liner carrying 3,200 passengers and 1,000 crew members, struck rocks off the Italian island of Giglio on January 13, 2012.
+# ::tok Thirty-two people died when the Costa Concordia , a luxury liner carrying 3,200 passengers and 1,000 crew members , struck rocks off the Italian island of Giglio on January 13 , 2012 .
+(x3 / die-01
+	:ARG1 (x1 / thirty-two)
+	:time (x20 / strike-01
+		:ARG0 (x7 / organization
+			:name (n / name
+				:op1 "Concordia")
+			:null_edge (x6 / null_tag)
+			:null_edge (x11 / liner
+				:mod (x10 / luxury)
+				:ARG0-of (x12 / carry-01
+					:ARG1 (x15 / and
+						:op1 (x14 / passenger)
+						:op1 (xap0 / person
+							:ARG0-of (x18 / have-org-role-91
+								:ARG2 (m / member)
+								:ARG1 (x17 / crew)))))))
+		:ARG1 (x21 / rock)
+		:ARG2 (x25 / island
+			:mod (x24 / country
+				:name (n1 / name
+					:op1 "Italy"))
+			:poss (x27 / country
+				:name (n2 / name
+					:op1 "Giglio")))
+		:time (x29 / date-entity
+			:time (x32 / date-entity
+				:year 2012))))
+
+# ::id 7
+# ::snt Another 150 people were injured in the evacuation of the ship -- 65 of them seriously.
+# ::tok Another 150 people were injured in the evacuation of the ship -- 65 of them seriously .
+(x5 / injure-01
+	:ARG1 (x1 / another
+		:op1 150)
+	:location (x8 / evacuation
+		:ARG1 (x11 / ship))
+	:null_edge 65
+	:manner (x16 / serious))
+
+# ::id 8
+# ::snt The injuries include partial paralysis, amputations and, in one case, blindness.
+# ::tok The injuries include partial paralysis , amputations and , in one case , blindness .
+(x3 / include-01
+	:ARG2 (x2 / injure-01)
+	:ARG1 (x8 / and
+		:op1 (x5 / paralysis
+			:mod (x4 / partial))
+		:op2 (x7 / amputation)
+		:prep-in (x12 / case-03
+			:quant 1)
+		:op2 (x14 / blind-02)))
+
+# ::id 9
+# ::snt Under the deal, Roberto Ferrarini, Costa Cruises' emergency manager in Genova, was sentenced to two years and 10 months in prison and Manrico Giampedroni, hotel director of the Costa Concordia, was given two years and six months.
+# ::tok Under the deal , Roberto Ferrarini , Costa Cruises ' emergency manager in Genova , was sentenced to two years and 10 months in prison and Manrico Giampedroni , hotel director of the Costa Concordia , was given two years and six months .
+(x26 / and
+	:op1 (x17 / sentence-01
+		:ARG3 (x3 / deal-01)
+		:name (x5 / name
+			:op1 "Roberto"
+			:op2 "Ferrarini"
+			:ARG0-of (x12 / manage-01
+				:ARG1 (x9 / organization
+					:name (n / name
+						:op1 "Cruises")
+					:null_edge (x8 / null_tag))
+				:mod (x11 / emergency)
+				:ARG1 (x14 / organization
+					:name (n1 / name
+						:op1 "Genova"))))
+		:ARG3 (x21 / and
+			:op1 (x20 / temporal-quantity
+				:unit (y / year)
+				:quant 2)
+			:op2 (x23 / temporal-quantity
+				:unit (m / month)
+				:quant 10))
+		:ARG1 (x41 / and
+			:name (x27 / name
+				:op1 "Manrico"
+				:op2 "Giampedroni"
+				:ARG0-of (x31 / have-org-role-91
+					:ARG2 (d / director)
+					:ARG1 (x30 / hotel
+						:location (x25 / prison))
+					:ARG1 (x35 / organization
+						:name (n2 / name
+							:op1 "Concordia")
+						:null_edge (x34 / null_tag))))
+			:op1 (x40 / year
+				:quant 2)
+			:op2 (x43 / temporal-quantity
+				:unit (m1 / month)
+				:quant 6))))
+
+# ::id 10
+# ::snt Ferrarini spoke on the phone and by radio to Schettino the night of the crash between impact and evacuation, and Giampedroni was in communication with Ferrarini on Schettino's behalf that night.
+# ::tok Ferrarini spoke on the phone and by radio to Schettino the night of the crash between impact and evacuation , and Giampedroni was in communication with Ferrarini on Schettino 's behalf that night .
+(x21 / and
+	:op1 (x2 / speak-01
+		:ARG0 (x1 / person
+			:name (n / name
+				:op1 "Ferrarini"))
+		:ARG1 (x6 / and
+			:op1 (x5 / phone)
+			:op2 (x8 / radio))
+		:ARG2 (x10 / person
+			:name (n1 / name
+				:op1 "Schettino"))
+		:ARG1 (x15 / crash-01
+			:time (x12 / night)
+			:ARG1 (x18 / and
+				:op1 (x17 / impact-01)
+				:op2 (x19 / evacuation)))
+		:ARG1 (x25 / communicate-01
+			:null_edge (x27 / person
+				:name (n2 / name
+					:op1 "Ferrarini"))
+			:time (x33 / night
+				:null_edge (x22 / person
+					:name (n3 / name
+						:op1 "Giampedroni"))
+				:poss (x29 / person
+					:name (n4 / name
+						:op1 "Schettino"))))))
+
+# ::id 11
+# ::snt Schettino's first mate Ciro Ambrosio, who was the officer on the bridge and in command of the ship when it went off course, was handed a sentence of one year and 11 months; third officer Silvia Coronica, who was second in command to Ambrosio at the time, received 18 months; and helmsman Jacob Rusli Bin was sentenced to 20 months.
+# ::tok Schettino 's first mate Ciro Ambrosio , who was the officer on the bridge and in command of the ship when it went off course , was handed a sentence of one year and 11 months ; third officer Silvia Coronica , who was second in command to Ambrosio at the time , received 18 months ; and helmsman Jacob Rusli Bin was sentenced to 20 months .
+(x / xconcept
+	:x (x57 / and
+		:op2 (x54 / receive-01
+			:ARG0 (x41 / person
+				:name (n1 / name
+					:op1 "Coronica")
+				:null_edge (x39 / officer)
+				:name (x40 / name
+					:op1 "Silvia")))
+		:op1 (x56 / temporal-quantity
+			:unit (m1 / month)
+			:quant 18)
+		:op1 (x58 / and
+			:op1 (x28 / hand-01
+				:name (x1 / name
+					:op1 "Schettino"
+					:op2 "'s"
+					:op3 "first"
+					:op4 "mate"
+					:op5 "Ciro"
+					:op6 "Ambrosio"
+					:ARG0-of (x4 / mate)
+					:ARG0-of (x11 / officer
+						:ARG1 (x15 / and
+							:op2 (x17 / command-02
+								:ARG1 (x20 / ship)))
+						:time (x23 / go-02)))
+				:ARG1 (x30 / sentence-01
+					:ARG1 (x34 / and
+						:op1 (x33 / year
+							:quant 1)
+						:op2 (x36 / temporal-quantity
+							:unit (m / month)
+							:quant 11)))
+				:time (x45 / second
+					:null_edge (x49 / person
+						:name (n / name
+							:op1 "Ambrosio"))))
+			:op2 (x64 / sentence-01
+				:ARG1 (x60 / person
+					:name (n2 / name
+						:op1 "Jacob"
+						:op2 "Rusli"
+						:op3 "Bin")
+					:ARG0-of (x59 / helmsman))
+				:ARG2 (x67 / temporal-quantity
+					:unit (m2 / month)
+					:quant 20)))))
+
+# ::id 12
+# ::snt Those three were also convicted of causing a shipwreck, or maritime disaster.
+# ::tok Those three were also convicted of causing a shipwreck , or maritime disaster .
+(x5 / convict-01
+	:quant 3
+	:mod (x4 / also)
+	:ARG0-of (x7 / cause-01
+		:ARG0 3
+		:ARG1 (x11 / or
+			:op2 (x9 / shipwreck)
+			:op2 (x13 / disaster))))
+
+# ::id 13
+# ::snt Audio recordings played to the court showed that helmsman Rusli Bin misunderstood Schettino's directions to turn moments before the ship ran aground.
+# ::tok Audio recordings played to the court showed that helmsman Rusli Bin misunderstood Schettino 's directions to turn moments before the ship ran aground .
+(x7 / show-01
+	:ARG0 (x1 / audio
+		:ARG1 (x2 / record-01
+			:ARG1-of (x3 / play-01
+				:ARG2 (x6 / court))))
+	:ARG1 (x12 / misunderstand-01
+		:ARG0 (x10 / person
+			:name (n / name
+				:op1 "Rusli"
+				:op2 "Bin")
+			:ARG0-of (x9 / helmsman))
+		:ARG1 (x15 / direction
+			:ARG0 (x13 / person
+				:name (n1 / name
+					:op1 "Schettino")))
+		:purpose (x17 / turn-18
+			:ARG0 x10
+			:ARG0 x13
+			:ARG1 (x18 / moment))
+		:time (x19 / before
+			:op1 (x22 / run-07
+				:ARG1 (x21 / ship)
+				:direction (x23 / aground)))))
+
+# ::id 14
+# ::snt Lawyer: 'We will appeal'
+# ::tok Lawyer : ` We will appeal '
+(x6 / appeal-01
+	:ARG0 (x4 / we))
+
+# ::id 15
+# ::snt In Italy, sentences less than two years do not generally have to be served in prison except in some cases of homicide, but not in manslaughter.
+# ::tok In Italy , sentences less than two years do not generally have to be served in prison except in some cases of homicide , but not in manslaughter .
+(x4 / sentence-01
+	:location (x2 / country
+		:name (n / name
+			:op1 "Italy"))
+	:ARG1 (x8 / temporal-quantity
+		:unit (y / year)
+		:null_edge (x5 / less-than
+			:null_edge 2))
+	:ARG1-of (x11 / general-02)
+	:ARG1-of (x15 / serve-01
+		:location (x17 / prison)
+		:ARG2-of (x18 / except-01
+			:ARG1 (x21 / case-03
+				:quant (x20 / some)
+				:ARG1 (x23 / homicide))
+			:ARG1 (x28 / manslaughter))))
+
+# ::id 16
+# ::snt As a result only Ferrarini and Giampedroni aren't likely to serve any time in prison, although they would first have to exhaust the appeals process.
+# ::tok As a result only Ferrarini and Giampedroni are n't likely to serve any time in prison , although they would first have to exhaust the appeals process .
+(x3 / result-01
+	:ARG1 (x10 / likely-01
+		:ARG1 (x6 / and
+			:mod (x4 / only)
+			:op1 (x5 / person
+				:name (n / name
+					:op1 "Ferrarini"))
+			:op2 (x7 / person
+				:name (n1 / name
+					:op1 "Giampedroni")))
+		:ARG1 (x12 / serve-01
+			:ARG0 x6
+			:ARG1 (x14 / time
+				:mod (x13 / any))
+			:location (x16 / prison))
+		:ARG1 (x24 / exhaust-01
+			:ARG1 (x27 / process-02
+				:ARG1 (x26 / appeal-01)))))
+
+# ::id 17
+# ::snt The prosecutor backed their plea bargain requests and all five are on the prosecution witness list for the trial of Schettino in Grosseto, the Tuscan city nearest the site of the wreck.
+# ::tok The prosecutor backed their plea bargain requests and all five are on the prosecution witness list for the trial of Schettino in Grosseto , the Tuscan city nearest the site of the wreck .
+(x8 / and
+	:op1 (x3 / back-01
+		:ARG0 (x2 / prosecute-01)
+		:ARG1 (x7 / request-01
+			:ARG0 (x5 / plead-02)
+			:mod (x6 / bargain-01))
+		:ARG0 (x16 / list-01
+			:quant (x9 / all)
+			:ARG2 (x14 / person
+				:ARG0-of (p / prosecute-01))
+			:mod (x15 / person
+				:ARG0-of (w / witness-01))
+			:ARG2 (x21 / person
+				:name (n / name
+					:op1 "Schettino")
+				:location (x23 / country
+					:name (n1 / name
+						:op1 "Grosseto")
+					:location (x27 / city
+						:location (x26 / world-region
+							:name (n2 / name
+								:op1 "Tuscan"))
+						:location (x30 / site
+							:location-of (x33 / wreck))))))))
+
+# ::id 18
+# ::snt Read more: Costa Concordia reveals its darkest secrets
+# ::tok Read more : Costa Concordia reveals its darkest secrets
+(x1 / read-01
+	:degree (x2 / more
+		:compared-to (x6 / reveal-01
+			:ARG0 (x5 / organization
+				:name (n / name
+					:op1 "Concordia")
+				:null_edge (x4 / null_tag))
+			:ARG1 (x9 / secret
+				:ARG1-of (x8 / darkest)))))
+
+# ::id 19
+# ::snt But Pierpaolo Lucchese , who is one of the many lawyers who objected to the plea bargains, told CNN he will appeal the sentences.
+# ::tok But Pierpaolo Lucchese , who is one of the many lawyers who objected to the plea bargains , told CNN he will appeal the sentences .
+(x1 / contrast-01
+	:ARG2 (x19 / tell-01
+		:ARG0 (x3 / person
+			:name (n / name
+				:op1 "Lucchese")
+			:name (x2 / name
+				:op1 "Pierpaolo")
+			:null_edge (x11 / lawyer
+				:quant (x10 / many)
+				:ARG0-of (x13 / object-01
+					:ARG2 (x17 / thing
+						:ARG1-of (b / bargain-01)
+						:mod (x16 / plead-02)))))
+		:ARG2 (x20 / publication
+			:name (n1 / name
+				:op1 "CNN"))
+		:ARG1 (x23 / appeal-01
+			:ARG0 (x21 / he)
+			:ARG1 (x25 / sentence-01))))
+
+# ::id 20
+# ::snt "It is unthinkable that these lives and the damage to the island are worth two years or less," he said by phone.
+# ::tok `` It is unthinkable that these lives and the damage to the island are worth two years or less , '' he said by phone .
+(x23 / say-01
+	:ARG1 (x4 / unthinkable
+		:ARG1 (x18 / or
+			:op1 (x17 / temporal-quantity
+				:unit (y / year)
+				:quant 2)
+			:op2 (x19 / less)))
+	:ARG1 (x8 / and
+		:op1 (x7 / life)
+		:op2 (x10 / damage-01
+			:ARG2 (x13 / island)))
+	:ARG0 (x22 / he)
+	:manner (x25 / phone))
+
+# ::id 21
+# ::snt "We will appeal this to Italy's highest court."
+# ::tok `` We will appeal this to Italy 's highest court . ''
+(x4 / appeal-02
+	:ARG0 (x2 / we)
+	:ARG1 (x5 / this)
+	:ARG2 (x10 / court
+		:ARG0 (x7 / country
+			:name (n / name
+				:op1 "Italy"))
+		:ARG1-of (x9 / high-02
+			:degree (m / most))))
+
+# ::id 22
+# ::snt Schettino also asked Wednesday for a plea bargain in exchange for a sentence of three years and five months in prison, but the request has not yet been decided.
+# ::tok Schettino also asked Wednesday for a plea bargain in exchange for a sentence of three years and five months in prison , but the request has not yet been decided .
+(x23 / contrast-01
+	:ARG1 (x3 / ask-01
+		:ARG0 (x1 / person
+			:name (n / name
+				:op1 "Schettino"))
+		:mod (x2 / also)
+		:ARG2 (x8 / bargain-01
+			:mod (x7 / plead-02
+				:ARG1 (x10 / exchange-01
+					:ARG3 (x13 / sentence-01
+						:ARG1 (x17 / and
+							:op1 (x16 / temporal-quantity
+								:unit (y / year)
+								:quant 3)
+							:op2 (x19 / temporal-quantity
+								:unit (m / month)
+								:quant 5
+								:null_edge (x21 / prison)))))))
+		:time (xap0 / date-entity
+			:weekday (x4 / wednesday)))
+	:ARG2 (x30 / decide-01
+		:ARG1 (x25 / request-01)
+		:time (x28 / yet)))
+
+# ::id 23
+# ::snt However, the prosecutor adamantly opposes it so there is little chance it will be accepted.
+# ::tok However , the prosecutor adamantly opposes it so there is little chance it will be accepted .
+(x6 / oppose-01
+	:ARG0 (x4 / prosecute-01)
+	:manner (x5 / adamantly)
+	:ARG1 (x12 / chance-02
+		:ARG2 (x11 / little)
+		:ARG1 (x16 / accept-01)))
+
+# ::id 24
+# ::snt The next hearing in Schettino's case is scheduled for September 23, but the judges could rule officially on his plea bargain sooner.
+# ::tok The next hearing in Schettino 's case is scheduled for September 23 , but the judges could rule officially on his plea bargain sooner .
+(x14 / contrast-01
+	:ARG1 (x9 / schedule-01
+		:ARG1 (x3 / hearing-02
+			:mod (x2 / next)
+			:ARG1 (x7 / case-03
+				:ARG2 (x5 / person
+					:name (n / name
+						:op1 "Schettino"))))
+		:ARG3 (x11 / date-entity))
+	:ARG2 (x17 / possible-01
+		:ARG1 (x18 / rule-out-02
+			:manner (x19 / official)
+			:prep-on (x23 / bargain-01
+				:mod (x22 / plead-02))
+			:time (x24 / soon)
+			:ARG0 (xap1 / person
+				:name (xap0 / have-org-role-91
+					:ARG3 (x16 / judge-01))))))
+
+# ::id 25
+# ::snt Night of chaos
+# ::tok Night of chaos
+(x1 / night
+	:ARG1 (x3 / chaos))
+
+# ::id 26
+# ::snt Schettino faces three criminal charges: involuntary manslaughter for the 32 deaths, causing a maritime disaster and causing personal injury to 150 people who were badly hurt in the accident.
+# ::tok Schettino faces three criminal charges : involuntary manslaughter for the 32 deaths , causing a maritime disaster and causing personal injury to 150 people who were badly hurt in the accident .
+(x2 / face-01
+	:ARG0 (x1 / person
+		:name (n / name
+			:op1 "Schettino"))
+	:ARG1 (x5 / charge-05
+		:quant 3
+		:mod (x4 / criminal-03)
+		:ARG2 (x8 / manslaughter
+			:ARG1-of (x7 / volunteer-01
+				:polarity -)
+			:ARG2 (x12 / die-01
+				:quant 32)))
+	:ARG1 (x18 / and
+		:ARG0-of (x14 / cause-01
+			:ARG1 (x17 / disaster))
+		:op2 (x19 / cause-01
+			:ARG1 (x21 / injure-01
+				:ARG1-of (x20 / personal-02))
+			:null_edge (x28 / hurt-01
+				:null_edge 150
+				:time (x31 / accident)))))
+
+# ::id 27
+# ::snt Read more: What cruise lines don't want you to know
+# ::tok Read more : What cruise lines do n't want you to know
+(x1 / read-01
+	:degree (x2 / more)
+	:null_edge (x9 / want-01
+		:ARG0 (x6 / line
+			:mod (x5 / cruise))
+		:ARG1 (x12 / know-01
+			:ARG0 x6
+			:ARG0 (x10 / you))))
+
+# ::id 28
+# ::snt According to passengers' accounts, chaos ensued that night as guests rushed to fill lifeboats and escape the shipwreck.
+# ::tok According to passengers ' accounts , chaos ensued that night as guests rushed to fill lifeboats and escape the shipwreck .
+(x8 / ensue-01
+	:location (x5 / account
+		:poss (x3 / passenger))
+	:ARG1 (x7 / chaos)
+	:time (x10 / night
+		:mod (x9 / that))
+	:time (x13 / rush-01
+		:ARG0 (x12 / guest)
+		:ARG1 (x17 / and
+			:op1 (x15 / fill-01
+				:ARG1 (x16 / lifeboat))
+			:op2 (x18 / escape-01
+				:ARG1 (x20 / shipwreck)))))
+
+# ::id 29
+# ::snt Some crew members helped passengers and then jumped overboard, passengers said.
+# ::tok Some crew members helped passengers and then jumped overboard , passengers said .
+(x12 / say-01
+	:ARG1 (x6 / and
+		:op1 (x4 / help-01
+			:ARG1 (x5 / passenger)
+			:ARG0 (xap0 / person
+				:quant (x1 / some)
+				:ARG0-of (x3 / have-org-role-91
+					:ARG2 (m / member)
+					:ARG1 (x2 / crew))))
+		:op2 (x8 / jump-08
+			:mod (x9 / overboard)))
+	:ARG0 (x11 / passenger))
+
+# ::id 30
+# ::snt Remaining crew members seemed helpless to handle the melee.
+# ::tok Remaining crew members seemed helpless to handle the melee .
+(x4 / seem-01
+	:ARG1 (x5 / helpless
+		:null_edge (x7 / handle-01
+			:ARG1 (x9 / melee))
+		:ARG0 (xap0 / person
+			:ARG0-of (x3 / have-org-role-91
+				:ARG2 (m / member)
+				:ARG1-of (x1 / remain-01)
+				:ARG1 (x2 / crew)))))
+
+# ::id 31
+# ::snt The case against Schettino centers on several questions, including why it took him more than an hour to issue an order to abandon ship and why the captain allegedly left the vessel before all passengers had abandoned it.
+# ::tok The case against Schettino centers on several questions , including why it took him more than an hour to issue an order to abandon ship and why the captain allegedly left the vessel before all passengers had abandoned it .
+(x5 / center
+	:ARG1 (x8 / question-01
+		:ARG1 (x2 / case-03
+			:prep-against (x4 / person
+				:name (n / name
+					:op1 "Schettino")))
+		:quant (x7 / several)
+		:ARG2-of (x10 / include-91
+			:ARG1 (x26 / and
+				:op2 (x15 / more-than
+					:op1 (x31 / leave-11
+						:ARG0 (x29 / have-org-role-91
+							:ARG2 (c / captain))
+						:ARG1-of (x30 / allege-01)
+						:ARG1 (x33 / vessel)
+						:time (x34 / before
+							:op1 (x38 / abandon-01
+								:ARG0 (x36 / passenger
+									:quant (x35 / all))))))
+				:op2 (x20 / issue-01
+					:ARG1 (x22 / order
+						:purpose (x24 / abandon-01
+							:ARG1 (x25 / ship))))))))
+
+# ::id 32
+# ::snt Given the complicated nature of the case, his trial could drag on for a year or more.
+# ::tok Given the complicated nature of the case , his trial could drag on for a year or more .
+(x11 / possible-01
+	:ARG1 (x12 / drag-01
+		:manner (x3 / complicate-01)
+		:ARG1 (x17 / or
+			:op1 (x16 / year)
+			:op2 (x18 / more-than))))
+
+# ::id 33
+# ::snt The prosecutor presented the court with a list of 357 witnesses Wednesday.
+# ::tok The prosecutor presented the court with a list of 357 witnesses Wednesday .
+(x3 / present-01
+	:ARG0 (x2 / prosecute-01)
+	:ARG1 (x5 / court)
+	:ARG2 (x8 / list-01
+		:consist-of (x11 / person
+			:ARG0-of (w / witness-01)
+			:quant (x10 / 357)))
+	:time (xap0 / date-entity
+		:weekday (x12 / wednesday)))
+
+# ::id 34
+# ::snt Running in tandem with the criminal prosecution are numerous civil suits against Schettino, which can be heard at the same time.
+# ::tok Running in tandem with the criminal prosecution are numerous civil suits against Schettino , which can be heard at the same time .
+(x16 / possible-01
+	:ARG1 (x1 / run-02
+		:manner (x3 / tandem)
+		:ARG2 (x7 / prosecute-01
+			:ARG1-of (x6 / criminal-03)))
+	:quant (x9 / numerous)
+	:mod (x10 / civil)
+	:prep-against (x13 / person
+		:name (n / name
+			:op1 "Schettino"))
+	:ARG1 (x18 / hear-01)
+	:time (x22 / time
+		:ARG1-of (x21 / same-01)))
+
+# ::id 35
+# ::snt This means more than 250 civil parties are also represented in court.
+# ::tok This means more than 250 civil parties are also represented in court .
+(x2 / mean-01
+	:ARG1 (x1 / this)
+	:ARG2 (x10 / represent-01
+		:ARG1 (x7 / party
+			:quant (x3 / more-than
+				:op1 250)
+			:mod (x6 / civil))
+		:mod (x9 / also)
+		:location (x12 / court)))
+
+# ::id 36
+# ::snt Read more: Cruise passengers get bill of rights
+# ::tok Read more : Cruise passengers get bill of rights
+(x1 / read-01
+	:degree (x2 / more)
+	:null_edge (x6 / get-05
+		:ARG0 (x5 / passenger
+			:mod (x4 / cruise))
+		:ARG1 (x7 / bill
+			:mod (x9 / right))))
+
+# ::id 37
+# ::snt Meanwhile, the Costa Concordia lies half-submerged on its side on the shore of Giglio Island, rusting and rotting in the waters off Tuscany's coast.
+# ::tok Meanwhile , the Costa Concordia lies half-submerged on its side on the shore of Giglio Island , rusting and rotting in the waters off Tuscany 's coast .
+(x6 / lie-07
+	:time (x1 / meanwhile)
+	:ARG1 (x5 / organization
+		:name (n / name
+			:op1 "Concordia")
+		:null_edge (x4 / null_tag))
+	:ARG1 (x19 / and
+		:op1 (x7 / half-submerged
+			:location (x10 / side
+				:ARG1 (x13 / shore
+					:ARG1 (x16 / island
+						:null_edge (x15 / country
+							:name (n1 / name
+								:op1 "Giglio"))))))
+		:op2 (x18 / rusting)
+		:op2 (x20 / rot-01
+			:location (x23 / water
+				:mod (x24 / off
+					:op1 (x27 / coast
+						:part-of (x25 / country
+							:name (n2 / name
+								:op1 "Tuscany"))))))))
+
+# ::id 38
+# ::snt Nearly 500 workers are involved in an operation led by Titan Salvage to remove the wreck while protecting the marine environment.
+# ::tok Nearly 500 workers are involved in an operation led by Titan Salvage to remove the wreck while protecting the marine environment .
+(x5 / involve-01
+	:ARG1 (x3 / person
+		:ARG0-of (w / work-01)
+		:quant (x1 / nearly
+			:op1 500))
+	:ARG2 (x8 / operation
+		:ARG1-of (x9 / lead-02
+			:ARG0 (x11 / university
+				:name (n / name
+					:op1 "Titan"
+					:op2 "Salvage"))))
+	:purpose (x14 / remove-01
+		:ARG0 x3
+		:ARG1 (x16 / wreck)
+		:purpose (x18 / protect-01
+			:ARG1 (x21 / environment
+				:mod (x20 / military
+					:name (n1 / name
+						:op1 "marine"))))))
+
+# ::id 39
+# ::snt Titan and Costa Cruises said earlier this month that they hope to be able to rotate the vessel to a vertical position in September.
+# ::tok Titan and Costa Cruises said earlier this month that they hope to be able to rotate the vessel to a vertical position in September .
+(x5 / say-01
+	:ARG0 (x4 / organization
+		:name (n / name
+			:op1 "Cruises")
+		:null_edge (x2 / and
+			:op1 (x1 / titan)
+			:op2 (x3 / person
+				:name (n1 / name
+					:op1 "Costa"))))
+	:time (x8 / month
+		:time (x6 / early)
+		:mod (x7 / this))
+	:ARG1 (x11 / hope-01
+		:ARG0 (x10 / they)
+		:ARG1 (x14 / possible-01
+			:ARG1 (x16 / rotate-01
+				:ARG1 (x18 / vessel)
+				:ARG2 (x22 / position-01
+					:mod (x21 / vertical)
+					:time (x24 / date-entity))))))
+
+# ::id 40
+# ::snt They will then be able to assess whether it can be refloated and towed away.
+# ::tok They will then be able to assess whether it can be refloated and towed away .
+(x10 / possible-01
+	:ARG1 (x7 / assess-01
+		:ARG0 (x1 / they))
+	:ARG1 (x12 / refloat
+		:ARG1 (x14 / tow-01)
+		:direction (x15 / away))
+	:ARG1 (x13 / and))
+
+# ::id 41
+# ::snt 1 year on, survivors to mark the disaster
+# ::tok 1 year on , survivors to mark the disaster
+(x7 / mark-01
+	:quant 1
+	:ARG0 (x5 / person
+		:ARG0-of (s / survive-01))
+	:ARG1 (x9 / disaster))
+
+# ::id 42
+# ::snt Journalist Barbie Latza Nadeau reported from Rome and Laura Smith-Spark wrote in London.
+# ::tok Journalist Barbie Latza Nadeau reported from Rome and Laura Smith-Spark wrote in London .
+(x8 / and
+	:op1 (x5 / report-01
+		:ARG0 (x4 / person
+			:name (n / name
+				:op1 "Nadeau")
+			:name (x2 / name
+				:op1 "Barbie"
+				:mod (x1 / journalist))
+			:name (x3 / name
+				:op1 "Latza"))
+		:ARG0 (x7 / city
+			:name (n1 / name
+				:op1 "Rome")))
+	:op2 (x11 / write-01
+		:ARG0 (x9 / person
+			:name (n2 / name
+				:op1 "Laura"
+				:op2 "Smith-Spark"))
+		:location (x13 / city
+			:name (n3 / name
+				:op1 "London"))))
+
+# ::id 43
+# ::snt Journalist Livia Borghese contributed to this report.
+# ::tok Journalist Livia Borghese contributed to this report .
+(x4 / contribute-01
+	:null_edge (x2 / name
+		:op1 "Livia"
+		:null_edge (x1 / journalist))
+	:ARG2 (x7 / report
+		:mod (x6 / this)))
+
