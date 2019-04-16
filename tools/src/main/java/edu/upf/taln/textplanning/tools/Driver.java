@@ -25,6 +25,7 @@ public class Driver
 	private static final String semeval_command = "semeval";
 	private static final String rank_eval_command = "rankeval";
 	private static final String extract_eval_command = "extracteval";
+	private static final String process_files_command = "process";
 	private static final String collect_meanings_vectors = "meanings";
 	private static final String create_context_vectors = "context";
 	private final static Logger log = LogManager.getLogger();
@@ -125,12 +126,12 @@ public class Driver
 	@Parameters(commandDescription = "Run evaluation of ranking-based extractive summarization")
 	private static class ExtractiveEvaluationCommand
 	{
+		@Parameter(names = {"-i", "-input"}, description = "Path to folder with xmi files containing source documents", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path input;
 		@Parameter(names = {"-g", "-gold"}, description = "Path to folder with text files containing gold summaries", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path gold_folder;
-		@Parameter(names = {"-i", "-input"}, description = "Path to folder with text files containing texts to summarize", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path input_file;
+		private Path gold;
 		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
 		private Path dictionary;
@@ -164,6 +165,18 @@ public class Driver
 		@Parameter(names = {"-set", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
 				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
 		private VectorType sense_vector_type = VectorType.Random;
+	}
+
+	@SuppressWarnings("unused")
+	@Parameters(commandDescription = "Process text files with UIMA pipeline")
+	private static class ProcessFilesCommand
+	{
+		@Parameter(names = {"-i", "-input"}, description = "Path to folder with text files", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path input;
+		@Parameter(names = {"-o", "-output"}, description = "Path to folder where xmi files will be stored", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
+		private Path output;
 	}
 
 	@SuppressWarnings("unused")
@@ -215,6 +228,7 @@ public class Driver
 		SemEvalEvaluationCommand semEval = new SemEvalEvaluationCommand();
 		RankEvaluationCommand rankEval = new RankEvaluationCommand();
 		ExtractiveEvaluationCommand extractEval = new ExtractiveEvaluationCommand();
+		ProcessFilesCommand process = new ProcessFilesCommand();
 		CollectMeaningsCommand meanings = new CollectMeaningsCommand();
 		CreateContextVectorsCommand context = new CreateContextVectorsCommand();
 
@@ -222,6 +236,7 @@ public class Driver
 		jc.addCommand(semeval_command, semEval);
 		jc.addCommand(rank_eval_command, rankEval);
 		jc.addCommand(extract_eval_command, extractEval);
+		jc.addCommand(process_files_command, process);
 		jc.addCommand(collect_meanings_vectors, meanings);
 		jc.addCommand(create_context_vectors, context);
 		jc.parse(args);
@@ -263,7 +278,12 @@ public class Driver
 						extractEval.word_vectors_path, extractEval.word_vector_type,
 						extractEval.sentence_vectors_path, extractEval.sentence_vector_type,
 						extractEval.context_vectors_path, extractEval.context_vector_type);
-				ExtractiveEvaluation.run(extractEval.gold_folder, extractEval.input_file, extractEval.output, resources);
+				ExtractiveEvaluation.run(extractEval.input, extractEval.gold, extractEval.output, resources);
+				break;
+			}
+			case process_files_command:
+			{
+				ExtractiveEvaluation.preprocess(process.input, process.output);
 				break;
 			}
 			case collect_meanings_vectors:

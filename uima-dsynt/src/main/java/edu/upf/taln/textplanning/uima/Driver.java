@@ -6,18 +6,18 @@ import com.beust.jcommander.Parameters;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
-import edu.upf.taln.textplanning.common.ProcessResourcesFactory;
+import edu.upf.taln.textplanning.common.DocumentResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.uima.io.TextParser;
 import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
-import it.uniroma1.lcl.jlt.util.Files;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -28,7 +28,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
-import static edu.upf.taln.textplanning.common.FileUtils.*;
+import static edu.upf.taln.textplanning.common.FileUtils.createOutputPath;
+import static edu.upf.taln.textplanning.common.FileUtils.serializeMeanings;
 import static java.util.stream.Collectors.*;
 
 public class Driver
@@ -117,110 +118,70 @@ public class Driver
 		private VectorType sense_vector_type = VectorType.Random;
 	}
 
-	private static void getCandidates(Path input_folder, Path output_folder)
+	private static void processFiles(Path input_folder, Path output_folder)
 	{
-		log.info("Loading files");
-		final File[] text_files = getFilesInFolder(input_folder, text_suffix);
-		if (text_files == null)
-			log.error("No files found");
-		else
+		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createSpanPipeline(language, false);
+		if (pipeline != null)
 		{
-			log.info("Processing texts with UIMA and looking up candidate meanings");
-			final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createSpanPipeline(language, false);
-
-			Arrays.stream(text_files)
-					.sorted(Comparator.comparing(File::getName))
-					.map(File::toPath)
-					.forEach(f ->
-					{
-						log.info("Processing " + f);
-						final String text = readTextFile(f);
-						UIMAWrapper uima = new UIMAWrapper(text, pipeline);
-						final List<List<Set<Candidate>>> candidates = uima.getDisambiguatedCandidates();
-
-						Path out_file = createOutputPath(f, output_folder, text_suffix, meanings_suffix);
-						log.info("Serializing meanings to  " + out_file);
-						serializeMeanings(candidates, out_file);
-					});
+			UIMAWrapper.processAndSerialize(input_folder, output_folder, text_suffix, TextParser.class, pipeline);
 		}
 	}
 
 	private static void getSystemMeaningsUIMA(Path input_folder, Path output_folder, Path babel_config, Path freqs_file, Path vectors)
 	{
-		log.info("Loading files");
-		final File[] text_files = getFilesInFolder(input_folder, text_suffix);
-		if (text_files == null)
-			log.error("No files found");
-		else
+		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createRankingPipeline(language, false, babel_config, freqs_file, vectors);
+		if (pipeline != null)
 		{
-			log.info("Processing texts with UIMA and collecting system meanings");
-			final UIMAWrapper.Pipeline pipeline =
-					UIMAWrapper.createRankingPipeline(language, false, babel_config, freqs_file, vectors);
-
-			Arrays.stream(text_files)
-					.sorted(Comparator.comparing(File::getName))
-					.map(File::toPath)
-					.forEach(f ->
-					{
-						log.info("Processing " + f);
-						final String text = readTextFile(f);
-						UIMAWrapper uima = new UIMAWrapper(text, pipeline);
-						final List<List<Set<Candidate>>> candidates = uima.getDisambiguatedCandidates();
-
-						Path out_file = createOutputPath(f, output_folder, text_suffix, meanings_suffix);
-						log.info("Serializing meanings to  " + out_file);
-						serializeMeanings(candidates, out_file);
-					});
+			UIMAWrapper.processAndSerialize(input_folder, output_folder, text_suffix, TextParser.class, pipeline);
 		}
 	}
 
-	private static void getSystemMeanings(Path text_folder, Path candidate_folder, Path output_folder, InitialResourcesFactory resources)
+	private static void getSystemMeanings(Path text_folder, Path xmi_folder, Path output_folder, InitialResourcesFactory resources)
 	{
+		log.info("Setting up UIMA pipeline");
+		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createSpanPipeline(language, false);
+		if (pipeline == null)
+			return;
+
 		log.info("Loading files");
-		final List<Path> text_files = Arrays.stream(Objects.requireNonNull(getFilesInFolder(text_folder, text_suffix)))
-				.sorted(Comparator.comparing(File::getName))
-				.map(File::toPath)
+		final List<UIMAWrapper> text_files = UIMAWrapper.process(text_folder, text_suffix, TextParser.class, pipeline).stream()
+				.sorted(Comparator.comparing(UIMAWrapper::getId))
 				.collect(toList());
-		final List<Path> candidate_files = Arrays.stream(Objects.requireNonNull(getFilesInFolder(candidate_folder, meanings_suffix)))
-				.sorted(Comparator.comparing(File::getName))
-				.map(File::toPath)
+		final List<UIMAWrapper> xmi_files = UIMAWrapper.readFromXMI(xmi_folder).stream()
+				.sorted(Comparator.comparing(UIMAWrapper::getId))
 				.collect(toList());
 
 		// Check all files are paired
-		assert (text_files.size() == candidate_files.size());
+		assert (text_files.size() == xmi_files.size());
 		for (int i = 0; i < text_files.size(); ++i)
 		{
-			final String name1 = Files.removeExtension(text_files.get(i).getFileName().toString());
-			final String name2 = Files.removeExtension(candidate_files.get(i).getFileName().toString());
+			final String name1 = FilenameUtils.removeExtension(text_files.get(i).getId());
+			final String name2 =  FilenameUtils.removeExtension(xmi_files.get(i).getId());
 			assert name1.equals(name2);
 		}
-
-		log.info("Setting up UIMA pipeline");
-		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createSpanPipeline(language, false);
 
 		log.info("Processing text files");
 		IntStream.range(0, text_files.size())
 				.forEach(i ->
 				{
-					final Path file = text_files.get(i);
-					log.info("Processing " + file);
-					final String text = readTextFile(file);
-					final List<Candidate> candidates = deserializeMeanings(candidate_files.get(i)).stream()
+					log.info("Processing file " + i);
+
+					final List<Candidate> candidates = xmi_files.get(i).getDisambiguatedCandidates().stream()
 							.flatMap(l -> l.stream()
 									.flatMap(Set::stream))
 							.collect(toList());
 
-					UIMAWrapper uima = new UIMAWrapper(text, pipeline);
+					UIMAWrapper uima = text_files.get(i);
 					final List<String> tokens = uima.getNominalTokens().stream()
 							.flatMap(List::stream)
 							.collect(toList());
 
 					Options options = new Options();
-					ProcessResourcesFactory process = new ProcessResourcesFactory(resources, options, candidates, tokens, null);
+					DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, tokens, null);
 					final Function<String, Double> context_weighter = process.getMeaningsWeighter();
 					final BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
 					final BiPredicate<String, String> meanings_filter = process.getMeaningsFilter();
-					final Predicate<Candidate> candidates_filter = process.getCandidatesFilter(context_weighter);
+					final Predicate<Candidate> candidates_filter = process.getCandidatesFilter();
 					TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
 
 					candidates.forEach(c -> c.setWeight(context_weighter.apply(c.getMeaning().getReference())));
@@ -237,7 +198,7 @@ public class Driver
 									.collect(toList()))
 							.collect(toList());
 
-					Path out_file = createOutputPath(file, output_folder, text_suffix, meanings_suffix);
+					Path out_file = createOutputPath(text_folder.resolve(uima.getId()), output_folder, text_suffix, meanings_suffix);
 					log.info("Serializing meanings to  " + out_file);
 					serializeMeanings(grouped_candidates, out_file);
 				});
@@ -265,7 +226,7 @@ public class Driver
 		{
 			case get_candidates_command:
 			{
-				getCandidates(candidates.texts, candidates.output);
+				processFiles(candidates.texts, candidates.output);
 				break;
 			}
 			case get_system_UIMA_command:

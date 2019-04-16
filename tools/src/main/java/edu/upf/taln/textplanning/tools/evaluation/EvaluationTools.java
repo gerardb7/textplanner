@@ -2,15 +2,17 @@ package edu.upf.taln.textplanning.tools.evaluation;
 
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
-import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
-import edu.upf.taln.textplanning.common.ProcessResourcesFactory;
+import edu.upf.taln.textplanning.common.DocumentResourcesFactory;
 import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.io.CandidatesCollector;
 import edu.upf.taln.textplanning.core.ranking.Disambiguation;
-import edu.upf.taln.textplanning.core.structures.*;
+import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.core.structures.Mention;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
+import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.uima.io.DSyntSemantics;
 import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.commons.lang3.tuple.Pair;
@@ -23,15 +25,16 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.*;
 import javax.xml.transform.stream.StreamSource;
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.*;
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
-import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
 
 public class EvaluationTools
@@ -44,7 +47,7 @@ public class EvaluationTools
 		@XmlAttribute
 		public String lang;
 		@XmlElement(name = "text")
-		public List<Text> texts;
+		public List<Text> texts = new ArrayList<>();
 	}
 
 	@XmlAccessorType(XmlAccessType.FIELD)
@@ -53,10 +56,10 @@ public class EvaluationTools
 		@XmlAttribute
 		public String id;
 		@XmlElement(name = "sentence")
-		public List<Sentence> sentences;
-		public Function<String, Double> weighter;
+		public List<Sentence> sentences = new ArrayList<>();
+		public DocumentResourcesFactory resources;
 		public SemanticGraph graph = null;
-		public List<SemanticSubgraph> subgraphs = null;
+		public List<SemanticSubgraph> subgraphs = new ArrayList<>();
 	}
 
 	@XmlAccessorType(XmlAccessType.FIELD)
@@ -65,7 +68,7 @@ public class EvaluationTools
 		@XmlAttribute
 		public String id;
 		@XmlElement(name = "wf")
-		public List<Token> tokens;
+		public List<Token> tokens = new ArrayList<>();
 		Map<Mention, List<Candidate>> candidates = new HashMap<>();
 	}
 
@@ -87,24 +90,15 @@ public class EvaluationTools
 	public static final String verb_pos_tag = "V";
 	public static final String adverb_pos_tag = "R";
 	public static final String other_pos_tag = "X";
-	private static final String text_suffix = "txt";
 	private static final String candidates_file = "candidates.bin";
 	private static final String contexts_file = "contexts.bin";
 	private final static Logger log = LogManager.getLogger();
 
-	public static Corpus loadResourcesFromText(Path text_files, Path output_path, InitialResourcesFactory resource_factory,
+	public static Corpus loadResourcesFromXMI(Path xmi_folder, Path output_path, InitialResourcesFactory resource_factory,
 	                                      ULocale language, int max_span_size, Options options)
 	{
-		final File[] filesInFolder = FileUtils.getFilesInFolder(text_files, text_suffix);
-		if (filesInFolder == null)
-			return new Corpus();
 
-		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createParsingPipeline(language);
-		final List<UIMAWrapper> docs = Arrays.stream(filesInFolder)
-				.map(File::toPath)
-				.map(FileUtils::readTextFile)
-				.map(text -> new UIMAWrapper(text, pipeline))
-				.collect(toList());
+		final List<UIMAWrapper> docs = UIMAWrapper.readFromXMI(xmi_folder);
 
 		Corpus corpus = new Corpus();
 		AtomicInteger doc_counter = new AtomicInteger(0);
@@ -198,7 +192,7 @@ public class EvaluationTools
 			corpus.texts.forEach(t ->
 					t.sentences.forEach(s ->
 							contexts2mentions.keySet().stream()
-									.filter(c -> c.equals(s.id))
+									.filter(c -> c.startsWith(s.id))
 									.map(contexts2mentions::get)
 									.flatMap(List::stream)
 									.forEach(m -> s.candidates.put(m, mentions2candidates.get(m)))));
@@ -207,8 +201,14 @@ public class EvaluationTools
 			{
 				log.info("Loading contexts from " + contexts_path);
 				final List<Function<String, Double>> weigthers = (List<Function<String, Double>>) Serializer.deserialize(contexts_path);
-				IntStream.range(0, corpus.texts.size())
-						.forEach(i -> corpus.texts.get(i).weighter = weigthers.get(i));
+				for (int i = 0; i < corpus.texts.size(); ++i)
+				{
+					final List<Candidate> text_candidates = corpus.texts.get(i).sentences.stream()
+							.flatMap(s -> s.candidates.values().stream().flatMap(List::stream))
+							.collect(toList());
+
+					corpus.texts.get(i).resources = new DocumentResourcesFactory(resources, options, weigthers.get(i), text_candidates);
+				}
 			}
 			else
 			{
@@ -223,11 +223,10 @@ public class EvaluationTools
 					final List<Candidate> text_candidates = corpus.texts.get(i).sentences.stream()
 							.flatMap(s -> s.candidates.values().stream().flatMap(List::stream))
 							.collect(toList());
-					ProcessResourcesFactory process = new ProcessResourcesFactory(resources, options, text_candidates, text_tokens, null);
-					corpus.texts.get(i).weighter = process.getMeaningsWeighter();
+					corpus.texts.get(i).resources = new DocumentResourcesFactory(resources, options, text_candidates, text_tokens, null);
 				}
 				log.info("Contexts created in " + timer.stop());
-				Serializer.serialize(corpus.texts.stream().map(t -> t.weighter).collect(toList()), contexts_path);
+				Serializer.serialize(corpus.texts.stream().map(t -> t.resources.getMeaningsWeighter()).collect(toList()), contexts_path);
 				log.info("Contexts saved in " + contexts_path);
 			}
 		}
@@ -252,16 +251,12 @@ public class EvaluationTools
 							.flatMap(s -> s.candidates.values().stream()
 									.flatMap(Collection::stream))
 							.collect(toList());
-					final List<String> tokens = sentences.stream()
-							.flatMap(sentence -> sentence.tokens.stream()
-									.map(t -> t.wf))
-							.collect(toList());
 
-					final Function<String, Double> weighter = corpus.texts.get(i).weighter;
-					ProcessResourcesFactory process = new ProcessResourcesFactory(resources, options, text_candidates, tokens, null);
-					final Predicate<Candidate> candidates_filter = process.getCandidatesFilter(weighter);
+					DocumentResourcesFactory doc_resources = corpus.texts.get(i).resources;
+					final Function<String, Double> weighter = doc_resources.getMeaningsWeighter();
+					final Predicate<Candidate> candidates_filter = doc_resources.getCandidatesFilter();
 					final BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
-					final BiPredicate<String, String> meanings_filter = process.getMeaningsFilter();
+					final BiPredicate<String, String> meanings_filter = doc_resources.getMeaningsFilter();
 
 					// Log stats
 					final int num_mentions = sentences.stream()

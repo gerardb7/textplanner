@@ -5,32 +5,78 @@ import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.Corpus;
+import edu.upf.taln.textplanning.uima.io.TextParser;
+import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.uima.resource.ResourceInitializationException;
 
 import java.nio.file.Path;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.IntStream;
 
 import static edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.adverb_pos_tag;
+import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.joining;
 
 public class ExtractiveEvaluation
 {
+	public static class DeepMindSourceParser extends TextParser
+	{
+		@Override
+		protected String parse(String file_contents)
+		{
+			final String[] parts = file_contents.split("@highlight");
+			if (parts.length == 0)
+				return "";
+			return Arrays.stream(parts[0].split("[\\r\\n]+"))
+					.filter(not(String::isEmpty))
+					.collect(joining(System.getProperty("line.separator")));
+		}
+	}
+
+	public static class DeepMindSoummaryParser extends TextParser
+	{
+		@Override
+		protected String parse(String file_contents)
+		{
+			final String[] parts = file_contents.split("^\\s*@highlight\\s*$");
+			if (parts.length < 2)
+				return "";
+
+			return IntStream.range(1, parts.length)
+					.mapToObj(i -> parts[i])
+					.filter(not(String::isEmpty))
+					.map(t -> Arrays.stream(t.split("[\\r\\n]+"))
+							.filter(not(String::isEmpty))
+							.collect(joining(System.getProperty("line.separator"))))
+					.collect(joining(System.getProperty("line.separator")));
+		}
+	}
+
+
 	private static final int max_span_size = 3;
 	private static final ULocale language = ULocale.ENGLISH;
-	private static final String gold_suffix = ".gold";
+	private static final String suffix = ".story";
 	private final static Logger log = LogManager.getLogger();
 
-	public static void run(Path gold_folder, Path input_folder, Path output_path, InitialResourcesFactory resources_factory)
+	public static void preprocess(Path input_folder, Path output_folder)
+	{
+		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createParsingPipeline(language);
+		if (pipeline != null)
+		{
+			UIMAWrapper.processAndSerialize(input_folder, output_folder, suffix, DeepMindSourceParser.class, pipeline);
+		}
+	}
+
+	public static void run(Path input_folder, Path gold_folder, Path output_path, InitialResourcesFactory resources_factory) throws ResourceInitializationException
 	{
 		final Options options = new Options();
 		options.excluded_POS_Tags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
 
 		// load corpus
-		final Corpus corpus = EvaluationTools.loadResourcesFromText(input_folder, output_path, resources_factory, language, max_span_size,
-				options);
+		final Corpus corpus = EvaluationTools.loadResourcesFromXMI(input_folder, output_path, resources_factory,
+				language, max_span_size, options);
 
 		// rank
 		EvaluationTools.rankMeanings(options, corpus, resources_factory);

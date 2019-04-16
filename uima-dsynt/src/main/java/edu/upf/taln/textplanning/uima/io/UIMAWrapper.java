@@ -6,16 +6,16 @@ import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Lemma;
 import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.NGram;
 import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Sentence;
 import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Token;
+import de.tudarmstadt.ukp.dkpro.core.io.text.TextReader;
+import de.tudarmstadt.ukp.dkpro.core.io.xmi.XmiReader;
+import de.tudarmstadt.ukp.dkpro.core.io.xmi.XmiWriter;
 import de.tudarmstadt.ukp.dkpro.core.matetools.MateLemmatizer;
 import de.tudarmstadt.ukp.dkpro.core.ngrams.NGramAnnotator;
 import de.tudarmstadt.ukp.dkpro.core.nlp4j.Nlp4JDependencyParser;
+import de.tudarmstadt.ukp.dkpro.core.stanfordnlp.StanfordLemmatizer;
 import de.tudarmstadt.ukp.dkpro.core.stanfordnlp.StanfordPosTagger;
 import de.tudarmstadt.ukp.dkpro.core.stanfordnlp.StanfordSegmenter;
-import de.tudarmstadt.ukp.dkpro.wsd.algorithm.TALNSenseBaseline;
-import de.tudarmstadt.ukp.dkpro.wsd.annotator.WSDAnnotatorCollectiveCandidate;
-import de.tudarmstadt.ukp.dkpro.wsd.resource.WSDResourceCollectiveCandidate;
 import de.tudarmstadt.ukp.dkpro.wsd.type.WSDResult;
-import edu.upf.taln.flask_wrapper.type.WSDSpan;
 import edu.upf.taln.parser.deep_parser.core.DeepParser;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
@@ -23,11 +23,11 @@ import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.uima.TextPlanningAnnotator;
-import edu.upf.taln.textplanning.uima.io.DSyntSemanticGraphFactory;
+import edu.upf.taln.uima.disambiguation.core.WSDAnnotatorCollectiveContext;
+import edu.upf.taln.uima.disambiguation.core.inventory.BabelnetSenseInventoryResource;
 import edu.upf.taln.uima.flask_wrapper.ConceptExtractorAnnotator;
 import edu.upf.taln.uima.wsd.annotation_extender.core.WSDResultExtender;
-import edu.upf.taln.uima.wsd.candidateDetection.BabelNetCandidateIdentification;
-import edu.upf.taln.uima.wsd.si.babelnet.resource.BabelnetSenseInventoryResource;
+import edu.upf.taln.uima.wsd.item_annotator.WSDItemAnnotator;
 import edu.upf.taln.uima.wsd.types.BabelNetSense;
 import it.uniroma1.lcl.jlt.util.Language;
 import org.apache.commons.lang3.tuple.Pair;
@@ -36,8 +36,11 @@ import org.apache.logging.log4j.Logger;
 import org.apache.uima.UIMAException;
 import org.apache.uima.analysis_engine.AnalysisEngine;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
+import org.apache.uima.collection.CollectionReaderDescription;
 import org.apache.uima.fit.factory.AnalysisEngineFactory;
-import org.apache.uima.fit.factory.JCasFactory;
+import org.apache.uima.fit.factory.CollectionReaderFactory;
+import org.apache.uima.fit.pipeline.JCasIterable;
+import org.apache.uima.fit.pipeline.SimplePipeline;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.resource.ExternalResourceDescription;
@@ -48,7 +51,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngine;
 import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngineDescription;
 import static org.apache.uima.fit.factory.ExternalResourceFactory.createExternalResourceDescription;
@@ -57,14 +61,21 @@ public class UIMAWrapper
 {
 	public static class Pipeline
 	{
-		private final AnalysisEngine pipeline;
+		private final List<AnalysisEngineDescription> pipeline;
+		private final ULocale language;
 
-		public Pipeline(AnalysisEngine uima_pipeline)
+		public Pipeline(List<AnalysisEngineDescription> uima_pipeline, ULocale language)
 		{
 			this.pipeline = uima_pipeline;
+			this.language = language;
 		}
 
-		private AnalysisEngine getPipeline() { return pipeline; }
+		private List<AnalysisEngineDescription> getPipeline() { return pipeline; }
+
+		public ULocale getLanguage()
+		{
+			return language;
+		}
 	}
 
 	private final JCas doc;
@@ -73,19 +84,125 @@ public class UIMAWrapper
 	private static final String noun_pos_tag = "NN"; // PTB
 	private final static Logger log = LogManager.getLogger();
 
-	public UIMAWrapper(String text, Pipeline pipeline)
+	private UIMAWrapper(JCas doc)
+	{
+		this.doc = doc;
+	}
+
+	public static void processAndSerialize(Path input_folder, Path output_folder, String suffix, Class <? extends TextReader> parser, Pipeline pipeline)
 	{
 		try
 		{
-			log.info("Processing text");
-			doc = processText(text, pipeline);
+			CollectionReaderDescription reader = CollectionReaderFactory.createReaderDescription(
+					parser,
+					TextParser.PARAM_SOURCE_LOCATION, input_folder.toString(),
+					TextParser.PARAM_LANGUAGE, pipeline.language.toLanguageTag(),
+					TextParser.PARAM_PATTERNS, "*" + suffix);
+
+			AnalysisEngineDescription writer = AnalysisEngineFactory.createEngineDescription(
+					XmiWriter.class,
+					XmiWriter.PARAM_TARGET_LOCATION, output_folder.toAbsolutePath().toString(),
+					XmiWriter.PARAM_OVERWRITE, true);
+
+			final List<AnalysisEngineDescription> components = pipeline.getPipeline();
+			components.add(writer);
+			AnalysisEngineDescription desc = createEngineDescription(components.toArray(new AnalysisEngineDescription[0]));
+
+			for (JCas jCas : SimplePipeline.iteratePipeline(reader, desc))
+			{
+			}
 		}
 		catch (UIMAException e)
 		{
-			log.error("Failed to process text with UIMA pipeline: " + e);
+			log.error("Failed to process texts with UIMA pipeline: " + e);
 			throw new RuntimeException(e);
 		}
 	}
+
+	public static List<UIMAWrapper> process(Path input_folder, String suffix, Class <? extends TextReader> parser, Pipeline pipeline)
+	{
+		final List<UIMAWrapper> docs = new ArrayList<>();
+
+		try
+		{
+			CollectionReaderDescription reader = CollectionReaderFactory.createReaderDescription(
+					parser,
+					TextParser.PARAM_SOURCE_LOCATION, input_folder.toString(),
+					TextParser.PARAM_LANGUAGE, pipeline.language.toLanguageTag(),
+					TextParser.PARAM_PATTERNS, "*" + suffix);
+
+			final List<AnalysisEngineDescription> components = pipeline.getPipeline();
+			AnalysisEngineDescription desc = createEngineDescription(components.toArray(new AnalysisEngineDescription[0]));
+
+			final JCasIterable jCas = SimplePipeline.iteratePipeline(reader, desc);
+			jCas.forEach(d -> docs.add(new UIMAWrapper(d)));
+		}
+		catch (UIMAException e)
+		{
+			log.error("Failed to process texts with UIMA pipeline: " + e);
+			throw new RuntimeException(e);
+		}
+
+		return docs;
+	}
+
+
+	public static List<UIMAWrapper> readFromXMI(Path input_folder)
+	{
+		try
+		{
+			log.info("Reading documents from XMI in " + input_folder);
+			CollectionReaderDescription reader = CollectionReaderFactory.createReaderDescription(
+					XmiReader.class,
+					XmiReader.PARAM_SOURCE_LOCATION, input_folder.toString(),
+					XmiReader.PARAM_LANGUAGE, "en",
+					XmiReader.PARAM_PATTERNS, "*.xmi",
+					XmiReader.PARAM_TYPE_SYSTEM_FILE, input_folder.resolve("TypeSystem.xml").toAbsolutePath().toString(),
+					XmiReader.PARAM_MERGE_TYPE_SYSTEM, true);
+
+			final JCasIterable jcasIt = SimplePipeline.iteratePipeline(reader, createEngineDescription(StanfordLemmatizer.class));
+			List<UIMAWrapper> wrappers = new ArrayList<>();
+			for (JCas doc : jcasIt)
+			{
+				wrappers.add(new UIMAWrapper(doc));
+			}
+
+			log.info(wrappers.size() + " docs read");
+			return wrappers;
+		}
+		catch (UIMAException e)
+		{
+			log.error("Failed to process texts with UIMA pipeline: " + e);
+			throw new RuntimeException(e);
+		}
+	}
+
+	public static void writeToXMI(List<UIMAWrapper> docs, Path output_folder)
+	{
+		try
+		{
+			log.info("Writing docs to " + output_folder);
+			AnalysisEngineDescription writer = AnalysisEngineFactory.createEngineDescription(
+					XmiWriter.class,
+					XmiWriter.PARAM_TARGET_LOCATION, output_folder.toAbsolutePath().toString(),
+					XmiWriter.PARAM_OVERWRITE, true);
+			final AnalysisEngine pipeline = createEngine(createEngineDescription(writer));
+			for (UIMAWrapper doc : docs)
+			{
+//			final DocumentMetaData metadata = DocumentMetaData.get(doc.doc);
+//			metadata.setDocumentId(doc.id);
+				SimplePipeline.runPipeline(doc.doc, pipeline);
+			}
+
+			log.info(docs.size() + " docs written to " + output_folder);
+		}
+		catch (UIMAException e)
+		{
+			log.error("Failed to process texts with UIMA pipeline: " + e);
+			throw new RuntimeException(e);
+		}
+	}
+
 
 	public static Pipeline createSpanPipeline(ULocale language, boolean use_concept_extractor)
 	{
@@ -102,15 +219,13 @@ public class UIMAWrapper
 					createEngineDescription(ConceptExtractorAnnotator.class, ConceptExtractorAnnotator.PARAM_FLASK_URL, concept_extraction_url)
 					: createEngineDescription(NGramAnnotator.class, NGramAnnotator.PARAM_N, 3);
 
-			ArrayList<AnalysisEngineDescription> components = new ArrayList<>();
+			List<AnalysisEngineDescription> components = new ArrayList<>();
 			components.add(segmenter);
 			components.add(pos);
 			components.add(lemma);
 			components.add(spans);
-			AnalysisEngineDescription[] componentArray = components.toArray(new AnalysisEngineDescription[0]);
-			AnalysisEngineDescription all = createEngineDescription(componentArray);
 
-			return new Pipeline(createEngine(all));
+			return new Pipeline(components, language);
 		}
 		catch (UIMAException e)
 		{
@@ -136,24 +251,19 @@ public class UIMAWrapper
 					createEngineDescription(ConceptExtractorAnnotator.class, ConceptExtractorAnnotator.PARAM_FLASK_URL, concept_extraction_url)
 					: createEngineDescription(NGramAnnotator.class, NGramAnnotator.PARAM_N, ngram_size);
 
-			AnalysisEngineDescription babelnet_candidates = use_concept_extractor ?
-					createEngineDescription(BabelNetCandidateIdentification.class, WSDSpan.class)
-					: createEngineDescription(BabelNetCandidateIdentification.class, NGram.class);
+			AnalysisEngineDescription spanCandidates = createEngineDescription(WSDItemAnnotator.class,
+					WSDItemAnnotator.PARAM_CLASS_NAMES, new String[]{"edu.upf.taln.flask_wrapper.type.WSDSpan", "de.tudarmstadt.ukp.dkpro.core.api.ner.type.NamedEntity"});
 
 			ExternalResourceDescription babelnet = createExternalResourceDescription(BabelnetSenseInventoryResource.class,
 					BabelnetSenseInventoryResource.PARAM_BABELNET_CONFIGPATH, babel_config.toString(),
 					BabelnetSenseInventoryResource.PARAM_BABELNET_LANG, language.toLanguageTag().toUpperCase(),
 					BabelnetSenseInventoryResource.PARAM_BABELNET_DESCLANG, language.toLanguageTag().toUpperCase());
 
-			ExternalResourceDescription babelnetDisambiguationResources = createExternalResourceDescription(WSDResourceCollectiveCandidate.class,
-					WSDResourceCollectiveCandidate.SENSE_INVENTORY_RESOURCE, babelnet,
-					WSDResourceCollectiveCandidate.DISAMBIGUATION_METHOD, TALNSenseBaseline.class.getName(),
-					WSDResourceCollectiveCandidate.PARAM_FREQUENCIES_FILE, freqs_file.toString(),
-					WSDResourceCollectiveCandidate.PARAM_SIMILARITIES_FILE, vectors.toString());
+			ExternalResourceDescription babelnetDisambiguationResources = null;
 
-			AnalysisEngineDescription disambiguation = createEngineDescription(WSDAnnotatorCollectiveCandidate.class,
-					WSDAnnotatorCollectiveCandidate.WSD_ALGORITHM_RESOURCE, babelnetDisambiguationResources,
-					WSDAnnotatorCollectiveCandidate.PARAM_BEST_ONLY, false);
+			AnalysisEngineDescription disambiguation = createEngineDescription(WSDAnnotatorCollectiveContext.class,
+					WSDAnnotatorCollectiveContext.WSD_ALGORITHM_RESOURCE, babelnetDisambiguationResources,
+					WSDAnnotatorCollectiveContext.PARAM_BEST_ONLY, false);
 
 			AnalysisEngineDescription extender = createEngineDescription(WSDResultExtender.class,
 					WSDResultExtender.PARAM_BABELNET, babelnet,
@@ -166,14 +276,12 @@ public class UIMAWrapper
 			components.add(pos);
 			components.add(lemma);
 			components.add(spans);
-			components.add(babelnet_candidates);
+			components.add(spanCandidates);
 			components.add(disambiguation);
 			components.add(extender);
 			components.add(textplanner);
-			AnalysisEngineDescription[] componentArray = components.toArray(new AnalysisEngineDescription[0]);
-			AnalysisEngineDescription all = createEngineDescription(componentArray);
 
-			return new Pipeline(createEngine(all));
+			return new Pipeline(components, language);
 		}
 		catch (UIMAException e)
 		{
@@ -192,8 +300,7 @@ public class UIMAWrapper
 			AnalysisEngineDescription segmenter = createEngineDescription(StanfordSegmenter.class,
 					StanfordSegmenter.PARAM_LANGUAGE, language.toLanguageTag());
 			AnalysisEngineDescription pos = createEngineDescription(StanfordPosTagger.class,
-					StanfordPosTagger.PARAM_LANGUAGE, language.toLanguageTag(),
-					StanfordPosTagger.PARAM_VARIANT, "taln");
+					StanfordPosTagger.PARAM_LANGUAGE, language.toLanguageTag());
 			AnalysisEngineDescription lemma = createEngineDescription(MateLemmatizer.class,
 					MateLemmatizer.PARAM_LANGUAGE, language.toLanguageTag(),
 					MateLemmatizer.PARAM_VARIANT, "default");
@@ -208,19 +315,22 @@ public class UIMAWrapper
 
 			// MATE DSynt parsing
 			AnalysisEngineDescription deepParser = createEngineDescription(DeepParser.class,
-					DeepParser.PARAM_LANGUAGE, language.toLanguageTag(),
 					DeepParser.PARAM_TYPE, "taln");
 			components.add(deepParser);
 
-			final AnalysisEngineDescription[] componentArray = components.toArray(new AnalysisEngineDescription[0]);
-			final AnalysisEngineDescription engineDescription = createEngineDescription(componentArray);
-			return new Pipeline(createEngine(engineDescription));
+			return new Pipeline(components, language);
 		}
 		catch (UIMAException e)
 		{
 			log.error("Cannot create UIMA pipeline: " + e);
+			e.printStackTrace();
 			return null;
 		}
+	}
+
+	public String getId()
+	{
+		return 	DocumentMetaData.get(doc).getDocumentId();
 	}
 
 	public List<List<String>> getTokens()
@@ -314,16 +424,5 @@ public class UIMAWrapper
 	{
 		DSyntSemanticGraphFactory factory = new DSyntSemanticGraphFactory();
 		return factory.create(doc);
-	}
-
-	private static JCas processText(String text, Pipeline pipeline) throws UIMAException
-	{
-		JCas jCas;
-		jCas = JCasFactory.createText(text);
-		//jCas.setDocumentLanguage(pipeline.g);
-		DocumentMetaData.create(jCas);
-		pipeline.getPipeline().process(jCas);
-
-		return jCas;
 	}
 }

@@ -172,7 +172,7 @@ public class RankingEvaluation
 							.collect(toList());
 
 					Map<Meaning, Double> weights = meanings.stream()
-							.collect(groupingBy(m -> m, averagingDouble(m -> t.weighter.apply(m.getReference()))));
+							.collect(groupingBy(m -> m, averagingDouble(m -> t.resources.getMeaningsWeighter().apply(m.getReference()))));
 
 					return meanings.stream()
 							.distinct()

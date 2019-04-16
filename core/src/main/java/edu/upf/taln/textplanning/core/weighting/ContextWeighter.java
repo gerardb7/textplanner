@@ -5,6 +5,7 @@ import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
+import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -29,13 +30,17 @@ public class ContextWeighter implements Function<String, Double>, Serializable
 		log.info("Calculating meaning weights using gloss and context vectors");
 		final Stopwatch timer = Stopwatch.createStarted();
 
-		final Set<String> meanings = candidates.stream()
+		final List<String> meanings = candidates.stream()
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference)
-				.collect(Collectors.toSet());
+				.distinct()
+				.collect(Collectors.toList());
 
 		// Calculate context vectors just once per each context
-		meanings.forEach(m -> {
+		DebugUtils.ThreadReporter reporter = new DebugUtils.ThreadReporter(log);
+		meanings.parallelStream()
+				.peek(i -> reporter.report())
+				.forEach(m -> {
 					final Optional<double[]> glosses_vector = glosses_vectors.getVector(m);
 					final List<String> context = context_function.apply(m);
 					final Optional<double[]> context_vector =context_vectors.getVector(context);

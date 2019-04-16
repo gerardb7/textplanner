@@ -95,7 +95,7 @@ public class SemEvalEvaluation
 		IntStream.range(0, corpus.texts.size()).forEach(i ->
 		{
 			log.info("TEXT " + i);
-			final Function<String, Double> weighter = corpus.texts.get(i).weighter;
+			final Function<String, Double> weighter = corpus.texts.get(i).resources.getMeaningsWeighter();
 			corpus.texts.get(i).sentences.forEach(s ->
 					s.candidates.values().forEach(m -> print_full_ranking(m, weighter, gold, true, max_length)));
 
@@ -195,7 +195,7 @@ public class SemEvalEvaluation
 						.map(s -> s.candidates.values().stream()
 								.filter(not(List::isEmpty))
 								.map(mention_candidates -> mention_candidates.stream()
-										.max(comparingDouble(c -> t.weighter.apply(c.getMeaning().getReference()))))
+										.max(comparingDouble(c -> t.resources.getMeaningsWeighter().apply(c.getMeaning().getReference()))))
 								.flatMap(Optional::stream)
 								.collect(toList()))
 						.collect(toList()))
@@ -210,8 +210,8 @@ public class SemEvalEvaluation
 						.map(s -> s.candidates.values().stream()
 								.filter(not(List::isEmpty))
 								.map(mention_candidates -> mention_candidates.stream()
-										.max(comparingDouble(c -> t.weighter.apply(c.getMeaning().getReference())))
-										.map(c -> t.weighter.apply(c.getMeaning().getReference()) >= threshold ? c : mention_candidates.get(0)))
+										.max(comparingDouble(c -> t.resources.getMeaningsWeighter().apply(c.getMeaning().getReference())))
+										.map(c -> t.resources.getMeaningsWeighter().apply(c.getMeaning().getReference()) >= threshold ? c : mention_candidates.get(0)))
 								.flatMap(Optional::stream)
 								.collect(toList()))
 						.collect(toList()))

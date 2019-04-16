@@ -18,6 +18,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
+import org.apache.uima.jcas.tcas.Annotation;
 
 import java.util.List;
 import java.util.Optional;
@@ -38,18 +39,28 @@ public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 			{
 				JCasUtil.selectCovered(DeepDependency.class, sentence).forEach(d ->
 				{
-					// Add vertices
-					final String governor_id = createVertex(graph, jcas, sentence, d.getGovernor());
-					final String dependent_id = createVertex(graph, jcas, sentence, d.getDependent());
+					try
+					{
+						if (!d.getDependencyType().equals("ROOT"))
+						{
+							// Add vertices
+							final String governor_id = createVertex(graph, jcas, sentence, d.getGovernor());
+							final String dependent_id = createVertex(graph, jcas, sentence, d.getDependent());
 
-					// Add edge
-					Role role = Role.create(d.getDependencyType());
-					graph.addEdge(governor_id, dependent_id, role);
+							// Add edge
+							Role role = Role.create(d.getDependencyType());
+							graph.addEdge(governor_id, dependent_id, role);
+						}
+					}
+					catch (Exception e)
+					{
+						log.warn("Failed to add edge for deep dependency " + d + " in sentence " + createId(sentence) + ": " + e);
+					}
 				});
 			}
 			catch (Exception e)
 			{
-				log.error("Reading DSynt tree file for sentence " + sentence.getId() + ": " + e);
+				log.error("Reading DSynt tree file for sentence " + createId(sentence) + ": " + e);
 			}
 		}
 
@@ -66,7 +77,7 @@ public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 		graph.addMention(id, mention);
 		meaning.ifPresent(p -> graph.setMeaning(id, p.getLeft()));
 		meaning.ifPresent(p -> graph.setWeight(id, p.getRight()));
-		graph.addSource(id, sentence.getId());
+		graph.addSource(id, createId(sentence));
 		// TODO decide if type needs setting
 
 		return id;
@@ -82,12 +93,14 @@ public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 				.map(Lemma::getValue)
 				.collect(Collectors.joining(" "));
 		final String pos = deep_token.getPos().getPosValue();
-		final List<Token> sentence_tokens = JCasUtil.selectCovering(jcas, Token.class, sentence);
+		final List<Token> sentence_tokens = JCasUtil.selectCovered(jcas, Token.class, sentence);
 		final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
 		final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1));
+		if (token_based_offset_begin == -1 || token_based_offset_end == -1)
+			throw new RuntimeException("Cannot get offsets for \"" + surface_form + "\" in sentence " + createId(sentence));
 		final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
 
-		return Mention.get(sentence.getId(), offsets, surface_form, lemma, pos, false, "");
+		return Mention.get(createId(sentence), offsets, surface_form, lemma, pos, false, "");
 	}
 
 	private static Optional<Pair<Meaning, Double>> createMeaning(JCas jcas, DeepToken deep_token)
@@ -97,7 +110,7 @@ public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 		{
 			final WSDResult ann = annotations.get(0);
 			BabelNetSense babel_synset = (BabelNetSense) ann.getBestSense();
-			final Meaning meaning = Meaning.get(babel_synset.getId(), babel_synset.getLabel(), babel_synset.getNameEntity());
+			final Meaning meaning = Meaning.get(createId(babel_synset), babel_synset.getLabel(), babel_synset.getNameEntity());
 			final double rank = babel_synset.getConfidence();
 			return Optional.of(Pair.of(meaning, rank));
 		}
@@ -116,5 +129,10 @@ public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 		}
 
 		return OptionalDouble.empty();
+	}
+
+	private static String createId(Annotation ann)
+	{
+		return "a" + ann.getBegin() + "-" + ann.getEnd();
 	}
 }

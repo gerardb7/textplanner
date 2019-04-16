@@ -103,12 +103,12 @@ public class Driver
 
 		Options options = new Options();
 		final List<Candidate> candidates = new ArrayList<>(graphs.getCandidates());
-		ProcessResourcesFactory process = new ProcessResourcesFactory(resources, options, candidates, tokens, null);
+		DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, tokens, null);
 
 		final Function<String, Double> context_weighter = process.getMeaningsWeighter();
 		final BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
 		final BiPredicate<String, String> meanings_filter = process.getMeaningsFilter();
-		final Predicate<Candidate> candidates_filter = process.getCandidatesFilter(context_weighter);
+		final Predicate<Candidate> candidates_filter = process.getCandidatesFilter();
 		TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
 
 		Path output = FileUtils.createOutputPath(graphs_file, graphs_file.getParent(),
