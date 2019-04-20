@@ -21,7 +21,6 @@ import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
-import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.uima.TextPlanningAnnotator;
 import edu.upf.taln.uima.disambiguation.core.WSDAnnotatorCollectiveContext;
 import edu.upf.taln.uima.disambiguation.core.inventory.BabelnetSenseInventoryResource;
@@ -34,12 +33,12 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.uima.UIMAException;
-import org.apache.uima.analysis_engine.AnalysisEngine;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.collection.CollectionReaderDescription;
 import org.apache.uima.fit.factory.AnalysisEngineFactory;
 import org.apache.uima.fit.factory.CollectionReaderFactory;
 import org.apache.uima.fit.pipeline.JCasIterable;
+import org.apache.uima.fit.pipeline.JCasIterator;
 import org.apache.uima.fit.pipeline.SimplePipeline;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
@@ -53,7 +52,6 @@ import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
-import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngine;
 import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngineDescription;
 import static org.apache.uima.fit.factory.ExternalResourceFactory.createExternalResourceDescription;
 
@@ -78,7 +76,10 @@ public class UIMAWrapper
 		}
 	}
 
-	private final JCas doc;
+	private final String id;
+	private final List<List<TokenInfo>> tokens_info;
+	private final List<List<Set<Candidate>>> disambiguated_meanings;
+	private final SemanticGraph graph;
 	private static final int ngram_size = 3;
 	private static final String concept_extraction_url = "http://server01-taln.s.upf.edu:8000";
 	private static final String noun_pos_tag = "NN"; // PTB
@@ -86,7 +87,51 @@ public class UIMAWrapper
 
 	private UIMAWrapper(JCas doc)
 	{
-		this.doc = doc;
+		id = DocumentMetaData.get(doc).getDocumentId();
+		tokens_info = JCasUtil.select(doc, Sentence.class).stream()
+				.map(s -> JCasUtil.selectCovered(Token.class, s).stream()
+						.map(t -> new TokenInfo(t.getCoveredText(), t.getLemmaValue(), t.getPosValue()))
+						.collect(toList()))
+				.collect(toList());
+
+		//Collect disambiguated candidates
+		final List<Sentence> sentences = new ArrayList<>(JCasUtil.select(doc, Sentence.class));
+		disambiguated_meanings = sentences.stream()
+				.map(sentence -> JCasUtil.selectCovered(NGram.class, sentence).stream()
+						.map(span ->
+						{
+							final String surface_form = span.getCoveredText();
+							final List<Token> surface_tokens = JCasUtil.selectCovered(Token.class, span);
+							final String lemma = surface_tokens.stream()
+									.map(Token::getLemma)
+									.map(Lemma::getValue)
+									.collect(Collectors.joining(" "));
+							final String pos = surface_tokens.size() == 1 ? surface_tokens.get(0).getPos().getPosValue() : noun_pos_tag;
+							final List<Token> sentence_tokens = JCasUtil.selectCovered(Token.class, sentence);
+							final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
+							final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1));
+							final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
+							final Mention mention = new Mention("s" + sentences.indexOf(sentence), offsets, surface_form, lemma, pos, false, "");
+
+							return JCasUtil.selectAt(doc, WSDResult.class, span.getBegin(), span.getEnd()).stream()
+									.map(a ->
+									{
+										final BabelNetSense s = (BabelNetSense) a.getBestSense();
+										final Meaning meaning = Meaning.get(s.getId(), s.getLabel(), s.getNameEntity());
+//										final double rank = JCasUtil.selectAt(doc, ConceptRelevance.class, a.getBegin(), a.getEnd()).get(0).getDomainRelevance();
+										Candidate c = new Candidate(mention, meaning);
+										c.setWeight(s.getConfidence());
+										return c;
+									})
+									.collect(toSet());
+						})
+						.filter(l -> !l.isEmpty())
+						.collect(toList()))
+				.collect(toList());
+
+		DSyntSemanticGraphFactory factory = new DSyntSemanticGraphFactory();
+		graph = factory.create(doc);
+
 	}
 
 	public static void processAndSerialize(Path input_folder, Path output_folder, String suffix, Class <? extends TextReader> parser, Pipeline pipeline)
@@ -108,7 +153,8 @@ public class UIMAWrapper
 			components.add(writer);
 			AnalysisEngineDescription desc = createEngineDescription(components.toArray(new AnalysisEngineDescription[0]));
 
-			for (JCas jCas : SimplePipeline.iteratePipeline(reader, desc))
+			//noinspection StatementWithEmptyBody
+			for (@SuppressWarnings("unused") JCas jCas : SimplePipeline.iteratePipeline(reader, desc))
 			{
 			}
 		}
@@ -156,15 +202,16 @@ public class UIMAWrapper
 					XmiReader.class,
 					XmiReader.PARAM_SOURCE_LOCATION, input_folder.toString(),
 					XmiReader.PARAM_LANGUAGE, "en",
-					XmiReader.PARAM_PATTERNS, "*.xmi",
+					XmiReader.PARAM_PATTERNS, XmiReader.INCLUDE_PREFIX + "*.xmi",
 					XmiReader.PARAM_TYPE_SYSTEM_FILE, input_folder.resolve("TypeSystem.xml").toAbsolutePath().toString(),
 					XmiReader.PARAM_MERGE_TYPE_SYSTEM, true);
 
-			final JCasIterable jcasIt = SimplePipeline.iteratePipeline(reader, createEngineDescription(StanfordLemmatizer.class));
+			final JCasIterator jcasIt = SimplePipeline.iteratePipeline(reader, createEngineDescription(StanfordLemmatizer.class)).iterator();
 			List<UIMAWrapper> wrappers = new ArrayList<>();
-			for (JCas doc : jcasIt)
+			while (jcasIt.hasNext())
 			{
-				wrappers.add(new UIMAWrapper(doc));
+				final JCas next = jcasIt.next();
+				wrappers.add(new UIMAWrapper(next));
 			}
 
 			log.info(wrappers.size() + " docs read");
@@ -176,33 +223,6 @@ public class UIMAWrapper
 			throw new RuntimeException(e);
 		}
 	}
-
-	public static void writeToXMI(List<UIMAWrapper> docs, Path output_folder)
-	{
-		try
-		{
-			log.info("Writing docs to " + output_folder);
-			AnalysisEngineDescription writer = AnalysisEngineFactory.createEngineDescription(
-					XmiWriter.class,
-					XmiWriter.PARAM_TARGET_LOCATION, output_folder.toAbsolutePath().toString(),
-					XmiWriter.PARAM_OVERWRITE, true);
-			final AnalysisEngine pipeline = createEngine(createEngineDescription(writer));
-			for (UIMAWrapper doc : docs)
-			{
-//			final DocumentMetaData metadata = DocumentMetaData.get(doc.doc);
-//			metadata.setDocumentId(doc.id);
-				SimplePipeline.runPipeline(doc.doc, pipeline);
-			}
-
-			log.info(docs.size() + " docs written to " + output_folder);
-		}
-		catch (UIMAException e)
-		{
-			log.error("Failed to process texts with UIMA pipeline: " + e);
-			throw new RuntimeException(e);
-		}
-	}
-
 
 	public static Pipeline createSpanPipeline(ULocale language, boolean use_concept_extractor)
 	{
@@ -330,16 +350,7 @@ public class UIMAWrapper
 
 	public String getId()
 	{
-		return 	DocumentMetaData.get(doc).getDocumentId();
-	}
-
-	public List<List<String>> getTokens()
-	{
-		return JCasUtil.select(doc, Sentence.class).stream()
-				.map(s -> JCasUtil.selectCovered(Token.class, s).stream()
-						.map(Token::getCoveredText)
-						.collect(toList()))
-				.collect(toList());
+		return id;
 	}
 
 	public static class TokenInfo
@@ -362,67 +373,35 @@ public class UIMAWrapper
 
 	public List<List<TokenInfo>> getTokensInfo()
 	{
-		return JCasUtil.select(doc, Sentence.class).stream()
-				.map(s -> JCasUtil.selectCovered(Token.class, s).stream()
-						.map(t -> new TokenInfo(t.getCoveredText(), t.getLemmaValue(), t.getPosValue()))
+		return tokens_info;
+	}
+
+	public List<List<String>> getTokens()
+	{
+		return tokens_info.stream()
+				.map(s -> s.stream()
+						.map(t -> t.wordForm)
 						.collect(toList()))
 				.collect(toList());
 	}
 
 	public List<List<String>> getNominalTokens()
 	{
-		return JCasUtil.select(doc, Sentence.class).stream()
-				.map(s -> JCasUtil.selectCovered(Token.class, s).stream()
-						.filter(t -> t.getPos().getPosValue().startsWith(noun_pos_tag))
-						.map(Token::getCoveredText)
+		return tokens_info.stream()
+				.map(s -> s.stream()
+						.filter(t -> t.pos.startsWith(noun_pos_tag))
+						.map(t -> t.wordForm)
 						.collect(toList()))
 				.collect(toList());
 	}
 
 	public List<List<Set<Candidate>>> getDisambiguatedCandidates()
 	{
-		log.info("Collecting disambiguated candidates");
-		DebugUtils.ThreadReporter reporter = new DebugUtils.ThreadReporter(log);
-		final List<Sentence> sentences = new ArrayList<>(JCasUtil.select(doc, Sentence.class));
-		return sentences.stream()
-				.parallel()
-				.peek(s -> reporter.report())
-				.map(sentence -> JCasUtil.selectCovered(NGram.class, sentence).stream()
-						.map(span ->
-						{
-							final String surface_form = span.getCoveredText();
-							final List<Token> surface_tokens = JCasUtil.selectCovered(Token.class, span);
-							final String lemma = surface_tokens.stream()
-									.map(Token::getLemma)
-									.map(Lemma::getValue)
-									.collect(Collectors.joining(" "));
-							final String pos = surface_tokens.size() == 1 ? surface_tokens.get(0).getPos().getPosValue() : noun_pos_tag;
-							final List<Token> sentence_tokens = JCasUtil.selectCovered(Token.class, sentence);
-							final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
-							final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1));
-							final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
-							final Mention mention = Mention.get("s" + sentences.indexOf(sentence), offsets, surface_form, lemma, pos, false, "");
-
-							return JCasUtil.selectAt(doc, WSDResult.class, span.getBegin(), span.getEnd()).stream()
-									.map(a ->
-									{
-										final BabelNetSense s = (BabelNetSense) a.getBestSense();
-										final Meaning meaning = Meaning.get(s.getId(), s.getLabel(), s.getNameEntity());
-//										final double rank = JCasUtil.selectAt(doc, ConceptRelevance.class, a.getBegin(), a.getEnd()).get(0).getDomainRelevance();
-										Candidate c = new Candidate(mention, meaning);
-										c.setWeight(s.getConfidence());
-										return c;
-									})
-									.collect(toSet());
-						})
-						.filter(l -> !l.isEmpty())
-						.collect(toList()))
-				.collect(toList());
+		return disambiguated_meanings;
 	}
 
 	public SemanticGraph getSemanticGraph()
 	{
-		DSyntSemanticGraphFactory factory = new DSyntSemanticGraphFactory();
-		return factory.create(doc);
+		return graph;
 	}
 }

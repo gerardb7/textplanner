@@ -47,7 +47,7 @@ public class RankingEvaluation
 	private static final String gold_suffix = ".gold";
 	private final static Logger log = LogManager.getLogger();
 
-	public static void run(Path gold_folder, Path xml_file, Path output_path, InitialResourcesFactory resources_factory) throws Exception
+	public static void run(Path gold_folder, Path xml_file, Path output_path, InitialResourcesFactory resources_factory)
 	{
 		final Options options = new Options();
 		final List<Set<AlternativeMeanings>> goldMeanings = getGoldMeanings(gold_folder);

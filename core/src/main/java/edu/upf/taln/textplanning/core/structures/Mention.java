@@ -4,8 +4,6 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.Serializable;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -13,7 +11,7 @@ import java.util.Objects;
  */
 public final class Mention implements Comparable<Mention>, Serializable
 {
-	private final String id;
+	private final int id; // unique identifier
 	private final String source_id; // Identifies context in which mention occurs, e.g. sentence, document, etc.
 	private final Pair<Integer, Integer> span; // Token-based offsets
 	private final String surface_form;
@@ -21,26 +19,13 @@ public final class Mention implements Comparable<Mention>, Serializable
 	private final String pos; // POS tag
 	private final boolean isNE; // is NE
 	private final String type; // e.g. AMR concept label
-	private static final Map<String, Mention> mentions = new HashMap<>(); // to ensure unique Mention objects
 	private final static long serialVersionUID = 1L;
+	private static int id_counter = 0;
 
-	// Factory method
-	public static Mention get(String context_id, Pair<Integer, Integer> tokens_span, String surface_form, String lemma,
-	                          String POS, boolean isNE, String type)
-	{
-		final String id = context_id + "_" + tokens_span.toString();
-		if (mentions.containsKey(id))
-			return mentions.get(id);
-
-		Mention m = new Mention(id, context_id, tokens_span, surface_form, lemma, POS, isNE, type);
-		mentions.put(id, m);
-		return m;
-	}
-
-	private Mention(String id, String context_id, Pair<Integer, Integer> tokens_span, String surface_form, String lemma,
+	public Mention(String context_id, Pair<Integer, Integer> tokens_span, String surface_form, String lemma,
 	                String POS, boolean isNE, String type)
 	{
-		this.id = id;
+		this.id = id_counter++;
 		this.source_id = context_id;
 		this.span = tokens_span;
 		this.surface_form = surface_form;
@@ -50,7 +35,7 @@ public final class Mention implements Comparable<Mention>, Serializable
 		this.type = type;
 	}
 
-	public String getId() { return id;}
+	public int getId() { return id;}
 	public String getContextId() { return source_id; }
 	public Pair<Integer, Integer> getSpan() { return span; }
 	public String getSurface_form() { return surface_form; }
@@ -65,9 +50,8 @@ public final class Mention implements Comparable<Mention>, Serializable
 	@Override
 	public String toString()
 	{
-		return getSurface_form();
+		return getContextId() + "_" + getSpan() + "_" + getSurface_form();
 	}
-
 
 	@Override
 	public int hashCode()

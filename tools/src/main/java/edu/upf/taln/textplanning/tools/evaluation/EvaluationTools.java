@@ -9,10 +9,8 @@ import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.io.CandidatesCollector;
 import edu.upf.taln.textplanning.core.ranking.Disambiguation;
-import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.structures.Mention;
-import edu.upf.taln.textplanning.core.structures.SemanticGraph;
-import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
+import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
+import edu.upf.taln.textplanning.core.structures.*;
 import edu.upf.taln.textplanning.uima.io.DSyntSemantics;
 import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.commons.lang3.tuple.Pair;
@@ -91,17 +89,16 @@ public class EvaluationTools
 	public static final String adverb_pos_tag = "R";
 	public static final String other_pos_tag = "X";
 	private static final String candidates_file = "candidates.bin";
-	private static final String contexts_file = "contexts.bin";
+	private static final String glosses_file = "glosses.bin";
 	private final static Logger log = LogManager.getLogger();
 
 	public static Corpus loadResourcesFromXMI(Path xmi_folder, Path output_path, InitialResourcesFactory resource_factory,
 	                                      ULocale language, int max_span_size, Options options)
 	{
 
-		final List<UIMAWrapper> docs = UIMAWrapper.readFromXMI(xmi_folder);
-
 		Corpus corpus = new Corpus();
 		AtomicInteger doc_counter = new AtomicInteger(0);
+		final List<UIMAWrapper> docs = UIMAWrapper.readFromXMI(xmi_folder);
 
 		docs.forEach(d -> {
 			final Text text = new Text();
@@ -162,18 +159,20 @@ public class EvaluationTools
 		try
 		{
 			final Path candidates_path = output_path.resolve(candidates_file);
-			final Path contexts_path = output_path.resolve(contexts_file);
+			final Path glosses_path = output_path.resolve(glosses_file);
 			List<Candidate> candidates;
 			if (Files.exists(candidates_path))
 			{
 				log.info("Loading candidates from " + candidates_path);
+				Stopwatch timer = Stopwatch.createStarted();
 				candidates = (List<Candidate>) Serializer.deserialize(candidates_path);
+				log.info("Candidates loaded in " + timer.stop());
 			}
 			else
 			{
 				log.info("Collecting mentions");
 				Stopwatch timer = Stopwatch.createStarted();
-				final List<Mention> mentions = collectMentions(corpus, max_span_size, options.excluded_POS_Tags);
+				final List<Mention> mentions = collectMentions(corpus, max_span_size, options.excluded_POS_Tags, language);
 				log.info("Mentions collected in " + timer.stop());
 
 				log.info("Looking up meanings");
@@ -183,56 +182,80 @@ public class EvaluationTools
 				log.info("Meanings looked up in " + timer.stop());
 
 				Serializer.serialize(candidates, candidates_path);
-				log.info("Candidates saved in " + candidates_path);
+				log.info("Candidates saved to " + candidates_path);
 			}
 
-			// assign candidates to corpus objects
-			final Map<Mention, List<Candidate>> mentions2candidates = candidates.stream().collect(groupingBy(Candidate::getMention));
-			final Map<String, List<Mention>> contexts2mentions = mentions2candidates.keySet().stream().collect(groupingBy(Mention::getContextId));
-			corpus.texts.forEach(t ->
-					t.sentences.forEach(s ->
-							contexts2mentions.keySet().stream()
-									.filter(c -> c.startsWith(s.id))
-									.map(contexts2mentions::get)
-									.flatMap(List::stream)
-									.forEach(m -> s.candidates.put(m, mentions2candidates.get(m)))));
-
-			if (Files.exists(contexts_path))
 			{
-				log.info("Loading contexts from " + contexts_path);
-				final List<Function<String, Double>> weigthers = (List<Function<String, Double>>) Serializer.deserialize(contexts_path);
-				for (int i = 0; i < corpus.texts.size(); ++i)
+				log.info("Assigning candidates to mentions");
+				Stopwatch timer = Stopwatch.createStarted();
+				corpus.texts.forEach(text ->
 				{
-					final List<Candidate> text_candidates = corpus.texts.get(i).sentences.stream()
-							.flatMap(s -> s.candidates.values().stream().flatMap(List::stream))
-							.collect(toList());
+					final Map<Mention, List<Candidate>> text_candidates = candidates.stream()
+							.filter(c -> c.getMention().getContextId().startsWith(text.id + "."))
+							.collect(groupingBy(Candidate::getMention));
 
-					corpus.texts.get(i).resources = new DocumentResourcesFactory(resources, options, weigthers.get(i), text_candidates);
-				}
+					text_candidates.forEach((mention, mention_candidates) ->
+					{
+						final String mention_context_id = mention.getContextId();
+						text.sentences.forEach(sentence ->
+						{
+							if (mention_context_id.equals(sentence.id))
+								sentence.candidates.put(mention, mention_candidates);
+						});
+					});
+				});
+				log.info("Assignment done in " + timer.stop());
+			}
+
+			Map<String, List<String>> glosses;
+			if (Files.exists(glosses_path))
+			{
+				log.info("Loading glosses from " + glosses_path);
+				Stopwatch timer = Stopwatch.createStarted();
+				glosses = (Map<String, List<String>>) Serializer.deserialize(glosses_path);
+				log.info("Glosses loaded in " + timer.stop());
 			}
 			else
 			{
-				log.info("Creating context weighters");
+				log.info("Querying glosses");
 				Stopwatch timer = Stopwatch.createStarted();
+				glosses = new HashMap<>();
  				for (int i = 0; i < corpus.texts.size(); ++i)
 				{
-					final List<String> text_tokens = corpus.texts.get(i).sentences.stream()
-							.flatMap(s -> s.tokens.stream())
-							.map(t -> t.wf)
-							.collect(toList());
 					final List<Candidate> text_candidates = corpus.texts.get(i).sentences.stream()
 							.flatMap(s -> s.candidates.values().stream().flatMap(List::stream))
 							.collect(toList());
-					corpus.texts.get(i).resources = new DocumentResourcesFactory(resources, options, text_candidates, text_tokens, null);
+					text_candidates.stream()
+							.map(Candidate::getMeaning)
+							.map(Meaning::getReference)
+							.distinct()
+							.forEach(r -> glosses.computeIfAbsent(r, k -> resources.getDictionary().getGlosses(k, resources.getLanguage())));
 				}
-				log.info("Contexts created in " + timer.stop());
-				Serializer.serialize(corpus.texts.stream().map(t -> t.resources.getMeaningsWeighter()).collect(toList()), contexts_path);
-				log.info("Contexts saved in " + contexts_path);
+				log.info("Glosses queried in " + timer.stop());
+				Serializer.serialize(glosses, glosses_path);
+				log.info("Glosses saved to " + glosses_path);
 			}
+
+			log.info("Creating document resources");
+			Stopwatch timer = Stopwatch.createStarted();
+			for (int i = 0; i < corpus.texts.size(); ++i)
+			{
+				final List<String> text_tokens = corpus.texts.get(i).sentences.stream()
+						.flatMap(s -> s.tokens.stream())
+						.map(t -> t.wf)
+						.collect(toList());
+				final List<Candidate> text_candidates = corpus.texts.get(i).sentences.stream()
+						.flatMap(s -> s.candidates.values().stream().flatMap(List::stream))
+						.collect(toList());
+
+				corpus.texts.get(i).resources = new DocumentResourcesFactory(resources, options, text_candidates, text_tokens, glosses);
+			}
+			log.info("Document resources created in " + timer.stop());
 		}
 		catch (Exception e)
 		{
 			log.error("Cannot load resources: " + e);
+			e.printStackTrace();
 		}
 
 		return corpus;
@@ -308,7 +331,7 @@ public class EvaluationTools
 					BiPredicate<Mention, Mention> adjacency_function =
 							(m1, m2) -> Math.abs(mentions.indexOf(m1) - mentions.indexOf(m2)) <= context_size;
 					BiPredicate<Mention, Mention> adjacency_function2 =
-							(m1, m2) -> text.graph.containsEdge(m1.getId(), m2.getId());
+							(m1, m2) -> text.graph.containsEdge(m1.toString(), m2.toString());
 
 					// rank mentions
 					TextPlanner.rankMentions(candidates, adjacency_function, options);
@@ -325,7 +348,7 @@ public class EvaluationTools
 		});
 	}
 
-	public static List<Mention> collectMentions(Corpus corpus, int max_span_size, Set<String> exclude_pos_tags)
+	public static List<Mention> collectMentions(Corpus corpus, int max_span_size, Set<String> exclude_pos_tags, ULocale language)
 	{
 		// create mention objects
 		return corpus.texts.stream()
@@ -353,12 +376,9 @@ public class EvaluationTools
 															.collect(joining(" "));
 													String pos = tokens.size() == 1 ? tokens.get(0).pos : noun_pos_tag;
 
-													final String start_id = tokens.get(0).id;
-													final String end_id = tokens.get(tokens.size() - 1).id;
-													final String id = tokens.size() == 1 ? start_id : start_id + "-" + end_id;
-													return Mention.get(id, Pair.of(start, end), form, lemma, pos, false, "");
+													return new Mention(s.id, Pair.of(start, end), form, lemma, pos, false, "");
 												})
-										/*.filter(m -> FunctionWordsFilter.filter(m, language))*/)
+										.filter(m -> FunctionWordsFilter.test(m.getSurface_form(), language)))
 								.flatMap(stream -> stream))
 						.flatMap(stream -> stream))
 				.flatMap(stream -> stream)

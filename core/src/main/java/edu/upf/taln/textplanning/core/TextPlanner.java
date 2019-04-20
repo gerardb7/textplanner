@@ -122,9 +122,9 @@ public final class TextPlanner
 
 			// One variable per mention
 			final Map<String, Mention> variables2mentions = mentions2meanings.keySet().stream()
-					.collect(toMap(Mention::getId, m -> m));
+					.collect(toMap(Mention::toString, m -> m));
 			final Map<String, Double> variables2weights = mentions2meanings.keySet().stream()
-					.collect(toMap(Mention::getId, m -> mentions2meanings.get(m).getWeight()));
+					.collect(toMap(Mention::toString, m -> mentions2meanings.get(m).getWeight()));
 			List<String> variables = List.copyOf(variables2mentions.keySet());
 
 			final List<String> labels = variables.stream() // for debugging purposes

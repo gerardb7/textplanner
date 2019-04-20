@@ -14,6 +14,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class ContextWeighter implements Function<String, Double>, Serializable
 {
@@ -38,26 +39,31 @@ public class ContextWeighter implements Function<String, Double>, Serializable
 
 		// Calculate context vectors just once per each context
 		DebugUtils.ThreadReporter reporter = new DebugUtils.ThreadReporter(log);
-		meanings.parallelStream()
+		final double[] ws = meanings.parallelStream()
 				.peek(i -> reporter.report())
-				.forEach(m -> {
+				.mapToDouble(m ->
+				{
 					final Optional<double[]> glosses_vector = glosses_vectors.getVector(m);
 					final List<String> context = context_function.apply(m);
-					final Optional<double[]> context_vector =context_vectors.getVector(context);
+					final Optional<double[]> context_vector = context_vectors.getVector(context);
 					if (glosses_vector.isPresent() && context_vector.isPresent())
-						weights.put(m, score_function.apply(glosses_vector.get(), context_vector.get()));
+						return score_function.apply(glosses_vector.get(), context_vector.get());
 					else
-						weights.put(m, 0.0);
+						return 0.0;
+				}).toArray();
 
-				});
+		IntStream.range(0, meanings.size())
+				.forEach(i -> weights.put(meanings.get(i), ws[i]));
 
 		// Make sure all weights are normalized
-		assert weights.values().stream().map(Math::abs).allMatch(w -> w >= 0.0 && w <= 1.0);
-		if (weights.values().stream().anyMatch(w -> w < 0.0))
-			weights.keySet().forEach(i -> weights.replace(i, (weights.get(i) + 1.0)/2.0));
+		assert this.weights.values().stream().map(Math::abs).allMatch(w -> w >= 0.0 && w <= 1.0);
+		if (this.weights.values().stream().anyMatch(w -> w < 0.0))
+			this.weights.keySet().forEach(i -> this.weights.replace(i, (this.weights.get(i) + 1.0)/2.0));
 
-
-		log.info(weights.size() + " meanings with weights out of " + candidates.size());
+		final long num_weighted = this.weights.values().stream()
+				.filter(w -> w != 0.0)
+				.count();
+		log.info(num_weighted + " meanings with weights out of " + meanings.size() + " (" + candidates.size() + " candidates)");
 		log.info("Weights calculated in " + timer.stop());
 	}
 

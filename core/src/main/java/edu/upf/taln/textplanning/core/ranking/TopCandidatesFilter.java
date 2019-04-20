@@ -48,7 +48,7 @@ public class TopCandidatesFilter implements Predicate<Candidate>
 
 	private static List<Candidate> limit(List<Candidate> candidates, Function<String, Double> eval, int top_k, double threshold)
 	{
-		if (candidates.isEmpty())
+		if (candidates.isEmpty() || top_k < 1)
 			return Collections.emptyList();
 
 		// Top k candidates according to predefined order, e.g. dictionary's best sense ordering

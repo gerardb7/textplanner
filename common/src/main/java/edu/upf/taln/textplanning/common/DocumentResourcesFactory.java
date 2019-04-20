@@ -33,7 +33,6 @@ public class DocumentResourcesFactory
 	public DocumentResourcesFactory(InitialResourcesFactory factory, Options options,
 	                                List<Candidate> candidates, List<String> tokens, Map<String, List<String>> glosses)
 	{
-		log.info("Loading document-specific resources");
 
 		// Glosses
 		Function<String, List<String>> glosses_function;
@@ -59,23 +58,11 @@ public class DocumentResourcesFactory
 		candidates_filter = createCandidatesFilter(candidates, weighter, options, factory.getLanguage());
 	}
 
-	public DocumentResourcesFactory(InitialResourcesFactory factory, Options options, Function<String, Double> weighter,
-	                                List<Candidate> candidates)
-	{
-		log.info("Loading document-specific resources");
-
-		// Filters and weighter
-		filter = new DifferentMentionsFilter(candidates);
-		this.weighter = weighter;
-		candidates_filter = createCandidatesFilter(candidates, weighter, options, factory.getLanguage());
-	}
-
 	public Function<String, Double> getMeaningsWeighter() { return weighter; }
 
 	public BiPredicate<String, String> getMeaningsFilter() { return filter; }
 
 	public Predicate<Candidate> getCandidatesFilter() { return candidates_filter; }
-
 
 	private static Predicate<Candidate> createCandidatesFilter(List<Candidate> candidates, Function<String, Double> weighter, Options options, ULocale language)
 	{

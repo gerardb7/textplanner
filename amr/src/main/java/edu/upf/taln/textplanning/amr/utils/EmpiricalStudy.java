@@ -652,7 +652,7 @@ public class EmpiricalStudy
 
 	}
 
-	private static  SimilarityStats getSimilarityStats(Collection<Candidate> candidates, VectorsSimilarity sim,
+	private static  SimilarityStats getSimilarityStats(List<Candidate> candidates, VectorsSimilarity sim,
 	                                                   boolean do_pairwise_similarity)
 	{
 		if (candidates.isEmpty())
@@ -921,7 +921,7 @@ public class EmpiricalStudy
 							final Candidate.Type ne = ne_offsets.contains(span) ?
 									ne_types.get(ne_offsets.indexOf(span)) : Candidate.Type.Other;
 
-							return Mention.get(
+							return new Mention(
 									tokens.get(span.getRight() - 1).sentIndex() + "-" + span,
 									span,
 									span_text,

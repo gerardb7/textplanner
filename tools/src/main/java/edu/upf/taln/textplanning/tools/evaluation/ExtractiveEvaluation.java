@@ -12,10 +12,12 @@ import org.apache.logging.log4j.Logger;
 import org.apache.uima.resource.ResourceInitializationException;
 
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Set;
 import java.util.stream.IntStream;
 
-import static edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.adverb_pos_tag;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.joining;
 
@@ -58,6 +60,7 @@ public class ExtractiveEvaluation
 	private static final int max_span_size = 3;
 	private static final ULocale language = ULocale.ENGLISH;
 	private static final String suffix = ".story";
+	private static final Set<String> excludedPOS = Set.of("CC","DT","EX","IN","LS","MD","PDT","POS","PRP","PRP$","RB","RBR","RBS","RP","TO","UH","WDT","WP","WP$","WRB");
 	private final static Logger log = LogManager.getLogger();
 
 	public static void preprocess(Path input_folder, Path output_folder)
@@ -72,7 +75,7 @@ public class ExtractiveEvaluation
 	public static void run(Path input_folder, Path gold_folder, Path output_path, InitialResourcesFactory resources_factory) throws ResourceInitializationException
 	{
 		final Options options = new Options();
-		options.excluded_POS_Tags = Set.of(EvaluationTools.other_pos_tag, adverb_pos_tag);
+		options.excluded_POS_Tags = excludedPOS;
 
 		// load corpus
 		final Corpus corpus = EvaluationTools.loadResourcesFromXMI(input_folder, output_path, resources_factory,
