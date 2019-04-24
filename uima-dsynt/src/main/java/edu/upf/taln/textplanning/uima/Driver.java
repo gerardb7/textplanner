@@ -9,9 +9,11 @@ import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.common.DocumentResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
+import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.core.weighting.WeightFunction;
 import edu.upf.taln.textplanning.uima.io.TextParser;
 import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.commons.io.FilenameUtils;
@@ -22,9 +24,7 @@ import java.nio.file.Path;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
@@ -178,8 +178,8 @@ public class Driver
 
 					Options options = new Options();
 					DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, tokens, null);
-					final Function<String, Double> context_weighter = process.getMeaningsWeighter();
-					final BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
+					final WeightFunction context_weighter = process.getMeaningsWeighter();
+					final SimilarityFunction sim = resources.getMeaningsSimilarity();
 					final BiPredicate<String, String> meanings_filter = process.getMeaningsFilter();
 					final Predicate<Candidate> candidates_filter = process.getCandidatesFilter();
 					TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);

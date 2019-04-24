@@ -38,6 +38,6 @@ public class DifferentMentionsFilter implements BiPredicate<String, String>
 	@Override
 	public boolean test(String r1, String r2)
 	{
-		return same_mentions_sets.stream().anyMatch(s -> s.contains(r1) && s.contains(r2));
+		return same_mentions_sets.stream().noneMatch(s -> s.contains(r1) && s.contains(r2));
 	}
 }

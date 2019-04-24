@@ -16,7 +16,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class ContextWeighter implements Function<String, Double>, Serializable
+public class ContextWeighter implements WeightFunction, Serializable
 {
 	public final Map<String, Double> weights = new HashMap<>();
 	private final static Logger log = LogManager.getLogger();
@@ -71,5 +71,11 @@ public class ContextWeighter implements Function<String, Double>, Serializable
 	public Double apply(String item)
 	{
 		return weights.get(item);
+	}
+
+	@Override
+	public boolean isDefined(String item)
+	{
+		return weights.containsKey(item);
 	}
 }

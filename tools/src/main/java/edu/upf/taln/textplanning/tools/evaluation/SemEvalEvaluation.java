@@ -21,8 +21,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
-import static edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.adverb_pos_tag;
-import static edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.other_pos_tag;
 import static java.util.Comparator.comparingDouble;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
@@ -32,6 +30,11 @@ public class SemEvalEvaluation
 {
 	private static final int max_span_size = 3;
 	private static final ULocale language = ULocale.ENGLISH;
+	private static final String noun_pos_tag = "N";
+	private static final String adj_pos_tag = "J";
+	private static final String verb_pos_tag = "V";
+	private static final String adverb_pos_tag = "R";
+	private static final String other_pos_tag = "X";
 	private final static Logger log = LogManager.getLogger();
 
 	public static void run(Path gold_file, Path xml_file, Path output_path, InitialResourcesFactory resources_factory) throws Exception
@@ -40,7 +43,7 @@ public class SemEvalEvaluation
 		final Map<String, String> gold = parseGoldFile(gold_file);
 		options.excluded_POS_Tags = Set.of(other_pos_tag, adverb_pos_tag);
 		final Corpus corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path, resources_factory,
-				language, max_span_size, options);
+				language, max_span_size, noun_pos_tag, options);
 		EvaluationTools.rankMeanings(options, corpus, resources_factory);
 
 		log.info("********************************");
@@ -109,7 +112,7 @@ public class SemEvalEvaluation
 		final Map<String, String> gold = parseGoldFile(gold_file);
 		base_options.excluded_POS_Tags = Set.of(other_pos_tag, adverb_pos_tag);
 		final Corpus corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path,
-				resources_factory, language, max_span_size, base_options);
+				resources_factory, language, max_span_size, noun_pos_tag, base_options);
 
 		log.info("Ranking meanings (full)");
 		final int num_values = 11; final double min_value = 0.0; final double max_value = 1.0;

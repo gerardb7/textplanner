@@ -60,6 +60,7 @@ public class ExtractiveEvaluation
 	private static final int max_span_size = 3;
 	private static final ULocale language = ULocale.ENGLISH;
 	private static final String suffix = ".story";
+	private static final String noun_pos_prefix = "N";
 	private static final Set<String> excludedPOS = Set.of("CC","DT","EX","IN","LS","MD","PDT","POS","PRP","PRP$","RB","RBR","RBS","RP","TO","UH","WDT","WP","WP$","WRB");
 	private final static Logger log = LogManager.getLogger();
 
@@ -79,7 +80,7 @@ public class ExtractiveEvaluation
 
 		// load corpus
 		final Corpus corpus = EvaluationTools.loadResourcesFromXMI(input_folder, output_path, resources_factory,
-				language, max_span_size, options);
+				language, max_span_size, noun_pos_prefix, options);
 
 		// rank
 		EvaluationTools.rankMeanings(options, corpus, resources_factory);
@@ -95,7 +96,7 @@ public class ExtractiveEvaluation
 					.flatMap(Collection::stream)
 					.map(Mention::getSurface_form)
 					.collect(joining(" "));
-			log.info(summary);
+			log.info("Summary: " + summary);
 		});
 
 		EvaluationTools.plan(options, corpus, resources_factory);

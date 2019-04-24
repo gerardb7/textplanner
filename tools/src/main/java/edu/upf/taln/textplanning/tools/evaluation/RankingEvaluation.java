@@ -19,8 +19,6 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import static edu.upf.taln.textplanning.common.FileUtils.getFilesInFolder;
-import static edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.other_pos_tag;
-import static edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.adverb_pos_tag;
 import static java.util.stream.Collectors.*;
 
 public class RankingEvaluation
@@ -44,6 +42,11 @@ public class RankingEvaluation
 
 	private static final int max_span_size = 3;
 	private static final ULocale language = ULocale.ENGLISH;
+	private static final String noun_pos_tag = "N";
+	private static final String adj_pos_tag = "J";
+	private static final String verb_pos_tag = "V";
+	private static final String adverb_pos_tag = "R";
+	private static final String other_pos_tag = "X";
 	private static final String gold_suffix = ".gold";
 	private final static Logger log = LogManager.getLogger();
 
@@ -54,7 +57,7 @@ public class RankingEvaluation
 		options.excluded_POS_Tags = new HashSet<>(Arrays.asList(other_pos_tag, adverb_pos_tag)); 
 		//options.excluded_POS_Tags = Collections.unmodifiableSet(options.excluded_POS_Tags); 
 		final Corpus corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path,
-				resources_factory, language, max_span_size, options);
+				resources_factory, language, max_span_size, noun_pos_tag, options);
 		assert goldMeanings.size() == corpus.texts.size();
 
 		{

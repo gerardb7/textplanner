@@ -4,18 +4,17 @@ import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import org.apache.commons.lang3.tuple.Pair;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.BiPredicate;
 
 import static java.util.stream.Collectors.*;
 
 public class Disambiguation
 {
-	private final static BiPredicate<Mention, Mention> spans_over = (m1, m2) -> m1.getSpan().getLeft() <= m2.getSpan().getLeft() &&
-			m1.getSpan().getRight() >= m2.getSpan().getRight();
+	private final static BiPredicate<Mention, Mention> spans_over =
+			(m1, m2) -> m1.getContextId().equals(m2.getContextId()) &&
+						m1.getSpan().getLeft() <= m2.getSpan().getLeft() &&
+						m1.getSpan().getRight() >= m2.getSpan().getRight();
 
 	public static Map<Mention, Candidate> disambiguate(List<Candidate> candidates)
 	{
@@ -33,6 +32,7 @@ public class Disambiguation
 	{
 		final List<Mention> mentions = candidates.stream()
 				.map(Candidate::getMention)
+				.distinct()
 				.collect(toList());
 
 		final Map<Mention, List<Candidate>> mentions2candidates = candidates.stream()
@@ -71,9 +71,9 @@ public class Disambiguation
 		Map<Mention, Candidate> selected = new HashMap<>();
 		for (Mention m : mentions2candidates.keySet())
 		{
-			mentions2candidates.get(m).stream()
-					.max(Comparator.comparingDouble(Candidate::getWeight))
-					.ifPresent(c -> selected.put(m, c));
+			final List<Candidate> m_candidates = mentions2candidates.get(m);
+			final Optional<Candidate> max = m_candidates.stream().max(Comparator.comparingDouble(Candidate::getWeight));
+			max.ifPresent(c -> selected.put(m, c));
 		}
 
 		return selected;

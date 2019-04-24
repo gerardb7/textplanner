@@ -43,7 +43,7 @@ public class CandidatesCollector
 						.map(meaning -> Meaning.get(meaning, dictionary.getLabel(meaning, language).orElse(""), false))
 						.collect(toList())));
 
-		// use traditional loops to make sure that the order of lists of candidates is preserved
+		// order of candidate lists must be preserved
 		final List<Candidate> candidates = new ArrayList<>();
 		for (Triple<String, String, String> t : forms2mentions.keySet())
 		{

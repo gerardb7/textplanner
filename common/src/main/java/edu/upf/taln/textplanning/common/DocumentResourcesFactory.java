@@ -10,6 +10,7 @@ import edu.upf.taln.textplanning.core.similarity.vectors.*;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.weighting.ContextWeighter;
+import edu.upf.taln.textplanning.core.weighting.WeightFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -26,7 +27,7 @@ import static java.util.stream.Collectors.toList;
 public class DocumentResourcesFactory
 {
 	private final DifferentMentionsFilter filter;
-	private final Function<String, Double> weighter;
+	private final WeightFunction weighter;
 	private final Predicate<Candidate> candidates_filter;
 	private final static Logger log = LogManager.getLogger();
 
@@ -58,7 +59,7 @@ public class DocumentResourcesFactory
 		candidates_filter = createCandidatesFilter(candidates, weighter, options, factory.getLanguage());
 	}
 
-	public Function<String, Double> getMeaningsWeighter() { return weighter; }
+	public WeightFunction getMeaningsWeighter() { return weighter; }
 
 	public BiPredicate<String, String> getMeaningsFilter() { return filter; }
 

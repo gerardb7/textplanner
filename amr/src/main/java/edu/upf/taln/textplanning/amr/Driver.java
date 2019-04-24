@@ -14,11 +14,13 @@ import edu.upf.taln.textplanning.common.*;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
+import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
+import edu.upf.taln.textplanning.core.weighting.WeightFunction;
 import main.AmrMain;
 import net.sf.extjwnl.JWNLException;
 import org.apache.commons.io.FilenameUtils;
@@ -105,8 +107,8 @@ public class Driver
 		final List<Candidate> candidates = new ArrayList<>(graphs.getCandidates());
 		DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, tokens, null);
 
-		final Function<String, Double> context_weighter = process.getMeaningsWeighter();
-		final BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
+		final WeightFunction context_weighter = process.getMeaningsWeighter();
+		final SimilarityFunction sim = resources.getMeaningsSimilarity();
 		final BiPredicate<String, String> meanings_filter = process.getMeaningsFilter();
 		final Predicate<Candidate> candidates_filter = process.getCandidatesFilter();
 		TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);

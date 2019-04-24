@@ -7,20 +7,25 @@ import edu.upf.taln.textplanning.core.io.GraphSemantics;
 import edu.upf.taln.textplanning.core.ranking.Ranker;
 import edu.upf.taln.textplanning.core.redundancy.RedundancyRemover;
 import edu.upf.taln.textplanning.core.similarity.SemanticTreeSimilarity;
+import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.structures.*;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
+import edu.upf.taln.textplanning.core.weighting.WeightFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.OptionalDouble;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 
 /**
@@ -65,37 +70,52 @@ public final class TextPlanner
 	/**
 	 * Ranks set of candidate meanings
 	 */
-	public static void rankMeanings(List<Candidate> candidates, Predicate<Candidate> candidates_filter,
-	                                BiPredicate<String, String> meanings_filter, Function<String, Double> weighting,
-	                                BiFunction<String, String, OptionalDouble> similarity, Options o)
+	public static void rankMeanings(List<Candidate> candidates,
+	                                Predicate<Candidate> candidates_filter, BiPredicate<String, String> meanings_filter,
+	                                WeightFunction weighting, SimilarityFunction similarity, Options o)
 	{
 		log.info("*Ranking meanings*");
 		Stopwatch timer = Stopwatch.createStarted();
 
+		// Only consider candidates that pass the filter, e.g. have certain POS
 		final List<Candidate> filtered_candidates = candidates.stream()
 				.filter(candidates_filter)
 				.collect(toList());
-		final List<String> references = filtered_candidates.stream()
+
+		// Exclude meanings for which similarity function is not defined
+		final List<Meaning> ranked_meanings = filtered_candidates.stream()
 				.map(Candidate::getMeaning)
+				.distinct()
+				.filter(m -> similarity.isDefined(m.getReference()))
+				.collect(toList());
+
+		final List<String> references = ranked_meanings.stream()
 				.map(Meaning::getReference)
-				.distinct()
-				.collect(Collectors.toList());
-		final List<String> labels = filtered_candidates.stream() // for debugging purposes
-				.map(Candidate::getMeaning)
+				.collect(toList());
+		final List<String> labels = ranked_meanings.stream() // for debugging purposes
 				.map(Meaning::toString)
-				.distinct()
 				.collect(toList());
 
 		if (references.isEmpty())
 			return;
 
-		double[] ranking = Ranker.rank(references, labels, weighting, similarity, true, meanings_filter, o.sim_threshold, o.damping_meanings);
+		double[] ranking = Ranker.rank(references, labels, weighting, similarity, meanings_filter, o.sim_threshold, o.damping_meanings, true, true);
 
 		// Assign ranking values to meanings
-		filtered_candidates.forEach(m ->
+		filtered_candidates.forEach(candidate ->
 		{
-			int i = references.indexOf(m.getMeaning().getReference());
-			m.setWeight(ranking[i]);
+			final String reference = candidate.getMeaning().getReference();
+
+			// If reference is ranked, assign ranking value
+			if (references.contains(reference))
+			{
+				int i = references.indexOf(candidate.getMeaning().getReference());
+				candidate.setWeight(ranking[i]);
+			}
+			else // otherwise keep original weight
+			{
+				candidate.setWeight(weighting.apply(reference));
+			}
 		});
 
 		log.info("Ranking completed in " + timer.stop());
@@ -144,8 +164,8 @@ public final class TextPlanner
 						final Mention m2 = variables2mentions.get(v2);
 						return OptionalDouble.of(adjacency_function.test(m1, m2) || adjacency_function.test(m2, m1) ? 1.0 : 0.0);
 					};
-			double[] ranking = Ranker.rank(variables, labels, variables2weights::get, similarity, false,
-					(v1, v2) -> true, 0.0, o.damping_variables);
+			double[] ranking = Ranker.rank(variables, labels, variables2weights::get, similarity,
+					(v1, v2) -> true, 0.0, o.damping_variables, true, true);
 
 			IntStream.range(0, variables.size()).boxed()
 					.forEach(i -> mentions2meanings.get(variables2mentions.get(variables.get(i))).setWeight(ranking[i]));

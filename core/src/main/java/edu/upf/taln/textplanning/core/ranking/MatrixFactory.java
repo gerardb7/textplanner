@@ -18,24 +18,48 @@ public class MatrixFactory
 	private final static Logger log = LogManager.getLogger();
 
 	/**
-	 * Creates a row-stochastic matrix to rank a set of items according to a bias and a similarity function
+	 * Creates a square non-negative matrix to rank a set of items according to a bias and a similarity function
+	 *
+	 * 1- Linear algebra explanation of Perron–Frobenius theorem:
+	 * A positive matrix with exclusively positive real numbers as elements has a dominant real eigenvalue k (larger than
+	 * any other eigenvalue) and a dominant strictly positive eigenvector v with eigenvalue k. There are no other non-negative
+	 * eigenvectors except positive multiples of v -> other eigenvectors must contain negative or complex components
+	 *
+	 * Non-negative and irreducible matrices also satisfy theorem.
+	 *
+	 * 2- Probability theory explanation of the theorem:
+	 * A stationary distribution π is a non-negative unit (summking 1) left eigenvector with eigenvalue 1 of a row
+	 * stochastic (non-negative) matrix P. If the chain is irreducible and aperiodic, then there is a unique π for any
+	 * starting distribution. This unique π describes the limit of all unit eigenvectors -the dominant eigenvector?
+	 *
+	 * A chain is irreducible if it is possible to get to any state from any state -the directed graph is strongly connected.
+	 *
+	 * An irreducible chain is aperiodic if at least one state is aperiodic (chain an return to the sate in any
+	 * number of steps, without a period). A state is aperiodic if the chain can return to it in an even and in an uneven
+	 * number of transitions.
+	 *
+	 * If a chain has more than one closed communicating class, each one will have its own unique stationary distribution.
+	 *
+	 * If @param make_positive is set to true then the underlying graph is turned into a complete graph, and the stochastic
+	 * matrix made irreducible, aperiodic and positive.
+	 * If @row_normalize is set to true, the matrix returned is row stochastic
 	 */
 	public static double[][] createRankingMatrix(List<String> items, Function<String, Double> bias,
-	                                             BiFunction<String, String, OptionalDouble> sim, boolean smooth,
+	                                             BiFunction<String, String, OptionalDouble> sim,
 	                                             BiPredicate<String, String> filter,
-	                                             double sim_threshold, double d)
+	                                             double sim_threshold, double d,
+	                                             boolean make_positive, boolean row_normalize)
 	{
 		log.info("Creating ranking matrix for " + items.size() + " items");
 		int n = items.size();
 
-		// Create normalized *strictly positive* bias row vector for the set of items
-		double[] L = createBiasVector(items, bias, smooth, true);
+		// Create non-negative bias row vector for the set of items
+		double[] L = createBiasVector(items, bias);
 
-		// Create *symmetric non-negative* similarity matrix
-		double[][] X = createSimilarityMatrix(items, sim, filter, sim_threshold,true,true, true);
+		// Create symmetric non-negative similarity matrix
+		double[][] X = createSimilarityMatrix(items, sim, filter, sim_threshold, true);
 
-		// Ranking matrix: stochastic matrix describing probabilities of a random walk going from an item u to another
-		// item v.
+		// Create ranking matrix:
 		double[][] R = new double[n][n];
 
 		// Bias each row in X using bias L and d factor d
@@ -49,49 +73,41 @@ public class MatrixFactory
 					R[u][v] = Ruv;
 				}));
 
-		log.info("Matrix created");
-		// R is row-normalized because both L and X are normalized
+		log.info("Matrix created"); // guaranteed to be non-negative
+
+		if (make_positive)
+			makePositive(R);
+
+		if (row_normalize)
+			rowNormalize(R);
+
 		return R;
 	}
 
-	// Creates *strictly positive* bias row vector by applying the bias function to a set of items
-	public static double[] createBiasVector(List<String> items, Function<String, Double> bias,
-	                                        boolean smooth, boolean normalize)
+	// Creates non-negative bias row vector by applying the bias function to a set of items
+	public static double[] createBiasVector(List<String> items, Function<String, Double> bias)
 	{
-		int n = items.size();
-		double[] v = items.stream()
-				.parallel()
-				.mapToDouble(bias::apply)
+		return items.parallelStream()
+				.mapToDouble(i ->
+				{
+					final Double w = bias.apply(i);
+					if (w < 0.0)
+					{
+						// only positive weights are allowed!
+						log.warn("Negative weight for item " + i);
+						return 0.0;
+					}
+
+					return w;
+				})
 				.toArray();
-
-		if (smooth)
-		{
-			double alpha = Arrays.stream(v)
-					.average().orElse(1.0) / 100; // pseudocount α for additive smoothing of rank values
-			IntStream.range(0, n).forEach(i -> v[i] = v[i] + alpha);
-		}
-
-		if (normalize)
-		{
-			double accum = Arrays.stream(v).sum(); // includes pseudocounts if smoothed
-			if (accum > 0.0)
-				IntStream.range(0, n).forEach(i -> v[i] /= accum); // normalize vector with sum of row
-			else
-			{
-				final double const_value = 1.0 / n;
-				IntStream.range(0, n).forEach(i -> v[i] = const_value);
-			}
-		}
-
-		return v;
 	}
 
 	// Creates a symmetric non-negative similarity matrix
 	public static double[][] createSimilarityMatrix(List<String> items,
 	                                                BiFunction<String, String, OptionalDouble> sim,
 	                                                BiPredicate<String, String> filter,
-	                                                double sim_threshold, boolean set_undefined_to_avg,
-	                                                boolean normalize, boolean report_stats)
+	                                                double sim_threshold, boolean report_stats)
 	{
 		int n = items.size();
 		double[][] m = new double[n][n];
@@ -105,13 +121,13 @@ public class MatrixFactory
 
 		// Calculate similarity values
 		IntStream.range(0, n)
-				.parallel()
+				.parallel() // each thread writes to separate portions (rows) of the matrix
 				.peek(i -> reporter.report())
 				.forEach(i -> IntStream.range(i, n).forEach(j ->
 				{
 					double simij = 0.0;
-					String e1 = items.get(i);
-					String e2 = items.get(j);
+					final String e1 = items.get(i);
+					final String e2 = items.get(j);
 					if (filter.test(e1, e2))
 					{
 						num_filtered.incrementAndGet();
@@ -136,28 +152,8 @@ public class MatrixFactory
 						log.info(counter_pairs.get() + " out of " + total_pairs);
 				}));
 
-		// Non-negative matrix -> all rows must have at least one non-zero value
 		if (Arrays.stream(m).anyMatch(row -> Arrays.stream(row).allMatch(v -> v == 0.0)))
-			log.error("Similarity matrix has an all-zero row");
-
-		if (set_undefined_to_avg)
-		{
-			// Set all 0-valued similarity values to the average of non-zero similarities
-			final OptionalDouble average = Arrays.stream(m)
-					.flatMapToDouble(Arrays::stream)
-					.filter(v -> v >= 0.0)
-					.average();
-			if (average.isPresent())
-			{
-				final double avg = average.getAsDouble();
-				IntStream.range(0, n).forEach(i ->
-						IntStream.range(0, n).forEach(j ->
-						{
-							if (m[i][j] == 0.0)
-								m[i][j] = avg;
-						}));
-			}
-		}
+			log.warn("Similarity matrix has an all-zero row");
 
 		if (report_stats)
 		{
@@ -166,25 +162,41 @@ public class MatrixFactory
 			log.info("Similarity values are negative for " + num_negative.get() + " out of " + num_defined);
 		}
 
-		if (normalize)
-			normalize(m);
-
 		return m;
 	}
 
 	/**
-	 * Row-normalizes a matrix
+	 * Smooths values to make each row positive
 	 */
-	private static void normalize(double[][] m)
+	private static void makePositive(double[][] m)
+	{
+		int n = m.length;
+
+		IntStream.range(0, n).parallel().forEach(i ->
+		{
+			double alpha = Arrays.stream(m[i])
+					.average().orElse(1.0) / 100; // pseudocount α for additive smoothing of rank values
+
+			IntStream.range(0, n).forEach(j ->
+			{
+				if (m[i][j] == 0.0)
+					m[i][j] = alpha;
+			});
+		});
+	}
+
+	/**
+	 * Row-normalizes a square matrix
+	 */
+	private static void rowNormalize(double[][] m)
 	{
 		// Normalize matrix with sum of each row (adjacent lists)
-		int r = m.length;
-		int c = m[0].length;
+		int n = m.length;
 
-		IntStream.range(0, r).parallel().forEach(i ->
+		IntStream.range(0, n).parallel().forEach(i ->
 		{
 			double accum = Arrays.stream(m[i]).sum();
-			IntStream.range(0, c).forEach(j -> m[i][j] = m[i][j] / accum);
+			IntStream.range(0, n).forEach(j -> m[i][j] = m[i][j] / accum);
 		});
 
 		// This check accounts for precision of 64-bit doubles, as explained in

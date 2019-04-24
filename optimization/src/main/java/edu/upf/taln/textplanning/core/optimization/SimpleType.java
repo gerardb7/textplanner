@@ -36,7 +36,7 @@ public class SimpleType implements Function
 
 
 		// Mention and candidate type match and are different to
-		type_vector = MatrixFactory.createBiasVector(items, type_match,false, false);
+		type_vector = MatrixFactory.createBiasVector(items, type_match);
 	}
 
 	@Override

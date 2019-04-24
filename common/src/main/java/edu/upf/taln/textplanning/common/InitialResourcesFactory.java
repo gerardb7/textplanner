@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.common;
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
+import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.*;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
@@ -26,7 +27,7 @@ public class InitialResourcesFactory
 	private final MeaningDictionary dictionary;
 	private final SentenceVectors sentence_vectors;
 	private final BiFunction<double[], double[], Double> sentence_similarity_function;
-	private final BiFunction<String, String, OptionalDouble> meanings_similarity_function;
+	private final SimilarityFunction meanings_similarity_function;
 	private final Path meaning_context_vectors_path;
 	private final VectorType meaning_context_vectors_type;
 	private final static Logger log = LogManager.getLogger();
@@ -124,7 +125,7 @@ public class InitialResourcesFactory
 		return sentence_vectors;
 	}
 
-	public BiFunction<String, String, OptionalDouble> getMeaningsSimilarity()
+	public SimilarityFunction getMeaningsSimilarity()
 	{
 		return meanings_similarity_function;
 	}
