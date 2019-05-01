@@ -6,9 +6,11 @@ import com.beust.jcommander.Parameters;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
+import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.tools.evaluation.ExtractiveEvaluation;
+import edu.upf.taln.textplanning.tools.evaluation.GoldDisambiguationEvaluation;
 import edu.upf.taln.textplanning.tools.evaluation.RankingEvaluation;
 import edu.upf.taln.textplanning.tools.evaluation.SemEvalEvaluation;
 import org.apache.logging.log4j.LogManager;
@@ -23,6 +25,7 @@ public class Driver
 {
 	private final static ULocale language = ULocale.ENGLISH;
 	private static final String semeval_command = "semeval";
+	public static final String disambiguation_eval_command = "wsdeval";
 	private static final String rank_eval_command = "rankeval";
 	private static final String extract_eval_command = "extracteval";
 	private static final String process_files_command = "process";
@@ -33,6 +36,53 @@ public class Driver
 	@SuppressWarnings("unused")
 	@Parameters(commandDescription = "Run SemEval WSD/EL evaluation")
 	private static class SemEvalEvaluationCommand
+	{
+		@Parameter(names = {"-g", "-gold"}, description = "Path to gold file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path gold_file;
+		@Parameter(names = {"-i", "-input"}, description = "Path to XML input file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path input_file;
+		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path dictionary;
+		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
+		private Path output;
+		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path freqsFile;
+		@Parameter(names = {"-sv", "-sentence_vectors"}, description = "Path to sentence vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path sentence_vectors_path;
+		@Parameter(names = {"-st", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1, required = true,
+				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
+		private SentenceVectorType sentence_vector_type = SentenceVectorType.Random;
+		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path word_vectors_path;
+		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1, required = true,
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
+		private VectorType word_vector_type = VectorType.Random;
+		@Parameter(names = {"-cv", "-context_vectors"}, description = "Path to sense context vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path context_vectors_path;
+		@Parameter(names = {"-ct", "-context_vectors_type"}, description = "Type of sense context vectors", arity = 1, required = true,
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
+		private VectorType context_vector_type = VectorType.Random;
+		@Parameter(names = {"-sev", "-sense_vectors"}, description = "Path to sense vectors", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
+		private Path sense_vectors_path;
+		@Parameter(names = {"-set", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
+				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
+		private VectorType sense_vector_type = VectorType.Random;
+		@Parameter(names = {"-b", "-batch"}, description = "If true, a batch test is ran", arity = 1)
+		private boolean batch = false;
+	}
+
+	@SuppressWarnings("unused")
+	@Parameters(commandDescription = "Run disambiguation evaluation")
+	private static class DisambiguationEvaluationCommand
 	{
 		@Parameter(names = {"-g", "-gold"}, description = "Path to gold file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
@@ -226,6 +276,7 @@ public class Driver
 	public static void main(String[] args) throws Exception
 	{
 		SemEvalEvaluationCommand semEval = new SemEvalEvaluationCommand();
+		DisambiguationEvaluationCommand wsdEval = new DisambiguationEvaluationCommand();
 		RankEvaluationCommand rankEval = new RankEvaluationCommand();
 		ExtractiveEvaluationCommand extractEval = new ExtractiveEvaluationCommand();
 		ProcessFilesCommand process = new ProcessFilesCommand();
@@ -234,6 +285,7 @@ public class Driver
 
 		JCommander jc = new JCommander();
 		jc.addCommand(semeval_command, semEval);
+		jc.addCommand(disambiguation_eval_command, wsdEval);
 		jc.addCommand(rank_eval_command, rankEval);
 		jc.addCommand(extract_eval_command, extractEval);
 		jc.addCommand(process_files_command, process);
@@ -255,10 +307,29 @@ public class Driver
 						semEval.word_vectors_path,  semEval.word_vector_type,
 						semEval.sentence_vectors_path, semEval.sentence_vector_type,
 						semEval.context_vectors_path,  semEval.context_vector_type);
+				Options options = new Options();
+				SemEvalEvaluation eval = new SemEvalEvaluation(semEval.gold_file, semEval.input_file, semEval.output,
+						resources, options);
 				if (semEval.batch)
-					SemEvalEvaluation.run_batch(semEval.gold_file, semEval.input_file, semEval.output, resources);
+					eval.run_batch();
 				else
-					SemEvalEvaluation.run(semEval.gold_file, semEval.input_file, semEval.output, resources);
+					eval.run();
+				break;
+			}
+			case disambiguation_eval_command:
+			{
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, wsdEval.dictionary, wsdEval.freqsFile,
+						wsdEval.sense_vectors_path,  wsdEval.sense_vector_type,
+						wsdEval.word_vectors_path,  wsdEval.word_vector_type,
+						wsdEval.sentence_vectors_path, wsdEval.sentence_vector_type,
+						wsdEval.context_vectors_path,  wsdEval.context_vector_type);
+				Options options = new Options();
+				GoldDisambiguationEvaluation eval = new GoldDisambiguationEvaluation(wsdEval.gold_file, wsdEval.input_file, wsdEval.output,
+						resources, options);
+				if (wsdEval.batch)
+					eval.run_batch();
+				else
+					eval.run();
 				break;
 			}
 			case rank_eval_command:

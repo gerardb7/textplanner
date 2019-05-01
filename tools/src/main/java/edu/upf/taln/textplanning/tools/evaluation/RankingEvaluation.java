@@ -8,6 +8,7 @@ import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
+import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.AlternativeMeanings;
 import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.Corpus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -23,22 +24,8 @@ import static java.util.stream.Collectors.*;
 
 public class RankingEvaluation
 {
-	public static class AlternativeMeanings
-	{
-		private final Set<String> alternatives = new HashSet<>();
-		private final String text; // covered text or label
+	public RankingEvaluation() {}
 
-		private AlternativeMeanings(Collection<String> meanings, String text)
-		{
-			alternatives.addAll(meanings);
-			this.text = text;
-		}
-
-		private static boolean match(AlternativeMeanings a1, AlternativeMeanings a2)
-		{
-			return !Collections.disjoint(a1.alternatives, a2.alternatives);
-		}
-	}
 
 	private static final int max_span_size = 3;
 	private static final ULocale language = ULocale.ENGLISH;
@@ -188,7 +175,7 @@ public class RankingEvaluation
 	private static List<List<Meaning>> fullRank(Options options, Corpus corpus,
 	                                            InitialResourcesFactory resources_factory)
 	{
-		EvaluationTools.rankMeanings(options, corpus, resources_factory);
+		EvaluationTools.rankMeanings(options, corpus, resources_factory.getMeaningsSimilarity());
 
 		return corpus.texts.stream()
 				.map(t -> {
@@ -211,27 +198,30 @@ public class RankingEvaluation
 		List<Double> avg_precisions = new ArrayList<>();
 		for (int i = 0; i < goldMeanings.size(); ++i)
 		{
-			final List<Meaning> system_set = systemMeanings.get(i);
+			final List<String> system_set = systemMeanings.get(i).stream().map(Meaning::getReference).collect(toList());
 			final Set<String> gold_set = goldMeanings.get(i).stream()
 					.flatMap(a -> a.alternatives.stream())
 					.collect(toSet());
 
-			int true_positives = 0;
-			int false_positives = 0;
+			int true_positives_partial = 0;
+			int false_positives_partial = 0;
 			Map<Integer, Double> rank_precisions = new HashMap<>();
 			for (int k = 0; k < system_set.size(); ++k)
 			{
-				if (gold_set.contains(system_set.get(k).getReference()))
+				if (gold_set.contains(system_set.get(k)))
 				{
-					final double p = (double) ++true_positives / (double) (true_positives + false_positives);
+					final double p = (double) ++true_positives_partial / (double) (true_positives_partial + false_positives_partial);
 					rank_precisions.put(k, p);
 				}
 				else
-					++false_positives;
+					++false_positives_partial;
 			}
+
 			rank_precisions.values().stream().mapToDouble(d -> d).average().ifPresent(avg_precisions::add);
+
 		}
 
 		return avg_precisions.stream().mapToDouble(d -> d).average().orElse(0.0);
 	}
+
 }

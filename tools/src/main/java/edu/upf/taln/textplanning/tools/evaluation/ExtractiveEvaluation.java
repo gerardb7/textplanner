@@ -83,7 +83,7 @@ public class ExtractiveEvaluation
 				language, max_span_size, noun_pos_prefix, options);
 
 		// rank
-		EvaluationTools.rankMeanings(options, corpus, resources_factory);
+		EvaluationTools.rankMeanings(options, corpus, resources_factory.getMeaningsSimilarity());
 		EvaluationTools.disambiguate(corpus);
 		EvaluationTools.rankMentions(options, corpus);
 

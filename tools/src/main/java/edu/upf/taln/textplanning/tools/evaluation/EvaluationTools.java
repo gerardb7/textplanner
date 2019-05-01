@@ -2,8 +2,8 @@ package edu.upf.taln.textplanning.tools.evaluation;
 
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
-import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.common.DocumentResourcesFactory;
+import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
@@ -29,9 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
@@ -83,6 +81,37 @@ public class EvaluationTools
 		public String pos;
 		@XmlValue
 		public String wf;
+	}
+
+
+	public static class AlternativeMeanings
+	{
+		final Set<String> alternatives = new HashSet<>();
+		final String text; // covered text or label
+		final String begin;
+		final String end;
+
+		AlternativeMeanings(Collection<String> meanings, String text, String begin, String end)
+		{
+			alternatives.addAll(meanings);
+			this.text = text;
+			this.begin = begin;
+			this.end = end;
+		}
+
+		AlternativeMeanings(Collection<String> meanings, String text)
+		{
+			alternatives.addAll(meanings);
+			this.text = text;
+			this.begin = "";
+			this.end = "";
+		}
+
+		@Override
+		public String toString()
+		{
+			return text + " " + begin + "-" + end + " = " + alternatives;
+		}
 	}
 
 	private static final String candidates_file = "candidates.bin";
@@ -258,7 +287,7 @@ public class EvaluationTools
 		return corpus;
 	}
 
-	public static void rankMeanings(Options options, Corpus corpus, InitialResourcesFactory resources)
+	public static void rankMeanings(Options options, Corpus corpus, SimilarityFunction sim)
 	{
 		log.info(options);
 
@@ -275,7 +304,6 @@ public class EvaluationTools
 					DocumentResourcesFactory doc_resources = corpus.texts.get(i).resources;
 					final WeightFunction weighter = doc_resources.getMeaningsWeighter();
 					final Predicate<Candidate> candidates_filter = doc_resources.getCandidatesFilter();
-					final SimilarityFunction sim = resources.getMeaningsSimilarity();
 					final BiPredicate<String, String> meanings_filter = doc_resources.getMeaningsFilter();
 
 					// Log stats
@@ -317,71 +345,71 @@ public class EvaluationTools
 		});
 	}
 
-		public static void rankMentions(Options options, Corpus corpus)
+	public static void rankMentions(Options options, Corpus corpus)
+	{
+		final int context_size = 3;
+		corpus.texts.forEach(text ->
+				text.sentences.forEach(sentence ->
+				{
+					final List<Candidate> candidates = sentence.candidates.values().stream()
+							.flatMap(List::stream)
+							.collect(toList());
+					final List<Mention> mentions = candidates.stream().map(Candidate::getMention).collect(toList());
+					BiPredicate<Mention, Mention> adjacency_function =
+							(m1, m2) -> Math.abs(mentions.indexOf(m1) - mentions.indexOf(m2)) <= context_size;
+//					BiPredicate<Mention, Mention> adjacency_function2 =
+//							(m1, m2) -> text.graph.containsEdge(m1.toString(), m2.toString());
+
+					// rank mentions
+					TextPlanner.rankMentions(candidates, adjacency_function, options);
+				}));
+	}
+
+	public static void plan(Options options, Corpus corpus, InitialResourcesFactory resources)
+	{
+		corpus.texts.forEach(text ->
 		{
-			final int context_size = 3;
-			corpus.texts.forEach(text ->
-					text.sentences.forEach(sentence ->
-					{
-						final List<Candidate> candidates = sentence.candidates.values().stream()
-								.flatMap(List::stream)
-								.collect(toList());
-						final List<Mention> mentions = candidates.stream().map(Candidate::getMention).collect(toList());
-						BiPredicate<Mention, Mention> adjacency_function =
-								(m1, m2) -> Math.abs(mentions.indexOf(m1) - mentions.indexOf(m2)) <= context_size;
-						BiPredicate<Mention, Mention> adjacency_function2 =
-								(m1, m2) -> text.graph.containsEdge(m1.toString(), m2.toString());
+			final Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(text.graph, new DSyntSemantics(), options);
+			final Collection<SemanticSubgraph> selected_subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, resources.getMeaningsSimilarity(), options);
+			text.subgraphs = TextPlanner.sortSubgraphs(subgraphs, resources.getMeaningsSimilarity(), options);
+		});
+	}
 
-						// rank mentions
-						TextPlanner.rankMentions(candidates, adjacency_function, options);
-					}));
-		}
+	public static List<Mention> collectMentions(Corpus corpus, int max_span_size, String noun_pos_prefix,
+	                                            Set<String> exclude_pos_tags, ULocale language)
+	{
+		// create mention objects
+		return corpus.texts.stream()
+				.map(d -> d.sentences.stream()
+						.map(s -> IntStream.range(0, s.tokens.size())
+								.mapToObj(start -> IntStream.range(start + 1, Math.min(start + max_span_size + 1, s.tokens.size()))
+										.filter(end ->
+										{
+											// single words must have a pos tag other than 'X'
+											if (end - start == 1)
+												return !exclude_pos_tags.contains(s.tokens.get(start).pos);
+												// multiwords must contain at least one nominal token
+											else
+												return s.tokens.subList(start, end).stream()
+														.anyMatch(t -> t.pos.startsWith(noun_pos_prefix));
+										})
+										.mapToObj(end ->
+										{
+											final List<Token> tokens = s.tokens.subList(start, end);
+											final String form = tokens.stream()
+													.map(t -> t.wf)
+													.collect(joining(" "));
+											final String lemma = tokens.stream()
+													.map(t -> t.lemma != null ? t.lemma : t.wf)
+													.collect(joining(" "));
+											String pos = tokens.size() == 1 ? tokens.get(0).pos : noun_pos_prefix;
 
-		public static void plan(Options options, Corpus corpus, InitialResourcesFactory resources)
-		{
-			corpus.texts.forEach(text ->
-			{
-				final Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(text.graph, new DSyntSemantics(), options);
-				final Collection<SemanticSubgraph> selected_subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, resources.getMeaningsSimilarity(), options);
-				text.subgraphs = TextPlanner.sortSubgraphs(subgraphs, resources.getMeaningsSimilarity(), options);
-			});
-		}
-
-		public static List<Mention> collectMentions(Corpus corpus, int max_span_size, String noun_pos_prefix,
-		                                            Set<String> exclude_pos_tags, ULocale language)
-		{
-			// create mention objects
-			return corpus.texts.stream()
-					.map(d -> d.sentences.stream()
-							.map(s -> IntStream.range(0, s.tokens.size())
-									.mapToObj(start -> IntStream.range(start + 1, Math.min(start + max_span_size + 1, s.tokens.size()))
-											.filter(end ->
-											{
-												// single words must have a pos tag other than 'X'
-												if (end - start == 1)
-													return !exclude_pos_tags.contains(s.tokens.get(start).pos);
-													// multiwords must contain at least one nominal token
-												else
-													return s.tokens.subList(start, end).stream()
-															.anyMatch(t -> t.pos.startsWith(noun_pos_prefix));
-											})
-											.mapToObj(end ->
-											{
-												final List<Token> tokens = s.tokens.subList(start, end);
-												final String form = tokens.stream()
-														.map(t -> t.wf)
-														.collect(joining(" "));
-												final String lemma = tokens.stream()
-														.map(t -> t.lemma != null ? t.lemma : t.wf)
-														.collect(joining(" "));
-												String pos = tokens.size() == 1 ? tokens.get(0).pos : noun_pos_prefix;
-
-												return new Mention(s.id, Pair.of(start, end), form, lemma, pos, false, "");
-											})
-											.filter(m -> FunctionWordsFilter.test(m.getSurface_form(), language)))
-									.flatMap(stream -> stream))
-							.flatMap(stream -> stream))
-					.flatMap(stream -> stream)
-					.collect(toList());
-		}
+											return new Mention(s.id, Pair.of(start, end), form, lemma, pos, false, "");
+										})
+										.filter(m -> FunctionWordsFilter.test(m.getSurface_form(), language)))
+								.flatMap(stream -> stream))
+						.flatMap(stream -> stream))
+				.flatMap(stream -> stream)
+				.collect(toList());
+	}
 	}

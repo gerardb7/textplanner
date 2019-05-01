@@ -21,6 +21,23 @@ public class Options
 	public int num_subgraphs = 10; // Number of subgraphs to include in the plan
 	public double tree_edit_lambda = 0.1; // Controls impact of roles when calculating similarity between semantic trees
 
+	public Options() {}
+
+	public Options(Options o)
+	{
+		this.excluded_POS_Tags.addAll(o.excluded_POS_Tags);
+		this.min_context_freq = o.min_context_freq;
+		this.context_threshold = o.context_threshold;
+		this.num_first_meanings = o.num_first_meanings;
+		this.sim_threshold = o.sim_threshold;
+		this.damping_meanings = o.damping_meanings;
+		this.damping_variables = o.damping_variables;
+		this.num_subgraphs_extract = o.num_subgraphs_extract;
+		this.extraction_lambda = o.extraction_lambda;
+		this.num_subgraphs = o.num_subgraphs;
+		this.tree_edit_lambda = o.tree_edit_lambda;
+	}
+
 	@Override
 	public String toString()
 	{
