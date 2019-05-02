@@ -162,7 +162,7 @@ public class RankingEvaluation
 							.collect(toList());
 
 					Map<Meaning, Double> weights = meanings.stream()
-							.collect(groupingBy(m -> m, averagingDouble(m -> t.resources.getMeaningsWeighter().apply(m.getReference()))));
+							.collect(groupingBy(m -> m, averagingDouble(m -> t.resources.getBiasFunction().apply(m.getReference()))));
 
 					return meanings.stream()
 							.distinct()
@@ -175,7 +175,7 @@ public class RankingEvaluation
 	private static List<List<Meaning>> fullRank(Options options, Corpus corpus,
 	                                            InitialResourcesFactory resources_factory)
 	{
-		EvaluationTools.rankMeanings(options, corpus, resources_factory.getMeaningsSimilarity());
+		EvaluationTools.rankMeanings(options, corpus, resources_factory.getSimilarityFunction());
 
 		return corpus.texts.stream()
 				.map(t -> {

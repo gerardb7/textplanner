@@ -7,16 +7,10 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
-import edu.upf.taln.textplanning.amr.structures.AMRAlignments;
-import edu.upf.taln.textplanning.amr.io.AMRGraphListFactory;
-import edu.upf.taln.textplanning.amr.io.AMRReader;
 import edu.upf.taln.textplanning.common.CMLCheckers;
-import edu.upf.taln.textplanning.core.weighting.corpora.CompactFrequencies;
-import edu.upf.taln.textplanning.core.weighting.corpora.FreqsFile;
-import edu.upf.taln.textplanning.core.structures.Meaning;
-import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.core.bias.corpora.CompactFrequencies;
+import edu.upf.taln.textplanning.core.bias.corpora.FreqsFile;
 import edu.upf.taln.textplanning.common.Serializer;
-import edu.upf.taln.textplanning.core.weighting.TFIDF;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.SuffixFileFilter;
@@ -32,8 +26,6 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.*;
 

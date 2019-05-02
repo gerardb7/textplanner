@@ -7,13 +7,15 @@ import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.common.DocumentResourcesFactory;
+import edu.upf.taln.textplanning.common.InitialResourcesFactory.BiasResources;
+import edu.upf.taln.textplanning.common.InitialResourcesFactory.SimilarityResources;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
+import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.weighting.WeightFunction;
 import edu.upf.taln.textplanning.uima.io.TextParser;
 import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.commons.io.FilenameUtils;
@@ -178,8 +180,8 @@ public class Driver
 
 					Options options = new Options();
 					DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, tokens, null);
-					final WeightFunction context_weighter = process.getMeaningsWeighter();
-					final SimilarityFunction sim = resources.getMeaningsSimilarity();
+					final BiasFunction context_weighter = process.getBiasFunction();
+					final SimilarityFunction sim = resources.getSimilarityFunction();
 					final BiPredicate<String, String> meanings_filter = process.getMeaningsFilter();
 					final Predicate<Candidate> candidates_filter = process.getCandidatesFilter();
 					TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
@@ -236,11 +238,20 @@ public class Driver
 			}
 			case get_system_command:
 			{
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, null, system.freqsFile,
-						system.sense_vectors_path,  system.sense_vector_type,
-						system.word_vectors_path,  system.word_vector_type,
-						null, system.sentence_vector_type,
-						system.context_vectors_path,  system.context_vector_type);
+				BiasResources bias_resources = new BiasResources();
+				bias_resources.bias_meanings_path = null;
+				bias_resources.idf_file = system.freqsFile;
+				bias_resources.word_vectors_path = system.word_vectors_path;
+				bias_resources.word_vectors_type = system.word_vector_type;
+				bias_resources.sentence_vectors_path = null;
+				bias_resources.sentence_vectors_type = system.sentence_vector_type;
+
+				SimilarityResources sim_resources = new SimilarityResources();
+				sim_resources.meaning_vectors_path = system.sense_vectors_path;
+				sim_resources.meaning_vectors_type = system.sense_vector_type;
+
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources,
+						sim_resources);
 				getSystemMeanings(system.texts, system.candidates, system.output, resources);
 				break;
 			}

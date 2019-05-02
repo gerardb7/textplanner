@@ -20,7 +20,6 @@ import static java.util.stream.Collectors.toMap;
 
 public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 {
-	private final Path gold_file;
 	private final EvaluationTools.Corpus corpus;
 	final Map<String, AlternativeMeanings> gold;
 	private final InitialResourcesFactory resources_factory;
@@ -39,9 +38,8 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 	public GoldDisambiguationEvaluation(Path gold_file, Path xml_file, Path output_path,
 	                                    InitialResourcesFactory resources_factory, Options options)
 	{
-		this.gold_file = gold_file;
 		this.corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path, resources_factory, language, max_span_size, noun_pos_tag, options);
-		this.gold = parseGoldFile(this.gold_file);
+		this.gold = parseGoldFile(gold_file);
 		this.resources_factory = resources_factory;
 		options.excluded_POS_Tags = Set.of(other_pos_tag, adverb_pos_tag);
 

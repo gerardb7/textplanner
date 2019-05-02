@@ -19,30 +19,49 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 
 import static edu.upf.taln.textplanning.core.utils.DebugUtils.LOGGING_STEP_SIZE;
-import static java.util.stream.Collectors.*;
+import static java.util.function.Predicate.not;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 
 public class InitialResourcesFactory
 {
 	private final ULocale language;
 	private final MeaningDictionary dictionary;
+	private final Set<String> bias_meanings;
 	private final SentenceVectors sentence_vectors;
 	private final BiFunction<double[], double[], Double> sentence_similarity_function;
 	private final SimilarityFunction meanings_similarity_function;
-	private final Path meaning_context_vectors_path;
-	private final VectorType meaning_context_vectors_type;
+
 	private final static Logger log = LogManager.getLogger();
+
+	public static class BiasResources
+	{
+		// Resources for domain-based bias
+		public Path bias_meanings_path = null;
+
+		// Resources for context-based bias
+		public Path word_vectors_path = null;
+		public VectorType word_vectors_type = null;
+		public Path sentence_vectors_path = null;
+		public SentenceVectorType sentence_vectors_type = null;
+		public Path idf_file = null; // for SIF sentence vectors
+	}
+
+	public static class SimilarityResources
+	{
+		public Path meaning_vectors_path = null;
+		public VectorType meaning_vectors_type = null;
+	}
+
 
 	public InitialResourcesFactory(ULocale language, Path dictionary_config) throws Exception
 	{
-		this(language, dictionary_config, null, null, null, null, null, null, null, null, null);
+		this(language, dictionary_config, new BiasResources(), new SimilarityResources());
 	}
 
+
 	public InitialResourcesFactory(ULocale language, Path dictionary_config,
-	                               Path idf_file,
-	                               Path meaning_vectors_path, VectorType meaning_vectors_type,
-	                               Path word_vectors_path, VectorType word_vectors_type,
-	                               Path sentence_vectors_path, SentenceVectorType sentence_vectors_type,
-	                               Path meaning_context_vectors_path, VectorType meaning_context_vectors_type) throws Exception
+	                               BiasResources bias_resources, SimilarityResources sim_resources) throws Exception
 	{
 		// Load ranking resources
 		log.info("Loading initial resources");
@@ -53,27 +72,20 @@ public class InitialResourcesFactory
 		else
 			dictionary = null;
 
-		if (meaning_vectors_type != null)
-		{
-			final Vectors meaning_vectors = getVectors(meaning_vectors_path, meaning_vectors_type, 300);
-			meanings_similarity_function = new VectorsSimilarity(meaning_vectors, new CosineSimilarity());
-		}
-		else
-			meanings_similarity_function = null;
-
+		// Bias resources
 		Vectors word_vectors = null;
-		if (word_vectors_type != null)
-			word_vectors = getVectors(word_vectors_path, word_vectors_type, 300);
+		if (bias_resources.word_vectors_type != null)
+			word_vectors = getVectors(bias_resources.word_vectors_path, bias_resources.word_vectors_type, 300);
 
-		if (sentence_vectors_type != null)
+		if (bias_resources.sentence_vectors_type != null)
 		{
-			switch (sentence_vectors_type)
+			switch (bias_resources.sentence_vectors_type)
 			{
 				case SIF:
 				{
-					if (word_vectors != null && idf_file != null)
+					if (word_vectors != null && bias_resources.idf_file != null)
 					{
-						final Map<String, Double> weights = getFrequencies(idf_file);
+						final Map<String, Double> weights = getFrequencies(bias_resources.idf_file);
 						final Double default_weight = Collections.min(weights.values());
 						sentence_vectors = new SIFVectors(word_vectors, w -> weights.getOrDefault(w, default_weight));
 						sentence_similarity_function = (SIFVectors) sentence_vectors;
@@ -107,8 +119,23 @@ public class InitialResourcesFactory
 			sentence_similarity_function = null;
 		}
 
-		this.meaning_context_vectors_path = meaning_context_vectors_path;
-		this.meaning_context_vectors_type = meaning_context_vectors_type;
+		if (bias_resources.bias_meanings_path != null)
+		{
+			bias_meanings = Arrays.stream(FileUtils.readTextFile(bias_resources.bias_meanings_path).split("\n"))
+					.filter(not(String::isEmpty))
+					.collect(toSet());
+		}
+		else
+			bias_meanings = null;
+
+		// Similarity resources
+		if (sim_resources.meaning_vectors_type != null)
+		{
+			final Vectors meaning_vectors = getVectors(sim_resources.meaning_vectors_path, sim_resources.meaning_vectors_type, 300);
+			meanings_similarity_function = new VectorsSimilarity(meaning_vectors, new CosineSimilarity());
+		}
+		else
+			meanings_similarity_function = null;
 	}
 
 	public ULocale getLanguage() { return language; }
@@ -120,12 +147,14 @@ public class InitialResourcesFactory
 
 	public MeaningDictionary getDictionary() { return dictionary; }
 
+	public Set<String> getBiaseanings() { return bias_meanings; }
+
 	public SentenceVectors getSentenceVectors()
 	{
 		return sentence_vectors;
 	}
 
-	public SimilarityFunction getMeaningsSimilarity()
+	public SimilarityFunction getSimilarityFunction()
 	{
 		return meanings_similarity_function;
 	}
@@ -175,6 +204,4 @@ public class InitialResourcesFactory
 		}
 	}
 
-	public Path getMeaningContextVectorsPath() { return meaning_context_vectors_path; }
-	public VectorType getMeaningContextVectorsType() { return meaning_context_vectors_type; }
 }

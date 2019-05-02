@@ -13,6 +13,7 @@ import edu.upf.taln.textplanning.amr.utils.EmpiricalStudy;
 import edu.upf.taln.textplanning.common.*;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
+import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
@@ -20,7 +21,6 @@ import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
-import edu.upf.taln.textplanning.core.weighting.WeightFunction;
 import main.AmrMain;
 import net.sf.extjwnl.JWNLException;
 import org.apache.commons.io.FilenameUtils;
@@ -107,8 +107,8 @@ public class Driver
 		final List<Candidate> candidates = new ArrayList<>(graphs.getCandidates());
 		DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, tokens, null);
 
-		final WeightFunction context_weighter = process.getMeaningsWeighter();
-		final SimilarityFunction sim = resources.getMeaningsSimilarity();
+		final BiasFunction context_weighter = process.getBiasFunction();
+		final SimilarityFunction sim = resources.getSimilarityFunction();
 		final BiPredicate<String, String> meanings_filter = process.getMeaningsFilter();
 		final Predicate<Candidate> candidates_filter = process.getCandidatesFilter();
 		TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
@@ -170,7 +170,7 @@ public class Driver
 	{
 		log.info("Running from " + subgraphs_file);
 		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
-		BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
+		BiFunction<String, String, OptionalDouble> sim = resources.getSimilarityFunction();
 
 		Options options = new Options();
 		options.num_subgraphs = num_subgraphs;
@@ -186,7 +186,7 @@ public class Driver
 	{
 		log.info("Running from " + subgraphs_file);
 		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
-		BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();;
+		BiFunction<String, String, OptionalDouble> sim = resources.getSimilarityFunction();;
 
 		Options options = new Options();
 		final List<SemanticSubgraph> plan = TextPlanner.sortSubgraphs(subgraphs, (e1, e2) -> sim.apply(e1, e2), options);
@@ -240,7 +240,7 @@ public class Driver
 		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language,null, resources.getDictionary(), no_stanford);
 		AMRSemanticGraphFactory globalFactory = new AMRSemanticGraphFactory();
 
-		BiFunction<String, String, OptionalDouble> sim = resources.getMeaningsSimilarity();
+		BiFunction<String, String, OptionalDouble> sim = resources.getSimilarityFunction();
 		AmrMain generator = new AmrMain(generation_resources);
 
 		Options options = new Options();
@@ -304,7 +304,7 @@ public class Driver
 					.map(AMRAlignments::getTokens)
 					.flatMap(List::stream)
 					.collect(toList());
-//			final ContextWeighter context_weighter = new ContextWeighter(candidates, resources.getSenseContextVectors(),
+//			final ContextBias context_weighter = new ContextBias(candidates, resources.getSenseContextVectors(),
 //					resources.getSentenceVectors(), w -> context, resources.getWordVectorsSimilarityFunction());
 
 //			TopCandidatesFilter candidates_filter = new TopCandidatesFilter(candidates, context_weighter::weight, 5);
@@ -407,6 +407,9 @@ public class Driver
 		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path freqsFile;
+		@Parameter(names = {"-b", "-bias"}, description = "Path to text file containing meanings used to bias ranking", arity = 1,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path biasFile;
 		@Parameter(names = {"-st", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1,
 				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
 		private SentenceVectorType sentence_vector_type = SentenceVectorType.Random;
@@ -615,24 +618,30 @@ public class Driver
 		Driver driver = new Driver();
 		if (jc.getParsedCommand().equals(create_graphs_command))
 		{
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, create_graphs.dictionary, null,
-					null, null,
-					null,  null,
-					null,  null,
-					null,  null);
+			InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
+			InitialResourcesFactory.SimilarityResources sim_resources = new InitialResourcesFactory.SimilarityResources();
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, create_graphs.dictionary, bias_resources,
+					sim_resources);
 			driver.create_graphs(create_graphs.inputFile, resources, create_graphs.no_stanford);
 		}
 		else if (jc.getParsedCommand().equals(rank_meanings_command))
 		{
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, rank_meanings.freqsFile,
-					rank_meanings.sense_vectors_path,  rank_meanings.sense_vector_type,
-					rank_meanings.word_vectors_path,  rank_meanings.word_vector_type,
-					null, rank_meanings.sentence_vector_type,
-					rank_meanings.context_vectors_path,  rank_meanings.context_vector_type);
+			InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
+			bias_resources.bias_meanings_path = rank_meanings.biasFile;
+			bias_resources.word_vectors_path = rank_meanings.word_vectors_path;
+			bias_resources.word_vectors_type = rank_meanings.word_vector_type;
+			bias_resources.sentence_vectors_type = rank_meanings.sentence_vector_type;
+			bias_resources.idf_file = rank_meanings.freqsFile;
 
+			InitialResourcesFactory.SimilarityResources sim_resources = new InitialResourcesFactory.SimilarityResources();
+			sim_resources.meaning_vectors_path = rank_meanings.sense_vectors_path;
+			sim_resources.meaning_vectors_type = rank_meanings.sense_vector_type;
+
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources,
+					sim_resources);
 			driver.rank_meanings(rank_meanings.inputFile, resources);
 		}
-			else if (jc.getParsedCommand().equals(create_global_command))
+		else if (jc.getParsedCommand().equals(create_global_command))
 			driver.create_global(create_global.inputFile);
 		else if (jc.getParsedCommand().equals(rank_variables_command))
 			driver.rank_mentions(rank_variables.inputFile);
@@ -640,20 +649,26 @@ public class Driver
 			driver.extract_subgraphs(extract_subgraphs.inputFile, extract_subgraphs.num_subgraphs);
 		else if (jc.getParsedCommand().equals(remove_redundancy_command))
 		{
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, null,
-					remove_redundancy.vectorsPath, remove_redundancy.vectorType,
-					null, null,
-					null, null,
-					null, null);
+			InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
+
+			InitialResourcesFactory.SimilarityResources sim_resources = new InitialResourcesFactory.SimilarityResources();
+			sim_resources.meaning_vectors_path = remove_redundancy.vectorsPath;
+			sim_resources.meaning_vectors_type = remove_redundancy.vectorType;
+
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources,
+					sim_resources);
 			driver.remove_redundancy(remove_redundancy.inputFile, remove_redundancy.num_subgraphs, resources);
 		}
 		else if (jc.getParsedCommand().equals(sort_subgraphs_command))
 		{
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, null,
-					sort_subgraphs.vectorsPath, sort_subgraphs.vectorType,
-					null, null,
-					null, null,
-					null, null);
+			InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
+
+			InitialResourcesFactory.SimilarityResources sim_resources = new InitialResourcesFactory.SimilarityResources();
+			sim_resources.meaning_vectors_path = sort_subgraphs.vectorsPath;
+			sim_resources.meaning_vectors_type = sort_subgraphs.vectorType;
+
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources,
+					sim_resources);
 			driver.sort_subgraphs(sort_subgraphs.inputFile, resources);
 		}
 		else if (jc.getParsedCommand().equals(write_amr_command))
@@ -663,11 +678,15 @@ public class Driver
 		/* --- */
 		else if (jc.getParsedCommand().equals(summarize_command))
 		{
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, summarize.dictionary, summarize.freqsFile,
-					summarize.vectorsPath, summarize.vectorType,
-					null, null,
-					null, null,
-					null, null);
+			InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
+
+			InitialResourcesFactory.SimilarityResources sim_resources = new InitialResourcesFactory.SimilarityResources();
+			sim_resources.meaning_vectors_path = summarize.vectorsPath;
+			sim_resources.meaning_vectors_type = summarize.vectorType;
+
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, summarize.dictionary, bias_resources,
+					sim_resources);
+
 			driver.summarize(summarize.input, resources, summarize.no_stanford,summarize.num_extract,
 					summarize.num_subgraphs, summarize.generation_resources, summarize.max_words);
 		}

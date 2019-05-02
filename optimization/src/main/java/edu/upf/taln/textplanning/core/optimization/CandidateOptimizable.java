@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning.core.optimization;
 
 import cc.mallet.optimize.Optimizable;
-import edu.upf.taln.textplanning.core.weighting.corpora.Corpus;
+import edu.upf.taln.textplanning.core.bias.corpora.Corpus;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import org.apache.commons.lang3.tuple.Pair;

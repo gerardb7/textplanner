@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.core.weighting;
+package edu.upf.taln.textplanning.core.bias;
 
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
@@ -9,14 +9,13 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
 
 import static java.util.Comparator.comparingLong;
 import static java.util.stream.Collectors.toList;
 
 public class NumberForms
 {
-	private final Map<String, Double> weights = new HashMap<>();
+	private final Map<String, Double> bias_values = new HashMap<>();
 
 	public NumberForms(Collection<Candidate> candidates)
 	{
@@ -33,13 +32,13 @@ public class NumberForms
 		final long max_count = counts.stream()
 				.mapToLong(Pair::getRight)
 				.max().orElse(1);
-		counts.forEach(p -> weights.put(p.getLeft().getReference(), p.getRight().doubleValue() / max_count));
+		counts.forEach(p -> bias_values.put(p.getLeft().getReference(), p.getRight().doubleValue() / max_count));
 	}
 
 	public double weight(String meaning)
 	{
-		assert weights.containsKey(meaning);
+		assert bias_values.containsKey(meaning);
 
-		return weights.get(meaning);
+		return bias_values.get(meaning);
 	}
 }

@@ -33,7 +33,7 @@ public abstract class DisambiguationEvaluation
 	{
 		final Corpus corpus = getCorpus();
 
-		EvaluationTools.rankMeanings(getOptions(), corpus, getFactory().getMeaningsSimilarity());
+		EvaluationTools.rankMeanings(getOptions(), corpus, getFactory().getSimilarityFunction());
 
 		log.info("********************************");
 		{
@@ -89,7 +89,7 @@ public abstract class DisambiguationEvaluation
 		IntStream.range(0, corpus.texts.size()).forEach(i ->
 		{
 			log.info("TEXT " + i);
-			final Function<String, Double> weighter = corpus.texts.get(i).resources.getMeaningsWeighter();
+			final Function<String, Double> weighter = corpus.texts.get(i).resources.getBiasFunction();
 			corpus.texts.get(i).sentences.forEach(s ->
 					s.candidates.forEach((m, l) -> print_full_ranking(l, getGold(m), weighter, max_length)));
 
@@ -119,7 +119,7 @@ public abstract class DisambiguationEvaluation
 		for (Options options : batch_options)
 		{
 			resetRanks(corpus);
-			EvaluationTools.rankMeanings(options, corpus, getFactory().getMeaningsSimilarity());
+			EvaluationTools.rankMeanings(options, corpus, getFactory().getSimilarityFunction());
 			log.info("********************************");
 			{
 				final List<List<List<Candidate>>> ranked_candidates = chooseTopRankOrFirst(corpus);
@@ -174,7 +174,7 @@ public abstract class DisambiguationEvaluation
 						.map(s -> s.candidates.values().stream()
 								.filter(not(List::isEmpty))
 								.map(mention_candidates -> mention_candidates.stream()
-										.max(comparingDouble(c -> t.resources.getMeaningsWeighter().apply(c.getMeaning().getReference()))))
+										.max(comparingDouble(c -> t.resources.getBiasFunction().apply(c.getMeaning().getReference()))))
 								.flatMap(Optional::stream)
 								.collect(toList()))
 						.collect(toList()))
@@ -189,8 +189,8 @@ public abstract class DisambiguationEvaluation
 						.map(s -> s.candidates.values().stream()
 								.filter(not(List::isEmpty))
 								.map(mention_candidates -> mention_candidates.stream()
-										.max(comparingDouble(c -> t.resources.getMeaningsWeighter().apply(c.getMeaning().getReference())))
-										.map(c -> t.resources.getMeaningsWeighter().apply(c.getMeaning().getReference()) >= threshold ? c : mention_candidates.get(0)))
+										.max(comparingDouble(c -> t.resources.getBiasFunction().apply(c.getMeaning().getReference())))
+										.map(c -> t.resources.getBiasFunction().apply(c.getMeaning().getReference()) >= threshold ? c : mention_candidates.get(0)))
 								.flatMap(Optional::stream)
 								.collect(toList()))
 						.collect(toList()))

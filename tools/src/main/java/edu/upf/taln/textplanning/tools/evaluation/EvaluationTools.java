@@ -12,7 +12,7 @@ import edu.upf.taln.textplanning.core.ranking.Disambiguation;
 import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.structures.*;
-import edu.upf.taln.textplanning.core.weighting.WeightFunction;
+import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.uima.io.DSyntSemantics;
 import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.commons.lang3.tuple.Pair;
@@ -302,7 +302,7 @@ public class EvaluationTools
 							.collect(toList());
 
 					DocumentResourcesFactory doc_resources = corpus.texts.get(i).resources;
-					final WeightFunction weighter = doc_resources.getMeaningsWeighter();
+					final BiasFunction weighter = doc_resources.getBiasFunction();
 					final Predicate<Candidate> candidates_filter = doc_resources.getCandidatesFilter();
 					final BiPredicate<String, String> meanings_filter = doc_resources.getMeaningsFilter();
 
@@ -370,8 +370,8 @@ public class EvaluationTools
 		corpus.texts.forEach(text ->
 		{
 			final Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(text.graph, new DSyntSemantics(), options);
-			final Collection<SemanticSubgraph> selected_subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, resources.getMeaningsSimilarity(), options);
-			text.subgraphs = TextPlanner.sortSubgraphs(subgraphs, resources.getMeaningsSimilarity(), options);
+			final Collection<SemanticSubgraph> selected_subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, resources.getSimilarityFunction(), options);
+			text.subgraphs = TextPlanner.sortSubgraphs(subgraphs, resources.getSimilarityFunction(), options);
 		});
 	}
 

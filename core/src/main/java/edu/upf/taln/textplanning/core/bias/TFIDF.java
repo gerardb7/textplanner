@@ -1,8 +1,8 @@
-package edu.upf.taln.textplanning.core.weighting;
+package edu.upf.taln.textplanning.core.bias;
 
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
-import edu.upf.taln.textplanning.core.weighting.corpora.Corpus;
+import edu.upf.taln.textplanning.core.bias.corpora.Corpus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -12,7 +12,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * A weighting function for items based on tf.idf score.
+ * A bias function for items based on tf.idf score.
  * Based on corpus with annotations of the items to weight.
  */
 public final class TFIDF

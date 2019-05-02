@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.common;
 
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.Options;
+import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
 import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.ranking.StopWordsFilter;
@@ -9,8 +10,7 @@ import edu.upf.taln.textplanning.core.ranking.TopCandidatesFilter;
 import edu.upf.taln.textplanning.core.similarity.vectors.*;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
-import edu.upf.taln.textplanning.core.weighting.ContextWeighter;
-import edu.upf.taln.textplanning.core.weighting.WeightFunction;
+import edu.upf.taln.textplanning.core.bias.ContextBias;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -27,7 +27,7 @@ import static java.util.stream.Collectors.toList;
 public class DocumentResourcesFactory
 {
 	private final DifferentMentionsFilter filter;
-	private final WeightFunction weighter;
+	private final BiasFunction bias;
 	private final Predicate<Candidate> candidates_filter;
 	private final static Logger log = LogManager.getLogger();
 
@@ -41,7 +41,7 @@ public class DocumentResourcesFactory
 			glosses_function = s -> factory.getDictionary().getGlosses(s, factory.getLanguage());
 		else
 			glosses_function = s -> glosses.computeIfAbsent(s, k -> List.of());
-		Vectors meaning_context_vectors = getVectors(factory, 300, glosses_function);
+		Vectors meaning_context_vectors = new SenseGlossesVectors(factory.getLanguage(), glosses_function, factory.getSentenceVectors());
 
 		// Contexts
 		final Predicate<String> stop_words_filter = (str) -> StopWordsFilter.test(str, factory.getLanguage()); // filter function and frequent words
@@ -52,14 +52,14 @@ public class DocumentResourcesFactory
 		context_tokens.removeIf(t -> Collections.frequency(tokens, t) < options.min_context_freq);
 		log.info("Context set to: " + context_tokens);
 
-		// Filters and weighter
+		// Filters and bias
 		filter = new DifferentMentionsFilter(candidates);
-		weighter = new ContextWeighter(candidates, meaning_context_vectors, factory.getSentenceVectors(), w -> context_tokens,
+		bias = new ContextBias(candidates, meaning_context_vectors, factory.getSentenceVectors(), w -> context_tokens,
 				factory.getSentenceSimilarityFunction());
-		candidates_filter = createCandidatesFilter(candidates, weighter, options, factory.getLanguage());
+		candidates_filter = createCandidatesFilter(candidates, bias, options, factory.getLanguage());
 	}
 
-	public WeightFunction getMeaningsWeighter() { return weighter; }
+	public BiasFunction getBiasFunction() { return bias; }
 
 	public BiPredicate<String, String> getMeaningsFilter() { return filter; }
 
@@ -76,31 +76,5 @@ public class DocumentResourcesFactory
 		final Predicate<Candidate> pos_filter =	c ->  !options.excluded_POS_Tags.contains(c.getMention().getPOS());
 
 		return top_filter.and(pos_filter).and(function_words_filter);
-	}
-
-	private static Vectors getVectors(InitialResourcesFactory factory, int num_dimensions, Function<String, List<String>> glosses)
-	{
-		try
-		{
-			switch (factory.getMeaningContextVectorsType())
-			{
-				case Text_Glove:
-				case Text_Word2vec:
-					return new TextVectors(factory.getMeaningContextVectorsPath(), factory.getMeaningContextVectorsType());
-				case Binary_Word2vec:
-					return new Word2VecVectors(factory.getMeaningContextVectorsPath());
-				case Binary_RandomAccess:
-					return new RandomAccessFileVectors(factory.getMeaningContextVectorsPath(), num_dimensions);
-				case SenseGlosses:
-					return new SenseGlossesVectors(factory.getLanguage(), glosses, factory.getSentenceVectors());
-				case Random:
-				default:
-					return new RandomVectors();
-			}
-		}
-		catch (Exception e)
-		{
-			return null;
-		}
 	}
 }

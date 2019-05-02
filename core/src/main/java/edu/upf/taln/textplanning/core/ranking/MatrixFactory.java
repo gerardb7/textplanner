@@ -93,7 +93,7 @@ public class MatrixFactory
 					final Double w = bias.apply(i);
 					if (w < 0.0)
 					{
-						// only positive weights are allowed!
+						// only positive bias_values are allowed!
 						log.warn("Negative weight for item " + i);
 						return 0.0;
 					}

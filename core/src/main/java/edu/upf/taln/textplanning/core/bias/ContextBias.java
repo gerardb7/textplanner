@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.core.weighting;
+package edu.upf.taln.textplanning.core.bias;
 
 import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors;
@@ -16,19 +16,19 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class ContextWeighter implements WeightFunction, Serializable
+public class ContextBias implements BiasFunction, Serializable
 {
-	public final Map<String, Double> weights = new HashMap<>();
+	public final Map<String, Double> bias_values = new HashMap<>();
 	private final static Logger log = LogManager.getLogger();
 	private final static long serialVersionUID = 1L;
 
-	public ContextWeighter(Collection<Candidate> candidates,
-	                       Vectors glosses_vectors,
-	                       SentenceVectors context_vectors,
-	                       Function<String, List<String>> context_function,
-	                       BiFunction<double[], double[], Double> score_function)
+	public ContextBias(Collection<Candidate> candidates,
+	                   Vectors glosses_vectors,
+	                   SentenceVectors context_vectors,
+	                   Function<String, List<String>> context_function,
+	                   BiFunction<double[], double[], Double> score_function)
 	{
-		log.info("Calculating meaning weights using gloss and context vectors");
+		log.info("Calculating bias values using gloss and context vectors");
 		final Stopwatch timer = Stopwatch.createStarted();
 
 		final List<String> meanings = candidates.stream()
@@ -53,29 +53,29 @@ public class ContextWeighter implements WeightFunction, Serializable
 				}).toArray();
 
 		IntStream.range(0, meanings.size())
-				.forEach(i -> weights.put(meanings.get(i), ws[i]));
+				.forEach(i -> bias_values.put(meanings.get(i), ws[i]));
 
-		// Make sure all weights are normalized
-		assert this.weights.values().stream().map(Math::abs).allMatch(w -> w >= 0.0 && w <= 1.0);
-		if (this.weights.values().stream().anyMatch(w -> w < 0.0))
-			this.weights.keySet().forEach(i -> this.weights.replace(i, (this.weights.get(i) + 1.0)/2.0));
+		// Make sure all bias_values are normalized
+		assert this.bias_values.values().stream().map(Math::abs).allMatch(w -> w >= 0.0 && w <= 1.0);
+		if (this.bias_values.values().stream().anyMatch(w -> w < 0.0))
+			this.bias_values.keySet().forEach(i -> this.bias_values.replace(i, (this.bias_values.get(i) + 1.0)/2.0));
 
-		final long num_weighted = this.weights.values().stream()
+		final long num_weighted = this.bias_values.values().stream()
 				.filter(w -> w != 0.0)
 				.count();
-		log.info(num_weighted + " meanings with weights out of " + meanings.size() + " (" + candidates.size() + " candidates)");
-		log.info("Weights calculated in " + timer.stop());
+		log.info(num_weighted + " meanings with bias values out of " + meanings.size() + " (" + candidates.size() + " candidates)");
+		log.info("Bias values calculated in " + timer.stop());
 	}
 
 	@Override
 	public Double apply(String item)
 	{
-		return weights.get(item);
+		return bias_values.get(item);
 	}
 
 	@Override
 	public boolean isDefined(String item)
 	{
-		return weights.containsKey(item);
+		return bias_values.containsKey(item);
 	}
 }

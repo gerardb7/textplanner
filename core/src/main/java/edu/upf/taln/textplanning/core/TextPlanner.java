@@ -10,7 +10,7 @@ import edu.upf.taln.textplanning.core.similarity.SemanticTreeSimilarity;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.structures.*;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
-import edu.upf.taln.textplanning.core.weighting.WeightFunction;
+import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -72,7 +72,7 @@ public final class TextPlanner
 	 */
 	public static void rankMeanings(List<Candidate> candidates,
 	                                Predicate<Candidate> candidates_filter, BiPredicate<String, String> meanings_filter,
-	                                WeightFunction weighting, SimilarityFunction similarity, Options o)
+	                                BiasFunction weighting, SimilarityFunction similarity, Options o)
 	{
 		log.info("*Ranking meanings*");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -123,7 +123,7 @@ public final class TextPlanner
 
 
 	/**
-	 * 	Ranks mentions according to their initial weights and an adjacency function
+	 * 	Ranks mentions according to their initial bias_values and an adjacency function
 	 */
 	public static void rankMentions(List<Candidate> candidates, BiPredicate<Mention, Mention> adjacency_function,
 	                                Options o)

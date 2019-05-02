@@ -14,7 +14,7 @@ public class Options
 	public double context_threshold = 0.8;
 	public int num_first_meanings = 1;
 	public double sim_threshold = 0.6; // Pairs of meanings with sim below this value have their score set to 0
-	public double damping_meanings = 0.6; // controls bias towards weighting function when ranking meanings
+	public double damping_meanings = 0.6; // controls bias towards bias function when ranking meanings
 	public double damping_variables = 0.2; // controls bias towards meanings rank when ranking variables
 	public int num_subgraphs_extract = 1000; // Number of subgraphs to extract
 	public double extraction_lambda = 1.0; // Controls balance between weight of nodes and cost of edges during subgraph extraction
