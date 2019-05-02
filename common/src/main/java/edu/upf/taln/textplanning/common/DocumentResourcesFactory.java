@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.common;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
+import edu.upf.taln.textplanning.core.bias.DomainBias;
 import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
 import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.ranking.StopWordsFilter;
@@ -32,30 +33,48 @@ public class DocumentResourcesFactory
 	private final static Logger log = LogManager.getLogger();
 
 	public DocumentResourcesFactory(InitialResourcesFactory factory, Options options,
-	                                List<Candidate> candidates, List<String> tokens, Map<String, List<String>> glosses)
+	                                List<Candidate> candidates, List<String> tokens,
+	                                Map<String, List<String>> glosses)
 	{
 
-		// Glosses
-		Function<String, List<String>> glosses_function;
-		if (glosses == null)
-			glosses_function = s -> factory.getDictionary().getGlosses(s, factory.getLanguage());
+		if (factory.getBiasFunctionType() != null)
+		{
+			if (factory.getBiasFunctionType() == BiasFunction.Type.Context)
+			{
+				// Glosses
+				Function<String, List<String>> glosses_function;
+				if (glosses == null)
+					glosses_function = s -> factory.getDictionary().getGlosses(s, factory.getLanguage());
+				else
+					glosses_function = s -> glosses.computeIfAbsent(s, k -> List.of());
+				Vectors meaning_context_vectors = new SenseGlossesVectors(factory.getLanguage(), glosses_function, factory.getSentenceVectors());
+
+				// Contexts
+				final Predicate<String> stop_words_filter = (str) -> StopWordsFilter.test(str, factory.getLanguage()); // filter function and frequent words
+				final List<String> context_tokens = tokens.stream()
+						.distinct()
+						.filter(stop_words_filter)
+						.collect(toList());
+				context_tokens.removeIf(t -> Collections.frequency(tokens, t) < options.min_context_freq);
+				log.info("Context set to: " + context_tokens);
+
+				bias = new ContextBias(candidates, meaning_context_vectors, factory.getSentenceVectors(), w -> context_tokens,
+						factory.getSentenceSimilarityFunction());
+
+			}
+			else if (factory.getBiasFunctionType() == BiasFunction.Type.Domain)
+			{
+				bias = new DomainBias(factory.getBiasMeanings(), factory.getSimilarityFunction());
+			}
+			else
+				bias = null;
+		}
 		else
-			glosses_function = s -> glosses.computeIfAbsent(s, k -> List.of());
-		Vectors meaning_context_vectors = new SenseGlossesVectors(factory.getLanguage(), glosses_function, factory.getSentenceVectors());
+			bias = null;
 
-		// Contexts
-		final Predicate<String> stop_words_filter = (str) -> StopWordsFilter.test(str, factory.getLanguage()); // filter function and frequent words
-		final List<String> context_tokens = tokens.stream()
-				.distinct()
-				.filter(stop_words_filter)
-				.collect(toList());
-		context_tokens.removeIf(t -> Collections.frequency(tokens, t) < options.min_context_freq);
-		log.info("Context set to: " + context_tokens);
 
-		// Filters and bias
+		// Filters
 		filter = new DifferentMentionsFilter(candidates);
-		bias = new ContextBias(candidates, meaning_context_vectors, factory.getSentenceVectors(), w -> context_tokens,
-				factory.getSentenceSimilarityFunction());
 		candidates_filter = createCandidatesFilter(candidates, bias, options, factory.getLanguage());
 	}
 

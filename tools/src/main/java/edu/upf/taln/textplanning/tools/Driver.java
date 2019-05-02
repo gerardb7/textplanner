@@ -7,6 +7,7 @@ import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
+import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.tools.evaluation.ExtractiveEvaluation;
@@ -49,6 +50,9 @@ public class Driver
 		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
+		@Parameter(names = {"-bf", "-bias_function"}, description = "Type of bias function", arity = 1, required = true,
+				converter = CMLCheckers.BiasTypeConverter.class , validateWith = CMLCheckers.BiasTypeValidator.class)
+		private BiasFunction.Type biasType;
 		@Parameter(names = {"-b", "-bias"}, description = "Path to text file containing meanings used to bias ranking", arity = 1,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path biasFile;
@@ -93,6 +97,9 @@ public class Driver
 		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
+		@Parameter(names = {"-bf", "-bias_function"}, description = "Type of bias function", arity = 1, required = true,
+				converter = CMLCheckers.BiasTypeConverter.class , validateWith = CMLCheckers.BiasTypeValidator.class)
+		private BiasFunction.Type biasType;
 		@Parameter(names = {"-b", "-bias"}, description = "Path to text file containing meanings used to bias ranking", arity = 1,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path biasFile;
@@ -137,6 +144,9 @@ public class Driver
 		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
+		@Parameter(names = {"-bf", "-bias_function"}, description = "Type of bias function", arity = 1, required = true,
+				converter = CMLCheckers.BiasTypeConverter.class , validateWith = CMLCheckers.BiasTypeValidator.class)
+		private BiasFunction.Type biasType;
 		@Parameter(names = {"-b", "-bias"}, description = "Path to text file containing meanings used to bias ranking", arity = 1,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path biasFile;
@@ -179,6 +189,9 @@ public class Driver
 		@Parameter(names = {"-o", "-output"}, description = "Path to folder where text files will be created containing system summaries", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
+		@Parameter(names = {"-bf", "-bias_function"}, description = "Type of bias function", arity = 1, required = true,
+				converter = CMLCheckers.BiasTypeConverter.class , validateWith = CMLCheckers.BiasTypeValidator.class)
+		private BiasFunction.Type biasType;
 		@Parameter(names = {"-b", "-bias"}, description = "Path to text file containing meanings used to bias ranking", arity = 1,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path biasFile;
@@ -291,6 +304,7 @@ public class Driver
 			case semeval_command:
 			{
 				InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
+				bias_resources.bias_function_type = semEval.biasType;
 				bias_resources.bias_meanings_path = semEval.biasFile;
 				bias_resources.word_vectors_path = semEval.word_vectors_path;
 				bias_resources.word_vectors_type = semEval.word_vector_type;
@@ -317,6 +331,7 @@ public class Driver
 			case disambiguation_eval_command:
 			{
 				InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
+				bias_resources.bias_function_type = semEval.biasType;
 				bias_resources.bias_meanings_path = wsdEval.biasFile;
 				bias_resources.word_vectors_path = wsdEval.word_vectors_path;
 				bias_resources.word_vectors_type = wsdEval.word_vector_type;
@@ -342,6 +357,7 @@ public class Driver
 			case rank_eval_command:
 			{
 				InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
+				bias_resources.bias_function_type = semEval.biasType;
 				bias_resources.bias_meanings_path = rankEval.biasFile;
 				bias_resources.word_vectors_path = rankEval.word_vectors_path;
 				bias_resources.word_vectors_type = rankEval.word_vector_type;
@@ -361,6 +377,7 @@ public class Driver
 			case extract_eval_command:
 			{
 				InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
+				bias_resources.bias_function_type = semEval.biasType;
 				bias_resources.bias_meanings_path = extractEval.biasFile;
 				bias_resources.word_vectors_path = extractEval.word_vectors_path;
 				bias_resources.word_vectors_type = extractEval.word_vector_type;

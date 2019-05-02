@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.common;
 import com.beust.jcommander.IParameterValidator;
 import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.ParameterException;
+import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 
@@ -159,6 +160,15 @@ public class CMLCheckers
 		}
 	}
 
+	public static class BiasTypeConverter implements IStringConverter<BiasFunction.Type>
+	{
+		@Override
+		public BiasFunction.Type convert(String value)
+		{
+			return BiasFunction.Type.valueOf(value);
+		}
+	}
+
 	public static class VectorTypeConverter implements IStringConverter<VectorType>
 	{
 		@Override
@@ -174,6 +184,19 @@ public class CMLCheckers
 		public SentenceVectorType convert(String value)
 		{
 			return SentenceVectorType.valueOf(value);
+		}
+	}
+
+	public static class BiasTypeValidator implements IParameterValidator
+	{
+		@Override
+		public void validate(String name, String value) throws ParameterException
+		{
+			try{ BiasFunction.Type.valueOf(value); }
+			catch (Exception e)
+			{
+				throw new ParameterException("Parameter " + name + " has invalid valued " + value);
+			}
 		}
 	}
 

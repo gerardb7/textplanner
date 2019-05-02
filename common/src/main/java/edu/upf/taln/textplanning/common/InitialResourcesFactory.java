@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.common;
 
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
+import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
@@ -27,15 +28,17 @@ public class InitialResourcesFactory
 {
 	private final ULocale language;
 	private final MeaningDictionary dictionary;
+	private final BiasFunction.Type bias_function_type;
 	private final Set<String> bias_meanings;
 	private final SentenceVectors sentence_vectors;
 	private final BiFunction<double[], double[], Double> sentence_similarity_function;
 	private final SimilarityFunction meanings_similarity_function;
-
 	private final static Logger log = LogManager.getLogger();
 
 	public static class BiasResources
 	{
+		public BiasFunction.Type bias_function_type = null;
+
 		// Resources for domain-based bias
 		public Path bias_meanings_path = null;
 
@@ -73,6 +76,8 @@ public class InitialResourcesFactory
 			dictionary = null;
 
 		// Bias resources
+		bias_function_type = bias_resources.bias_function_type;
+
 		Vectors word_vectors = null;
 		if (bias_resources.word_vectors_type != null)
 			word_vectors = getVectors(bias_resources.word_vectors_path, bias_resources.word_vectors_type, 300);
@@ -140,14 +145,19 @@ public class InitialResourcesFactory
 
 	public ULocale getLanguage() { return language; }
 
+	public MeaningDictionary getDictionary() { return dictionary; }
+
+	public BiasFunction.Type getBiasFunctionType()
+	{
+		return bias_function_type;
+	}
+
+	public Set<String> getBiasMeanings() { return bias_meanings; }
+
 	public BiFunction<double[], double[], Double> getSentenceSimilarityFunction()
 	{
 		return sentence_similarity_function;
 	}
-
-	public MeaningDictionary getDictionary() { return dictionary; }
-
-	public Set<String> getBiaseanings() { return bias_meanings; }
 
 	public SentenceVectors getSentenceVectors()
 	{
