@@ -55,8 +55,11 @@ public class EvaluationTools
 		public String id;
 		@XmlElement(name = "sentence")
 		public List<Sentence> sentences = new ArrayList<>();
+		@XmlTransient
 		public DocumentResourcesFactory resources;
+		@XmlTransient
 		public SemanticGraph graph = null;
+		@XmlTransient
 		public List<SemanticSubgraph> subgraphs = new ArrayList<>();
 	}
 
@@ -67,6 +70,7 @@ public class EvaluationTools
 		public String id;
 		@XmlElement(name = "wf")
 		public List<Token> tokens = new ArrayList<>();
+		@XmlTransient
 		Map<Mention, List<Candidate>> candidates = new HashMap<>();
 	}
 
@@ -225,7 +229,7 @@ public class EvaluationTools
 						final String mention_context_id = mention.getContextId();
 						text.sentences.forEach(sentence ->
 						{
-							if (mention_context_id.equals(sentence.id))
+							if (mention_context_id.startsWith(sentence.id))
 								sentence.candidates.put(mention, mention_candidates);
 						});
 					});
@@ -251,11 +255,12 @@ public class EvaluationTools
 					final List<Candidate> text_candidates = corpus.texts.get(i).sentences.stream()
 							.flatMap(s -> s.candidates.values().stream().flatMap(List::stream))
 							.collect(toList());
-					text_candidates.stream()
+					final Set<String> meanings = text_candidates.stream()
 							.map(Candidate::getMeaning)
 							.map(Meaning::getReference)
-							.distinct()
-							.forEach(r -> glosses.computeIfAbsent(r, k -> resources.getDictionary().getGlosses(k, resources.getLanguage())));
+							.collect(toSet());
+					meanings.addAll(resources.getBiasMeanings());
+					meanings.forEach(r -> glosses.computeIfAbsent(r, k -> resources.getDictionary().getGlosses(k, resources.getLanguage())));
 				}
 				log.info("Glosses queried in " + timer.stop());
 				Serializer.serialize(glosses, glosses_path);
@@ -382,7 +387,7 @@ public class EvaluationTools
 		return corpus.texts.stream()
 				.map(d -> d.sentences.stream()
 						.map(s -> IntStream.range(0, s.tokens.size())
-								.mapToObj(start -> IntStream.range(start + 1, Math.min(start + max_span_size + 1, s.tokens.size()))
+								.mapToObj(start -> IntStream.range(start + 1, Math.min(start + max_span_size + 1, s.tokens.size() + 1))
 										.filter(end ->
 										{
 											// single words must have a pos tag other than 'X'
@@ -403,8 +408,9 @@ public class EvaluationTools
 													.map(t -> t.lemma != null ? t.lemma : t.wf)
 													.collect(joining(" "));
 											String pos = tokens.size() == 1 ? tokens.get(0).pos : noun_pos_prefix;
+											String contextId = tokens.size() == 1 ? tokens.get(0).id : tokens.get(0).id + "-" + tokens.get(tokens.size()-1).id;
 
-											return new Mention(s.id, Pair.of(start, end), form, lemma, pos, false, "");
+											return new Mention(contextId, Pair.of(start, end), form, lemma, pos, false, "");
 										})
 										.filter(m -> FunctionWordsFilter.test(m.getSurface_form(), language)))
 								.flatMap(stream -> stream))

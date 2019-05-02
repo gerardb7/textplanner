@@ -38,14 +38,10 @@ public class InitialResourcesFactory
 	public static class BiasResources
 	{
 		public BiasFunction.Type bias_function_type = null;
-
-		// Resources for domain-based bias
-		public Path bias_meanings_path = null;
-
-		// Resources for context-based bias
+		public Path bias_meanings_path = null; // for domain bias
 		public Path word_vectors_path = null;
 		public VectorType word_vectors_type = null;
-		public Path sentence_vectors_path = null;
+		public Path sentence_vectors_path = null; // for pre-calculated sentence vectors
 		public SentenceVectorType sentence_vectors_type = null;
 		public Path idf_file = null; // for SIF sentence vectors
 	}
@@ -128,6 +124,8 @@ public class InitialResourcesFactory
 		{
 			bias_meanings = Arrays.stream(FileUtils.readTextFile(bias_resources.bias_meanings_path).split("\n"))
 					.filter(not(String::isEmpty))
+					.map(l -> l.split("\t")[0])
+					.map(String::trim)
 					.collect(toSet());
 		}
 		else

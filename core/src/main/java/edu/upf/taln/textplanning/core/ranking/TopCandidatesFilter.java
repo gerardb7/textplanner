@@ -12,6 +12,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static java.lang.Math.min;
+import static java.util.stream.Collectors.toList;
 
 /**
  * For each mention, reduces its set of candidates to the best items according to an evaluation function
@@ -39,7 +40,7 @@ public class TopCandidatesFilter implements Predicate<Candidate>
 				.map(candidate_sets::get)
 				.map(l -> limit(l, eval, top_k, threshold))
 				.flatMap(List::stream)
-				.collect(Collectors.toList());
+				.collect(toList());
 	}
 	
 	private static <T> Predicate<T> not(Predicate<T> t) {
@@ -56,15 +57,13 @@ public class TopCandidatesFilter implements Predicate<Candidate>
 
 		// Filtered list of candidates according to eval function
 		final List<Candidate> filtered = candidates.stream()
-				.filter(c -> eval.apply(c.getMeaning().getReference()) >= threshold)
-				.collect(Collectors.toList());
+				.filter(c -> {
+					final Double avg_sim = eval.apply(c.getMeaning().getReference());
+					return avg_sim >= threshold;
+				})
+				.collect(toList());
 		top_candidates.addAll(filtered);
-
-//		candidates.stream()
-//				.filter(not(top_candidates::contains))
-//				.max(Comparator.comparingDouble(c -> eval.apply(c.getMeaning().getReference()))).ifPresent(top_candidates::add);
-
-		return top_candidates;
+		return top_candidates.stream().distinct().collect(toList());
 	}
 
 }

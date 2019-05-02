@@ -39,16 +39,16 @@ public class DocumentResourcesFactory
 
 		if (factory.getBiasFunctionType() != null)
 		{
+			// Glosses
+			Function<String, List<String>> glosses_function;
+			if (glosses == null)
+				glosses_function = s -> factory.getDictionary().getGlosses(s, factory.getLanguage());
+			else
+				glosses_function = s -> glosses.getOrDefault(s, List.of());
+			Vectors glosses_vectors = new SenseGlossesVectors(factory.getLanguage(), glosses_function, factory.getSentenceVectors());
+
 			if (factory.getBiasFunctionType() == BiasFunction.Type.Context)
 			{
-				// Glosses
-				Function<String, List<String>> glosses_function;
-				if (glosses == null)
-					glosses_function = s -> factory.getDictionary().getGlosses(s, factory.getLanguage());
-				else
-					glosses_function = s -> glosses.computeIfAbsent(s, k -> List.of());
-				Vectors meaning_context_vectors = new SenseGlossesVectors(factory.getLanguage(), glosses_function, factory.getSentenceVectors());
-
 				// Contexts
 				final Predicate<String> stop_words_filter = (str) -> StopWordsFilter.test(str, factory.getLanguage()); // filter function and frequent words
 				final List<String> context_tokens = tokens.stream()
@@ -58,13 +58,12 @@ public class DocumentResourcesFactory
 				context_tokens.removeIf(t -> Collections.frequency(tokens, t) < options.min_context_freq);
 				log.info("Context set to: " + context_tokens);
 
-				bias = new ContextBias(candidates, meaning_context_vectors, factory.getSentenceVectors(), w -> context_tokens,
+				bias = new ContextBias(candidates, glosses_vectors, factory.getSentenceVectors(), w -> context_tokens,
 						factory.getSentenceSimilarityFunction());
-
 			}
 			else if (factory.getBiasFunctionType() == BiasFunction.Type.Domain)
 			{
-				bias = new DomainBias(factory.getBiasMeanings(), factory.getSimilarityFunction());
+				bias = new DomainBias(candidates, factory.getBiasMeanings(), glosses_vectors, factory.getSentenceSimilarityFunction());
 			}
 			else
 				bias = null;
@@ -91,7 +90,7 @@ public class DocumentResourcesFactory
 		// exclude function words for ranking, but be careful not to remove words just because they're frequent -e.g. stop words
 		final Predicate<Candidate> function_words_filter = (c) -> FunctionWordsFilter.test(c.getMention().getSurface_form(), language);
 		final TopCandidatesFilter top_filter =
-				new TopCandidatesFilter(mentions2candidates, weighter, options.num_first_meanings, options.context_threshold);
+				new TopCandidatesFilter(mentions2candidates, weighter, options.num_first_meanings, options.min_bias_threshold);
 		final Predicate<Candidate> pos_filter =	c ->  !options.excluded_POS_Tags.contains(c.getMention().getPOS());
 
 		return top_filter.and(pos_filter).and(function_words_filter);

@@ -26,9 +26,9 @@ public class ContextBias implements BiasFunction, Serializable
 	                   Vectors glosses_vectors,
 	                   SentenceVectors context_vectors,
 	                   Function<String, List<String>> context_function,
-	                   BiFunction<double[], double[], Double> score_function)
+	                   BiFunction<double[], double[], Double> sim)
 	{
-		log.info("Calculating bias values using gloss and context vectors");
+		log.info("Calculating context bias values using gloss and context vectors");
 		final Stopwatch timer = Stopwatch.createStarted();
 
 		final List<String> meanings = candidates.stream()
@@ -47,7 +47,7 @@ public class ContextBias implements BiasFunction, Serializable
 					final List<String> context = context_function.apply(m);
 					final Optional<double[]> context_vector = context_vectors.getVector(context);
 					if (glosses_vector.isPresent() && context_vector.isPresent())
-						return score_function.apply(glosses_vector.get(), context_vector.get());
+						return sim.apply(glosses_vector.get(), context_vector.get());
 					else
 						return 0.0;
 				}).toArray();

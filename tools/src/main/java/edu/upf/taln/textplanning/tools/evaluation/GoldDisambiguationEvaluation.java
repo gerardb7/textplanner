@@ -23,7 +23,7 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 	private final EvaluationTools.Corpus corpus;
 	final Map<String, AlternativeMeanings> gold;
 	private final InitialResourcesFactory resources_factory;
-	private final Options options = new Options();
+	private final Options options;
 	private final static Logger log = LogManager.getLogger();
 
 	private static final int max_span_size = 3;
@@ -41,7 +41,8 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 		this.corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path, resources_factory, language, max_span_size, noun_pos_tag, options);
 		this.gold = parseGoldFile(gold_file);
 		this.resources_factory = resources_factory;
-		options.excluded_POS_Tags = Set.of(other_pos_tag, adverb_pos_tag);
+		this.options = options;
+		this.options.excluded_POS_Tags = Set.of(other_pos_tag, adverb_pos_tag);
 
 		// Check gold anns
 		final List<String> tokens = corpus.texts.stream()
@@ -67,7 +68,7 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 				.collect(toMap(
 						a -> a[0].equals(a[1]) ? a[0] : a[0] + "-" + a[1],
 						a ->  new AlternativeMeanings(Arrays.asList(a[2].split("\\|")),
-								a[3].substring(1, a[3].length() -1), a[0], a[1])));
+								a[3].substring(1, a[3].length() -2), a[0], a[1])));
 
 	}
 
@@ -75,7 +76,13 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 	protected Set<String> getGold(Mention m)
 	{
 		final AlternativeMeanings meanings = gold.get(m.getContextId());
-		if (!m.getSurface_form().equals(meanings.text))
+		if (meanings == null)
+		{
+			log.warn("Mention " + m + " not in gold");
+			return Set.of();
+		}
+
+		if (!m.getSurface_form().equalsIgnoreCase(meanings.text))
 			log.warn("Mention from XML: " + m.getSurface_form() + " doesn't match mention from gold: " + meanings.text);
 		return meanings.alternatives;
 	}
