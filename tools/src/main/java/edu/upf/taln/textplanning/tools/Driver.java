@@ -303,20 +303,17 @@ public class Driver
 		{
 			case semeval_command:
 			{
-				InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
+				InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
 				bias_resources.bias_function_type = semEval.biasType;
 				bias_resources.bias_meanings_path = semEval.biasFile;
 				bias_resources.word_vectors_path = semEval.word_vectors_path;
 				bias_resources.word_vectors_type = semEval.word_vector_type;
 				bias_resources.sentence_vectors_type = semEval.sentence_vector_type;
 				bias_resources.idf_file = semEval.freqsFile;
+				bias_resources.meaning_vectors_path = semEval.sense_vectors_path;
+				bias_resources.meaning_vectors_type = semEval.sense_vector_type;
 
-				InitialResourcesFactory.SimilarityResources sim_resources = new InitialResourcesFactory.SimilarityResources();
-				sim_resources.meaning_vectors_path = semEval.sense_vectors_path;
-				sim_resources.meaning_vectors_type = semEval.sense_vector_type;
-
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, semEval.dictionary, bias_resources,
-						sim_resources);
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, semEval.dictionary, bias_resources);
 
 				Options options = new Options();
 				SemEvalEvaluation eval = new SemEvalEvaluation(semEval.gold_file, semEval.input_file, semEval.output,
@@ -329,20 +326,17 @@ public class Driver
 			}
 			case disambiguation_eval_command:
 			{
-				InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
+				InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
 				bias_resources.bias_function_type = wsdEval.biasType;
 				bias_resources.bias_meanings_path = wsdEval.biasFile;
 				bias_resources.word_vectors_path = wsdEval.word_vectors_path;
 				bias_resources.word_vectors_type = wsdEval.word_vector_type;
 				bias_resources.sentence_vectors_type = wsdEval.sentence_vector_type;
 				bias_resources.idf_file = wsdEval.freqsFile;
+				bias_resources.meaning_vectors_path = wsdEval.sense_vectors_path;
+				bias_resources.meaning_vectors_type = wsdEval.sense_vector_type;
 
-				InitialResourcesFactory.SimilarityResources sim_resources = new InitialResourcesFactory.SimilarityResources();
-				sim_resources.meaning_vectors_path = wsdEval.sense_vectors_path;
-				sim_resources.meaning_vectors_type = wsdEval.sense_vector_type;
-
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, wsdEval.dictionary, bias_resources,
-						sim_resources);
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, wsdEval.dictionary, bias_resources);
 
 				Options options = new Options();
 				GoldDisambiguationEvaluation eval = new GoldDisambiguationEvaluation(wsdEval.gold_file, wsdEval.input_file, wsdEval.output,
@@ -355,40 +349,34 @@ public class Driver
 			}
 			case rank_eval_command:
 			{
-				InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
+				InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
 				bias_resources.bias_function_type = rankEval.biasType;
 				bias_resources.bias_meanings_path = rankEval.biasFile;
 				bias_resources.word_vectors_path = rankEval.word_vectors_path;
 				bias_resources.word_vectors_type = rankEval.word_vector_type;
 				bias_resources.sentence_vectors_type = rankEval.sentence_vector_type;
 				bias_resources.idf_file = rankEval.freqsFile;
+				bias_resources.meaning_vectors_path = rankEval.sense_vectors_path;
+				bias_resources.meaning_vectors_type = rankEval.sense_vector_type;
 
-				InitialResourcesFactory.SimilarityResources sim_resources = new InitialResourcesFactory.SimilarityResources();
-				sim_resources.meaning_vectors_path = rankEval.sense_vectors_path;
-				sim_resources.meaning_vectors_type = rankEval.sense_vector_type;
-
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, rankEval.dictionary, bias_resources,
-						sim_resources);
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, rankEval.dictionary, bias_resources);
 
 				RankingEvaluation.run(rankEval.gold_folder, rankEval.input_file, rankEval.output, resources);
 				break;
 			}
 			case extract_eval_command:
 			{
-				InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
+				InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
 				bias_resources.bias_function_type = extractEval.biasType;
 				bias_resources.bias_meanings_path = extractEval.biasFile;
 				bias_resources.word_vectors_path = extractEval.word_vectors_path;
 				bias_resources.word_vectors_type = extractEval.word_vector_type;
 				bias_resources.sentence_vectors_type = extractEval.sentence_vector_type;
 				bias_resources.idf_file = extractEval.freqsFile;
+				bias_resources.meaning_vectors_path = extractEval.sense_vectors_path;
+				bias_resources.meaning_vectors_type = extractEval.sense_vector_type;
 
-				InitialResourcesFactory.SimilarityResources sim_resources = new InitialResourcesFactory.SimilarityResources();
-				sim_resources.meaning_vectors_path = extractEval.sense_vectors_path;
-				sim_resources.meaning_vectors_type = extractEval.sense_vector_type;
-
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, extractEval.dictionary, bias_resources,
-						sim_resources);
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, extractEval.dictionary, bias_resources);
 				ExtractiveEvaluation.run(extractEval.input, extractEval.gold, extractEval.output, resources);
 				break;
 			}
@@ -405,16 +393,12 @@ public class Driver
 			}
 			case create_context_vectors:
 			{
-				InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
-				bias_resources.word_vectors_path = extractEval.word_vectors_path;
-				bias_resources.word_vectors_type = extractEval.word_vector_type;
-				bias_resources.sentence_vectors_type = extractEval.sentence_vector_type;
-				bias_resources.idf_file = extractEval.freqsFile;
-
-				InitialResourcesFactory.SimilarityResources sim_resources = new InitialResourcesFactory.SimilarityResources();
-
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, extractEval.dictionary, bias_resources,
-						sim_resources);
+				InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
+				bias_resources.word_vectors_path = context.word_vectors_path;
+				bias_resources.word_vectors_type = context.word_vector_type;
+				bias_resources.sentence_vectors_type = context.sentence_vector_type;
+				bias_resources.idf_file = context.freqsFile;
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources);
 				ContextVectorsProducer.createVectors(context.meanings, context.chunk_size, context.output, resources, context.glosses_only);
 				break;
 			}

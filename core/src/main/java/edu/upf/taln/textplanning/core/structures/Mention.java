@@ -11,7 +11,8 @@ import java.util.Objects;
  */
 public final class Mention implements Comparable<Mention>, Serializable
 {
-	private final int id; // unique identifier
+	private final int id; // automatically generated unique identifier
+	private final String context_id; // identifier from context, e.g. annotation id
 	private final String source_id; // Identifies context in which mention occurs, e.g. sentence, document, etc.
 	private final Pair<Integer, Integer> span; // Token-based offsets
 	private final String surface_form;
@@ -19,14 +20,16 @@ public final class Mention implements Comparable<Mention>, Serializable
 	private final String pos; // POS tag
 	private final boolean isNE; // is NE
 	private final String type; // e.g. AMR concept label
+	private double weight = 0.0;
 	private final static long serialVersionUID = 1L;
 	private static int id_counter = 0;
 
-	public Mention(String context_id, Pair<Integer, Integer> tokens_span, String surface_form, String lemma,
+	public Mention(String context_id, String source_id, Pair<Integer, Integer> tokens_span, String surface_form, String lemma,
 	                String POS, boolean isNE, String type)
 	{
 		this.id = id_counter++;
-		this.source_id = context_id;
+		this.context_id = context_id;
+		this.source_id = source_id;
 		this.span = tokens_span;
 		this.surface_form = surface_form;
 		this.lemma = lemma;
@@ -36,13 +39,17 @@ public final class Mention implements Comparable<Mention>, Serializable
 	}
 
 	public int getId() { return id;}
-	public String getContextId() { return source_id; }
+	public String getContextId() { return context_id; }
+	public String getSourceId() { return source_id; }
 	public Pair<Integer, Integer> getSpan() { return span; }
 	public String getSurface_form() { return surface_form; }
 	public String getLemma() { return lemma; }
 	public String getPOS() { return pos;}
 	public boolean isNE() { return isNE; }
 	public String getType() { return type; }
+	public double getWeight() { return weight; }
+	public void setWeight(double weight) { this.weight = weight; }
+
 	public boolean isNominal() { return pos.startsWith("N"); }
 	public boolean isFiniteVerb() {	return pos.startsWith("VB") && !pos.equals("VB"); } // very crude
 	public boolean isMultiWord() { return span.getRight() - span.getLeft() > 1; }
@@ -50,7 +57,7 @@ public final class Mention implements Comparable<Mention>, Serializable
 	@Override
 	public String toString()
 	{
-		return getContextId() + "_" + getSpan() + "_" + getSurface_form();
+		return getId() + "_" + getContextId() + "_" + getSpan() + "_" + getSurface_form();
 	}
 
 	@Override
@@ -60,7 +67,7 @@ public final class Mention implements Comparable<Mention>, Serializable
 	}
 
 	@Override
-	public int compareTo( Mention o)
+	public int compareTo(Mention o)
 	{
 		return Comparator.comparing(Mention::getId).compare(this, o);
 	}

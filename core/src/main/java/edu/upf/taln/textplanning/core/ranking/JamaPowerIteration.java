@@ -8,6 +8,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.DoubleStream;
+import java.util.stream.IntStream;
 
 public class JamaPowerIteration implements PowerIterationRanking
 {
@@ -21,19 +22,23 @@ public class JamaPowerIteration implements PowerIterationRanking
 	 * @param labels labels identifying items in matrix, used for debugging purposes
 	 * @return the stationary distribution of the chain
 	 */
-	public Matrix run(Matrix a, List<String> labels)
+	public Matrix run(final Matrix a, List<String> labels)
 	{
 		// Check that a is a row-stochastic matrix
 		assert a.getColumnDimension() == a.getRowDimension(); // Is it square?
+		IntStream.range(0, a.getColumnDimension()).forEach(i -> IntStream.range(0, a.getRowDimension()).forEach(j ->
+		{
+			assert !Double.isNaN(a.getArray()[i][j]) : "NaN value at " + i + "-" + j;
+		}));
 		assert Arrays.stream(a.getArray()).allMatch(r -> Arrays.stream(r).allMatch(i -> i >= 0.0)); // Is it positive?
 		//assert Arrays.stream(a.getArray()).allMatch(r -> Math.abs(Arrays.stream(r).sum() - 1.0) < 4*2.22e-16); // Is it row-normalized?
 
 		// Change matrix from row-normalized to column normalized
 		// Turns rows into columns so that multiplication with column vector produces probs of reaching states
-		a = a.transpose(); // See http://en.wikipedia.org/wiki/Matrix_multiplication#Square_matrix_and_column_vector
+		Matrix at = a.transpose(); // See http://en.wikipedia.org/wiki/Matrix_multiplication#Square_matrix_and_column_vector
 
 		// Create initial state as a column vector
-		final int n = a.getColumnDimension();
+		final int n = at.getColumnDimension();
 		final double e = 1.0/(n*1000); // set stopping threshold
 		Matrix v = new Matrix(n, 1, 1.0 / n); // v is the distribution vector that will be iteratively updated
 
@@ -43,7 +48,7 @@ public class JamaPowerIteration implements PowerIterationRanking
 		do
 		{
 			// Core operation: transform distribution according to stochastic matrix
-			Matrix tmp = a.times(v); // right-multiply column-stochastic square matrix and column vector, produces column vector
+			Matrix tmp = at.times(v); // right-multiply column-stochastic square matrix and column vector, produces column vector
 			// Normalize distribution to obtain eigenvalue
 			tmp = tmp.times(1.0/tmp.norm1());
 

@@ -23,6 +23,11 @@ public class SenseGlossesVectors extends Vectors
 		this.sentence_vectors = sentence_vectors;
 	}
 
+	public void setGlossesFunction( Function<String, List<String>> glosses)
+	{
+		this.glosses = glosses;
+	}
+
 	@Override
 	public boolean isDefinedFor(String item)
 	{
@@ -48,11 +53,19 @@ public class SenseGlossesVectors extends Vectors
 					final List<Object> list = Collections.list(stringTokenizer);
 					return list.stream().map(Object::toString);
 				})
-				.filter(t -> StopWordsFilter.test(t, language)) // exclude both function and frequent words
-				.collect(Collectors.toList());
+				.collect(toList());
+
 		if (tokens.isEmpty())
 			return Optional.empty();
 
-		return sentence_vectors.getVector(tokens);
+		final List<String> filtered_tokens = tokens.stream()
+				.filter(t -> StopWordsFilter.test(t, language)) // exclude both function and frequent words
+				.collect(toList());
+
+		// If all tokens are function words, include them
+		if (filtered_tokens.isEmpty())
+			filtered_tokens.addAll(tokens);
+
+		return sentence_vectors.getVector(filtered_tokens);
 	}
 }

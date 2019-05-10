@@ -4,8 +4,6 @@ import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
-import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
-import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.*;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
@@ -21,8 +19,7 @@ import java.util.function.BiFunction;
 
 import static edu.upf.taln.textplanning.core.utils.DebugUtils.LOGGING_STEP_SIZE;
 import static java.util.function.Predicate.not;
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.*;
 
 public class InitialResourcesFactory
 {
@@ -32,10 +29,12 @@ public class InitialResourcesFactory
 	private final Set<String> bias_meanings;
 	private final SentenceVectors sentence_vectors;
 	private final BiFunction<double[], double[], Double> sentence_similarity_function;
-	private final SimilarityFunction meanings_similarity_function;
-	private final static Logger log = LogManager.getLogger();
+	private final VectorType meaning_vectors_type;
+	private final Vectors meaning_vectors;
+	private static final int NUM_DIMENSIONS = 300;
+	private static final Logger log = LogManager.getLogger();
 
-	public static class BiasResources
+	public static class ResourceParams
 	{
 		public BiasFunction.Type bias_function_type = null;
 		public Path bias_meanings_path = null; // for domain bias
@@ -44,26 +43,21 @@ public class InitialResourcesFactory
 		public Path sentence_vectors_path = null; // for pre-calculated sentence vectors
 		public SentenceVectorType sentence_vectors_type = null;
 		public Path idf_file = null; // for SIF sentence vectors
-	}
-
-	public static class SimilarityResources
-	{
-		public Path meaning_vectors_path = null;
 		public VectorType meaning_vectors_type = null;
+		public Path meaning_vectors_path = null;
 	}
 
 
 	public InitialResourcesFactory(ULocale language, Path dictionary_config) throws Exception
 	{
-		this(language, dictionary_config, new BiasResources(), new SimilarityResources());
+		this(language, dictionary_config, new ResourceParams());
 	}
 
 
-	public InitialResourcesFactory(ULocale language, Path dictionary_config,
-	                               BiasResources bias_resources, SimilarityResources sim_resources) throws Exception
+	public InitialResourcesFactory(ULocale language, Path dictionary_config, ResourceParams params) throws Exception
 	{
-		// Load ranking resources
-		log.info("Loading initial resources");
+		// Load ranking params
+		log.info("Loading initial params");
 
 		this.language = language;
 		if (dictionary_config != null)
@@ -71,22 +65,22 @@ public class InitialResourcesFactory
 		else
 			dictionary = null;
 
-		// Bias resources
-		bias_function_type = bias_resources.bias_function_type;
+		// Bias params
+		bias_function_type = params.bias_function_type;
 
 		Vectors word_vectors = null;
-		if (bias_resources.word_vectors_type != null)
-			word_vectors = getVectors(bias_resources.word_vectors_path, bias_resources.word_vectors_type, 300);
+		if (params.word_vectors_type != null)
+			word_vectors = createVectorsFromPath(params.word_vectors_type, params.word_vectors_path);
 
-		if (bias_resources.sentence_vectors_type != null)
+		if (params.sentence_vectors_type != null)
 		{
-			switch (bias_resources.sentence_vectors_type)
+			switch (params.sentence_vectors_type)
 			{
 				case SIF:
 				{
-					if (word_vectors != null && bias_resources.idf_file != null)
+					if (word_vectors != null && params.idf_file != null)
 					{
-						final Map<String, Double> weights = getFrequencies(bias_resources.idf_file);
+						final Map<String, Double> weights = getFrequencies(params.idf_file);
 						final Double default_weight = Collections.min(weights.values());
 						sentence_vectors = new SIFVectors(word_vectors, w -> weights.getOrDefault(w, default_weight));
 						sentence_similarity_function = (SIFVectors) sentence_vectors;
@@ -120,9 +114,9 @@ public class InitialResourcesFactory
 			sentence_similarity_function = null;
 		}
 
-		if (bias_resources.bias_meanings_path != null)
+		if (params.bias_meanings_path != null)
 		{
-			bias_meanings = Arrays.stream(FileUtils.readTextFile(bias_resources.bias_meanings_path).split("\n"))
+			bias_meanings = Arrays.stream(FileUtils.readTextFile(params.bias_meanings_path).split("\n"))
 					.filter(not(String::isEmpty))
 					.map(l -> l.split("\t")[0])
 					.map(String::trim)
@@ -131,14 +125,13 @@ public class InitialResourcesFactory
 		else
 			bias_meanings = null;
 
-		// Similarity resources
-		if (sim_resources.meaning_vectors_type != null)
-		{
-			final Vectors meaning_vectors = getVectors(sim_resources.meaning_vectors_path, sim_resources.meaning_vectors_type, 300);
-			meanings_similarity_function = new VectorsSimilarity(meaning_vectors, new CosineSimilarity());
-		}
+
+		// Similarity params
+		meaning_vectors_type = params.meaning_vectors_type;
+		if (params.meaning_vectors_type != null && params.meaning_vectors_path != null)
+			meaning_vectors = createVectorsFromPath(params.meaning_vectors_type, params.meaning_vectors_path);
 		else
-			meanings_similarity_function = null;
+			meaning_vectors = null;
 	}
 
 	public ULocale getLanguage() { return language; }
@@ -160,11 +153,6 @@ public class InitialResourcesFactory
 	public SentenceVectors getSentenceVectors()
 	{
 		return sentence_vectors;
-	}
-
-	public SimilarityFunction getSimilarityFunction()
-	{
-		return meanings_similarity_function;
 	}
 
 	// Reads text-based IDF file
@@ -195,7 +183,17 @@ public class InitialResourcesFactory
 		return new HashMap<>();
 	}
 
-	private Vectors getVectors(Path location, VectorType type, int num_dimensions) throws Exception
+	public VectorType getMeaningVectorsType()
+	{
+		return meaning_vectors_type;
+	}
+
+	public Vectors getMeaningVectors()
+	{
+		return meaning_vectors;
+	}
+
+	private Vectors createVectorsFromPath(VectorType type, Path location) throws Exception
 	{
 		switch (type)
 		{
@@ -205,7 +203,7 @@ public class InitialResourcesFactory
 			case Binary_Word2vec:
 				return new Word2VecVectors(location);
 			case Binary_RandomAccess:
-				return new RandomAccessFileVectors(location, num_dimensions);
+				return new RandomAccessFileVectors(location, NUM_DIMENSIONS);
 			case Random:
 			default:
 				return new RandomVectors();

@@ -27,7 +27,7 @@ public class CandidatesCollector
 	 * Assigns candidate entities to nodes (tokens) of a given set of structures.
 	 * Assumes unique vertex labels across graphs.
 	 */
-	public static List<Candidate> collect(MeaningDictionary dictionary, ULocale language, List<Mention> mentions)
+	public static Map<Mention, List<Candidate>> collect(MeaningDictionary dictionary, ULocale language, List<Mention> mentions)
 	{
 		log.info("Collecting candidate meanings");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -44,7 +44,7 @@ public class CandidatesCollector
 						.collect(toList())));
 
 		// order of candidate lists must be preserved
-		final List<Candidate> candidates = new ArrayList<>();
+		final Map<Mention, List<Candidate>> candidates = new HashMap<>();
 		for (Triple<String, String, String> t : forms2mentions.keySet())
 		{
 			final List<Mention> form_mentions = forms2mentions.get(t);
@@ -52,11 +52,16 @@ public class CandidatesCollector
 			for (Mention mention : form_mentions)
 			{
 				final List<Candidate> mention_candidates = form_meanings.stream().map(meaning -> new Candidate(mention, meaning)).collect(toList());
-				candidates.addAll(mention_candidates);
+				candidates.put(mention , mention_candidates);
 			}
 		}
 
-		int num_references = candidates.stream().map(Candidate::getMeaning).map(Meaning::getReference).collect(toSet()).size();
+		int num_references = candidates.values().stream()
+				.flatMap(List::stream)
+				.map(Candidate::getMeaning)
+				.map(Meaning::getReference)
+				.collect(toSet())
+				.size();
 		log.info("Created " + candidates.size() + " candidates with " + num_references +
 				" distinct references for " + forms2mentions.keySet().size() + " anchors (" +
 				dictionary.getNumQueries() +	" queries).");

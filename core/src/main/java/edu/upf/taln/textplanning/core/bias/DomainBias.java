@@ -56,7 +56,7 @@ public class DomainBias implements BiasFunction
 								// average top similarity values
 								.map(v2 -> sim.apply(doubles, v2))
 								.sorted(Collections.reverseOrder())
-								.limit(num_top_meanings)
+								//.limit(num_top_meanings)
 								.mapToDouble(d -> d)
 								.average()
 								.orElse(0.0))

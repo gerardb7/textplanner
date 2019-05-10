@@ -102,6 +102,8 @@ public class SemanticGraph extends SimpleDirectedGraph<String, Role> implements 
 		addEdge(source, target, new_edge);
 	}
 
+	public Set<Meaning> getMeanings() { return Set.copyOf(meanings.values()); }
+
 	public Optional<Meaning> getMeaning(String v) { return Optional.ofNullable(meanings.get(v)); }
 	public void setMeaning(String v, Meaning m) { meanings.put(v, m); }
 	public Collection<Mention> getMentions(String v) { return mentions.get(v); }

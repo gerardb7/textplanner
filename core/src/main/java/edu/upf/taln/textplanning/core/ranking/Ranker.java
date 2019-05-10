@@ -29,11 +29,11 @@ public class Ranker
 {
 	public static double[] rank(List<String> items, List<String> labels, Function<String, Double> bias,
 	                         BiFunction<String, String, OptionalDouble> sim,
-	                         BiPredicate<String, String> filter,
+	                         BiPredicate<String, String> sim_filter,
 	                         double sim_threshold, double d,
 	                         boolean make_positive, boolean row_normalize)
 	{
-		double[][] rankingArrays = MatrixFactory.createRankingMatrix(items, bias, sim, filter, sim_threshold, d, make_positive, row_normalize);
+		double[][] rankingArrays = MatrixFactory.createRankingMatrix(items, bias, sim, sim_filter, sim_threshold, d, make_positive, row_normalize);
 		Matrix rankingMatrix = new Matrix(rankingArrays);
 		JamaPowerIteration alg = new JamaPowerIteration();
 		Matrix finalDistribution = alg.run(rankingMatrix, labels);

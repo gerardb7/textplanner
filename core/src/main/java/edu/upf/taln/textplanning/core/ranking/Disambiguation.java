@@ -6,29 +6,49 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static java.util.stream.Collectors.*;
 
 public class Disambiguation
 {
 	private final static BiPredicate<Mention, Mention> spans_over =
-			(m1, m2) -> m1.getContextId().equals(m2.getContextId()) &&
+			(m1, m2) -> m1.getSourceId().equals(m2.getSourceId()) &&
 						m1.getSpan().getLeft() <= m2.getSpan().getLeft() &&
 						m1.getSpan().getRight() >= m2.getSpan().getRight();
 
+
 	public static Map<Mention, Candidate> disambiguate(List<Candidate> candidates)
 	{
-		// Select which mentions should be part of the graph
-		final Map<Mention, List<Mention>> selected_mentions = Disambiguation.selectMentions(candidates);
-
-		// Disambiguate meanings
-		final List<Candidate> filtered_candidates = candidates.stream()
-				.filter(c -> selected_mentions.keySet().contains(c.getMention()))
-				.collect(toList());
-		return selectCandidates(filtered_candidates);
+		// Uses default weight-based strategies for mention and candidate selection
+		Set<Mention> selected_mentions = selectMaxWeightMentions(candidates);
+		return disambiguate(candidates, selected_mentions::contains, Disambiguation::selectMaxWeightCandidate);
 	}
 
-	private static Map<Mention, List<Mention>> selectMentions(List<Candidate> candidates)
+	public static Map<Mention, Candidate> disambiguate(List<Candidate> candidates,
+	                                                   Function<List<Candidate>, Optional<Candidate>> candidate_selector)
+	{
+		// Uses default weight-based strategies for mention and candidate selection
+		Set<Mention> selected_mentions = selectMaxWeightMentions(candidates);
+		return disambiguate(candidates, selected_mentions::contains, candidate_selector);
+	}
+
+	public static Map<Mention, Candidate> disambiguate(List<Candidate> candidates,
+	                                                   Predicate<Mention> mention_selector,
+	                                                   Function<List<Candidate>, Optional<Candidate>> candidate_selector)
+	{
+		// filter candidates by mention
+		final List<Candidate> filtered_candidates = candidates.stream()
+				.filter(c -> mention_selector.test(c.getMention()))
+				.collect(toList());
+
+		// disambiguate
+		return selectCandidates(filtered_candidates, candidate_selector);
+	}
+
+	// Default strategy for mention selection
+	private static Set<Mention> selectMaxWeightMentions(List<Candidate> candidates)
 	{
 		final List<Mention> mentions = candidates.stream()
 				.map(Candidate::getMention)
@@ -57,13 +77,22 @@ public class Disambiguation
 
 		// Select mentions which don't have any subsumer or subsumed mention with a higher weight
 		BiPredicate<Mention, Mention> weights_more = (m1, m2) -> mentions2weights.get(m1) > mentions2weights.get(m2);
-		return mentions.stream()
+		final Map<Mention, List<Mention>> top_mentions = mentions.stream()
 				.filter(m1 -> mentions2subsumed.get(m1).stream().allMatch(m2 -> weights_more.test(m1, m2)))
 				.filter(m1 -> mentions2subsumers.get(m1).stream().noneMatch(m2 -> weights_more.test(m2, m1)))
 				.collect(toMap(m -> m, mentions2subsumed::get));
+
+		return top_mentions.keySet();
 	}
 
-	private static Map<Mention, Candidate> selectCandidates(List<Candidate> candidates)
+	// Default strategy for candidate selection
+	private static Optional<Candidate> selectMaxWeightCandidate(List<Candidate> candidates)
+	{
+		return candidates.stream().max(Comparator.comparingDouble(Candidate::getWeight));
+	}
+
+	private static Map<Mention, Candidate> selectCandidates(List<Candidate> candidates,
+	                                                        Function<List<Candidate>, Optional<Candidate>> selector)
 	{
 		final Map<Mention, List<Candidate>> mentions2candidates = candidates.stream()
 				.collect(groupingBy(Candidate::getMention));
@@ -72,7 +101,7 @@ public class Disambiguation
 		for (Mention m : mentions2candidates.keySet())
 		{
 			final List<Candidate> m_candidates = mentions2candidates.get(m);
-			final Optional<Candidate> max = m_candidates.stream().max(Comparator.comparingDouble(Candidate::getWeight));
+			final Optional<Candidate> max = selector.apply(m_candidates);
 			max.ifPresent(c -> selected.put(m, c));
 		}
 

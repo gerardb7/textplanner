@@ -100,7 +100,7 @@ public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 			throw new RuntimeException("Cannot get offsets for \"" + surface_form + "\" in sentence " + createId(sentence));
 		final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
 
-		return new Mention(createId(sentence), offsets, surface_form, lemma, pos, false, "");
+		return new Mention(String.valueOf(deep_token.getAddress()), createId(sentence), offsets, surface_form, lemma, pos, false, "");
 	}
 
 	private static Optional<Pair<Meaning, Double>> createMeaning(JCas jcas, DeepToken deep_token)

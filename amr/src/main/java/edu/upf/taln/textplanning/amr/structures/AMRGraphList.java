@@ -16,6 +16,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
 // Assumes unique vertex labels across graphs
@@ -44,10 +45,10 @@ public class AMRGraphList implements Serializable
 				.collect(Collectors.toMap(AMRGraph::getContextId, Function.identity()));
 		candidates.forEach(c ->
 		{
-			final AMRGraph g = graph_ids.get(c.getMention().getContextId());
+			final AMRGraph g = graph_ids.get(c.getMention().getSourceId());
 			final Optional<String> ov = g.getAlignments().getSpanTopVertex(c.getMention().getSpan());
 			ov.ifPresent(v -> 	candidate_meanings.put(v, c));
-			if (!ov.isPresent())
+			if (ov.isEmpty())
 				log.warn("Candidate " + c + " has no vertex");
 		});
 		this.chains.addAll(chains);
@@ -70,15 +71,28 @@ public class AMRGraphList implements Serializable
 				.findFirst();
 	}
 
-	public Collection<Mention> getMentions() { return vertices2mentions.values(); }
-
-	public Collection<Mention> getMentions(String v)
+	public List<Mention> getMentions()
 	{
-		return vertices2mentions.get(v);
+		return List.copyOf(vertices2mentions.values());
 	}
-	public Collection<Candidate> getCandidates()
+
+	public List<Mention> getMentions(AMRGraph g)
 	{
-		return candidate_meanings.values();
+		return g.vertexSet().stream()
+				.filter(vertices2mentions::containsKey)
+				.map(vertices2mentions::get)
+				.flatMap(Collection::stream)
+				.collect(toList());
+	}
+
+	public List<Mention> getMentions(String v)
+	{
+		return List.copyOf(vertices2mentions.get(v));
+	}
+
+	public List<Candidate> getCandidates()
+	{
+		return List.copyOf(candidate_meanings.values());
 	}
 
 	public List<Candidate> getCandidates(AMRGraph g)
@@ -90,9 +104,9 @@ public class AMRGraphList implements Serializable
 				.collect(Collectors.toList());
 	}
 
-	public Collection<Candidate> getCandidates(String v)
+	public List<Candidate> getCandidates(String v)
 	{
-		return candidate_meanings.get(v);
+		return List.copyOf(candidate_meanings.get(v));
 	}
 
 	public List<String> getVertices(Mention m)

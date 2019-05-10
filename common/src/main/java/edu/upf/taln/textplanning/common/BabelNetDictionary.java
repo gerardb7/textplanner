@@ -147,7 +147,12 @@ public class BabelNetDictionary implements MeaningDictionary
 		{
 			num_queries.getAndIncrement();
 			BabelPOS bnPOS = BN_POS_EN.get(pos);
+			if (bnPOS == null)
+				log.error("Failed to map POS tag " + pos);
 			final Language bnLang = Language.fromISO(language.toLanguageTag());
+			if (bnLang == null)
+				log.error("Failed to map language tag " + language.toLanguageTag());
+
 			final List<BabelSynset> synsets = bn.getSynsets(form, bnLang, bnPOS);
 			synsets.sort(new BabelSynsetComparator(form, bnLang));
 			return synsets.stream()

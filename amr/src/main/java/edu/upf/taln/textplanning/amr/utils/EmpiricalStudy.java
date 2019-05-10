@@ -364,13 +364,16 @@ public class EmpiricalStudy
 
 			// Update global map
 			tokens_by_pos.keySet().forEach(pos -> corpus.tokens_counts_total.merge(pos, (long) tokens_by_pos.get(pos).size(),
-					(l1, l2) -> l1 + l2));
+					Long::sum));
 			log.info("CoreNLP processing done");
 
 			final List<Mention> mentions = getMentions(document);
 			log.info(mentions.size() + " mentions collected");
 
-			final List<Candidate> candidates = CandidatesCollector.collect(bn, language, mentions);
+			final Map<Mention, List<Candidate>> mentions2candidates = CandidatesCollector.collect(bn, language, mentions);
+			final List<Candidate> candidates = mentions2candidates.values().stream()
+					.flatMap(List::stream)
+					.collect(toList());
 			final Map<String, List<Candidate>> candidates_by_pos = candidates.stream()
 					.collect(groupingBy(c -> simplifyTag(c.getMention().getPOS())));
 			candidates_by_pos.put(content, candidates); // Add a new category for all (content) mentions
@@ -922,6 +925,7 @@ public class EmpiricalStudy
 									ne_types.get(ne_offsets.indexOf(span)) : Candidate.Type.Other;
 
 							return new Mention(
+									span_text,
 									tokens.get(span.getRight() - 1).sentIndex() + "-" + span,
 									span,
 									span_text,

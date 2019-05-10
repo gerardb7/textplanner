@@ -9,11 +9,9 @@ import edu.upf.taln.textplanning.uima.io.TextParser;
 import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.uima.resource.ResourceInitializationException;
 
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.Set;
 import java.util.stream.IntStream;
@@ -56,8 +54,8 @@ public class ExtractiveEvaluation
 		}
 	}
 
-
 	private static final int max_span_size = 3;
+	private static final boolean rank_together = true;
 	private static final ULocale language = ULocale.ENGLISH;
 	private static final String suffix = ".story";
 	private static final String noun_pos_prefix = "N";
@@ -73,33 +71,33 @@ public class ExtractiveEvaluation
 		}
 	}
 
-	public static void run(Path input_folder, Path gold_folder, Path output_path, InitialResourcesFactory resources_factory) throws ResourceInitializationException
+	public static void run(Path input_folder, Path gold_folder, Path output_path, InitialResourcesFactory resources_factory)
 	{
 		final Options options = new Options();
-		options.excluded_POS_Tags = excludedPOS;
+		//options.excluded_ranking_POS_Tags = excludedPOS;
 
 		// load corpus
 		final Corpus corpus = EvaluationTools.loadResourcesFromXMI(input_folder, output_path, resources_factory,
-				language, max_span_size, noun_pos_prefix, options);
+				language, max_span_size, rank_together, noun_pos_prefix, excludedPOS, options);
 
 		// rank
-		EvaluationTools.rankMeanings(options, corpus, resources_factory.getSimilarityFunction());
-		EvaluationTools.disambiguate(corpus);
+		EvaluationTools.rankMeanings(options, corpus);
 		EvaluationTools.rankMentions(options, corpus);
 
-		// create summaries
+		// create summaries (without a graph!)
 		corpus.texts.forEach(text ->
 		{
-			final String summary = text.graph.vertexSet().stream()
-					.sorted(Comparator.comparingDouble(text.graph::getWeight).reversed())
-					.map(text.graph::getMentions)
-					.flatMap(Collection::stream)
+			final String summary = text.sentences.stream()
+					.map(sentence -> sentence.candidates.keySet())
+					.flatMap(Set::stream)
+					.sorted(Comparator.comparingDouble(Mention::getWeight).reversed())
 					.map(Mention::getSurface_form)
+					.distinct()
 					.collect(joining(" "));
 			log.info("Summary: " + summary);
 		});
 
-		EvaluationTools.plan(options, corpus, resources_factory);
+		EvaluationTools.plan(options, corpus);
 	}
 }
 

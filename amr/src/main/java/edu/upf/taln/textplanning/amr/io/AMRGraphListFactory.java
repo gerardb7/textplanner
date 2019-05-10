@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static java.util.stream.Collectors.toList;
 
@@ -74,13 +75,16 @@ public class AMRGraphListFactory
 		// Collect candidates for mentions. Current behaviour is to lookup nouns and multiwords only
 		final List<Mention> mentions_to_lookup = new ArrayList<>(multiwords.values());
 		mentions_to_lookup.addAll(nominal_words.values());
-		List<Candidate> candidate_meanings = CandidatesCollector.collect(dictionary, language, mentions_to_lookup);
+		Map<Mention, List<Candidate>> mentions2candidates = CandidatesCollector.collect(dictionary, language, mentions_to_lookup);
+		final List<Candidate> candidates = mentions2candidates.values().stream()
+				.flatMap(List::stream)
+				.collect(toList());
 
 		// Assign types to candidates
 		if (types_collector != null)
-			types_collector.getMeaningTypes(candidate_meanings);
+			types_collector.getMeaningTypes(candidates);
 
-		final AMRGraphList graph_list = new AMRGraphList(graphs, mentions, candidate_meanings, chains);
+		final AMRGraphList graph_list = new AMRGraphList(graphs, mentions, candidates, chains);
 		log.info("Semantic graphs created in " + timer.stop());
 		return graph_list;
 	}

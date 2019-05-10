@@ -7,12 +7,11 @@ import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
+import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.io.CandidatesCollector;
-import edu.upf.taln.textplanning.core.ranking.Disambiguation;
 import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.structures.*;
-import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.uima.io.DSyntSemantics;
 import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.commons.lang3.tuple.Pair;
@@ -46,6 +45,8 @@ public class EvaluationTools
 		public String lang;
 		@XmlElement(name = "text")
 		public List<Text> texts = new ArrayList<>();
+		@XmlTransient
+		public DocumentResourcesFactory resouces = null;
 	}
 
 	@XmlAccessorType(XmlAccessType.FIELD)
@@ -118,12 +119,14 @@ public class EvaluationTools
 		}
 	}
 
-	private static final String candidates_file = "candidates.bin";
-	private static final String glosses_file = "glosses.bin";
+	private static final String candidates_filename = "candidates";
+	private static final String binary_extension = ".bin";
+	private static final String glosses_filename = "glosses";
 	private final static Logger log = LogManager.getLogger();
 
 	public static Corpus loadResourcesFromXMI(Path xmi_folder, Path output_path, InitialResourcesFactory resource_factory,
-	                                          ULocale language, int max_span_size, String noun_pos_prefix, Options options)
+	                                          ULocale language, int max_span_size, boolean rank_together, String noun_pos_prefix,
+	                                          Set<String> ignored_POS_Tags, Options options)
 	{
 
 		Corpus corpus = new Corpus();
@@ -155,11 +158,12 @@ public class EvaluationTools
 
 		});
 
-		return loadResources(corpus, output_path, resource_factory, language, max_span_size, noun_pos_prefix, options);
+		return loadResources(corpus, output_path, resource_factory, language, max_span_size, rank_together, noun_pos_prefix, ignored_POS_Tags, options);
 	}
 
 	public static Corpus loadResourcesFromXML(Path xml_file, Path output_path, InitialResourcesFactory resource_factory,
-	                                          ULocale language, int max_span_size, String noun_pos_prefix, Options options)
+	                                          ULocale language, int max_span_size, boolean rank_together, String noun_pos_prefix,
+	                                          Set<String> ignored_POS_Tags, Options options)
 	{
 		log.info("Parsing XML file");
 
@@ -171,7 +175,7 @@ public class EvaluationTools
 			JAXBElement<Corpus> je1 = unmarshaller.unmarshal(xml, Corpus.class);
 			final Corpus corpus = je1.getValue();
 
-			return loadResources(corpus, output_path, resource_factory, language, max_span_size, noun_pos_prefix, options);
+			return loadResources(corpus, output_path, resource_factory, language, max_span_size, rank_together, noun_pos_prefix, ignored_POS_Tags, options);
 
 		}
 		catch (JAXBException e)
@@ -184,25 +188,26 @@ public class EvaluationTools
 
 
 	private static Corpus loadResources(Corpus corpus, Path output_path, InitialResourcesFactory resources,
-	                                    ULocale language, int max_span_size, String noun_pos_prefix, Options options)
+	                                    ULocale language, int max_span_size, boolean rank_together, String noun_pos_prefix,
+	                                    Set<String> ignored_POS_Tags, Options options)
 	{
 		try
 		{
-			final Path candidates_path = output_path.resolve(candidates_file);
-			final Path glosses_path = output_path.resolve(glosses_file);
-			List<Candidate> candidates;
+			final Path candidates_path = output_path.resolve(candidates_filename + "_" + language.toLanguageTag() + binary_extension);
+			final Path glosses_path = output_path.resolve(glosses_filename + "_" + language.toLanguageTag() + binary_extension);
+			Map<Mention, List<Candidate>> candidates;
 			if (Files.exists(candidates_path))
 			{
 				log.info("Loading candidates from " + candidates_path);
 				Stopwatch timer = Stopwatch.createStarted();
-				candidates = (List<Candidate>) Serializer.deserialize(candidates_path);
+				candidates = (Map<Mention, List<Candidate>>) Serializer.deserialize(candidates_path);
 				log.info("Candidates loaded in " + timer.stop());
 			}
 			else
 			{
 				log.info("Collecting mentions");
 				Stopwatch timer = Stopwatch.createStarted();
-				final List<Mention> mentions = collectMentions(corpus, max_span_size, noun_pos_prefix, options.excluded_POS_Tags, language);
+				final List<Mention> mentions = collectMentions(corpus, max_span_size, noun_pos_prefix, ignored_POS_Tags, language);
 				log.info("Mentions collected in " + timer.stop());
 
 				log.info("Looking up meanings");
@@ -215,27 +220,12 @@ public class EvaluationTools
 				log.info("Candidates saved to " + candidates_path);
 			}
 
-			{
-				log.info("Assigning candidates to mentions");
-				Stopwatch timer = Stopwatch.createStarted();
-				corpus.texts.forEach(text ->
-				{
-					final Map<Mention, List<Candidate>> text_candidates = candidates.stream()
-							.filter(c -> c.getMention().getContextId().startsWith(text.id + "."))
-							.collect(groupingBy(Candidate::getMention));
-
-					text_candidates.forEach((mention, mention_candidates) ->
-					{
-						final String mention_context_id = mention.getContextId();
-						text.sentences.forEach(sentence ->
-						{
-							if (mention_context_id.startsWith(sentence.id))
-								sentence.candidates.put(mention, mention_candidates);
-						});
-					});
-				});
-				log.info("Assignment done in " + timer.stop());
-			}
+			// assign mentions and candidates to corpus objects
+			corpus.texts.forEach(text ->
+					text.sentences.forEach(sentence ->
+							candidates.entrySet().stream()
+									.filter(e -> e.getKey().getSourceId().equals(sentence.id))
+									.forEach(e -> sentence.candidates.put(e.getKey(), e.getValue()))));
 
 			Map<String, List<String>> glosses;
 			if (Files.exists(glosses_path))
@@ -269,17 +259,33 @@ public class EvaluationTools
 
 			log.info("Creating document resources");
 			Stopwatch timer = Stopwatch.createStarted();
-			for (int i = 0; i < corpus.texts.size(); ++i)
+
+			if (rank_together)
 			{
-				final List<String> text_tokens = corpus.texts.get(i).sentences.stream()
-						.flatMap(s -> s.tokens.stream())
+				final List<Candidate> candidates_list = candidates.values().stream()
+						.flatMap(List::stream)
+						.collect(toList());
+				final List<String> tokens = corpus.texts.stream()
+						.flatMap(text -> text.sentences.stream()
+								.flatMap(s -> s.tokens.stream()))
 						.map(t -> t.wf)
 						.collect(toList());
-				final List<Candidate> text_candidates = corpus.texts.get(i).sentences.stream()
-						.flatMap(s -> s.candidates.values().stream().flatMap(List::stream))
-						.collect(toList());
+				corpus.resouces = new DocumentResourcesFactory(resources, options, candidates_list, tokens, glosses);
+			}
+			else
+			{
+				for (int i = 0; i < corpus.texts.size(); ++i)
+				{
+					final List<String> text_tokens = corpus.texts.get(i).sentences.stream()
+							.flatMap(s -> s.tokens.stream())
+							.map(t -> t.wf)
+							.collect(toList());
+					final List<Candidate> text_candidates = corpus.texts.get(i).sentences.stream()
+							.flatMap(s -> s.candidates.values().stream().flatMap(List::stream))
+							.collect(toList());
 
-				corpus.texts.get(i).resources = new DocumentResourcesFactory(resources, options, text_candidates, text_tokens, glosses);
+					corpus.texts.get(i).resources = new DocumentResourcesFactory(resources, options, text_candidates, text_tokens, glosses);
+				}
 			}
 			log.info("Document resources created in " + timer.stop());
 		}
@@ -292,62 +298,52 @@ public class EvaluationTools
 		return corpus;
 	}
 
-	public static void rankMeanings(Options options, Corpus corpus, SimilarityFunction sim)
+	public static void rankMeanings(Options options, Corpus corpus)
 	{
 		log.info(options);
 
-		// Rank candidates
-		IntStream.range(0, corpus.texts.size())
-				.forEach(i ->
-				{
-					final List<Sentence> sentences = corpus.texts.get(i).sentences;
-					final List<Candidate> text_candidates = sentences.stream()
-							.flatMap(s -> s.candidates.values().stream()
-									.flatMap(Collection::stream))
-							.collect(toList());
+		List<DocumentResourcesFactory> texts_resources = new ArrayList<>();
+		if (corpus.resouces != null)
+			texts_resources.add(corpus.resouces);
+		else
+			corpus.texts.forEach(text -> texts_resources.add(text.resources));
 
-					DocumentResourcesFactory doc_resources = corpus.texts.get(i).resources;
-					final BiasFunction weighter = doc_resources.getBiasFunction();
-					final Predicate<Candidate> candidates_filter = doc_resources.getCandidatesFilter();
-					final BiPredicate<String, String> meanings_filter = doc_resources.getMeaningsFilter();
-
-					// Log stats
-					final int num_mentions = sentences.stream()
-							.map(s -> s.candidates)
-							.mapToInt(m -> m.keySet().size())
-							.sum();
-					final long num_filtered_candidates = text_candidates.stream()
-							.filter(candidates_filter)
-							.count();
-					final long num_meanings = text_candidates.stream()
-							.filter(candidates_filter)
-							.map(Candidate::getMeaning)
-							.distinct()
-							.count();
-					log.info("Ranking document " + (i + 1) + " with " + num_mentions + " mentions, " +
-							text_candidates.size() + " candidates, " +
-							num_filtered_candidates + " candidates after filtering, and " +
-							num_meanings + " distinct meanings");
-
-					// Rank
-					TextPlanner.rankMeanings(text_candidates, candidates_filter, meanings_filter, weighter, sim, options);
-				});
-	}
-
-	public static void disambiguate(Corpus corpus)
-	{
-		corpus.texts.forEach(text ->
+		for (DocumentResourcesFactory resources : texts_resources)
 		{
-			final List<Candidate> text_candidates = text.sentences.stream()
-					.flatMap(sentence -> sentence.candidates.values().stream())
-					.flatMap(List::stream)
+			final BiasFunction bias = resources.getBiasFunction();
+			final SimilarityFunction similarity = resources.getSimilarityFunction();
+			final Predicate<Candidate> candidates_filter = resources.getCandidatesFilter();
+			final BiPredicate<String, String> similarity_filter = resources.getMeaningPairsSimilarityFilter();
+
+			final List<Sentence> sentences = corpus.texts.stream()
+					.flatMap(text -> text.sentences.stream())
 					.collect(toList());
-			final Map<Mention, Candidate> selected_candidates = Disambiguation.disambiguate(text_candidates);
-			text.sentences.forEach(sentence -> {
-				sentence.candidates.clear();
-				selected_candidates.forEach((m, c) -> sentence.candidates.put(m, List.of(c)));
-			});
-		});
+			final List<Candidate> candidates = sentences.stream()
+					.flatMap(s -> s.candidates.values().stream()
+							.flatMap(Collection::stream))
+					.collect(toList());
+
+			// Log stats
+			final int num_mentions = sentences.stream()
+					.map(s -> s.candidates)
+					.mapToInt(m -> m.keySet().size())
+					.sum();
+			final long num_filtered_candidates = candidates.stream()
+					.filter(candidates_filter)
+					.count();
+			final long num_meanings = candidates.stream()
+					.filter(candidates_filter)
+					.map(Candidate::getMeaning)
+					.distinct()
+					.count();
+			log.info("Ranking texts with " + num_mentions + " mentions, " +
+					candidates.size() + " candidates, " +
+					num_filtered_candidates + " candidates after filtering, and " +
+					num_meanings + " distinct meanings");
+
+			// Rank candidates
+			TextPlanner.rankMeanings(candidates, candidates_filter, similarity_filter, bias, similarity, options);
+		}
 	}
 
 	public static void rankMentions(Options options, Corpus corpus)
@@ -356,32 +352,38 @@ public class EvaluationTools
 		corpus.texts.forEach(text ->
 				text.sentences.forEach(sentence ->
 				{
-					final List<Candidate> candidates = sentence.candidates.values().stream()
-							.flatMap(List::stream)
-							.collect(toList());
-					final List<Mention> mentions = candidates.stream().map(Candidate::getMention).collect(toList());
+					final List<Mention> mentions = List.copyOf(sentence.candidates.keySet());
+					final Map<Mention, Candidate> candidates = new HashMap<>();
+					sentence.candidates.forEach((m, l) -> {
+						if (l.size() == 1)
+							candidates.put(m, l.get(0));
+						else
+							log.error("Mention " + m + " has more than one candidate!");
+					});
+
 					BiPredicate<Mention, Mention> adjacency_function =
 							(m1, m2) -> Math.abs(mentions.indexOf(m1) - mentions.indexOf(m2)) <= context_size;
 //					BiPredicate<Mention, Mention> adjacency_function2 =
 //							(m1, m2) -> text.graph.containsEdge(m1.toString(), m2.toString());
 
 					// rank mentions
-					TextPlanner.rankMentions(candidates, adjacency_function, options);
+					TextPlanner.rankMentions(mentions, candidates, adjacency_function, options);
 				}));
 	}
 
-	public static void plan(Options options, Corpus corpus, InitialResourcesFactory resources)
+	public static void plan(Options options, Corpus corpus)
 	{
 		corpus.texts.forEach(text ->
 		{
+			final SimilarityFunction sim = corpus.resouces != null ? corpus.resouces.getSimilarityFunction() : text.resources.getSimilarityFunction();
 			final Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(text.graph, new DSyntSemantics(), options);
-			final Collection<SemanticSubgraph> selected_subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, resources.getSimilarityFunction(), options);
-			text.subgraphs = TextPlanner.sortSubgraphs(subgraphs, resources.getSimilarityFunction(), options);
+			final Collection<SemanticSubgraph> selected_subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, sim, options);
+			text.subgraphs = TextPlanner.sortSubgraphs(subgraphs, sim, options);
 		});
 	}
 
 	public static List<Mention> collectMentions(Corpus corpus, int max_span_size, String noun_pos_prefix,
-	                                            Set<String> exclude_pos_tags, ULocale language)
+	                                            Set<String> ignore_pos_tags, ULocale language)
 	{
 		// create mention objects
 		return corpus.texts.stream()
@@ -392,7 +394,7 @@ public class EvaluationTools
 										{
 											// single words must have a pos tag other than 'X'
 											if (end - start == 1)
-												return !exclude_pos_tags.contains(s.tokens.get(start).pos);
+												return !ignore_pos_tags.contains(s.tokens.get(start).pos);
 												// multiwords must contain at least one nominal token
 											else
 												return s.tokens.subList(start, end).stream()
@@ -410,7 +412,7 @@ public class EvaluationTools
 											String pos = tokens.size() == 1 ? tokens.get(0).pos : noun_pos_prefix;
 											String contextId = tokens.size() == 1 ? tokens.get(0).id : tokens.get(0).id + "-" + tokens.get(tokens.size()-1).id;
 
-											return new Mention(contextId, Pair.of(start, end), form, lemma, pos, false, "");
+											return new Mention(contextId, s.id, Pair.of(start, end), form, lemma, pos, false, "");
 										})
 										.filter(m -> FunctionWordsFilter.test(m.getSurface_form(), language)))
 								.flatMap(stream -> stream))

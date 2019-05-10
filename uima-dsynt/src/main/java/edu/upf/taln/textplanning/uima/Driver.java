@@ -7,8 +7,7 @@ import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.common.DocumentResourcesFactory;
-import edu.upf.taln.textplanning.common.InitialResourcesFactory.BiasResources;
-import edu.upf.taln.textplanning.common.InitialResourcesFactory.SimilarityResources;
+import edu.upf.taln.textplanning.common.InitialResourcesFactory.ResourceParams;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
@@ -181,8 +180,8 @@ public class Driver
 					Options options = new Options();
 					DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, tokens, null);
 					final BiasFunction context_weighter = process.getBiasFunction();
-					final SimilarityFunction sim = resources.getSimilarityFunction();
-					final BiPredicate<String, String> meanings_filter = process.getMeaningsFilter();
+					final SimilarityFunction sim = process.getSimilarityFunction();
+					final BiPredicate<String, String> meanings_filter = process.getMeaningPairsSimilarityFilter();
 					final Predicate<Candidate> candidates_filter = process.getCandidatesFilter();
 					TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
 
@@ -190,7 +189,7 @@ public class Driver
 
 					// Let's group and sort the plain list of candidates by sentence and offsets.
 					final List<List<Set<Candidate>>> grouped_candidates = candidates.stream()
-							.collect(groupingBy(c -> c.getMention().getContextId(), groupingBy(c -> c.getMention().getSpan(), toSet())))
+							.collect(groupingBy(c -> c.getMention().getSourceId(), groupingBy(c -> c.getMention().getSpan(), toSet())))
 							.entrySet().stream()
 							.sorted(Comparator.comparing(Map.Entry::getKey))
 							.map(Map.Entry::getValue)
@@ -238,20 +237,17 @@ public class Driver
 			}
 			case get_system_command:
 			{
-				BiasResources bias_resources = new BiasResources();
+				ResourceParams bias_resources = new ResourceParams();
 				bias_resources.bias_meanings_path = null;
 				bias_resources.idf_file = system.freqsFile;
 				bias_resources.word_vectors_path = system.word_vectors_path;
 				bias_resources.word_vectors_type = system.word_vector_type;
 				bias_resources.sentence_vectors_path = null;
 				bias_resources.sentence_vectors_type = system.sentence_vector_type;
+				bias_resources.meaning_vectors_path = system.sense_vectors_path;
+				bias_resources.meaning_vectors_type = system.sense_vector_type;
 
-				SimilarityResources sim_resources = new SimilarityResources();
-				sim_resources.meaning_vectors_path = system.sense_vectors_path;
-				sim_resources.meaning_vectors_type = system.sense_vector_type;
-
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources,
-						sim_resources);
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources);
 				getSystemMeanings(system.texts, system.candidates, system.output, resources);
 				break;
 			}

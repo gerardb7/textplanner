@@ -111,7 +111,7 @@ public class UIMAWrapper
 							final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
 							final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1));
 							final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
-							final Mention mention = new Mention("s" + sentences.indexOf(sentence), offsets, surface_form, lemma, pos, false, "");
+							final Mention mention = new Mention(surface_form, "s" + sentences.indexOf(sentence), offsets, surface_form, lemma, pos, false, "");
 
 							return JCasUtil.selectAt(doc, WSDResult.class, span.getBegin(), span.getEnd()).stream()
 									.map(a ->
@@ -208,11 +208,11 @@ public class UIMAWrapper
 
 			final JCasIterator jcasIt = SimplePipeline.iteratePipeline(reader, createEngineDescription(StanfordLemmatizer.class)).iterator();
 			List<UIMAWrapper> wrappers = new ArrayList<>();
-			while (jcasIt.hasNext())
-			{
+//			while (jcasIt.hasNext())
+//			{
 				final JCas next = jcasIt.next();
 				wrappers.add(new UIMAWrapper(next));
-			}
+//			}
 
 			log.info(wrappers.size() + " docs read");
 			return wrappers;

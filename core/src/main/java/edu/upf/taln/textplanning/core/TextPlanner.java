@@ -14,10 +14,7 @@ import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.OptionalDouble;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
@@ -71,15 +68,16 @@ public final class TextPlanner
 	 * Ranks set of candidate meanings
 	 */
 	public static void rankMeanings(List<Candidate> candidates,
-	                                Predicate<Candidate> candidates_filter, BiPredicate<String, String> meanings_filter,
-	                                BiasFunction weighting, SimilarityFunction similarity, Options o)
+	                                Predicate<Candidate> candidates_to_rank_filter,
+	                                BiPredicate<String, String> meanings_similarity_filter,
+	                                BiasFunction bias, SimilarityFunction similarity, Options o)
 	{
 		log.info("*Ranking meanings*");
 		Stopwatch timer = Stopwatch.createStarted();
 
-		// Only consider candidates that pass the filter, e.g. have certain POS
+		// Rank candidates that pass the filter, e.g. have certain POS
 		final List<Candidate> filtered_candidates = candidates.stream()
-				.filter(candidates_filter)
+				.filter(candidates_to_rank_filter)
 				.collect(toList());
 
 		// Exclude meanings for which similarity function is not defined
@@ -99,10 +97,11 @@ public final class TextPlanner
 		if (references.isEmpty())
 			return;
 
-		double[] ranking = Ranker.rank(references, labels, weighting, similarity, meanings_filter, o.sim_threshold, o.damping_meanings, true, true);
+		double[] ranking = Ranker.rank(references, labels, bias, similarity, meanings_similarity_filter,
+				o.sim_threshold, o.damping_meanings, true, true);
 
-		// Assign ranking values to meanings
-		filtered_candidates.forEach(candidate ->
+		// Assign weights to candidates: rank values for those with a ranked meaning
+		candidates.forEach(candidate ->
 		{
 			final String reference = candidate.getMeaning().getReference();
 
@@ -111,10 +110,6 @@ public final class TextPlanner
 			{
 				int i = references.indexOf(candidate.getMeaning().getReference());
 				candidate.setWeight(ranking[i]);
-			}
-			else // otherwise keep original weight
-			{
-				candidate.setWeight(weighting.apply(reference));
 			}
 		});
 
@@ -125,37 +120,36 @@ public final class TextPlanner
 	/**
 	 * 	Ranks mentions according to their initial bias_values and an adjacency function
 	 */
-	public static void rankMentions(List<Candidate> candidates, BiPredicate<Mention, Mention> adjacency_function,
+	public static void rankMentions(List<Mention> mentions, Map<Mention, Candidate> candidates, BiPredicate<Mention, Mention> adjacency_function,
 	                                Options o)
 	{
 		log.info("*Ranking mentions*");
 		Stopwatch timer = Stopwatch.createStarted();
 
-		if (!candidates.isEmpty())
+		if (!mentions.isEmpty())
 		{
-			final Map<Mention, Candidate> mentions2meanings = candidates.stream()
-				.collect(toMap(Candidate::getMention, c -> c, (c1, c2) ->
-				{
-					log.error("Duplicate candidates for mention " + c1.getMention().getId());
-					return c1;
-				}));
-
 			// One variable per mention
-			final Map<String, Mention> variables2mentions = mentions2meanings.keySet().stream()
+			final Map<String, Mention> variables2mentions = mentions.stream()
 					.collect(toMap(Mention::toString, m -> m));
-			final Map<String, Double> variables2weights = mentions2meanings.keySet().stream()
-					.collect(toMap(Mention::toString, m -> mentions2meanings.get(m).getWeight()));
-			List<String> variables = List.copyOf(variables2mentions.keySet());
+			final Map<String, Double> variables2weights = candidates.keySet().stream()
+					.collect(toMap(Mention::toString, m -> candidates.get(m).getWeight()));
 
+			// Check that all variables have positive weights
+			variables2weights.forEach((key, value) ->
+			{
+				if (value <= 0.0)
+					log.warn("Variable " + key + " has value " + value);
+			});
+
+			List<String> variables = List.copyOf(variables2mentions.keySet());
 			final List<String> labels = variables.stream() // for debugging purposes
 					.map(v ->
 					{
 						final Mention mention = variables2mentions.get(v);
-						final Meaning meaning = mentions2meanings.get(mention).getMeaning();
+						final Meaning meaning = candidates.get(mention).getMeaning();
 						return DebugUtils.createLabelForVariable(v, meaning, List.of(mention));
 					})
 					.collect(Collectors.toList());
-
 
 			BiFunction<String, String, OptionalDouble> similarity =
 					(v1, v2) ->
@@ -164,11 +158,16 @@ public final class TextPlanner
 						final Mention m2 = variables2mentions.get(v2);
 						return OptionalDouble.of(adjacency_function.test(m1, m2) || adjacency_function.test(m2, m1) ? 1.0 : 0.0);
 					};
-			double[] ranking = Ranker.rank(variables, labels, variables2weights::get, similarity,
+
+			// Use average weight for mentions without a ranked candidate
+			final double avg_bias = variables2weights.values().stream()
+					.mapToDouble(v -> v)
+					.average().orElse(0.0);
+			double[] ranking = Ranker.rank(variables, labels, v -> variables2weights.getOrDefault(v, avg_bias), similarity,
 					(v1, v2) -> true, 0.0, o.damping_variables, true, true);
 
 			IntStream.range(0, variables.size()).boxed()
-					.forEach(i -> mentions2meanings.get(variables2mentions.get(variables.get(i))).setWeight(ranking[i]));
+					.forEach(i -> variables2mentions.get(variables.get(i)).setWeight(ranking[i]));
 		}
 
 		log.info("Ranking completed in " + timer.stop());

@@ -9,12 +9,12 @@ import java.util.Set;
 
 public class Options
 {
-	public Set<String> excluded_POS_Tags = new HashSet<>(); // candidates meanings for words with these POS aren't ranked
+	public Set<String> excluded_ranking_POS_Tags = new HashSet<>(); // meanings of words with these POS are excluded from the ranking -but disambiguated anyway
 	public int min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
 	public double min_bias_threshold = 0.7; // minimum bias value below which candidate meanings are ignored
 	public int num_first_meanings = 1;
 	public double sim_threshold = 0.0; // Pairs of meanings with sim below this value have their score set to 0
-	public double damping_meanings = 0.6; // controls bias towards bias function when ranking meanings
+	public double damping_meanings = 0.2; // controls balance between bias and similarity: higher value -> more bias
 	public double damping_variables = 0.2; // controls bias towards meanings rank when ranking variables
 	public int num_subgraphs_extract = 1000; // Number of subgraphs to extract
 	public double extraction_lambda = 1.0; // Controls balance between weight of nodes and cost of edges during subgraph extraction
@@ -25,7 +25,7 @@ public class Options
 
 	public Options(Options o)
 	{
-		this.excluded_POS_Tags.addAll(o.excluded_POS_Tags);
+		this.excluded_ranking_POS_Tags.addAll(o.excluded_ranking_POS_Tags);
 		this.min_context_freq = o.min_context_freq;
 		this.min_bias_threshold = o.min_bias_threshold;
 		this.num_first_meanings = o.num_first_meanings;
@@ -46,7 +46,7 @@ public class Options
 		//f.setMaximumFractionDigits(10);
 		f.setMinimumFractionDigits(3);
 		return  "Options:" +
-				"\n\texcluded_POS_Tags = " + excluded_POS_Tags +
+				"\n\texcluded_ranking_POS_Tags = " + excluded_ranking_POS_Tags +
 				"\n\tmin_context_freq = " + min_context_freq +
 				"\n\tmin_bias_threshold = " + min_bias_threshold +
 				"\n\tnum_first_meanings = " + num_first_meanings +

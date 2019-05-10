@@ -46,7 +46,7 @@ public class MatrixFactory
 	 */
 	public static double[][] createRankingMatrix(List<String> items, Function<String, Double> bias,
 	                                             BiFunction<String, String, OptionalDouble> sim,
-	                                             BiPredicate<String, String> filter,
+	                                             BiPredicate<String, String> sim_filter,
 	                                             double sim_threshold, double d,
 	                                             boolean make_positive, boolean row_normalize)
 	{
@@ -57,7 +57,7 @@ public class MatrixFactory
 		double[] L = createBiasVector(items, bias);
 
 		// Create symmetric non-negative similarity matrix
-		double[][] X = createSimilarityMatrix(items, sim, filter, sim_threshold, true);
+		double[][] X = createSimilarityMatrix(items, sim, sim_filter, sim_threshold, true);
 
 		// Create ranking matrix:
 		double[][] R = new double[n][n];
@@ -70,6 +70,7 @@ public class MatrixFactory
 					double Xuv = X[u][v]; // similarity
 					double Ruv = d * Lu + (1.0 - d)*Xuv;
 
+					assert !Double.isNaN(Ruv);
 					R[u][v] = Ruv;
 				}));
 
@@ -157,9 +158,8 @@ public class MatrixFactory
 
 		if (report_stats)
 		{
-			log.info("Similarity function invoked for " + num_filtered + " out of " + total_pairs);
-			log.info("Similarity function defined for " + num_defined + " out of " + num_filtered);
-			log.info("Similarity values are negative for " + num_negative.get() + " out of " + num_defined);
+			log.info((total_pairs - num_filtered.intValue()) + " meaning pairs filtered out from " + total_pairs);
+			log.info("Similarity values are negative for " + num_negative.get() + " pairs out of " + total_pairs);
 		}
 
 		return m;
@@ -174,13 +174,17 @@ public class MatrixFactory
 
 		IntStream.range(0, n).parallel().forEach(i ->
 		{
-			double alpha = Arrays.stream(m[i])
-					.average().orElse(1.0) / 100; // pseudocount α for additive smoothing of rank values
+			double accum = Arrays.stream(m[i]).average().orElse(0.0);
+			if (accum == 0.0)
+				accum = 1.0;
+			final double alpha = accum / 100.0; // pseudocount α for additive smoothing of rank values
 
 			IntStream.range(0, n).forEach(j ->
 			{
 				if (m[i][j] == 0.0)
 					m[i][j] = alpha;
+
+				assert !Double.isNaN(m[i][j]) : "NaN value at " + i + "-" + j;
 			});
 		});
 	}
@@ -196,7 +200,10 @@ public class MatrixFactory
 		IntStream.range(0, n).parallel().forEach(i ->
 		{
 			double accum = Arrays.stream(m[i]).sum();
-			IntStream.range(0, n).forEach(j -> m[i][j] = m[i][j] / accum);
+			IntStream.range(0, n).forEach(j -> {
+				m[i][j] = m[i][j] / accum;
+				assert !Double.isNaN(m[i][j]) : "NaN value at " + i + "-" + j;
+			});
 		});
 
 		// This check accounts for precision of 64-bit doubles, as explained in

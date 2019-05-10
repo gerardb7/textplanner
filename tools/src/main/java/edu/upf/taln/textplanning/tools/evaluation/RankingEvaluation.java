@@ -4,6 +4,7 @@ import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
+import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
@@ -26,8 +27,9 @@ public class RankingEvaluation
 {
 	public RankingEvaluation() {}
 
-
+	private static Set<String> evaluate_POS;
 	private static final int max_span_size = 3;
+	private static final boolean rank_together = false;
 	private static final ULocale language = ULocale.ENGLISH;
 	private static final String noun_pos_tag = "N";
 	private static final String adj_pos_tag = "J";
@@ -40,11 +42,17 @@ public class RankingEvaluation
 	public static void run(Path gold_folder, Path xml_file, Path output_path, InitialResourcesFactory resources_factory)
 	{
 		final Options options = new Options();
+
+		// Exclude POS from mention collection
+		final Set<String> excluded_mention_POS = Set.of(other_pos_tag);
+		// Exclude POS from ranking of meanings (but included in WSD, ranling of mentions, etc)
+		options.excluded_ranking_POS_Tags = Set.of(other_pos_tag, adverb_pos_tag);
+		// Evaluate these POS tags only
+		evaluate_POS = Set.of(noun_pos_tag, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+
 		final List<Set<AlternativeMeanings>> goldMeanings = getGoldMeanings(gold_folder);
-		options.excluded_POS_Tags = new HashSet<>(Arrays.asList(other_pos_tag, adverb_pos_tag)); 
-		//options.excluded_POS_Tags = Collections.unmodifiableSet(options.excluded_POS_Tags); 
 		final Corpus corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path,
-				resources_factory, language, max_span_size, noun_pos_tag, options);
+				resources_factory, language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
 		assert goldMeanings.size() == corpus.texts.size();
 
 		{
@@ -58,14 +66,14 @@ public class RankingEvaluation
 		{
 			log.info("********************************");
 			log.info("Testing context rank");
-			final List<List<Meaning>> system_meanings = contextRank(corpus, options.excluded_POS_Tags);
+			final List<List<Meaning>> system_meanings = contextRank(corpus);
 			final double map = evaluate(system_meanings, goldMeanings);
 			log.info("MAP = " + DebugUtils.printDouble(map));
 		}
 		{
 			log.info("********************************");
 			log.info("Testing full rank");
-			final List<List<Meaning>> system_meanings = fullRank(options, corpus, resources_factory);
+			final List<List<Meaning>> system_meanings = fullRank(options, corpus);
 			final double map = evaluate(system_meanings, goldMeanings);
 			log.info("MAP = " + DebugUtils.printDouble(map));
 		}
@@ -146,23 +154,23 @@ public class RankingEvaluation
 				.collect(toList());
 	}
 
-	private static List<List<Meaning>> contextRank(Corpus corpus, Set<String> excludedPOSTags)
+	private static List<List<Meaning>> contextRank(Corpus corpus)
 	{
 		return corpus.texts.stream()
 				.map(t -> {
 					// use same filters as in InitialResourcesFactory::getCandidatesFilter
 					Predicate<Candidate> function_words_filter = (c) -> FunctionWordsFilter.test(c.getMention().getSurface_form(), language);
-					final Predicate<Candidate> pos_filter =	c ->  !excludedPOSTags.contains(c.getMention().getPOS());
 
 					final List<Meaning> meanings = t.sentences.stream()
 							.flatMap(s -> s.candidates.values().stream())
 							.flatMap(Collection::stream)
-							.filter(function_words_filter.and(pos_filter))
+							.filter(function_words_filter)
 							.map(Candidate::getMeaning)
 							.collect(toList());
 
+					final BiasFunction bias = corpus.resouces != null ? corpus.resouces.getBiasFunction() : t.resources.getBiasFunction();
 					Map<Meaning, Double> weights = meanings.stream()
-							.collect(groupingBy(m -> m, averagingDouble(m -> t.resources.getBiasFunction().apply(m.getReference()))));
+							.collect(groupingBy(m -> m, averagingDouble(m -> bias.apply(m.getReference()))));
 
 					return meanings.stream()
 							.distinct()
@@ -172,10 +180,9 @@ public class RankingEvaluation
 				.collect(toList());
 	}
 
-	private static List<List<Meaning>> fullRank(Options options, Corpus corpus,
-	                                            InitialResourcesFactory resources_factory)
+	private static List<List<Meaning>> fullRank(Options options, Corpus corpus)
 	{
-		EvaluationTools.rankMeanings(options, corpus, resources_factory.getSimilarityFunction());
+		EvaluationTools.rankMeanings(options, corpus);
 
 		return corpus.texts.stream()
 				.map(t -> {

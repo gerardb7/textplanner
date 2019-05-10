@@ -19,6 +19,7 @@ import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 import main.AmrMain;
@@ -39,8 +40,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.*;
 
 @SuppressWarnings("ALL")
 public class Driver
@@ -108,8 +108,8 @@ public class Driver
 		DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, tokens, null);
 
 		final BiasFunction context_weighter = process.getBiasFunction();
-		final SimilarityFunction sim = resources.getSimilarityFunction();
-		final BiPredicate<String, String> meanings_filter = process.getMeaningsFilter();
+		final SimilarityFunction sim = process.getSimilarityFunction();
+		final BiPredicate<String, String> meanings_filter = process.getMeaningPairsSimilarityFilter();
 		final Predicate<Candidate> candidates_filter = process.getCandidatesFilter();
 		TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
 
@@ -127,8 +127,10 @@ public class Driver
 		Options options = new Options();
 		graphs.getGraphs().forEach(g ->
 		{
-			final List<Candidate> graph_candidates = graphs.getCandidates(g);
-			TextPlanner.rankMentions(graph_candidates, graphs::adjacent, options);
+			final List<Mention> mentions = graphs.getMentions(g);
+			final Map<Mention, Candidate> candidates = graphs.getCandidates(g).stream()
+					.collect(toMap(Candidate::getMention, c -> c));
+			TextPlanner.rankMentions(mentions, candidates, graphs::adjacent, options);
 		});
 
 		Path output = FileUtils.createOutputPath(graphs_file, graphs_file.getParent(),
@@ -169,32 +171,34 @@ public class Driver
 	private void remove_redundancy(Path subgraphs_file, int num_subgraphs, InitialResourcesFactory resources) throws Exception
 	{
 		log.info("Running from " + subgraphs_file);
-		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
-		BiFunction<String, String, OptionalDouble> sim = resources.getSimilarityFunction();
-
-		Options options = new Options();
-		options.num_subgraphs = num_subgraphs;
-		subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, (e1, e2) -> sim.apply(e1, e2), options);
-
-		Path output = FileUtils.createOutputPath(subgraphs_file, subgraphs_file.getParent(),
-				FilenameUtils.getExtension(subgraphs_file.toFile().getName()), non_redundant_suffix);
-		Serializer.serialize(subgraphs, output);
-		log.info("Non-redundant subgraphs serialized to " + output);
+//		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
+//
+////		DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, null, null);
+////		BiFunction<String, String, OptionalDouble> sim =  resources.getSimilarityFunction();
+//
+////		Options options = new Options();
+////		options.num_subgraphs = num_subgraphs;
+////		subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, (e1, e2) -> sim.apply(e1, e2), options);
+//
+//		Path output = FileUtils.createOutputPath(subgraphs_file, subgraphs_file.getParent(),
+//				FilenameUtils.getExtension(subgraphs_file.toFile().getName()), non_redundant_suffix);
+//		Serializer.serialize(subgraphs, output);
+//		log.info("Non-redundant subgraphs serialized to " + output);
 	}
 
 	private void sort_subgraphs(Path subgraphs_file, InitialResourcesFactory resources) throws Exception
 	{
 		log.info("Running from " + subgraphs_file);
-		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
-		BiFunction<String, String, OptionalDouble> sim = resources.getSimilarityFunction();;
-
-		Options options = new Options();
-		final List<SemanticSubgraph> plan = TextPlanner.sortSubgraphs(subgraphs, (e1, e2) -> sim.apply(e1, e2), options);
-
-		Path output = FileUtils.createOutputPath(subgraphs_file, subgraphs_file.getParent(),
-				FilenameUtils.getExtension(subgraphs_file.toFile().getName()), sorted_suffix);
-		Serializer.serialize(plan, output);
-		log.info("Text plan serialized to " + output);
+//		Collection<SemanticSubgraph> subgraphs = (Collection<SemanticSubgraph>) Serializer.deserialize(subgraphs_file);
+//		BiFunction<String, String, OptionalDouble> sim = resources.getSimilarityFunction();;
+//
+//		Options options = new Options();
+//		final List<SemanticSubgraph> plan = TextPlanner.sortSubgraphs(subgraphs, (e1, e2) -> sim.apply(e1, e2), options);
+//
+//		Path output = FileUtils.createOutputPath(subgraphs_file, subgraphs_file.getParent(),
+//				FilenameUtils.getExtension(subgraphs_file.toFile().getName()), sorted_suffix);
+//		Serializer.serialize(plan, output);
+//		log.info("Text plan serialized to " + output);
 	}
 
 	private void write_amr(Path subgraphs_file) throws IOException, ClassNotFoundException
@@ -240,7 +244,6 @@ public class Driver
 		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language,null, resources.getDictionary(), no_stanford);
 		AMRSemanticGraphFactory globalFactory = new AMRSemanticGraphFactory();
 
-		BiFunction<String, String, OptionalDouble> sim = resources.getSimilarityFunction();
 		AmrMain generator = new AmrMain(generation_resources);
 
 		Options options = new Options();
@@ -258,19 +261,19 @@ public class Driver
 					.collect(Collectors.toList());
 			log.info("*****Processing " + files.size() + " files in " + amr_bank + "*****");
 
-			final List<Path> failed_files = files.stream()
-					.filter(f -> !summarizeFile(f, reader, factory, globalFactory, e -> 0.0, (e1, e2) -> sim.apply(e1, e2), options, num_subgraphs_extract, num_subgraphs, generator, max_words))
-					.collect(toList());
-			final int num_success = files.size() - failed_files.size();
-			log.info("Successfully planned " + num_success + " files out of " + files.size());
-			if (!failed_files.isEmpty())
-				log.info("Failed files: " +  failed_files.stream().map(Path::getFileName).map(Path::toString).collect(joining(",")));
+//			final List<Path> failed_files = files.stream()
+//					.filter(f -> !summarizeFile(f, reader, factory, globalFactory, e -> 0.0, (e1, e2) -> sim.apply(e1, e2), options, num_subgraphs_extract, num_subgraphs, generator, max_words))
+//					.collect(toList());
+//			final int num_success = files.size() - failed_files.size();
+//			log.info("Successfully planned " + num_success + " files out of " + files.size());
+//			if (!failed_files.isEmpty())
+//				log.info("Failed files: " +  failed_files.stream().map(Path::getFileName).map(Path::toString).collect(joining(",")));
 		}
 		else if (Files.isRegularFile(amr_bank))
 		{
 			log.info("*****Begin processing*****");
 
-			summarizeFile(amr_bank, reader, factory, globalFactory, e -> 0.0, (e1, e2) -> sim.apply(e1, e2), options, num_subgraphs_extract, num_subgraphs, generator, max_words);
+//		summarizeFile(amr_bank, reader, factory, globalFactory, e -> 0.0, (e1, e2) -> sim.apply(e1, e2), options, num_subgraphs_extract, num_subgraphs, generator, max_words);
 		}
 		else
 			log.error("*****Cannot open " + amr_bank + ", aborting*****");
@@ -318,8 +321,10 @@ public class Driver
 			// 3- Rank mentions in each sentence
 			graphs.getGraphs().forEach(g ->
 			{
-				final List<Candidate> graph_candidates = graphs.getCandidates(g);
-				TextPlanner.rankMentions(graph_candidates, graphs::adjacent, options);
+				final List<Mention> mentions = graphs.getMentions(g);
+				final Map<Mention, Candidate> graph_candidates = graphs.getCandidates(g).stream()
+						.collect(toMap(Candidate::getMention, c -> c));
+				TextPlanner.rankMentions(mentions, graph_candidates, graphs::adjacent, options);
 			});
 			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
 					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), graphs_ranked2_suffix);
@@ -618,27 +623,23 @@ public class Driver
 		Driver driver = new Driver();
 		if (jc.getParsedCommand().equals(create_graphs_command))
 		{
-			InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
-			InitialResourcesFactory.SimilarityResources sim_resources = new InitialResourcesFactory.SimilarityResources();
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, create_graphs.dictionary, bias_resources,
-					sim_resources);
+			InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, create_graphs.dictionary, bias_resources);
+
 			driver.create_graphs(create_graphs.inputFile, resources, create_graphs.no_stanford);
 		}
 		else if (jc.getParsedCommand().equals(rank_meanings_command))
 		{
-			InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
+			InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
 			bias_resources.bias_meanings_path = rank_meanings.biasFile;
 			bias_resources.word_vectors_path = rank_meanings.word_vectors_path;
 			bias_resources.word_vectors_type = rank_meanings.word_vector_type;
 			bias_resources.sentence_vectors_type = rank_meanings.sentence_vector_type;
 			bias_resources.idf_file = rank_meanings.freqsFile;
+			bias_resources.meaning_vectors_path = rank_meanings.sense_vectors_path;
+			bias_resources.meaning_vectors_type = rank_meanings.sense_vector_type;
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources);
 
-			InitialResourcesFactory.SimilarityResources sim_resources = new InitialResourcesFactory.SimilarityResources();
-			sim_resources.meaning_vectors_path = rank_meanings.sense_vectors_path;
-			sim_resources.meaning_vectors_type = rank_meanings.sense_vector_type;
-
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources,
-					sim_resources);
 			driver.rank_meanings(rank_meanings.inputFile, resources);
 		}
 		else if (jc.getParsedCommand().equals(create_global_command))
@@ -649,26 +650,20 @@ public class Driver
 			driver.extract_subgraphs(extract_subgraphs.inputFile, extract_subgraphs.num_subgraphs);
 		else if (jc.getParsedCommand().equals(remove_redundancy_command))
 		{
-			InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
+			InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
+			bias_resources.meaning_vectors_path = remove_redundancy.vectorsPath;
+			bias_resources.meaning_vectors_type = remove_redundancy.vectorType;
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources);
 
-			InitialResourcesFactory.SimilarityResources sim_resources = new InitialResourcesFactory.SimilarityResources();
-			sim_resources.meaning_vectors_path = remove_redundancy.vectorsPath;
-			sim_resources.meaning_vectors_type = remove_redundancy.vectorType;
-
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources,
-					sim_resources);
 			driver.remove_redundancy(remove_redundancy.inputFile, remove_redundancy.num_subgraphs, resources);
 		}
 		else if (jc.getParsedCommand().equals(sort_subgraphs_command))
 		{
-			InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
+			InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
+			bias_resources.meaning_vectors_path = sort_subgraphs.vectorsPath;
+			bias_resources.meaning_vectors_type = sort_subgraphs.vectorType;
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources);
 
-			InitialResourcesFactory.SimilarityResources sim_resources = new InitialResourcesFactory.SimilarityResources();
-			sim_resources.meaning_vectors_path = sort_subgraphs.vectorsPath;
-			sim_resources.meaning_vectors_type = sort_subgraphs.vectorType;
-
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources,
-					sim_resources);
 			driver.sort_subgraphs(sort_subgraphs.inputFile, resources);
 		}
 		else if (jc.getParsedCommand().equals(write_amr_command))
@@ -678,14 +673,10 @@ public class Driver
 		/* --- */
 		else if (jc.getParsedCommand().equals(summarize_command))
 		{
-			InitialResourcesFactory.BiasResources bias_resources = new InitialResourcesFactory.BiasResources();
-
-			InitialResourcesFactory.SimilarityResources sim_resources = new InitialResourcesFactory.SimilarityResources();
-			sim_resources.meaning_vectors_path = summarize.vectorsPath;
-			sim_resources.meaning_vectors_type = summarize.vectorType;
-
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, summarize.dictionary, bias_resources,
-					sim_resources);
+			InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
+			bias_resources.meaning_vectors_path = summarize.vectorsPath;
+			bias_resources.meaning_vectors_type = summarize.vectorType;
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, summarize.dictionary, bias_resources);
 
 			driver.summarize(summarize.input, resources, summarize.no_stanford,summarize.num_extract,
 					summarize.num_subgraphs, summarize.generation_resources, summarize.max_words);

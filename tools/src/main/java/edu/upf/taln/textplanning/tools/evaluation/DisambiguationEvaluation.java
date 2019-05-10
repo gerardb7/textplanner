@@ -1,7 +1,8 @@
 package edu.upf.taln.textplanning.tools.evaluation;
 
-import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
+import edu.upf.taln.textplanning.core.bias.BiasFunction;
+import edu.upf.taln.textplanning.core.ranking.Disambiguation;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
@@ -12,10 +13,10 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 import static java.util.Comparator.comparingDouble;
-import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
 
 public abstract class DisambiguationEvaluation
@@ -23,53 +24,74 @@ public abstract class DisambiguationEvaluation
 
 	private final static Logger log = LogManager.getLogger();
 
+	abstract protected void checkCandidates(Corpus corpus);
 	abstract protected Set<String> getGold(Mention m);
 	abstract protected Corpus getCorpus();
-	abstract protected InitialResourcesFactory getFactory();
 	abstract protected Options getOptions();
-	abstract protected void evaluate(List<List<List<Candidate>>> system, String sufix);
+	abstract protected void evaluate(List<Candidate> system, String sufix);
+	abstract protected Set<String> getEvaluatePOS();
+	abstract protected boolean evaluateMultiwordsOnly();
 
 	public void run()
 	{
 		final Corpus corpus = getCorpus();
+		checkCandidates(corpus);
 
-		EvaluationTools.rankMeanings(getOptions(), corpus, getFactory().getSimilarityFunction());
+		EvaluationTools.rankMeanings(getOptions(), corpus);
 
 		log.info("********************************");
 		{
-			final List<List<List<Candidate>>> ranked_candidates = chooseRandom(corpus);
+			final List<Candidate> ranked_candidates = chooseRandom(corpus);
 			log.info("Random results:");
 			evaluate(ranked_candidates, "random.results");
 		}
 		{
-			final List<List<List<Candidate>>> ranked_candidates = chooseFirst(corpus);
+			final List<Candidate> ranked_candidates = chooseFirst(corpus);
 			log.info("First sense results:");
 			evaluate(ranked_candidates, "first.results");
 		}
 		{
-			final List<List<List<Candidate>>> ranked_candidates = chooseTopContext(corpus);
+			final List<Candidate> ranked_candidates = chooseTopContext(corpus);
 			log.info("Context results:");
 			evaluate(ranked_candidates, "context.results");
 		}
+//		{
+//			final double context_threshold = 0.2;
+//			final List<Candidate> ranked_candidates = chooseTopContextOrFirst(corpus, context_threshold);
+//			log.info("Context or first results (threshold = " + DebugUtils.printDouble(context_threshold) + "):");
+//			evaluate(ranked_candidates, "context_or_first_" + context_threshold + ".results");
+//		}
+//		{
+//			final double context_threshold = 0.4;
+//			final List<Candidate> ranked_candidates = chooseTopContextOrFirst(corpus, context_threshold);
+//			log.info("Context or first results (threshold = " + DebugUtils.printDouble(context_threshold) + "):");
+//			evaluate(ranked_candidates, "context_or_first_" + context_threshold + ".results");
+//		}
+//		{
+//			final double context_threshold = 0.6;
+//			final List<Candidate> ranked_candidates = chooseTopContextOrFirst(corpus, context_threshold);
+//			log.info("Context or first results (threshold = " + DebugUtils.printDouble(context_threshold) + "):");
+//			evaluate(ranked_candidates, "context_or_first_" + context_threshold + ".results");
+//		}
+//		{
+//			final double context_threshold = 0.8;
+//			final List<Candidate> ranked_candidates = chooseTopContextOrFirst(corpus, context_threshold);
+//			log.info("Context or first results (threshold = " + DebugUtils.printDouble(context_threshold) + "):");
+//			evaluate(ranked_candidates, "context_or_first_" + context_threshold + ".results");
+//		}
+//		{
+//			final double context_threshold = 0.9;
+//			final List<Candidate> ranked_candidates = chooseTopContextOrFirst(corpus, context_threshold);
+//			log.info("Context or first results (threshold = " + DebugUtils.printDouble(context_threshold) + "):");
+//			evaluate(ranked_candidates, "context_or_first_" + context_threshold + ".results");
+//		}
 		{
-			final double context_threshold = 0.7;
-			final List<List<List<Candidate>>> ranked_candidates = chooseTopContextOrFirst(corpus, context_threshold);
-			log.info("Context or first results (threshold = " + DebugUtils.printDouble(context_threshold) + "):");
-			evaluate(ranked_candidates, "context_or_first_" + context_threshold + ".results");
-		}
-		{
-			final double context_threshold = 0.8;
-			final List<List<List<Candidate>>> ranked_candidates = chooseTopContextOrFirst(corpus, context_threshold);
-			log.info("Context or first results (threshold = " + DebugUtils.printDouble(context_threshold) + "):");
-			evaluate(ranked_candidates, "context_or_first_" + context_threshold + ".results");
-		}
-		{
-			final List<List<List<Candidate>>> ranked_candidates = chooseTopRank(corpus);
+			final List<Candidate> ranked_candidates = chooseTopRank(corpus);
 			log.info("Rank results:");
 			evaluate(ranked_candidates, "rank.results");
 		}
 		{
-			final List<List<List<Candidate>>> ranked_candidates = chooseTopRankOrFirst(corpus);
+			final List<Candidate> ranked_candidates = chooseTopRankOrFirst(corpus);
 			log.info("Rank or first results:");
 			evaluate(ranked_candidates, "rank_or_first.results");
 		}
@@ -84,12 +106,11 @@ public abstract class DisambiguationEvaluation
 				.mapToInt(String::length)
 				.max().orElse(5) + 4;
 
-
-
 		IntStream.range(0, corpus.texts.size()).forEach(i ->
 		{
 			log.info("TEXT " + i);
-			final Function<String, Double> weighter = corpus.texts.get(i).resources.getBiasFunction();
+			final Function<String, Double> weighter =
+					corpus.resouces != null ? corpus.resouces.getBiasFunction() : corpus.texts.get(i).resources.getBiasFunction();
 			corpus.texts.get(i).sentences.forEach(s ->
 					s.candidates.forEach((m, l) -> print_full_ranking(l, getGold(m), weighter, max_length)));
 
@@ -119,15 +140,15 @@ public abstract class DisambiguationEvaluation
 		for (Options options : batch_options)
 		{
 			resetRanks(corpus);
-			EvaluationTools.rankMeanings(options, corpus, getFactory().getSimilarityFunction());
+			EvaluationTools.rankMeanings(options, corpus);
 			log.info("********************************");
 			{
-				final List<List<List<Candidate>>> ranked_candidates = chooseTopRankOrFirst(corpus);
+				final List<Candidate> ranked_candidates = chooseTopRankOrFirst(corpus);
 				log.info("Rank results:");
 				evaluate(ranked_candidates, "rank." + options.toShortString() + ".results");
 			}
 			{
-				final List<List<List<Candidate>>> ranked_candidates = chooseTopRankOrFirst(corpus);
+				final List<Candidate> ranked_candidates = chooseTopRankOrFirst(corpus);
 				log.info("Rank or first results:");
 				evaluate(ranked_candidates, "rank." + options.toShortString() + ".results");
 			}
@@ -135,98 +156,114 @@ public abstract class DisambiguationEvaluation
 		}
 	}
 
-	protected static List<List<List<Candidate>>> chooseRandom(Corpus corpus)
+	// Random baseline, only single words
+	protected static List<Candidate> chooseRandom(Corpus corpus)
 	{
 		// Choose top candidates:
 		Random random = new Random();
+		Predicate<Mention> mention_selector = (m) -> !m.isMultiWord(); // only single words
+		Function<List<Candidate>, Optional<Candidate>> candidate_selector =
+				l -> l.isEmpty() ? Optional.empty() : Optional.of(l.get(random.nextInt(l.size())));
+
+		final List<Candidate> candidates = corpus.texts.stream()
+				.flatMap(text -> text.sentences.stream()
+						.flatMap(sentence -> sentence.candidates.values().stream()
+								.flatMap(Collection::stream)))
+				.collect(toList());
+		final Map<Mention, Candidate> disambiguated = Disambiguation.disambiguate(candidates, mention_selector, candidate_selector);
+
+		return List.copyOf(disambiguated.values());
+	}
+
+	// Dictionary first sense baseline, only single words
+	protected static List<Candidate> chooseFirst(Corpus corpus)
+	{
+		// Choose top candidates:
+		Predicate<Mention> mention_selector = (m) -> !m.isMultiWord(); // only single words
+		Function<List<Candidate>, Optional<Candidate>> candidate_selector =
+				l -> l.isEmpty() ? Optional.empty() : Optional.of(l.get(0));
+
+		final List<Candidate> candidates = corpus.texts.stream()
+				.flatMap(text -> text.sentences.stream()
+						.flatMap(sentence -> sentence.candidates.values().stream()
+								.flatMap(Collection::stream)))
+				.collect(toList());
+		final Map<Mention, Candidate> disambiguated = Disambiguation.disambiguate(candidates, mention_selector, candidate_selector);
+
+		return List.copyOf(disambiguated.values());
+	}
+
+	// Uses default multiword selection strategy and bias function
+	protected static List<Candidate> chooseTopContext(Corpus corpus)
+	{
 		return corpus.texts.stream()
-				.map(t -> t.sentences.stream()
-						.map(s -> s.candidates.values().stream()
-								.filter(not(List::isEmpty))
-								.map(mention_candidates ->
-								{
-									final int j = random.nextInt(mention_candidates.size());
-									return mention_candidates.get(j);
-								})
-								.collect(toList()))
-						.collect(toList()))
+				.map(text ->
+				{
+					final BiasFunction bias = corpus.resouces != null ? corpus.resouces.getBiasFunction() : text.resources.getBiasFunction();
+					final List<Candidate> candidates = text.sentences.stream()
+							.flatMap(sentence -> sentence.candidates.values().stream()
+									.flatMap(Collection::stream))
+							.collect(toList());
+
+					Function<List<Candidate>, Optional<Candidate>> candidate_selector =
+							l -> l.stream().max(Comparator.comparingDouble(c -> bias.apply(c.getMeaning().getReference())));
+					final Map<Mention, Candidate> disambiguated = Disambiguation.disambiguate(candidates, candidate_selector);
+					return  disambiguated.values();
+				})
+				.flatMap(Collection::stream)
 				.collect(toList());
 	}
 
-	protected static List<List<List<Candidate>>> chooseFirst(Corpus corpus)
+	// Default multiword selection strategy + bias function iff above threshold, otherwise first sense
+	protected static List<Candidate> chooseTopContextOrFirst(Corpus corpus, double threshold)
 	{
-		// Choose top candidates:
 		return corpus.texts.stream()
-				.map(t -> t.sentences.stream()
-						.map(s -> s.candidates.values().stream()
-								.filter(not(List::isEmpty))
-								.map(mention_candidates -> mention_candidates.get(0))
-								.collect(toList()))
-						.collect(toList()))
+				.map(text ->
+				{
+					final BiasFunction bias = corpus.resouces != null ? corpus.resouces.getBiasFunction() : text.resources.getBiasFunction();
+					final List<Candidate> candidates = text.sentences.stream()
+							.flatMap(sentence -> sentence.candidates.values().stream()
+									.flatMap(Collection::stream))
+							.collect(toList());
+
+					Function<List<Candidate>, Optional<Candidate>> candidate_selector =
+							l -> l.stream()
+									.max(Comparator.comparingDouble(c -> bias.apply(c.getMeaning().getReference())))
+									.map(c -> bias.apply(c.getMeaning().getReference()) >= threshold ? c : l.get(0));
+					final Map<Mention, Candidate> disambiguated = Disambiguation.disambiguate(candidates, candidate_selector);
+					return  disambiguated.values();
+				})
+				.flatMap(Collection::stream)
 				.collect(toList());
 	}
 
-	protected static List<List<List<Candidate>>> chooseTopContext(Corpus corpus)
+	// Default multiword and candidate selection stratgies based on ranking values
+	protected static List<Candidate> chooseTopRank(Corpus corpus)
 	{
-		// Choose top candidates:
-		return corpus.texts.stream()
-				.map(t -> t.sentences.stream()
-						.map(s -> s.candidates.values().stream()
-								.filter(not(List::isEmpty))
-								.map(mention_candidates -> mention_candidates.stream()
-										.max(comparingDouble(c -> t.resources.getBiasFunction().apply(c.getMeaning().getReference()))))
-								.flatMap(Optional::stream)
-								.collect(toList()))
-						.collect(toList()))
+		final List<Candidate> candidates = corpus.texts.stream()
+				.flatMap(text -> text.sentences.stream()
+						.flatMap(sentence -> sentence.candidates.values().stream()
+								.flatMap(Collection::stream)))
 				.collect(toList());
+		final Map<Mention, Candidate> disambiguated = Disambiguation.disambiguate(candidates);
+
+		return List.copyOf(disambiguated.values());
 	}
 
-	protected static List<List<List<Candidate>>> chooseTopContextOrFirst(Corpus corpus, double threshold)
+	protected static List<Candidate> chooseTopRankOrFirst(Corpus corpus)
 	{
-		// Choose top candidates:
-		return corpus.texts.stream()
-				.map(t -> t.sentences.stream()
-						.map(s -> s.candidates.values().stream()
-								.filter(not(List::isEmpty))
-								.map(mention_candidates -> mention_candidates.stream()
-										.max(comparingDouble(c -> t.resources.getBiasFunction().apply(c.getMeaning().getReference())))
-										.map(c -> t.resources.getBiasFunction().apply(c.getMeaning().getReference()) >= threshold ? c : mention_candidates.get(0)))
-								.flatMap(Optional::stream)
-								.collect(toList()))
-						.collect(toList()))
+		Function<List<Candidate>, Optional<Candidate>> candidate_selector =
+				l -> l.stream()
+						.max(Comparator.comparingDouble(Candidate::getWeight))
+						.map(c -> c.getWeight() > 0.0 ? c : l.get(0));
+		final List<Candidate> candidates = corpus.texts.stream()
+				.flatMap(text -> text.sentences.stream()
+						.flatMap(sentence -> sentence.candidates.values().stream()
+								.flatMap(Collection::stream)))
 				.collect(toList());
-	}
+		final Map<Mention, Candidate> disambiguated = Disambiguation.disambiguate(candidates, candidate_selector);
 
-	protected static List<List<List<Candidate>>> chooseTopRank(Corpus corpus)
-	{
-		// Choose top candidates:
-		return corpus.texts.stream()
-				.map(t -> t.sentences.stream()
-						.map(s -> s.candidates.values().stream()
-								.filter(not(List::isEmpty))
-								.map(mention_candidates -> mention_candidates.stream()
-										.max(comparingDouble(Candidate::getWeight)))
-								.flatMap(Optional::stream)
-								.filter(c -> c.getWeight() > 0.0) // If top candidates has weight 0, then there really isn't a top candidate
-								.collect(toList()))
-						.collect(toList()))
-				.collect(toList());
-	}
-
-	protected static List<List<List<Candidate>>> chooseTopRankOrFirst(Corpus corpus)
-	{
-		// Choose top candidates:
-		return corpus.texts.stream()
-				.map(t -> t.sentences.stream()
-						.map(s -> s.candidates.values().stream()
-								.filter(not(List::isEmpty))
-								.map(mention_candidates -> mention_candidates.stream()
-										.max(comparingDouble(Candidate::getWeight))
-										.map(c -> c.getWeight() > 0.0 ? c : mention_candidates.get(0)))
-								.flatMap(Optional::stream)
-								.collect(toList()))
-						.collect(toList()))
-				.collect(toList());
+		return List.copyOf(disambiguated.values());
 	}
 
 	protected static void resetRanks(Corpus corpus)
@@ -254,16 +291,18 @@ public abstract class DisambiguationEvaluation
 //			return;
 //
 //		final Mention mention = candidates.get(0).getMention();
-//		log.info(mention.getContextId() + " \"" + mention + "\" " + mention.getPOS() + candidates.stream()
+//		log.info(mention.getSourceId() + " \"" + mention + "\" " + mention.getPOS() + candidates.stream()
 //				.map(c -> c.toString() + " " + DebugUtils.printDouble(c.getWeight()))
 //				.collect(joining("\n\t", "\n\t", "")));
 //	}
 
-	protected static void print_meaning_rankings(EvaluationTools.Text text, Function<String, Double> weighter, int max_length)
+	protected void print_meaning_rankings(EvaluationTools.Text text, Function<String, Double> weighter, int max_length)
 	{
+		final boolean multiwords = evaluateMultiwordsOnly();
 		final Map<Meaning, Double> weights = text.sentences.stream()
 				.flatMap(s -> s.candidates.values().stream())
 				.flatMap(Collection::stream)
+				.filter(m -> (multiwords && m.getMention().isMultiWord()) || (!multiwords && getEvaluatePOS().contains(m.getMention().getPOS())))
 				.collect(groupingBy(Candidate::getMeaning, averagingDouble(Candidate::getWeight)));
 		final List<Meaning> meanings = new ArrayList<>(weights.keySet());
 
@@ -280,27 +319,45 @@ public abstract class DisambiguationEvaluation
 						"\n--------------------------------------------------------------------------------------------")));
 	}
 
-	protected static void print_full_ranking(List<Candidate> candidates, Set<String> gold, Function<String, Double> weighter, int max_length)
+	protected void print_full_ranking(List<Candidate> candidates, Set<String> gold, Function<String, Double> bias, int max_length)
 	{
 		if (candidates.isEmpty())
 			return;
 
 		Mention mention = candidates.get(0).getMention();
-		final String max_m = candidates.stream()
+		if ((evaluateMultiwordsOnly() && !mention.isMultiWord() || (!evaluateMultiwordsOnly() && !getEvaluatePOS().contains(mention.getPOS()))))
+			return;
+
+		final String max_bias = candidates.stream()
+				.map(Candidate::getMeaning)
+				.map(Meaning::getReference)
+				.max(comparingDouble(bias::apply))
+				.orElse("");
+		final String max_rank = candidates.stream()
 				.max(comparingDouble(Candidate::getWeight))
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference).orElse("");
 		final String first_m = candidates.get(0).getMeaning().getReference();
 
-		final String result = gold.contains(max_m) ? "OK" : "FAIL";
-		final String ranked = max_m.equals(first_m) ? "" : "RANKED";
-		Function<String, String> marker = (r) -> (gold.contains(r) ? "GOLD " : "") + (r.equals(max_m) ? "SYSTEM" : "");
+		final String result = gold.contains(max_rank) ? "OK" : "FAIL";
+		final String ranked = max_rank.equals(first_m) ? "" : "RANKED";
+		Function<String, String> marker = (r) ->
+				(gold.contains(r) ? "GOLD " : "") +
+				(r.equals(max_bias) ? "BIAS " : "") +
+				(r.equals(max_rank) ? "RANK" : "");
+
 
 		log.info(mention.getId() + " \"" + mention + "\" " + mention.getPOS() + " " + result + " " + ranked +
 				candidates.stream()
-						.map(c -> String.format("%-15s%-" + max_length + "s%-15s%-15s", marker.apply(c.getMeaning().getReference()),
-								c.getMeaning().toString(), DebugUtils.printDouble(weighter.apply(c.getMeaning().getReference())),
-								(c.getWeight() > 0.0 ? DebugUtils.printDouble(c.getWeight(), 6) : "")))
-						.collect(joining("\n\t", "\t\n\t" + String.format("%-15s%-" + max_length + "s%-15s%-15s\n\t","Status", "Candidate","Context score","Rank score"), "")));
+						.map(c ->
+						{
+							final String mark = marker.apply(c.getMeaning().getReference());
+							final String bias_value = DebugUtils.printDouble(bias.apply(c.getMeaning().getReference()));
+							final String rank_value = c.getWeight() > 0.0 ? DebugUtils.printDouble(c.getWeight()) : "";
+
+							return String.format("%-15s%-" + max_length + "s%-15s%-15s", mark,
+									c.getMeaning().toString(), bias_value, rank_value);
+						})
+						.collect(joining("\n\t", "\t\n\t" + String.format("%-15s%-" + max_length + "s%-15s%-15s\n\t","Status", "Candidate","Bias","Rank"), "")));
 	}
 }

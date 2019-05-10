@@ -24,12 +24,13 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 	private final Path xml_file;
 	private final Path output_path;
 	private final Corpus corpus;
-	private final InitialResourcesFactory resources_factory;
 	private final Options options = new Options();
 	private final Map<String, String> gold;
+	private final Set<String> evaluate_POS;
 	private final static Logger log = LogManager.getLogger();
 
 	private static final int max_span_size = 3;
+	private static final boolean rank_together = false;
 	private static boolean exclude_multiwords = false;
 	private static final String noun_pos_tag = "N";
 	private static final String adj_pos_tag = "J";
@@ -44,10 +45,15 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 		this.gold_file = gold_file;
 		this.xml_file = xml_file;
 		this.output_path = output_path;
-		this.resources_factory = resources_factory;
-		options.excluded_POS_Tags = Set.of(other_pos_tag, adverb_pos_tag);
 
-		corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path, resources_factory, language, max_span_size, noun_pos_tag, options);
+		// Exclude POS from mention collection
+		final Set<String> excluded_mention_POS = Set.of(other_pos_tag);
+		// Exclude POS from ranking of meanings (but included in WSD, ranling of mentions, etc)
+		this.options.excluded_ranking_POS_Tags = Set.of(other_pos_tag, adverb_pos_tag);
+		// Evaluate these POS tags only
+		this.evaluate_POS = Set.of(noun_pos_tag, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+
+		corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path, resources_factory, language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
 
 		log.info("Parsing gold file");
 		gold = Arrays.stream(FileUtils.readTextFile(gold_file).split("\n"))
@@ -70,23 +76,41 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 	}
 
 	@Override
-	protected InitialResourcesFactory getFactory()
-	{
-		return resources_factory;
-	}
-
-	@Override
 	protected Options getOptions()
 	{
 		return options;
 	}
 
+
 	@Override
-	protected void evaluate(List<List<List<Candidate>>> system, String sufix)
+	protected void checkCandidates(Corpus corpus)
+	{
+		log.info("Checking candidate mentions against gold");
+		corpus.texts.stream()
+				.flatMap(text -> text.sentences.stream()
+						.flatMap(sentence -> sentence.candidates.values().stream()
+								.flatMap(List::stream)))
+				.map(Candidate::getMention)
+				.distinct()
+				.forEach(m -> {
+					if (!gold.containsKey(m))
+						log.info("\tMention " + m + " not in gold");
+				});
+	}
+
+	@Override
+	protected Set<String> getEvaluatePOS() { return evaluate_POS; }
+
+	@Override
+	protected boolean evaluateMultiwordsOnly()
+	{
+		return false;
+	}
+
+	@Override
+	protected void evaluate(List<Candidate> system, String sufix)
 	{
 		final Map<Mention, List<Candidate>> mentions2candidates = system.stream()
-				.flatMap(l -> l.stream()
-						.flatMap(l2 -> l2.stream()))
 				.collect(groupingBy(Candidate::getMention));
 		final List<Pair<Mention, List<Candidate>>> sorted_candidates = mentions2candidates.keySet().stream()
 				.sorted(Comparator.comparing(Mention::getContextId).thenComparing(Mention::getSpan))
@@ -103,12 +127,12 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 				.map(c ->
 				{
 					final Mention mention = c.getMention();
-					final String contextId = mention.getContextId();
+					final String sourceId = mention.getSourceId();
 					final Text document = corpus.texts.stream()
-							.filter(d -> contextId.startsWith(d.id))
+							.filter(d -> sourceId.startsWith(d.id))
 							.findFirst().orElseThrow(() -> new RuntimeException());
 					final EvaluationTools.Sentence sentence = document.sentences.stream()
-							.filter(s -> contextId.startsWith(s.id))
+							.filter(s -> sourceId.equals(s.id))
 							.findFirst().orElseThrow(() -> new RuntimeException());
 					final EvaluationTools.Token first_token = sentence.tokens.get(mention.getSpan().getLeft());
 					final EvaluationTools.Token last_token = sentence.tokens.get(mention.getSpan().getRight() - 1);
@@ -120,6 +144,8 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 		final Path results_file = FileUtils.createOutputPath(xml_file, output_path, "xml", sufix);
 		FileUtils.writeTextToFile(results_file, results);
 		log.info("Results file written to " + results_file);
+		log.info("Evaluated POS : " + evaluate_POS);
+
 
 		try
 		{
