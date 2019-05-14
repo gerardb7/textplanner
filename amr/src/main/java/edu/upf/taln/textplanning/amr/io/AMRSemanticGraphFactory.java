@@ -136,7 +136,7 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 							.map(candidates::get)
 							.forEach(c -> {
 								merged.setMeaning(v, c.getMeaning());
-								merged.setWeight(v, c.getWeight());
+								merged.setWeight(v, c.getWeight().orElse(0.0));
 							}));
 
 			if (concepts.containsKey(v1))

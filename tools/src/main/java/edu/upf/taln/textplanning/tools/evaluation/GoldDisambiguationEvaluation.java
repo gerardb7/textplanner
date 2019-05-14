@@ -22,7 +22,7 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 {
 	private final Corpus corpus;
 	final Map<String, AlternativeMeanings> gold;
-	private final Options options;
+	private final Options options = new Options();
 	private final Set<String> evaluate_POS;
 	private final static Logger log = LogManager.getLogger();
 
@@ -37,25 +37,18 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 	private static final ULocale language = ULocale.ITALIAN;
 
 	public GoldDisambiguationEvaluation(Path gold_file, Path xml_file, Path output_path,
-	                                    InitialResourcesFactory resources_factory, Options options)
+	                                    InitialResourcesFactory resources_factory)
 	{
-		this.options = options;
 		this.options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
 		this.options.min_bias_threshold = 0.7; // minimum bias value below which candidate meanings are ignored
 		this.options.num_first_meanings = 1;
 		this.options.sim_threshold = 0.0; // Pairs of meanings with sim below this value have their score set to 0
 		this.options.damping_meanings = 0.5; // controls balance between bias and similarity: higher value -> more bias
 
-		this.options.damping_variables = 0.2; // controls bias towards meanings rank when ranking variables
-		this.options.num_subgraphs_extract = 1000; // Number of subgraphs to extract
-		this.options.extraction_lambda = 1.0; // Controls balance between weight of nodes and cost of edges during subgraph extraction
-		this.options.num_subgraphs = 10; // Number of subgraphs to include in the plan
-		this.options.tree_edit_lambda = 0.1;
-
 		// Exclude POS from mention collection
 		final Set<String> excluded_mention_POS = Set.of(other_pos_tag);
-		// Exclude POS from ranking of meanings (but included in WSD, ranking of mentions, etc)
-		this.options.excluded_ranking_POS_Tags = Set.of(other_pos_tag, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+		// Include these POS in the ranking of meanings
+		options.ranking_POS_Tags = Set.of(noun_pos_tag, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
 		// Evaluate these POS tags only
 		this.evaluate_POS = Set.of(adverb_pos_tag); //noun_pos_tag, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
 

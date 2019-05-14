@@ -12,7 +12,6 @@ import org.apache.logging.log4j.Logger;
 import java.io.Serializable;
 import java.util.*;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -25,7 +24,7 @@ public class ContextBias implements BiasFunction, Serializable
 	public ContextBias(Collection<Candidate> candidates,
 	                   Vectors glosses_vectors,
 	                   SentenceVectors context_vectors,
-	                   Function<String, List<String>> context_function,
+	                   ContextFunction context_function,
 	                   BiFunction<double[], double[], Double> sim)
 	{
 		log.info("Calculating context bias values using gloss and context vectors");
@@ -44,7 +43,7 @@ public class ContextBias implements BiasFunction, Serializable
 				.mapToDouble(m ->
 				{
 					final Optional<double[]> glosses_vector = glosses_vectors.getVector(m);
-					final List<String> context = context_function.apply(m);
+					final List<String> context = context_function.getContext(m);
 					final Optional<double[]> context_vector = context_vectors.getVector(context);
 					if (glosses_vector.isPresent() && context_vector.isPresent())
 						return sim.apply(glosses_vector.get(), context_vector.get());

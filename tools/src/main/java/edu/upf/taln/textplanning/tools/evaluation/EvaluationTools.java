@@ -8,6 +8,7 @@ import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
+import edu.upf.taln.textplanning.core.bias.ContextFunction;
 import edu.upf.taln.textplanning.core.io.CandidatesCollector;
 import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
@@ -32,6 +33,8 @@ import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.util.stream.Collectors.*;
 
 public class EvaluationTools
@@ -88,6 +91,58 @@ public class EvaluationTools
 		public String wf;
 	}
 
+	// Implements local context based on corpus class
+	private static class Context extends ContextFunction
+	{
+		private final List<Sentence> sentences;
+		private final int window_size;
+		private final Map<Mention, List<String>> mentions2contexts;
+
+		public Context(List<Sentence> sentences, List<Candidate> candidates, ULocale language, int min_frequency, int window_size)
+		{
+			super(language, sentences.stream().flatMap(s -> s.tokens.stream().map(tok -> tok.wf))
+					.collect(toList()), min_frequency, candidates);
+			this.sentences = sentences;
+			this.window_size = window_size;
+
+			this.mentions2contexts = candidates.stream()
+					.map(Candidate::getMention)
+					.distinct()
+					.collect(toMap(mention -> mention, this::calculateWindow));
+		}
+
+		@Override
+		protected List<String> getWindow(Mention mention)
+		{
+			return mentions2contexts.get(mention);
+		}
+
+		private List<String> calculateWindow(Mention mention)
+		{
+			final String contextId = mention.getSourceId();
+
+			final List<String> sentence_tokens = sentences.stream()
+					.filter(s -> contextId.equals(s.id))
+					.findFirst()
+					.map(s -> s.tokens.stream()
+							.map(t -> t.wf)
+							.collect(toList()))
+					.orElse(List.of());
+
+
+			final Pair<Integer, Integer> span = mention.getSpan();
+			final Integer start = span.getLeft();
+			final Integer end = span.getRight();
+			final int size = sentence_tokens.size();
+
+			final List<String> tokens_left = start == 0 ?  List.of() : sentence_tokens.subList(max(0, start - window_size), start);
+			final List<String> tokens_right = end == size ? List.of() : sentence_tokens.subList(end, min(size, end + window_size));
+			List<String> window = new ArrayList<>(tokens_left);
+			window.addAll(tokens_right);
+
+			return filterTokens(window);
+		}
+	}
 
 	public static class AlternativeMeanings
 	{
@@ -249,7 +304,9 @@ public class EvaluationTools
 							.map(Candidate::getMeaning)
 							.map(Meaning::getReference)
 							.collect(toSet());
-					meanings.addAll(resources.getBiasMeanings());
+					final Set<String> biasMeanings = resources.getBiasMeanings();
+					if (biasMeanings != null)
+						meanings.addAll(biasMeanings);
 					meanings.forEach(r -> glosses.computeIfAbsent(r, k -> resources.getDictionary().getGlosses(k, resources.getLanguage())));
 				}
 				log.info("Glosses queried in " + timer.stop());
@@ -262,29 +319,27 @@ public class EvaluationTools
 
 			if (rank_together)
 			{
+				final List<Sentence> sentences = corpus.texts.stream()
+						.flatMap(t -> t.sentences.stream())
+						.collect(toList());
 				final List<Candidate> candidates_list = candidates.values().stream()
 						.flatMap(List::stream)
 						.collect(toList());
-				final List<String> tokens = corpus.texts.stream()
-						.flatMap(text -> text.sentences.stream()
-								.flatMap(s -> s.tokens.stream()))
-						.map(t -> t.wf)
-						.collect(toList());
-				corpus.resouces = new DocumentResourcesFactory(resources, options, candidates_list, tokens, glosses);
+
+				Context context = new Context(sentences, candidates_list, language, options.min_context_freq, options.window_size);
+				corpus.resouces = new DocumentResourcesFactory(resources, options, candidates_list, context, glosses);
 			}
 			else
 			{
 				for (int i = 0; i < corpus.texts.size(); ++i)
 				{
-					final List<String> text_tokens = corpus.texts.get(i).sentences.stream()
-							.flatMap(s -> s.tokens.stream())
-							.map(t -> t.wf)
-							.collect(toList());
-					final List<Candidate> text_candidates = corpus.texts.get(i).sentences.stream()
+					final Text text = corpus.texts.get(i);
+					final List<Candidate> text_candidates = text.sentences.stream()
 							.flatMap(s -> s.candidates.values().stream().flatMap(List::stream))
 							.collect(toList());
 
-					corpus.texts.get(i).resources = new DocumentResourcesFactory(resources, options, text_candidates, text_tokens, glosses);
+					Context context = new Context(text.sentences, text_candidates, language, options.min_context_freq, options.window_size);
+					text.resources = new DocumentResourcesFactory(resources, options, text_candidates, context, glosses);
 				}
 			}
 			log.info("Document resources created in " + timer.stop());
@@ -303,21 +358,32 @@ public class EvaluationTools
 		log.info(options);
 
 		List<DocumentResourcesFactory> texts_resources = new ArrayList<>();
+		List<List<Sentence>> sentence_sets = new ArrayList<>();
 		if (corpus.resouces != null)
-			texts_resources.add(corpus.resouces);
-		else
-			corpus.texts.forEach(text -> texts_resources.add(text.resources));
-
-		for (DocumentResourcesFactory resources : texts_resources)
 		{
+			texts_resources.add(corpus.resouces);
+			final List<Sentence> sentences = corpus.texts.stream()
+					.flatMap(text -> text.sentences.stream())
+					.collect(toList());
+			sentence_sets.add(sentences);
+		}
+		else
+		{
+			corpus.texts.forEach(text -> texts_resources.add(text.resources));
+			corpus.texts.stream()
+					.map(t -> t.sentences)
+					.forEach(sentence_sets::add);
+		}
+
+		for (int i=0; i < sentence_sets.size(); ++i)
+		{
+			DocumentResourcesFactory resources = texts_resources.get(i);
 			final BiasFunction bias = resources.getBiasFunction();
 			final SimilarityFunction similarity = resources.getSimilarityFunction();
 			final Predicate<Candidate> candidates_filter = resources.getCandidatesFilter();
 			final BiPredicate<String, String> similarity_filter = resources.getMeaningPairsSimilarityFilter();
 
-			final List<Sentence> sentences = corpus.texts.stream()
-					.flatMap(text -> text.sentences.stream())
-					.collect(toList());
+			final List<Sentence> sentences = sentence_sets.get(i);
 			final List<Candidate> candidates = sentences.stream()
 					.flatMap(s -> s.candidates.values().stream()
 							.flatMap(Collection::stream))
@@ -389,7 +455,7 @@ public class EvaluationTools
 		return corpus.texts.stream()
 				.map(d -> d.sentences.stream()
 						.map(s -> IntStream.range(0, s.tokens.size())
-								.mapToObj(start -> IntStream.range(start + 1, Math.min(start + max_span_size + 1, s.tokens.size() + 1))
+								.mapToObj(start -> IntStream.range(start + 1, min(start + max_span_size + 1, s.tokens.size() + 1))
 										.filter(end ->
 										{
 											// single words must have a pos tag other than 'X'

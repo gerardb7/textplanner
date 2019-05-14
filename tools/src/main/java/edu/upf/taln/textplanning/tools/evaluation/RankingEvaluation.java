@@ -45,8 +45,8 @@ public class RankingEvaluation
 
 		// Exclude POS from mention collection
 		final Set<String> excluded_mention_POS = Set.of(other_pos_tag);
-		// Exclude POS from ranking of meanings (but included in WSD, ranling of mentions, etc)
-		options.excluded_ranking_POS_Tags = Set.of(other_pos_tag, adverb_pos_tag);
+		// Include these POS in the ranking of meanings
+		options.ranking_POS_Tags = Set.of(noun_pos_tag, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
 		// Evaluate these POS tags only
 		evaluate_POS = Set.of(noun_pos_tag, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
 
@@ -190,7 +190,7 @@ public class RankingEvaluation
 					Map<Meaning, Double> weights = t.sentences.stream()
 							.flatMap(s -> s.candidates.values().stream())
 							.flatMap(Collection::stream)
-							.collect(groupingBy(Candidate::getMeaning, averagingDouble(Candidate::getWeight)));
+							.collect(groupingBy(Candidate::getMeaning, averagingDouble(c -> c.getWeight().orElse(0.0))));
 					final List<Meaning> file_meanings = new ArrayList<>(weights.keySet());
 					return file_meanings.stream()
 							.filter(m -> weights.get(m) > 0.0)

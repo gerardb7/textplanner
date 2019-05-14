@@ -9,8 +9,9 @@ import java.util.Set;
 
 public class Options
 {
-	public Set<String> excluded_ranking_POS_Tags = new HashSet<>(); // meanings of words with these POS are excluded from the ranking -but disambiguated anyway
-	public int min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
+	public Set<String> ranking_POS_Tags = new HashSet<>(); // only rank meanings of words with these POS - other meanings are excluded from the ranking but disambiguated anyway
+	public int min_context_freq = 3; // Minimum frequency of document tokens used to calculate nominal context vectors
+	public int window_size = 5; // Size of window in number of tokens used to calculate non-nominal context vectors
 	public double min_bias_threshold = 0.7; // minimum bias value below which candidate meanings are ignored
 	public int num_first_meanings = 1;
 	public double sim_threshold = 0.0; // Pairs of meanings with sim below this value have their score set to 0
@@ -25,8 +26,9 @@ public class Options
 
 	public Options(Options o)
 	{
-		this.excluded_ranking_POS_Tags.addAll(o.excluded_ranking_POS_Tags);
+		this.ranking_POS_Tags.addAll(o.ranking_POS_Tags);
 		this.min_context_freq = o.min_context_freq;
+		this.window_size = o.window_size;
 		this.min_bias_threshold = o.min_bias_threshold;
 		this.num_first_meanings = o.num_first_meanings;
 		this.sim_threshold = o.sim_threshold;
@@ -46,8 +48,9 @@ public class Options
 		//f.setMaximumFractionDigits(10);
 		f.setMinimumFractionDigits(3);
 		return  "Options:" +
-				"\n\texcluded_ranking_POS_Tags = " + excluded_ranking_POS_Tags +
+				"\n\tranking_POS_Tags = " + ranking_POS_Tags +
 				"\n\tmin_context_freq = " + min_context_freq +
+				"\n\twindow_size = " + window_size +
 				"\n\tmin_bias_threshold = " + min_bias_threshold +
 				"\n\tnum_first_meanings = " + num_first_meanings +
 				"\n\tsim_threshold = " + f.format(sim_threshold) +
@@ -62,6 +65,7 @@ public class Options
 	public String toShortString()
 	{
 		return  "test.cf" + min_context_freq +
+				".ws" + window_size +
 				".ct" + DebugUtils.printDouble(min_bias_threshold) +
 				".nf" + num_first_meanings +
 				".st" + DebugUtils.printDouble(sim_threshold) +

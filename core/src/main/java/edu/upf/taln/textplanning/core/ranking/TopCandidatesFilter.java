@@ -64,8 +64,8 @@ public class TopCandidatesFilter implements Predicate<Candidate>
 		// Filtered list of candidates according to bias function
 		final List<Candidate> bias_filtered = candidates.stream()
 				.filter(c -> {
-					final Double avg_sim = bias.apply(c.getMeaning().getReference());
-					return avg_sim >= threshold;
+					final Double bias_value = bias.apply(c.getMeaning().getReference());
+					return bias_value >= threshold;
 				})
 				.collect(toList());
 		top_candidates.addAll(bias_filtered);

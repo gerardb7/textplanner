@@ -132,7 +132,7 @@ public final class TextPlanner
 			final Map<String, Mention> variables2mentions = mentions.stream()
 					.collect(toMap(Mention::toString, m -> m));
 			final Map<String, Double> variables2weights = candidates.keySet().stream()
-					.collect(toMap(Mention::toString, m -> candidates.get(m).getWeight()));
+					.collect(toMap(Mention::toString, m -> candidates.get(m).getWeight().orElse(0.0)));
 
 			// Check that all variables have positive weights
 			variables2weights.forEach((key, value) ->

@@ -74,7 +74,7 @@ public class ExtractiveEvaluation
 	public static void run(Path input_folder, Path gold_folder, Path output_path, InitialResourcesFactory resources_factory)
 	{
 		final Options options = new Options();
-		//options.excluded_ranking_POS_Tags = excludedPOS;
+		//options.ranking_POS_Tags = excludedPOS;
 
 		// load corpus
 		final Corpus corpus = EvaluationTools.loadResourcesFromXMI(input_folder, output_path, resources_factory,

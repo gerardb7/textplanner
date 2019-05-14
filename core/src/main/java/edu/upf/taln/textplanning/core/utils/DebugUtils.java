@@ -63,12 +63,13 @@ public class DebugUtils
 				.filter(c -> !c.getMention().equals(chosen.getMention()))
 				.map(DebugUtils::printCandidate)
 				.collect(joining(", "));
+		final String weight_str = chosen.getWeight().map(DebugUtils::printDouble).orElse("no weight");
 		return "Disambiguated \"" + chosen.getMention().getSurface_form() +
-				"\" to " + chosen.getMeaning() + " " + printDouble(chosen.getWeight()) +
+				"\" to " + chosen.getMeaning() + " " + weight_str +
 				"\t\t" + other.stream()
 				.filter(c2 -> c2 != chosen)
 				.map(Candidate::getMeaning)
-				.map(m -> m.toString()  + " " + printDouble(chosen.getWeight()))
+				.map(m -> m.toString()  + " " + weight_str)
 				.collect(joining(", ")) +
 				(accepted_multiword.isEmpty() ? "" : "\n\tDetected multiword " + accepted_multiword) +
 				(rejected_multiwords.isEmpty() ? "" : "\n\tDiscarded multiwords " + rejected_multiwords);

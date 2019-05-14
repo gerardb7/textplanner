@@ -35,7 +35,7 @@ public abstract class DisambiguationEvaluation
 	public void run()
 	{
 		final Corpus corpus = getCorpus();
-		checkCandidates(corpus);
+		//checkCandidates(corpus);
 
 		EvaluationTools.rankMeanings(getOptions(), corpus);
 
@@ -90,11 +90,11 @@ public abstract class DisambiguationEvaluation
 			log.info("Rank results:");
 			evaluate(ranked_candidates, "rank.results");
 		}
-		{
-			final List<Candidate> ranked_candidates = chooseTopRankOrFirst(corpus);
-			log.info("Rank or first results:");
-			evaluate(ranked_candidates, "rank_or_first.results");
-		}
+//		{
+//			final List<Candidate> ranked_candidates = chooseTopRankOrFirst(corpus);
+//			log.info("Rank or first results:");
+//			evaluate(ranked_candidates, "rank_or_first.results");
+//		}
 		log.info("********************************");
 
 		final int max_length = corpus.texts.stream()
@@ -254,8 +254,8 @@ public abstract class DisambiguationEvaluation
 	{
 		Function<List<Candidate>, Optional<Candidate>> candidate_selector =
 				l -> l.stream()
-						.max(Comparator.comparingDouble(Candidate::getWeight))
-						.map(c -> c.getWeight() > 0.0 ? c : l.get(0));
+						.max(Comparator.comparingDouble(c -> c.getWeight().orElse(0.0)))
+						.map(c -> c.getWeight().isEmpty()? l.get(0) : c);
 		final List<Candidate> candidates = corpus.texts.stream()
 				.flatMap(text -> text.sentences.stream()
 						.flatMap(sentence -> sentence.candidates.values().stream()
@@ -303,7 +303,7 @@ public abstract class DisambiguationEvaluation
 				.flatMap(s -> s.candidates.values().stream())
 				.flatMap(Collection::stream)
 				.filter(m -> (multiwords && m.getMention().isMultiWord()) || (!multiwords && getEvaluatePOS().contains(m.getMention().getPOS())))
-				.collect(groupingBy(Candidate::getMeaning, averagingDouble(Candidate::getWeight)));
+				.collect(groupingBy(Candidate::getMeaning, averagingDouble(c -> c.getWeight().orElse(0.0))));
 		final List<Meaning> meanings = new ArrayList<>(weights.keySet());
 
 		log.info(meanings.stream()
@@ -334,7 +334,7 @@ public abstract class DisambiguationEvaluation
 				.max(comparingDouble(bias::apply))
 				.orElse("");
 		final String max_rank = candidates.stream()
-				.max(comparingDouble(Candidate::getWeight))
+				.max(comparingDouble(c -> c.getWeight().orElse(0.0)))
 				.map(Candidate::getMeaning)
 				.map(Meaning::getReference).orElse("");
 		final String first_m = candidates.get(0).getMeaning().getReference();
@@ -353,7 +353,7 @@ public abstract class DisambiguationEvaluation
 						{
 							final String mark = marker.apply(c.getMeaning().getReference());
 							final String bias_value = DebugUtils.printDouble(bias.apply(c.getMeaning().getReference()));
-							final String rank_value = c.getWeight() > 0.0 ? DebugUtils.printDouble(c.getWeight()) : "";
+							final String rank_value = c.getWeight().map(DebugUtils::printDouble).orElse("");
 
 							return String.format("%-15s%-" + max_length + "s%-15s%-15s", mark,
 									c.getMeaning().toString(), bias_value, rank_value);

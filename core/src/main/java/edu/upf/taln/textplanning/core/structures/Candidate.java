@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.core.structures;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Wrapper for a pair of a mention and a candidate meaning
@@ -12,7 +13,7 @@ public class Candidate implements Serializable
 
 	private final Mention mention;
 	private final Meaning meaning;
-	private double weight = 0.0;
+	private Double weight = null; // weight can be set only once!
 	private final static long serialVersionUID = 1L;
 
 	public Candidate(Mention m, Meaning e)
@@ -24,13 +25,16 @@ public class Candidate implements Serializable
 	public Mention getMention() { return mention; }
 	public Meaning getMeaning() { return meaning; }
 
-	public double getWeight()
+	public Optional<Double> getWeight()
 	{
-		return weight;
+		return weight == null ? Optional.empty() : Optional.of(weight);
 	}
 
 	public void setWeight(double weight)
 	{
+		if (this.weight != null)
+			throw new RuntimeException("Cannot set weight to candidate more than once");
+
 		this.weight = weight;
 	}
 

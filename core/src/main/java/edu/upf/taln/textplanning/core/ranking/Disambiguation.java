@@ -60,7 +60,8 @@ public class Disambiguation
 
 		final Map<Mention, Double> mentions2weights = mentions2candidates.entrySet().stream()
 						.map(p -> Pair.of(p.getKey(), p.getValue().stream()
-								.mapToDouble(Candidate::getWeight)
+								.map(Candidate::getWeight)
+								.mapToDouble(o -> o.orElse(0.0))
 								.max().orElse(0.0)))
 				.collect(toMap(Pair::getLeft, Pair::getRight));
 
@@ -88,7 +89,7 @@ public class Disambiguation
 	// Default strategy for candidate selection
 	private static Optional<Candidate> selectMaxWeightCandidate(List<Candidate> candidates)
 	{
-		return candidates.stream().max(Comparator.comparingDouble(Candidate::getWeight));
+		return candidates.stream().max(Comparator.comparingDouble(c -> c.getWeight().orElse(0.0)));
 	}
 
 	private static Map<Mention, Candidate> selectCandidates(List<Candidate> candidates,

@@ -2,30 +2,41 @@ package edu.upf.taln.textplanning.core.similarity.vectors;
 
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.ranking.StopWordsFilter;
+import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.core.structures.Meaning;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.StringTokenizer;
+import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 public class SenseGlossesVectors extends Vectors
 {
 	private final ULocale language;
 	private final Function<String, List<String>> glosses;
 	private final SentenceVectors sentence_vectors;
+	private final Map<String, Optional<double[]>> vectors;
 
-	public SenseGlossesVectors(ULocale language, Function<String, List<String>> glosses, SentenceVectors sentence_vectors)
+	public SenseGlossesVectors(ULocale language, List<Candidate> candidates, Function<String, List<String>> glosses, SentenceVectors sentence_vectors)
 	{
 		this.language = language;
 		this.glosses = glosses;
 		this.sentence_vectors = sentence_vectors;
-	}
 
-	public void setGlossesFunction( Function<String, List<String>> glosses)
-	{
-		this.glosses = glosses;
+		final List<String> meanings = candidates.stream()
+				.map(Candidate::getMeaning)
+				.map(Meaning::getReference)
+				.distinct()
+				.collect(toList());
+
+		vectors = meanings.stream()
+				.collect(toMap(r -> r, r ->
+				{
+					final List<String> r_glosses = glosses.apply(r);
+					final List<String> tokens = getTokens(r_glosses);
+					return sentence_vectors.getVector(tokens);
+				}));
 	}
 
 	@Override
@@ -43,20 +54,18 @@ public class SenseGlossesVectors extends Vectors
 	@Override
 	public Optional<double[]> getVector(String item)
 	{
-		final List<String> item_glosses = glosses.apply(item);
-		if (item_glosses.isEmpty())
-			return Optional.empty();
+		return vectors.get(item);
+	}
 
-		final List<String> tokens = item_glosses.stream()
+	private List<String> getTokens(List<String> glosses)
+	{
+		final List<String> tokens = glosses.stream()
 				.flatMap(g -> {
 					final StringTokenizer stringTokenizer = new StringTokenizer(g, " \t\n\r\f,.:;?!{}()[]'");
 					final List<Object> list = Collections.list(stringTokenizer);
 					return list.stream().map(Object::toString);
 				})
 				.collect(toList());
-
-		if (tokens.isEmpty())
-			return Optional.empty();
 
 		final List<String> filtered_tokens = tokens.stream()
 				.filter(t -> StopWordsFilter.test(t, language)) // exclude both function and frequent words
@@ -66,6 +75,6 @@ public class SenseGlossesVectors extends Vectors
 		if (filtered_tokens.isEmpty())
 			filtered_tokens.addAll(tokens);
 
-		return sentence_vectors.getVector(filtered_tokens);
+		return filtered_tokens;
 	}
 }

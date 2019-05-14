@@ -14,6 +14,7 @@ import edu.upf.taln.textplanning.common.*;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
+import edu.upf.taln.textplanning.core.bias.ContextFunction;
 import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
@@ -105,7 +106,10 @@ public class Driver
 
 		Options options = new Options();
 		final List<Candidate> candidates = new ArrayList<>(graphs.getCandidates());
-		DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, tokens, null);
+		ContextFunction context = null;
+		//new Context(sentences, candidates_list, language, options.min_context_freq, options.window_size);
+
+		DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, context, null);
 
 		final BiasFunction context_weighter = process.getBiasFunction();
 		final SimilarityFunction sim = process.getSimilarityFunction();

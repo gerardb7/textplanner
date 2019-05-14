@@ -315,9 +315,8 @@ public class Driver
 
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, semEval.dictionary, bias_resources);
 
-				Options options = new Options();
 				SemEvalEvaluation eval = new SemEvalEvaluation(semEval.gold_file, semEval.input_file, semEval.output,
-						resources, options);
+						resources);
 				if (semEval.batch)
 					eval.run_batch();
 				else
@@ -340,7 +339,7 @@ public class Driver
 
 				Options options = new Options();
 				GoldDisambiguationEvaluation eval = new GoldDisambiguationEvaluation(wsdEval.gold_file, wsdEval.input_file, wsdEval.output,
-						resources, options);
+						resources);
 				if (wsdEval.batch)
 					eval.run_batch();
 				else

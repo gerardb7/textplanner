@@ -11,6 +11,7 @@ import edu.upf.taln.textplanning.common.InitialResourcesFactory.ResourceParams;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
+import edu.upf.taln.textplanning.core.bias.ContextFunction;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
@@ -178,7 +179,10 @@ public class Driver
 							.collect(toList());
 
 					Options options = new Options();
-					DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, tokens, null);
+					ContextFunction context = null;
+							//new Context(sentences, candidates_list, language, options.min_context_freq, options.window_size);
+
+					DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, null, null);
 					final BiasFunction context_weighter = process.getBiasFunction();
 					final SimilarityFunction sim = process.getSimilarityFunction();
 					final BiPredicate<String, String> meanings_filter = process.getMeaningPairsSimilarityFilter();
