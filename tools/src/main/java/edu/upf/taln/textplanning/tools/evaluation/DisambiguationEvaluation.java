@@ -35,7 +35,7 @@ public abstract class DisambiguationEvaluation
 	public void run()
 	{
 		final Corpus corpus = getCorpus();
-		//checkCandidates(corpus);
+		checkCandidates(corpus);
 
 		EvaluationTools.rankMeanings(getOptions(), corpus);
 

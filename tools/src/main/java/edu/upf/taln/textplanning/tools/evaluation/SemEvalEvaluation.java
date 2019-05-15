@@ -101,8 +101,8 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 				.map(Candidate::getMention)
 				.distinct()
 				.forEach(m -> {
-					if (!gold.containsKey(m.getContextId()))
-						log.info("\tMention " + m + " not in gold");
+	//				if (!gold.containsKey(m.getContextId()))
+	//					log.info("\tMention " + m + " not in gold");
 				});
 	}
 

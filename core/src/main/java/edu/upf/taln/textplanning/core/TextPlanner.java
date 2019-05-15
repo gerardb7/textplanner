@@ -113,7 +113,7 @@ public final class TextPlanner
 			}
 		});
 
-		log.info("Ranking completed in " + timer.stop());
+		log.info("Ranking completed in " + timer.stop() + "\n");
 	}
 
 
@@ -170,7 +170,7 @@ public final class TextPlanner
 					.forEach(i -> variables2mentions.get(variables.get(i)).setWeight(ranking[i]));
 		}
 
-		log.info("Ranking completed in " + timer.stop());
+		log.info("Ranking completed in " + timer.stop() + "\n");
 	}
 
 	/**
