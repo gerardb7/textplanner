@@ -1,8 +1,8 @@
 # Text Planner #
 
-This repo contains code for an in progress tool, the **Text Planner**, that analyzes one or more texts and producess two separate ranks, 1) a rank of disambiguated meanings and 2) a rank of fragments of the original text. These ranks can be applied to a variety of downstream tasks such as extractive and abstractive summarization, text simplification, information extraction, semantic indexing, etc.
+This repo contains code for an in-progress tool, the **Text Planner**. Given one or more texts, the Text Planner produces two separate ranks, 1) a rank of disambiguated meanings and 2) a rank of fragments of the original text. These ranks can be applied to a variety of downstream tasks such as extractive and abstractive summarization, text simplification, information extraction, semantic indexing, etc.
 
-The Text Planner implements a novel unsupervised approach that is largely independent from language and can be applied to texts of any lenght, genre and domain. It draws methods from research in WSD, Entity Linking and automatic summarization to address these tasks jointly using a global graph-based strategy to rank candidate meanings and their mentions in the text.
+The Text Planner implements a novel unsupervised approach that is largely independent from language and can be applied to texts of any lenght, genre and domain. It draws methods from research in WSD, Entity Linking and automatic summarization to address these tasks jointly using a global graph-based strategy to rank candidate meanings and their mentions in the text. It only requires shallow lingusitic analysis -sentence splitting, tokenization and POS tagging.
 
 # Main features
 * New languages can be supported by providing some common language-specific resources: a linguistic pre-processing pipeline (sentence splitting, tokenizer and POS tagging), a [list of stop words](https://github.com/stopwords-iso) and a set of [pre-trained word embeddings](https://fasttext.cc/docs/en/crawl-vectors.html). 
