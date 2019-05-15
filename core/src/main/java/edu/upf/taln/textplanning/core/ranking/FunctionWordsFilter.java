@@ -18,7 +18,12 @@ public class FunctionWordsFilter
 	{
 		en_list =  Collections.unmodifiableSet(en_list); 
 	}
-	
+
+	public static Set<String> fr_list = new HashSet<>(Collections.emptyList());
+	{
+		fr_list =  Collections.unmodifiableSet(fr_list);
+	}
+
 	public static boolean test(Mention mention, ULocale language)
 	{
 		return test(mention.getSurface_form(), language);
