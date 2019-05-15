@@ -11,8 +11,12 @@ The Text Planner implements a novel unsupervised approach that is largely indepe
 * This tool can be integrated as a component of an [Apache UIMA](https://uima.apache.org/) pipeline.
 * The Text Planner is fully implemented with Java 8+ and makes heavy use of Streams and lambdas to guarantee safe concurrent execution of computationally intensive tasks.
 
-#Structure
-Code is organized into multi-module maven project. Core contains the code of the text planning library. Tools has evaluation scripts to test the tool using the [SemEval 2015 Shared Task 13 dataset](http://alt.qcri.org/semeval2015/task13/) and the [DeepMind Q&A dataset](https://cs.nyu.edu/~kcho/DMQA/). 
+# Structure
+Code is organized into multi-module maven project: 
+* *core* contains the code of the text planning library. 
+* *tools* has evaluation scripts to test the tool using the [SemEval 2015 Shared Task 13 dataset](http://alt.qcri.org/semeval2015/task13/) and the [DeepMind Q&A dataset](https://cs.nyu.edu/~kcho/DMQA/). 
+* *amr* runs the ranker on the ouput of an AMR parser
+* *dsynt-uima* contains two UIMA wrappers for the text planning, which can be ran as separate WSD and text ranking components.
 
 # Future work
 * A demo will be set up to show the capabilities of the tool and some of its applications
