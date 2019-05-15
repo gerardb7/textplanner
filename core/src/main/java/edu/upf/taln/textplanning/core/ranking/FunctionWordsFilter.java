@@ -38,6 +38,10 @@ public class FunctionWordsFilter
 		{
 			return !en_list.contains(form.toLowerCase());
 		}
+		else if (ULocale.FRENCH.equals(language))
+		{
+			return !fr_list.contains(form.toLowerCase());
+		}
 		else
 			throw new RuntimeException("Language " + language.toLanguageTag() + " not supported");
 	}
