@@ -1,4 +1,4 @@
-# TALN Text Planner #
+# Text Planner #
 
 Our Text Planner analyzes one or more texts and produces two separate ranks, 1) a rank of disambiguated meanings and 2) a rank of fragments of the original text. These ranks can be applied to a variety of downstream tasks such as extractive and abstractive summarization, text simplification, information extraction, semantic indexing, etc.
 
