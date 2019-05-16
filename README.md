@@ -9,7 +9,7 @@ The Text Planner implements a novel unsupervised approach that is largely indepe
 * Various lexicographic resources can be used as target repositories of meanings. Our default implementation uses [BabelNet](https://babelnet.org/), but the approach can be migrated with minimal effort to langauge-specific versions of [DBPedia](https://wiki.dbpedia.org/), Wikipedia, [WordNet](https://wordnet.princeton.edu/), etc.
 * Dependency-based syntactic or semantic structures can be incorporated into the ranking calculations. This enables the Text Planner to produce lingusitic structures that, coupled with natural language generation methods, can be applied to produce paraphrased versions of the input text, e.g. abstractive summaries, simplified texts, etc. This repo contains code for incoporating [AMR](https://amr.isi.edu/) and [DSynt](https://www.cambridge.org/core/journals/natural-language-engineering/article/datadriven-deepsyntactic-dependency-parsing/BC72079B9AC388F47729C2E1664D19B1/core-reader) analyses.
 * This tool can be integrated as a component of an [Apache UIMA](https://uima.apache.org/) pipeline.
-* The Text Planner is fully implemented with Java 8+ and makes heavy use of Streams and lambdas to guarantee safe concurrent execution of computationally intensive tasks.
+* The Text Planner is fully implemented with Java 8+ and makes heavy use of streams and lambdas to guarantee safe concurrent execution of computationally intensive tasks.
 * [Trove collections](http://java-performance.info/primitive-types-collections-trove-library/) and random access files are used to reduce memory footprint
 
 # Structure
