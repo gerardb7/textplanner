@@ -14,7 +14,7 @@ The Text Planner implements a novel unsupervised approach that is largely indepe
 * [Trove collections](http://java-performance.info/primitive-types-collections-trove-library/) and random access files are used to reduce memory footprint
 
 # Structure
-Code is organized into multi-module maven project: 
+Code is organized into a multi-module maven project: 
 * *core* contains the code of the text planning library. 
 * *tools* has evaluation scripts to test the tool using the [SemEval 2015 Shared Task 13 dataset](http://alt.qcri.org/semeval2015/task13/) and the [DeepMind Q&A dataset](https://cs.nyu.edu/~kcho/DMQA/). 
 * *amr* runs the ranker on the ouput of an AMR parser
