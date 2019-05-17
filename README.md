@@ -22,6 +22,7 @@ Code is organized into a multi-module maven project:
 * *optimization* contains an alternative approach to ranking based on multiobjective optimization with softmax distributions
 
 # Future work
-* A demo will be set up to show the capabilities of the tool and some of its applications
-* Publications describing the scientific work behind the tool and evaluations will be posted as they appear in publications 
+* Usage instructions will be added as the code becomes stable
+* An on-line demo will be set up to show the capabilities of the tool and some of its applications
+* Publications describing the scientific work behind the tool and evaluations will be posted as they are published 
 
