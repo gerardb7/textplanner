@@ -132,12 +132,12 @@ public class Driver
 	@Parameters(commandDescription = "Run evaluation of meanings ranking")
 	private static class RankEvaluationCommand
 	{
-		@Parameter(names = {"-g", "-gold"}, description = "Path to gold file", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path gold_folder;
 		@Parameter(names = {"-i", "-input"}, description = "Path to XML input file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path input_file;
+		@Parameter(names = {"-g", "-gold"}, description = "Path to gold file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path gold_folder;
 		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
 		private Path dictionary;
@@ -177,10 +177,10 @@ public class Driver
 	@Parameters(commandDescription = "Run evaluation of ranking-based extractive summarization")
 	private static class ExtractiveEvaluationCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Path to folder with xmi files containing source documents", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		@Parameter(names = {"-i", "-input"}, description = "Path to XML input file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path input;
-		@Parameter(names = {"-g", "-gold"}, description = "Path to folder with text files containing gold summaries", arity = 1, required = true,
+		@Parameter(names = {"-g", "-gold"}, description = "Path to folder containing gold summaries", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
 		private Path gold;
 		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,

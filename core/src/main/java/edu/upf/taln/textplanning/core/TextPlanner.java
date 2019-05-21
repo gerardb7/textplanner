@@ -134,13 +134,6 @@ public final class TextPlanner
 			final Map<String, Double> variables2weights = candidates.keySet().stream()
 					.collect(toMap(Mention::toString, m -> candidates.get(m).getWeight().orElse(0.0)));
 
-			// Check that all variables have positive weights
-			variables2weights.forEach((key, value) ->
-			{
-				if (value <= 0.0)
-					log.warn("Variable " + key + " has value " + value);
-			});
-
 			List<String> variables = List.copyOf(variables2mentions.keySet());
 			final List<String> labels = variables.stream() // for debugging purposes
 					.map(v ->
@@ -162,6 +155,7 @@ public final class TextPlanner
 			// Use average weight for mentions without a ranked candidate
 			final double avg_bias = variables2weights.values().stream()
 					.mapToDouble(v -> v)
+					.filter(v -> v > 0.0) // exclude unweighted variables
 					.average().orElse(0.0);
 			double[] ranking = Ranker.rank(variables, labels, v -> variables2weights.getOrDefault(v, avg_bias), similarity,
 					(v1, v2) -> true, 0.0, o.damping_variables, true, true);

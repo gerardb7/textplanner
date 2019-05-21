@@ -131,7 +131,6 @@ public class MatrixFactory
 					final String e2 = items.get(j);
 					if (filter.test(e1, e2))
 					{
-						num_filtered.incrementAndGet();
 						final OptionalDouble osim = sim.apply(e1, e2);
 						if (osim.isPresent())
 							num_defined.incrementAndGet();
@@ -142,6 +141,8 @@ public class MatrixFactory
 						else
 							simij = sim_value;
 					}
+					else
+						num_filtered.incrementAndGet();
 
 					if (simij < sim_threshold)
 						simij = 0.0;
@@ -158,7 +159,7 @@ public class MatrixFactory
 
 		if (report_stats)
 		{
-			log.info((total_pairs - num_filtered.intValue()) + " meaning pairs filtered out from " + total_pairs);
+			log.info( num_filtered.intValue() + " meaning pairs filtered out");
 			log.info("Similarity values are negative for " + num_negative.get() + " pairs out of " + total_pairs);
 		}
 

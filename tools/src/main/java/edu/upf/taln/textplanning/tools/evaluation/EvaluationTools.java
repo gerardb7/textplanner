@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.tools.evaluation;
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.DocumentResourcesFactory;
+import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.common.Serializer;
 import edu.upf.taln.textplanning.core.Options;
@@ -10,9 +11,11 @@ import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.bias.ContextFunction;
 import edu.upf.taln.textplanning.core.io.CandidatesCollector;
+import edu.upf.taln.textplanning.core.ranking.Disambiguation;
 import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.structures.*;
+import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.uima.io.DSyntSemantics;
 import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.commons.lang3.tuple.Pair;
@@ -30,11 +33,13 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.util.Comparator.comparingDouble;
 import static java.util.stream.Collectors.*;
 
 public class EvaluationTools
@@ -76,6 +81,8 @@ public class EvaluationTools
 		public List<Token> tokens = new ArrayList<>();
 		@XmlTransient
 		Map<Mention, List<Candidate>> candidates = new HashMap<>();
+		@XmlTransient
+		Map<Mention, Candidate> disambiguated = new HashMap<>();
 	}
 
 	@XmlAccessorType(XmlAccessType.FIELD)
@@ -353,6 +360,17 @@ public class EvaluationTools
 		return corpus;
 	}
 
+	public static void reset(Corpus corpus)
+	{
+		corpus.texts.forEach(t ->
+			t.sentences.forEach(s ->
+			{
+				s.disambiguated.clear();
+				s.candidates.values().forEach(m ->
+						m.forEach(c -> c.setWeight(0.0)));
+			}));
+	}
+
 	public static void rankMeanings(Options options, Corpus corpus)
 	{
 		log.info(options);
@@ -412,28 +430,39 @@ public class EvaluationTools
 		}
 	}
 
+	public static void disambiguate(Corpus corpus)
+	{
+		corpus.texts.forEach(text -> {
+			final List<Candidate> candidates = text.sentences.stream()
+					.flatMap(sentence -> sentence.candidates.values().stream()
+							.flatMap(Collection::stream))
+					.collect(toList());
+
+			final Map<Mention, Candidate> disambiguated = Disambiguation.disambiguate(candidates);
+			disambiguated.forEach((m, c) -> text.sentences.stream()
+					.filter(s -> s.id.equals(m.getSourceId()))
+					.findFirst()
+					.orElseThrow()
+					.disambiguated.put(m, c));
+		});
+	}
+
 	public static void rankMentions(Options options, Corpus corpus)
 	{
 		final int context_size = 3;
 		corpus.texts.forEach(text ->
 				text.sentences.forEach(sentence ->
 				{
-					final List<Mention> mentions = List.copyOf(sentence.candidates.keySet());
-					final Map<Mention, Candidate> candidates = new HashMap<>();
-					sentence.candidates.forEach((m, l) -> {
-						if (l.size() == 1)
-							candidates.put(m, l.get(0));
-						else
-							log.error("Mention " + m + " has more than one candidate!");
-					});
-
+					final List<Mention> mentions = sentence.disambiguated.keySet().stream()
+						.sorted(Comparator.comparing(Mention::getContextId))
+						.collect(toList());
 					BiPredicate<Mention, Mention> adjacency_function =
 							(m1, m2) -> Math.abs(mentions.indexOf(m1) - mentions.indexOf(m2)) <= context_size;
 //					BiPredicate<Mention, Mention> adjacency_function2 =
 //							(m1, m2) -> text.graph.containsEdge(m1.toString(), m2.toString());
 
 					// rank mentions
-					TextPlanner.rankMentions(mentions, candidates, adjacency_function, options);
+					TextPlanner.rankMentions(mentions, sentence.disambiguated, adjacency_function, options);
 				}));
 	}
 
@@ -486,4 +515,136 @@ public class EvaluationTools
 				.flatMap(stream -> stream)
 				.collect(toList());
 	}
+
+	public static void printMeaningRankings(Corpus corpus, Map<String, Set<String>> gold, boolean multiwords_only, Set<String> eval_POS)
+	{
+		IntStream.range(0, corpus.texts.size()).forEach(i ->
+		{
+			log.info("TEXT " + i);
+			final Text text = corpus.texts.get(i);
+			final Set<String> text_gold = gold.get(text.id);
+
+			final int max_length = text.sentences.stream()
+					.flatMap(s -> s.candidates.values().stream())
+					.flatMap(Collection::stream)
+					.map(Candidate::getMeaning)
+					.map(Meaning::toString)
+					.mapToInt(String::length)
+					.max().orElse(5) + 4;
+
+			final Function<String, Double> weighter =
+					corpus.resouces != null ? corpus.resouces.getBiasFunction() : text.resources.getBiasFunction();
+
+			final Map<Meaning, Double> weights = text.sentences.stream()
+					.flatMap(s -> s.candidates.values().stream())
+					.flatMap(Collection::stream)
+					.filter(m -> (multiwords_only && m.getMention().isMultiWord()) || (!multiwords_only && eval_POS.contains(m.getMention().getPOS())))
+					.collect(groupingBy(Candidate::getMeaning, averagingDouble(c -> c.getWeight().orElse(0.0))));
+
+			final List<Meaning> meanings = new ArrayList<>(weights.keySet());
+			Function<Meaning, String> inGold = m -> text_gold.contains(m.getReference()) ? "GOLD" : "";
+
+			log.info(meanings.stream()
+					.filter(m -> weights.get(m) > 0.0)
+					.sorted(Comparator.<Meaning>comparingDouble(weights::get).reversed())
+					.map(m -> String.format("%-" + max_length + "s%-11s%-11s%-8s",
+							m.toString(),
+							DebugUtils.printDouble(weights.get(m)),
+							DebugUtils.printDouble(weighter.apply(m.getReference())),
+							inGold.apply(m)))
+					.collect(joining("\n\t", "Meaning ranking by ranking score:\n\t",
+							"\n--------------------------------------------------------------------------------------------")));
+		});
 	}
+
+	public static void printDisambiguationResults(Corpus corpus, Function<Mention, Set<String>> gold, boolean multiwords_only, Set<String> eval_POS)
+	{
+		IntStream.range(0, corpus.texts.size()).forEach(i ->
+		{
+			log.info("TEXT " + i);
+			final Text text = corpus.texts.get(i);
+
+			final int max_length = text.sentences.stream()
+					.flatMap(s -> s.candidates.values().stream())
+					.flatMap(Collection::stream)
+					.map(Candidate::getMeaning)
+					.map(Meaning::toString)
+					.mapToInt(String::length)
+					.max().orElse(5) + 4;
+
+			final Function<String, Double> bias =
+					corpus.resouces != null ? corpus.resouces.getBiasFunction() : text.resources.getBiasFunction();
+
+			text.sentences.forEach(s ->
+					s.candidates.forEach((mention, candidates) ->
+					{
+						if (candidates.isEmpty())
+							return;
+
+						if ((multiwords_only && !mention.isMultiWord() || (!multiwords_only && !eval_POS.contains(mention.getPOS()))))
+							return;
+
+						final String max_bias = candidates.stream()
+								.map(Candidate::getMeaning)
+								.map(Meaning::getReference)
+								.max(comparingDouble(bias::apply))
+								.orElse("");
+						final String max_rank = candidates.stream()
+								.max(comparingDouble(c -> c.getWeight().orElse(0.0)))
+								.map(Candidate::getMeaning)
+								.map(Meaning::getReference).orElse("");
+						final String first_m = candidates.get(0).getMeaning().getReference();
+
+						final Set<String> gold_set = gold.apply(mention);
+						final String result = gold_set.contains(max_rank) ? "OK" : "FAIL";
+						final String ranked = max_rank.equals(first_m) ? "" : "RANKED";
+						Function<String, String> marker = (r) ->
+								(gold_set.contains(r) ? "GOLD " : "") +
+										(r.equals(max_bias) ? "BIAS " : "") +
+										(r.equals(max_rank) ? "RANK" : "");
+
+
+						log.info(mention.getId() + " \"" + mention + "\" " + mention.getPOS() + " " + result + " " + ranked +
+								candidates.stream()
+										.map(c ->
+										{
+											final String mark = marker.apply(c.getMeaning().getReference());
+											final String bias_value = DebugUtils.printDouble(bias.apply(c.getMeaning().getReference()));
+											final String rank_value = c.getWeight().map(DebugUtils::printDouble).orElse("");
+
+											return String.format("%-15s%-" + max_length + "s%-15s%-15s", mark,
+													c.getMeaning().toString(), bias_value, rank_value);
+										})
+										.collect(joining("\n\t", "\t\n\t" + String.format("%-15s%-" + max_length + "s%-15s%-15s\n\t", "Status", "Candidate", "Bias", "Rank"), "")));
+					}));
+
+		});
+	}
+
+	public static void writeDisambiguatedResultsToFile(Corpus corpus, Path output_file)
+	{
+		final String str = corpus.texts.stream()
+				.map(text -> text.sentences.stream()
+						.map(sentence -> sentence.disambiguated.keySet().stream()
+								.sorted(Comparator.comparing(Mention::getContextId))
+								.map(mention ->
+								{
+									String id = mention.getContextId();
+									if (id.contains("-"))
+									{
+										final String[] parts = id.split("-");
+										id = parts[0] + "\t" + parts[1];
+									}
+									else
+										id = id + "\t" + id;
+									return id + "\t" +
+											sentence.disambiguated.get(mention).getMeaning().getReference() + "\t\"" +
+											mention.getSurface_form() + "\"";
+								})
+								.collect(joining("\n")))
+						.collect(joining("\n")))
+				.collect(joining("\n"));
+
+		FileUtils.writeTextToFile(output_file, str);
+	}
+}

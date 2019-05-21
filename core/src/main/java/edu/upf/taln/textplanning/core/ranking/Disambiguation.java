@@ -3,6 +3,8 @@ package edu.upf.taln.textplanning.core.ranking;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 import java.util.function.BiPredicate;
@@ -13,6 +15,8 @@ import static java.util.stream.Collectors.*;
 
 public class Disambiguation
 {
+	private final static Logger log = LogManager.getLogger();
+
 	private final static BiPredicate<Mention, Mention> spans_over =
 			(m1, m2) -> m1.getSourceId().equals(m2.getSourceId()) &&
 						m1.getSpan().getLeft() <= m2.getSpan().getLeft() &&
@@ -42,6 +46,13 @@ public class Disambiguation
 		final List<Candidate> filtered_candidates = candidates.stream()
 				.filter(c -> mention_selector.test(c.getMention()))
 				.collect(toList());
+
+		log.info("Selected multiwords: " + filtered_candidates.stream()
+				.map(Candidate::getMention)
+				.distinct()
+				.filter(Mention::isMultiWord)
+				.map(Mention::toString)
+				.collect(joining("\n\t", "\n\t", "\n")));
 
 		// disambiguate
 		return selectCandidates(filtered_candidates, candidate_selector);

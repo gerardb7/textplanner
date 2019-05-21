@@ -45,7 +45,7 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 		this.options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
 		this.options.min_bias_threshold = 0.8; // minimum bias value below which candidate meanings are ignored
 		this.options.num_first_meanings = 1;
-		this.options.sim_threshold = 0.0; // Pairs of meanings with sim below this value have their score set to 0
+		this.options.sim_threshold = 0.8; // Pairs of meanings with sim below this value have their score set to 0
 		this.options.damping_meanings = 0.5; // controls balance between bias and similarity: higher value -> more bias
 
 		// Exclude POS from mention collection

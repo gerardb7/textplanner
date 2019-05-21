@@ -5,7 +5,6 @@ import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
-import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
@@ -17,8 +16,11 @@ import org.apache.logging.log4j.Logger;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 import static edu.upf.taln.textplanning.common.FileUtils.getFilesInFolder;
 import static java.util.stream.Collectors.*;
@@ -27,7 +29,6 @@ public class RankingEvaluation
 {
 	public RankingEvaluation() {}
 
-	private static Set<String> evaluate_POS;
 	private static final int max_span_size = 3;
 	private static final boolean rank_together = false;
 	private static final ULocale language = ULocale.ENGLISH;
@@ -42,47 +43,68 @@ public class RankingEvaluation
 	public static void run(Path gold_folder, Path xml_file, Path output_path, InitialResourcesFactory resources_factory)
 	{
 		final Options options = new Options();
+		options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
+		options.min_bias_threshold = 0.8; // minimum bias value below which candidate meanings are ignored
+		options.num_first_meanings = 1;
+		options.sim_threshold = 0.8; // Pairs of meanings with sim below this value have their score set to 0
+		options.damping_meanings = 0.5; // controls balance between bias and similarity: higher value -> more bias
 
 		// Exclude POS from mention collection
 		final Set<String> excluded_mention_POS = Set.of(other_pos_tag);
 		// Include these POS in the ranking of meanings
-		options.ranking_POS_Tags = Set.of(noun_pos_tag, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+		options.ranking_POS_Tags = Set.of(noun_pos_tag); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
 		// Evaluate these POS tags only
-		evaluate_POS = Set.of(noun_pos_tag, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+		Set<String> evaluate_POS = Set.of(noun_pos_tag); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
 
-		final List<Set<AlternativeMeanings>> goldMeanings = getGoldMeanings(gold_folder);
-		final Corpus corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path,
-				resources_factory, language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
-		assert goldMeanings.size() == corpus.texts.size();
+		final Map<String, Set<AlternativeMeanings>> gold = parseGoldMeanings(gold_folder);
+		final Corpus corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path, resources_factory, language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
+		assert gold.size() == corpus.texts.size();
 
+		EvaluationTools.rankMeanings(options, corpus);
+		EvaluationTools.disambiguate(corpus);
+
+//		final Path disamb_file = output_path.resolve("meanings_" + language.toLanguageTag() + ".txt");
+//		EvaluationTools.writeDisambiguatedResultsToFile(corpus, disamb_file);
+
+		log.info("\n********************************");
 		{
-			log.info("********************************");
-			log.info("Testing random rank");
-			final List<List<Meaning>> system_meanings = randomRank(corpus);
-			final double map = evaluate(system_meanings, goldMeanings);
-			log.info("MAP = " + DebugUtils.printDouble(map));
-		}
-
-		{
-			log.info("********************************");
-			log.info("Testing context rank");
-			final List<List<Meaning>> system_meanings = contextRank(corpus);
-			final double map = evaluate(system_meanings, goldMeanings);
-			log.info("MAP = " + DebugUtils.printDouble(map));
+			final int num_runs = 10;
+			final double map = IntStream.range(0, num_runs)
+					.mapToDouble(i ->
+							{
+								final Map<String, List<Meaning>> system_meanings = randomRank(corpus);
+								return evaluate(system_meanings, gold, evaluate_POS);
+							})
+					.average().orElse(0.0);
+				log.info("Random rank (" + num_runs + " runs) MAP = " + DebugUtils.printDouble(map));
 		}
 		{
-			log.info("********************************");
-			log.info("Testing full rank");
-			final List<List<Meaning>> system_meanings = fullRank(options, corpus);
-			final double map = evaluate(system_meanings, goldMeanings);
-			log.info("MAP = " + DebugUtils.printDouble(map));
+			final Map<String, List<Meaning>> system_meanings = frequencyRank(corpus);
+			final double map = evaluate(system_meanings, gold, evaluate_POS);
+			log.info("First sense + frequency rank MAP = " + DebugUtils.printDouble(map));
 		}
+		{
+			final Map<String, List<Meaning>> system_meanings = contextRank(corpus);
+			final double map = evaluate(system_meanings, gold, evaluate_POS);
+			log.info("Context rank MAP = " + DebugUtils.printDouble(map));
+		}
+		{
+			final Map<String, List<Meaning>> system_meanings = fullRank(corpus);
+			final double map = evaluate(system_meanings, gold, evaluate_POS);
+			log.info("Full rank MAP = " + DebugUtils.printDouble(map));
+		}
+		log.info("********************************\n");
 
+		final Map<String, Set<String>> gold_meanings = gold.entrySet().stream()
+				.collect(toMap(Map.Entry::getKey, e -> e.getValue().stream()
+						.flatMap(a -> a.alternatives.stream())
+						.collect(toSet())));
+		EvaluationTools.printMeaningRankings(corpus, gold_meanings, false, evaluate_POS);
 	}
 
-	private static List<Set<AlternativeMeanings>> getGoldMeanings(Path gold_folder)
+	private static Map<String, Set<AlternativeMeanings>> parseGoldMeanings(Path gold_folder)
 	{
-		log.info("Parsing gold files");
+		log.info("Parsing gold_meanings files");
 		final File[] gold_files = getFilesInFolder(gold_folder, gold_suffix);
 		assert gold_files != null;
 
@@ -102,16 +124,30 @@ public class RankingEvaluation
 //						.filter(not(is_meta))
 //						.collect(joining(" .\n")))
 //				.collect(toList());
+		final String doc_regex = "@text\\s+(d\\d{3})";
+		final Pattern doc_pattern = Pattern.compile(doc_regex);
+		final Predicate<String> is_doc = doc_pattern.asPredicate();
+
+		final List<String> doc_ids = lines.stream()
+				.map(doc_lines -> doc_lines.stream()
+						.filter(is_doc)
+						.findFirst()
+						.map(doc_pattern::matcher)
+						.filter(Matcher::matches)
+						.map(m -> m.group(1))
+						.orElseThrow())
+				.collect(toList());
 
 		final String regex = "(bn:\\d{8}[r|a|v|n](\\|bn:\\d{8}[r|a|v|n])*)-\"([^\"]+)\"";
 		final Pattern pattern = Pattern.compile(regex);
 		final Predicate<String> is_meanings = pattern.asPredicate();
 
-		final List<Set<AlternativeMeanings>> gold = lines.stream()
-				.map(l -> l.stream()
+		final List<Set<AlternativeMeanings>> gold_meanings = lines.stream()
+				.map(doc_lines -> doc_lines.stream()
 						.filter(is_meanings)
 						.map(pattern::matcher)
-						.map(m -> {
+						.map(m ->
+						{
 							final List<AlternativeMeanings> meanings = new ArrayList<>();
 							while (m.find())
 							{
@@ -130,45 +166,60 @@ public class RankingEvaluation
 						.collect(toSet()))
 				.collect(toList());
 
-		log.info(gold.stream()
+		log.info(gold_meanings.stream()
 				.flatMap(Set::stream)
 				.mapToLong(l -> l.alternatives.size())
-				.sum() + " meanings read from gold");
+				.sum() + " meanings read from gold_meanings");
 
-		return gold;
+		return IntStream.range(0, doc_ids.size())
+				.boxed()
+				.collect(toMap(doc_ids::get, gold_meanings::get));
 	}
 
-	private static List<List<Meaning>> randomRank(Corpus corpus)
+	private static Map<String, List<Meaning>> randomRank(Corpus corpus)
 	{
 		final Random random = new Random();
 		return corpus.texts.stream()
-				.map(t -> {
-					final List<Meaning> meanings = t.sentences.stream()
-							.flatMap(s -> s.candidates.values().stream())
-							.flatMap(Collection::stream)
-							.map(Candidate::getMeaning)
+				.collect(toMap(text -> text.id, text ->
+				{
+					final List<Meaning> meanings = text.sentences.stream()
+							.flatMap(sentence -> sentence.disambiguated.values().stream()
+								.map(Candidate::getMeaning))
 							.collect(toList());
 					Collections.shuffle(meanings, random);
 					return meanings;
-				})
-				.collect(toList());
+				}));
 	}
 
-	private static List<List<Meaning>> contextRank(Corpus corpus)
+	// Frequency-based ranking
+	private static Map<String, List<Meaning>> frequencyRank(Corpus corpus)
 	{
 		return corpus.texts.stream()
-				.map(t -> {
-					// use same filters as in InitialResourcesFactory::getCandidatesFilter
-					Predicate<Candidate> function_words_filter = (c) -> FunctionWordsFilter.test(c.getMention().getSurface_form(), language);
+				.collect(toMap(text -> text.id, text ->
+				{
+					final List<Candidate> disambiguated = text.sentences.stream()
+							.flatMap(sentence -> sentence.disambiguated.values().stream())
+							.collect(toList());
+					Function<Candidate, Long> frequency = c -> disambiguated.stream().filter(c2 -> c2 == c).count();
+					return disambiguated.stream()
+							.sorted(Comparator.comparingLong(frequency::apply).reversed())
+							.map(Candidate::getMeaning)
+							.collect(toList());
+				}));
+	}
 
-					final List<Meaning> meanings = t.sentences.stream()
-							.flatMap(s -> s.candidates.values().stream())
-							.flatMap(Collection::stream)
-							.filter(function_words_filter)
+	private static Map<String, List<Meaning>> contextRank(Corpus corpus)
+	{
+		return corpus.texts.stream()
+				.collect(toMap(text -> text.id, text ->
+				{
+					final List<Meaning> meanings = text.sentences.stream()
+							.flatMap(sentence -> sentence.disambiguated.values().stream())
 							.map(Candidate::getMeaning)
 							.collect(toList());
 
-					final BiasFunction bias = corpus.resouces != null ? corpus.resouces.getBiasFunction() : t.resources.getBiasFunction();
+					final BiasFunction bias = corpus.resouces != null ?
+							corpus.resouces.getBiasFunction() : text.resources.getBiasFunction();
 					Map<Meaning, Double> weights = meanings.stream()
 							.collect(groupingBy(m -> m, averagingDouble(m -> bias.apply(m.getReference()))));
 
@@ -176,46 +227,57 @@ public class RankingEvaluation
 							.distinct()
 							.sorted(Comparator.<Meaning>comparingDouble(weights::get).reversed())
 							.collect(toList());
-				})
-				.collect(toList());
+				}));
 	}
 
-	private static List<List<Meaning>> fullRank(Options options, Corpus corpus)
+	private static Map<String, List<Meaning>> fullRank(Corpus corpus)
 	{
-		EvaluationTools.rankMeanings(options, corpus);
-
 		return corpus.texts.stream()
-				.map(t -> {
-					// Filtering already done in EvaluationTools.rankMeanings
-					Map<Meaning, Double> weights = t.sentences.stream()
-							.flatMap(s -> s.candidates.values().stream())
-							.flatMap(Collection::stream)
+				.collect(toMap(text -> text.id, text ->
+				{
+					Map<Meaning, Double> weights = text.sentences.stream()
+							.flatMap(sentence -> sentence.disambiguated.values().stream())
 							.collect(groupingBy(Candidate::getMeaning, averagingDouble(c -> c.getWeight().orElse(0.0))));
 					final List<Meaning> file_meanings = new ArrayList<>(weights.keySet());
 					return file_meanings.stream()
 							.filter(m -> weights.get(m) > 0.0)
 							.sorted(Comparator.<Meaning>comparingDouble(weights::get).reversed())
 							.collect(toList());
-				})
-				.collect(toList());
+				}));
 	}
 
-	private static double evaluate(List<List<Meaning>> systemMeanings, List<Set<AlternativeMeanings>> goldMeanings)
+	private static double evaluate(Map<String, List<Meaning>> system, Map<String, Set<AlternativeMeanings>> gold, Set<String> POS)
 	{
 		List<Double> avg_precisions = new ArrayList<>();
-		for (int i = 0; i < goldMeanings.size(); ++i)
+		system.forEach((text_id, meanings) ->
 		{
-			final List<String> system_set = systemMeanings.get(i).stream().map(Meaning::getReference).collect(toList());
-			final Set<String> gold_set = goldMeanings.get(i).stream()
+			final List<String> system_set = meanings.stream().map(Meaning::getReference).collect(toList());
+			final Set<String> gold_set = gold.get(text_id).stream()
 					.flatMap(a -> a.alternatives.stream())
 					.collect(toSet());
+
+			Predicate<String> filter_by_POS = m ->
+					(m.endsWith("n") && POS.contains(noun_pos_tag)) ||
+					(m.endsWith("v") && POS.contains(verb_pos_tag)) ||
+					(m.endsWith("a") && POS.contains(adj_pos_tag)) ||
+					(m.endsWith("r") && POS.contains(adverb_pos_tag));
+
+			// Determine the actual subset of the gold to be used in the evaluation
+			final Set<String> evaluated_gold = gold_set.stream()
+					.filter(filter_by_POS)
+					.collect(toSet());
+
+			// Now determine the subset of the system candidates to be evaluated
+			final List<String> evaluated_system = system_set.stream()
+					.filter(filter_by_POS)
+					.collect(toList());
 
 			int true_positives_partial = 0;
 			int false_positives_partial = 0;
 			Map<Integer, Double> rank_precisions = new HashMap<>();
-			for (int k = 0; k < system_set.size(); ++k)
+			for (int k = 0; k < evaluated_system.size(); ++k)
 			{
-				if (gold_set.contains(system_set.get(k)))
+				if (evaluated_gold.contains(evaluated_system.get(k)))
 				{
 					final double p = (double) ++true_positives_partial / (double) (true_positives_partial + false_positives_partial);
 					rank_precisions.put(k, p);
@@ -225,10 +287,8 @@ public class RankingEvaluation
 			}
 
 			rank_precisions.values().stream().mapToDouble(d -> d).average().ifPresent(avg_precisions::add);
-
-		}
+		});
 
 		return avg_precisions.stream().mapToDouble(d -> d).average().orElse(0.0);
 	}
-
 }

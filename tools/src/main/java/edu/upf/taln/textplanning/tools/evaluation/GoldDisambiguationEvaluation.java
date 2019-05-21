@@ -14,6 +14,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Predicate;
 
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
@@ -136,36 +137,25 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 	@Override
 	protected void evaluate(List<Candidate> candidates, String sufix)
 	{
-		// Split gold by POS
-		final Map<String, Set<String>> gold_nouns = gold.entrySet().stream()
-				.filter(e -> e.getValue().alternatives.stream().anyMatch(m -> m.endsWith("n")))
-				.collect(toMap(Map.Entry::getKey, e -> e.getValue().alternatives));
-		final Map<String, Set<String>> gold_verbs = gold.entrySet().stream()
-				.filter(e -> e.getValue().alternatives.stream().anyMatch(m -> m.endsWith("v")))
-				.collect(toMap(Map.Entry::getKey, e -> e.getValue().alternatives));
-		final Map<String, Set<String>> gold_adjs = gold.entrySet().stream()
-			.filter(e -> e.getValue().alternatives.stream().anyMatch(m -> m.endsWith("a")))
-			.collect(toMap(Map.Entry::getKey, e -> e.getValue().alternatives));
-		final Map<String, Set<String>> gold_advs = gold.entrySet().stream()
-			.filter(e -> e.getValue().alternatives.stream().anyMatch(m -> m.endsWith("r")))
-			.collect(toMap(Map.Entry::getKey, e -> e.getValue().alternatives));
+		Predicate<AlternativeMeanings> filter_by_POS = a ->
+				(a.alternatives.stream().anyMatch(m -> m.endsWith("n")) && evaluate_POS.contains(noun_pos_tag)) ||
+				(a.alternatives.stream().anyMatch(m -> m.endsWith("v")) && evaluate_POS.contains(verb_pos_tag)) ||
+				(a.alternatives.stream().anyMatch(m -> m.endsWith("a")) && evaluate_POS.contains(adj_pos_tag)) ||
+				(a.alternatives.stream().anyMatch(m -> m.endsWith("r")) && evaluate_POS.contains(adverb_pos_tag));
 
 		// Determine the actual subset of the gold to be used in the evaluation
 		final Map<String, Set<String>> evaluated_gold = new HashMap<>();
 		if (multiwords_only)
+		{
 			gold.entrySet().stream()
-				.filter(e -> e.getKey().contains("-"))
-				.forEach(e -> evaluated_gold.put(e.getKey(), e.getValue().alternatives));
+					.filter(e -> e.getKey().contains("-"))
+					.forEach(e -> evaluated_gold.put(e.getKey(), e.getValue().alternatives));
+		}
 		else
 		{
-			if (evaluate_POS.contains(noun_pos_tag))
-				evaluated_gold.putAll(gold_nouns);
-			if (evaluate_POS.contains(verb_pos_tag))
-				evaluated_gold.putAll(gold_verbs);
-			if (evaluate_POS.contains(adj_pos_tag))
-				evaluated_gold.putAll(gold_adjs);
-			if (evaluate_POS.contains(adverb_pos_tag))
-				evaluated_gold.putAll(gold_advs);
+			gold.entrySet().stream()
+					.filter(e -> filter_by_POS.test(e.getValue()))
+					.forEach(e -> evaluated_gold.put(e.getKey(), e.getValue().alternatives));
 		}
 
 		// Now determine the subset of the system candidates to be evaluated
