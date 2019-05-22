@@ -183,12 +183,12 @@ public class Driver
 		@Parameter(names = {"-g", "-gold"}, description = "Path to folder containing gold summaries", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
 		private Path gold;
+		@Parameter(names = {"-o", "-output"}, description = "Path to folder where system summaries are created", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
+		private Path output;
 		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
 		private Path dictionary;
-		@Parameter(names = {"-o", "-output"}, description = "Path to folder where text files will be created containing system summaries", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
-		private Path output;
 		@Parameter(names = {"-bf", "-bias_function"}, description = "Type of bias function", arity = 1, required = true,
 				converter = CMLCheckers.BiasTypeConverter.class , validateWith = CMLCheckers.BiasTypeValidator.class)
 		private BiasFunction.Type biasType;
@@ -337,7 +337,6 @@ public class Driver
 
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, wsdEval.dictionary, bias_resources);
 
-				Options options = new Options();
 				GoldDisambiguationEvaluation eval = new GoldDisambiguationEvaluation(wsdEval.gold_file, wsdEval.input_file, wsdEval.output,
 						resources);
 				if (wsdEval.batch)

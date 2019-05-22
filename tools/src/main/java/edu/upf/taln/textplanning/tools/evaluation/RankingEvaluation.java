@@ -63,7 +63,7 @@ public class RankingEvaluation
 		EvaluationTools.rankMeanings(options, corpus);
 		EvaluationTools.disambiguate(corpus);
 
-//		final Path disamb_file = output_path.resolve("meanings_" + language.toLanguageTag() + ".txt");
+//		final Path disamb_file = resources_path.resolve("meanings_" + language.toLanguageTag() + ".txt");
 //		EvaluationTools.writeDisambiguatedResultsToFile(corpus, disamb_file);
 
 		log.info("\n********************************");

@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.tools.evaluation;
 
 import com.ibm.icu.util.ULocale;
+import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.structures.Mention;
@@ -11,15 +12,19 @@ import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
+import static edu.upf.taln.textplanning.common.FileUtils.getFilesInFolder;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 public class ExtractiveEvaluation
 {
@@ -64,7 +69,9 @@ public class ExtractiveEvaluation
 	private static final String verb_pos_tag = "V";
 	private static final String adverb_pos_tag = "R";
 	private static final String other_pos_tag = "X";
-	private static final String suffix = ".story";
+	private static final String document_extension = ".story";
+	private static final String summary_extension = ".summ";
+
 //	private static final Set<String> excludedPOS = Set.of("CC","DT","EX","IN","LS","MD","PDT","POS","PRP","PRP$","RB","RBR","RBS","RP","TO","UH","WDT","WP","WP$","WRB");
 	private final static Logger log = LogManager.getLogger();
 
@@ -73,7 +80,7 @@ public class ExtractiveEvaluation
 		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createParsingPipeline(language);
 		if (pipeline != null)
 		{
-			UIMAWrapper.processAndSerialize(input_folder, output_folder, suffix, DeepMindSourceParser.class, pipeline);
+			UIMAWrapper.processAndSerialize(input_folder, output_folder, document_extension, DeepMindSourceParser.class, pipeline);
 		}
 	}
 
@@ -92,7 +99,6 @@ public class ExtractiveEvaluation
 		// Include these POS in the ranking of meanings
 		options.ranking_POS_Tags = Set.of(noun_pos_tag); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
 		// Evaluate these POS tags only
-		Set<String> evaluate_POS = Set.of(noun_pos_tag); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
 
 		// load corpus
 		final Corpus corpus = EvaluationTools.loadResourcesFromXML(input_folder, output_path, resources_factory,
@@ -108,26 +114,58 @@ public class ExtractiveEvaluation
 		corpus.texts.forEach(text ->
 		{
 			log.info("Text " + text.id);
-			final String bow_summary = text.sentences.stream()
-					.map(sentence -> sentence.disambiguated.keySet())
-					.flatMap(Set::stream)
-					.sorted(Comparator.comparingDouble(Mention::getWeight).reversed())
-					.map(Mention::getSurface_form)
-					.distinct()
-					.map(s -> s.contains(" ") ? "\"" + s + "\"" : s)
-					.limit(50)
-					.collect(joining(" "));
-			log.info("BoW summary:\n\t" + bow_summary + "\n");
+			text.sentences.size();
 
-			final String summary = text.sentences.stream()
-					.sorted(Comparator.<Sentence>comparingDouble(s -> s.disambiguated.keySet().stream().mapToDouble(Mention::getWeight).average().orElse(0.0)).reversed())
-					.map(sentence -> sentence.tokens.stream().map(t -> t.wf).collect(joining(" ")))
-					.limit(10)
-					.collect(joining("\n\t ", "\n\t", "\n"));
-			log.info("Extractive summary: " + summary);
+			{
+				final String summary = text.sentences.stream()
+						.map(sentence -> sentence.disambiguated.keySet())
+						.flatMap(Set::stream)
+						.sorted(Comparator.comparingDouble(Mention::getWeight).reversed())
+						.map(Mention::getSurface_form)
+						.distinct()
+						//.map(s -> s.contains(" ") ? "\"" + s + "\"" : s)
+						.limit(50)
+						.collect(joining(" "));
+				log.info("BoW summary:\n\t" + summary + "\n");
+				{
+					final Path summary_path = output_path.resolve(text.id + "_bow" + summary_extension);
+					FileUtils.writeTextToFile(summary_path, summary);
+				}
+			}
+
+			{
+				final String summary = text.sentences.stream()
+						.sorted(Comparator.<Sentence>comparingDouble(s -> s.disambiguated.keySet().stream().mapToDouble(Mention::getWeight).average().orElse(0.0)).reversed())
+						.map(sentence -> sentence.tokens.stream().map(t -> t.wf).collect(joining(" ")))
+						.limit(10)
+						.collect(joining("\n"));
+				log.info("\tExtractive summary:\n\t" + summary.replace("\n", "\n\t") + "\n");
+				{
+					final Path summary_path = output_path.resolve(text.id + "_extractive" + summary_extension);
+					FileUtils.writeTextToFile(summary_path, summary);
+				}
+			}
 		});
 
 		//EvaluationTools.plan(options, corpus);
+	}
+
+
+	private void parseGold(Path gold_folder)
+	{
+		log.info("Parsing gold summaries files");
+		final File[] gold_files = getFilesInFolder(gold_folder, summary_extension);
+		assert gold_files != null;
+
+		final List<List<String>> lines = Arrays.stream(gold_files)
+				.sorted(Comparator.comparing(File::getName))
+				.map(File::toPath)
+				.map(FileUtils::readTextFile)
+				.map(text ->
+						Pattern.compile("\n+").splitAsStream(text)
+								.filter(l -> !l.isEmpty())
+								.collect(toList()))
+				.collect(toList());
 	}
 }
 
