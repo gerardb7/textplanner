@@ -39,7 +39,7 @@ public class JamaPowerIteration implements PowerIterationRanking
 
 		// Create initial state as a column vector
 		final int n = at.getColumnDimension();
-		final double e = 1.0/(n*1000); // set stopping threshold
+		final double e = 1.0/(n*1000); // quadratic error, used as stopping threshold
 		Matrix v = new Matrix(n, 1, 1.0 / n); // v is the distribution vector that will be iteratively updated
 
 		log.info("Starting power iteration");

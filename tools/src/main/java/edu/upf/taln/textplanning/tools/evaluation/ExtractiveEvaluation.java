@@ -4,27 +4,28 @@ import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
+import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
+import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
+import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.Corpus;
 import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.Sentence;
 import edu.upf.taln.textplanning.uima.io.TextParser;
 import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import static edu.upf.taln.textplanning.common.FileUtils.getFilesInFolder;
 import static java.util.function.Predicate.not;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.*;
 
 public class ExtractiveEvaluation
 {
@@ -84,7 +85,7 @@ public class ExtractiveEvaluation
 		}
 	}
 
-	public static void run(Path input_folder, Path gold_folder, Path output_path, InitialResourcesFactory resources_factory)
+	public static void run(Path input_folder, Path gold_folder, Path output_path, Path tmp_folder, InitialResourcesFactory resources_factory)
 	{
 		final Options options = new Options();
 		options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
@@ -100,9 +101,10 @@ public class ExtractiveEvaluation
 		options.ranking_POS_Tags = Set.of(noun_pos_tag); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
 		// Evaluate these POS tags only
 
-		// load corpus
-		final Corpus corpus = EvaluationTools.loadResourcesFromXML(input_folder, output_path, resources_factory,
+		// load input corpus and gold
+		final Corpus corpus = EvaluationTools.loadResourcesFromXML(input_folder, tmp_folder, resources_factory,
 				language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
+		final Map<String, List<List<String>>> gold = parseGold(gold_folder);
 
 		// rank
 		EvaluationTools.rankMeanings(options, corpus);
@@ -110,38 +112,181 @@ public class ExtractiveEvaluation
 		EvaluationTools.disambiguate(corpus);
 		EvaluationTools.rankMentions(options, corpus);
 
+
 		// create summaries (without a graph!)
 		corpus.texts.forEach(text ->
 		{
-			log.info("Text " + text.id);
-			text.sentences.size();
+			Function<Mention, String> printContext = m -> text.sentences.stream()
+					.filter(s -> s.id.equals(m.getSourceId()))
+					.findFirst()
+					.map(s -> s.tokens.stream()
+							.map(t -> m.getContextId().contains(t.id) ? "*" + t.wf + "*" : t.wf)
+							.collect(joining(" ")))
+					.orElse("");
+
+			String basename = FilenameUtils.removeExtension(text.filename);
+			//basename = basename.substring(0, basename.indexOf('_'));
+
+			log.info("Text " + text.id + " (" + basename + ")");
+			final List<List<String>> gold_tokens = gold.get(basename);
+			final int num_sentences = gold_tokens.size(); // make extractive summaries match num of sentences of gold summary
+//			log.info(gold_tokens.stream() // make bow summaries match num of content words of gold summary
+//					.map(s -> s.stream()
+//							.filter(t -> StopWordsFilter.test(t, language))
+//							.collect(toList()))
+//					.collect(toList()));
+
+
+			final long num_words = gold_tokens.stream() // make bow summaries match num of content words of gold summary
+					.mapToLong(s -> s.stream()
+							.filter(t -> FunctionWordsFilter.test(t, language))
+							.count())
+					.sum();
+			final String gold_summary = gold_tokens.stream()
+					.map(s -> String.join(" ", s))
+					.collect(joining("\n\t"));
+			log.info(num_sentences + " sentences, " + num_words + " content words, " + gold_summary.length() + " characters.");
+			log.info("Gold summary:\n\t" + gold_summary + "\n");
 
 			{
-				final String summary = text.sentences.stream()
-						.map(sentence -> sentence.disambiguated.keySet())
-						.flatMap(Set::stream)
-						.sorted(Comparator.comparingDouble(Mention::getWeight).reversed())
-						.map(Mention::getSurface_form)
+				// BoM summary
+				final List<Candidate> sorted_candidates = text.sentences.stream()
+						.flatMap(sentence -> sentence.disambiguated.values().stream())
+						.sorted(Comparator.<Candidate>comparingDouble(c -> c.getWeight().orElse(0.0)).reversed())
+						.collect(toList());
+
+				final String summary = sorted_candidates.stream()
+						.map(Candidate::getMention)
+						.map(Mention::getLemma)
 						.distinct()
-						//.map(s -> s.contains(" ") ? "\"" + s + "\"" : s)
-						.limit(50)
+						.limit(num_words)
 						.collect(joining(" "));
-				log.info("BoW summary:\n\t" + summary + "\n");
+
+				final String candidates_str = sorted_candidates.stream()
+						.limit(num_words)
+						.map(c -> c.getMention().toString() + "\t" + printContext.apply(c.getMention()))
+						.collect(joining("\n\t"));
+
+				log.info("BoM summary: " + summary + "\n\t" + candidates_str + "\n");
 				{
-					final Path summary_path = output_path.resolve(text.id + "_bow" + summary_extension);
+					final Path summary_path = output_path.resolve(basename + "_bom" + summary_extension);
+					FileUtils.writeTextToFile(summary_path, summary);
+				}
+			}
+
+
+			{
+				// BoW summary
+				final List<Candidate> sorted_candidates= text.sentences.stream()
+						.flatMap(sentence -> sentence.disambiguated.values().stream())
+						.filter(c -> c.getMention().getWeight().isPresent())
+						.sorted(Comparator.<Candidate>comparingDouble(c -> c.getMention().getWeight().get()).reversed())
+						.collect(toList());
+
+				final String summary = sorted_candidates.stream()
+						.map(Candidate::getMention)
+						.map(Mention::getLemma)
+						.distinct()
+						.limit(num_words)
+						.collect(joining(" "));
+
+				final String candidates_str = sorted_candidates.stream()
+						.limit(num_words)
+						.map(c -> c.getMention().toString() + "\t" + printContext.apply(c.getMention()))
+						.collect(joining("\n\t"));
+
+				log.info("BoW summary: " + summary + "\n\t" + candidates_str + "\n");
+				{
+					final Path summary_path = output_path.resolve(basename + "_bow" + summary_extension);
 					FileUtils.writeTextToFile(summary_path, summary);
 				}
 			}
 
 			{
-				final String summary = text.sentences.stream()
-						.sorted(Comparator.<Sentence>comparingDouble(s -> s.disambiguated.keySet().stream().mapToDouble(Mention::getWeight).average().orElse(0.0)).reversed())
+				final Map<Sentence, List<Candidate>> sentences2meanings = text.sentences.stream()
+						.collect(toMap(s -> s, s -> s.disambiguated.values().stream()
+								.filter(c -> c.getWeight().isPresent())
+								.collect(toList())));
+
+				// Extractive meaning summary
+				final Map<Sentence, String> sentences2weightlists = sentences2meanings.entrySet().stream()
+						.collect(toMap(Map.Entry::getKey, e -> e.getValue().stream()
+								.map(c -> c.getMention().getSurface_form() + " " +
+										DebugUtils.printDouble(c.getWeight().orElseThrow()))
+								.collect(joining(", "))));
+
+				final Map<Sentence, Double> sentences2weights = sentences2meanings.entrySet().stream()
+						.collect(toMap(Map.Entry::getKey, e -> e.getValue().stream()
+								.map(Candidate::getWeight)
+								.flatMap(Optional::stream)
+								.mapToDouble(d -> d)
+								.average()
+								.orElse(0.0)));
+
+				final List<Sentence> sorted_sentences = sentences2weights.entrySet().stream()
+						.sorted(Comparator.<Map.Entry<Sentence, Double>>comparingDouble(Map.Entry::getValue).reversed())
+						.map(Map.Entry::getKey)
+						.collect(toList());
+
+				final String debug = sorted_sentences.stream()
+						.map(sentence -> sentence.tokens.stream().map(t -> t.wf).collect(joining(" ")) +
+								"\t" + DebugUtils.printDouble(sentences2weights.get(sentence)) + "\t" + sentences2weightlists.get(sentence))
+						.limit(num_sentences)
+						.collect(joining("\n\t", "\n\t", "\n"));
+
+				final String summary = sorted_sentences.stream()
 						.map(sentence -> sentence.tokens.stream().map(t -> t.wf).collect(joining(" ")))
-						.limit(10)
+						.limit(num_sentences)
 						.collect(joining("\n"));
-				log.info("\tExtractive summary:\n\t" + summary.replace("\n", "\n\t") + "\n");
+				log.info("Extractive meaning summary:" + debug);
 				{
-					final Path summary_path = output_path.resolve(text.id + "_extractive" + summary_extension);
+					final Path summary_path = output_path.resolve(basename + "_extrmeaning" + summary_extension);
+					FileUtils.writeTextToFile(summary_path, summary);
+				}
+			}
+
+			{
+				final Map<Sentence, List<Mention>> sentences2mentions = text.sentences.stream()
+						.collect(toMap(s -> s, s -> s.mentions.stream()
+								.filter(c -> c.getWeight().isPresent())
+								.peek(m -> {
+									if(m.getWeight().get() == 0.0)
+										log.error("Mention has zero-valued weight: " + m.toString());
+								})
+								.collect(toList())));
+
+				final Map<Sentence, String> sentences2weightlists = sentences2mentions.entrySet().stream()
+						.collect(toMap(Map.Entry::getKey, e -> e.getValue().stream()
+								.filter(m -> m.getWeight().isPresent())
+								.map(m -> m.getSurface_form() + " " + DebugUtils.printDouble(m.getWeight().get()))
+								.collect(joining(", "))));
+
+				final Map<Sentence, Double> sentences2weights = sentences2mentions.entrySet().stream()
+						.collect(toMap(Map.Entry::getKey, e -> e.getValue().stream()
+								.flatMap(m -> m.getWeight().stream())
+								.mapToDouble(d -> d)
+								.average()
+								.orElse(0.0)));
+
+				final List<Sentence> sorted_sentences = sentences2weights.entrySet().stream()
+						.sorted(Comparator.<Map.Entry<Sentence, Double>>comparingDouble(Map.Entry::getValue).reversed())
+						.map(Map.Entry::getKey)
+						.collect(toList());
+
+				final String debug = sorted_sentences.stream()
+						.map(sentence -> sentence.tokens.stream().map(t -> t.wf).collect(joining(" ")) +
+								"\t" + DebugUtils.printDouble(sentences2weights.get(sentence)) + "\t" + sentences2weightlists.get(sentence))
+						.limit(num_sentences)
+						.collect(joining("\n\t", "\n\t", "\n"));
+
+				final String summary = sorted_sentences.stream()
+						.map(sentence -> sentence.tokens.stream().map(t -> t.wf).collect(joining(" ")))
+						.limit(num_sentences)
+						.collect(joining("\n"));
+
+				log.info("Extractive mention summary:" + debug);
+				{
+					final Path summary_path = output_path.resolve(basename + "_extrmention" + summary_extension);
 					FileUtils.writeTextToFile(summary_path, summary);
 				}
 			}
@@ -151,21 +296,31 @@ public class ExtractiveEvaluation
 	}
 
 
-	private void parseGold(Path gold_folder)
+	private static Map<String, List<List<String>>> parseGold(Path gold_folder)
 	{
 		log.info("Parsing gold summaries files");
 		final File[] gold_files = getFilesInFolder(gold_folder, summary_extension);
 		assert gold_files != null;
 
-		final List<List<String>> lines = Arrays.stream(gold_files)
+		return Arrays.stream(gold_files)
 				.sorted(Comparator.comparing(File::getName))
 				.map(File::toPath)
-				.map(FileUtils::readTextFile)
-				.map(text ->
-						Pattern.compile("\n+").splitAsStream(text)
-								.filter(l -> !l.isEmpty())
-								.collect(toList()))
-				.collect(toList());
+				.collect(toMap(
+						path -> {
+							String basename = FilenameUtils.removeExtension(path.getFileName().toString());
+							return basename.substring(0, basename.indexOf('_'));
+						},
+						path ->
+						{
+							String text = FileUtils.readTextFile(path);
+							return Pattern.compile("\n+").splitAsStream(text)
+									.filter(l -> !l.isEmpty())
+									.map(g -> {
+										final StringTokenizer stringTokenizer = new StringTokenizer(g, " \t\n\r\f,.:;?!{}()[]'");
+										return Collections.list(stringTokenizer).stream().map(Object::toString).collect(toList());
+									})
+									.collect(toList());
+						}));
 	}
 }
 

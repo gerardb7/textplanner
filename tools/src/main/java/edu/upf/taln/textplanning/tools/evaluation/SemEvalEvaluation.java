@@ -39,8 +39,7 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 	private static final String other_pos_tag = "X";
 	private static final ULocale language = ULocale.ENGLISH;
 
-	public SemEvalEvaluation(   Path gold_file, Path xml_file, Path output_path,
-	                            InitialResourcesFactory resources_factory)
+	public SemEvalEvaluation(   Path gold_file, Path xml_file, Path output_path, InitialResourcesFactory resources_factory)
 	{
 		this.options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
 		this.options.min_bias_threshold = 0.8; // minimum bias value below which candidate meanings are ignored

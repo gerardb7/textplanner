@@ -6,7 +6,6 @@ import com.beust.jcommander.Parameters;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
-import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
@@ -186,6 +185,9 @@ public class Driver
 		@Parameter(names = {"-o", "-output"}, description = "Path to folder where system summaries are created", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
+		@Parameter(names = {"-t", "-tmp"}, description = "Path to folder where temporary files are stored", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
+		private Path tmp;
 		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
 		private Path dictionary;
@@ -315,8 +317,7 @@ public class Driver
 
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, semEval.dictionary, bias_resources);
 
-				SemEvalEvaluation eval = new SemEvalEvaluation(semEval.gold_file, semEval.input_file, semEval.output,
-						resources);
+				SemEvalEvaluation eval = new SemEvalEvaluation(semEval.gold_file, semEval.input_file, semEval.output, resources);
 				if (semEval.batch)
 					eval.run_batch();
 				else
@@ -375,7 +376,7 @@ public class Driver
 				bias_resources.meaning_vectors_type = extractEval.sense_vector_type;
 
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, extractEval.dictionary, bias_resources);
-				ExtractiveEvaluation.run(extractEval.input, extractEval.gold, extractEval.output, resources);
+				ExtractiveEvaluation.run(extractEval.input, extractEval.gold, extractEval.output, extractEval.tmp, resources);
 				break;
 			}
 			case process_files_command:

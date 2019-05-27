@@ -9,11 +9,10 @@ import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 /**
- * Ranker class offers methods to rank items according to a bias function for single items and a similarity function
- * for pairs of items.
- * Ranking is addressed by creating stochastic matrices and using biased centering algorithms.
+ * Rank sitems according to a bias function for single items and a weight function for pairs of items.
+ * Ranking is addressed by creating a biased stochastic matrix and applying a centering algorithm.
  *
- * The methods are based on personalized PageRank algorithms, as used for summarization in:
+ * The ranking is based on personalized PageRank algorithms, such as the one used for summarization in:
  *      Otterbacher et al. 2009 paper "Biased LexRank" (p.5)
  *
  * "a probability matrix should be a square matrix with (a) nonnegative entries and (b) each row sum equal to 1.
@@ -28,12 +27,13 @@ import java.util.function.Function;
 public class Ranker
 {
 	public static double[] rank(List<String> items, List<String> labels, Function<String, Double> bias,
-	                         BiFunction<String, String, OptionalDouble> sim,
-	                         BiPredicate<String, String> sim_filter,
+	                         BiFunction<String, String, OptionalDouble> edge_weights, boolean symmetric,
+	                         BiPredicate<String, String> filter,
 	                         double sim_threshold, double d,
 	                         boolean make_positive, boolean row_normalize)
 	{
-		double[][] rankingArrays = MatrixFactory.createRankingMatrix(items, bias, sim, sim_filter, sim_threshold, d, make_positive, row_normalize);
+		double[][] rankingArrays = MatrixFactory.createRankingMatrix(items, bias, edge_weights, symmetric, filter,
+				sim_threshold, d, make_positive, row_normalize);
 		Matrix rankingMatrix = new Matrix(rankingArrays);
 		JamaPowerIteration alg = new JamaPowerIteration();
 		Matrix finalDistribution = alg.run(rankingMatrix, labels);

@@ -696,7 +696,7 @@ public class EmpiricalStudy
 			final List<Double> weights = new ArrayList<>();
 			if (num_pairs_meanings_defined > 0)
 			{
-				final double[][] M = MatrixFactory.createSimilarityMatrix(meanings, sim, filter,
+				final double[][] M = MatrixFactory.createTransitionMatrix(meanings, sim, true, filter,
 						0.0, false);
 				final List<Pair<Integer, Integer>> indexes = IntStream.range(0, num_meanings)
 						.mapToObj(i -> IntStream.range(i, num_meanings)

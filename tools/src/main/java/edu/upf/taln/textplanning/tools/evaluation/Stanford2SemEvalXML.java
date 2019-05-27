@@ -16,10 +16,10 @@ import java.io.StringWriter;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 public class Stanford2SemEvalXML
 {
@@ -44,10 +44,9 @@ public class Stanford2SemEvalXML
 		final File[] files = FileUtils.getFilesInFolder(input_folder, text_suffix);
 		if (files == null)
 			throw new Exception("Invalid input path " + input_folder);
-		final List<String> texts = Arrays.stream(files)
+		final Map<String, String> texts = Arrays.stream(files)
 				.map(File::toPath)
-				.map(FileUtils::readTextFile)
-				.collect(toList());
+				.collect(toMap(p -> p.getFileName().toString(), FileUtils::readTextFile));
 		final StringWriter swriter = new StringWriter();
 		BufferedWriter writer = new BufferedWriter(swriter);
 
@@ -55,10 +54,11 @@ public class Stanford2SemEvalXML
 		writer.append("<corpus lang=\"en\">"); writer.newLine();
 		int text_counter = 1;
 
-		for (String text : texts)
+		for (String filename : texts.keySet())
 		{
+			final String text = texts.get(filename);
 			final String text_id = String.format("d%03d", text_counter++);
-			writer.append("<text id=\"d").append(text_id).append("\">");
+			writer.append("<text id=\"d").append(text_id).append("\" filename=\"").append(filename).append("\">");
 			writer.newLine();
 
 			log.info("Processing text " + (text_counter-1));

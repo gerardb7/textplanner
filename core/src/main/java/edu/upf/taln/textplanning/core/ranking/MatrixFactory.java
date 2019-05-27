@@ -18,7 +18,9 @@ public class MatrixFactory
 	private final static Logger log = LogManager.getLogger();
 
 	/**
-	 * Creates a square non-negative matrix to rank a set of items according to a bias and a similarity function
+	 * Creates a square non-negative matrix to rank a set of items according to a bias and an edge weight function
+	 * The matrix is row-stochastic. In has to be transposed into a column-stochastic matrix before used in a power
+	 * iteration implementation of PageRank
 	 *
 	 * 1- Linear algebra explanation of Perron–Frobenius theorem:
 	 * A positive matrix with exclusively positive real numbers as elements has a dominant real eigenvalue k (larger than
@@ -45,8 +47,9 @@ public class MatrixFactory
 	 * If @row_normalize is set to true, the matrix returned is row stochastic
 	 */
 	public static double[][] createRankingMatrix(List<String> items, Function<String, Double> bias,
-	                                             BiFunction<String, String, OptionalDouble> sim,
-	                                             BiPredicate<String, String> sim_filter,
+	                                             BiFunction<String, String, OptionalDouble> edge_weights,
+	                                             boolean simmetric,
+	                                             BiPredicate<String, String> filter,
 	                                             double sim_threshold, double d,
 	                                             boolean make_positive, boolean row_normalize)
 	{
@@ -56,19 +59,20 @@ public class MatrixFactory
 		// Create non-negative bias row vector for the set of items
 		double[] L = createBiasVector(items, bias);
 
-		// Create symmetric non-negative similarity matrix
-		double[][] X = createSimilarityMatrix(items, sim, sim_filter, sim_threshold, true);
+		// Create non-negative transition matrix
+		double[][] X = createTransitionMatrix(items, edge_weights, simmetric, filter, sim_threshold, true);
 
 		// Create ranking matrix:
 		double[][] R = new double[n][n];
 
 		// Bias each row in X using bias L and d factor d
-		// Ruv = d*Lu + (1.0-d)*Xuv
-		IntStream.range(0, n).parallel().forEach(u ->
-				IntStream.range(0, n).forEach(v -> {
-					double Lu = L[u]; // bias towards relevance of v
-					double Xuv = X[u][v]; // similarity
-					double Ruv = d * Lu + (1.0 - d)*Xuv;
+		// Ru = d*Lu + (1.0-d)* SUM Xvu, for all v pointing to u
+		// Rvu = d*Lu + (1.0-d)*Xvu
+		IntStream.range(0, n).parallel().forEach(u -> // row for u
+				IntStream.range(0, n).forEach(v -> { // from v to u
+					double Lu = L[u]; // bias towards u
+					double Xvu = X[u][v]; // similarity from v to u
+					double Ruv = d * Lu + (1.0 - d)*Xvu;
 
 					assert !Double.isNaN(Ruv);
 					R[u][v] = Ruv;
@@ -104,9 +108,10 @@ public class MatrixFactory
 				.toArray();
 	}
 
-	// Creates a symmetric non-negative similarity matrix
-	public static double[][] createSimilarityMatrix(List<String> items,
-	                                                BiFunction<String, String, OptionalDouble> sim,
+	// Creates a symmetric non-negative matrix
+	public static double[][] createTransitionMatrix(List<String> items,
+	                                                BiFunction<String, String, OptionalDouble> edge_weights,
+	                                                boolean simmetric,
 	                                                BiPredicate<String, String> filter,
 	                                                double sim_threshold, boolean report_stats)
 	{
@@ -120,54 +125,56 @@ public class MatrixFactory
 		AtomicLong num_negative = new AtomicLong(0);
 		ThreadReporter reporter = new ThreadReporter(log);
 
-		// Calculate similarity values
+		// Fill matrix
 		IntStream.range(0, n)
 				.parallel() // each thread writes to separate portions (rows) of the matrix
 				.peek(i -> reporter.report())
-				.forEach(i -> IntStream.range(i, n).forEach(j ->
+				.forEach(i -> IntStream.range(simmetric ? i : 0, n).forEach(j ->
 				{
-					double simij = 0.0;
-					final String e1 = items.get(i);
-					final String e2 = items.get(j);
-					if (filter.test(e1, e2))
+					double wji = 0.0;
+					final String ej = items.get(j);
+					final String ei = items.get(i);
+					if (filter.test(ej, ei))
 					{
-						final OptionalDouble osim = sim.apply(e1, e2);
-						if (osim.isPresent())
-							num_defined.incrementAndGet();
+						final OptionalDouble o = edge_weights.apply(ej, ei);
+						o.ifPresent(d -> num_defined.incrementAndGet());
+						wji = o.orElse(0.0);
 
-						double sim_value = osim.orElse(0.0);
-						if (sim_value < 0.0)
+						if (wji < 0.0)
+						{
 							num_negative.incrementAndGet();
-						else
-							simij = sim_value;
+							wji = 0.0;
+						}
 					}
 					else
 						num_filtered.incrementAndGet();
 
-					if (simij < sim_threshold)
-						simij = 0.0;
+					if (wji < sim_threshold)
+						wji = 0.0;
 
-					m[i][j] = simij;
-					m[j][i] = simij; // symmetric matrix
+					m[i][j] = wji; // weight for edge going from j to i
+					if (simmetric)
+						m[j][i] = wji; // weight for edge going from i to j -> same if symmetric
 
 					if (counter_pairs.incrementAndGet() % 100000 == 0)
 						log.info(counter_pairs.get() + " out of " + total_pairs);
 				}));
 
 		if (Arrays.stream(m).anyMatch(row -> Arrays.stream(row).allMatch(v -> v == 0.0)))
-			log.warn("Similarity matrix has an all-zero row");
+			log.warn("Transition matrix has an all-zero row");
 
 		if (report_stats)
 		{
-			log.info( num_filtered.intValue() + " meaning pairs filtered out");
-			log.info("Similarity values are negative for " + num_negative.get() + " pairs out of " + total_pairs);
+			log.info( num_filtered.intValue() + " edge weights set to 0");
+			log.info("Weights are negative for " + num_negative.get() + " edges out of " + total_pairs);
 		}
 
 		return m;
 	}
 
 	/**
-	 * Smooths values to make each row positive
+	 * Smooths values to make each row positive.
+	 * Required when bias vector isn't guaranteed to be strictly positive
 	 */
 	private static void makePositive(double[][] m)
 	{
@@ -191,7 +198,7 @@ public class MatrixFactory
 	}
 
 	/**
-	 * Row-normalizes a square matrix
+	 * Row-normalizes a square matrix, e.g normalizes adjacency links, similarity values, etc.
 	 */
 	private static void rowNormalize(double[][] m)
 	{

@@ -5,6 +5,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * A sequence of one or more consecutive tokens
@@ -20,7 +21,7 @@ public final class Mention implements Comparable<Mention>, Serializable
 	private final String pos; // POS tag
 	private final boolean isNE; // is NE
 	private final String type; // e.g. AMR concept label
-	private double weight = 0.0;
+	private Double weight = null;
 	private final static long serialVersionUID = 1L;
 	private static int id_counter = 0;
 
@@ -47,8 +48,19 @@ public final class Mention implements Comparable<Mention>, Serializable
 	public String getPOS() { return pos;}
 	public boolean isNE() { return isNE; }
 	public String getType() { return type; }
-	public double getWeight() { return weight; }
-	public void setWeight(double weight) { this.weight = weight; }
+
+	public Optional<Double> getWeight()
+	{
+		return weight == null ? Optional.empty() : Optional.of(weight);
+	}
+
+	public void setWeight(double weight)
+	{
+		if (this.weight != null)
+			throw new RuntimeException("Cannot set weight to mention more than once");
+
+		this.weight = weight;
+	}
 
 	public boolean isNominal() { return pos.startsWith("N"); }
 	public boolean isFiniteVerb() {	return pos.startsWith("VB") && !pos.equals("VB"); } // very crude
@@ -63,12 +75,21 @@ public final class Mention implements Comparable<Mention>, Serializable
 	@Override
 	public int hashCode()
 	{
-		return Objects.hash(source_id, span);
+		return Objects.hash(id);
 	}
 
 	@Override
 	public int compareTo(Mention o)
 	{
 		return Comparator.comparing(Mention::getId).compare(this, o);
+	}
+
+	@Override
+	public boolean equals(Object o)
+	{
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+
+		return this.id == ((Mention)o).id;
 	}
 }

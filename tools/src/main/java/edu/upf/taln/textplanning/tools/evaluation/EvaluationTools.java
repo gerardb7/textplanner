@@ -21,6 +21,9 @@ import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.Multigraph;
+import org.jgrapht.graph.SimpleGraph;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
@@ -40,6 +43,7 @@ import java.util.stream.IntStream;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Comparator.comparingDouble;
+import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
 
 public class EvaluationTools
@@ -62,6 +66,8 @@ public class EvaluationTools
 	{
 		@XmlAttribute
 		public String id;
+		@XmlAttribute
+		public String filename;
 		@XmlElement(name = "sentence")
 		public List<Sentence> sentences = new ArrayList<>();
 		@XmlTransient
@@ -79,6 +85,8 @@ public class EvaluationTools
 		public String id;
 		@XmlElement(name = "wf")
 		public List<Token> tokens = new ArrayList<>();
+		@XmlTransient
+		List<Mention> mentions = new ArrayList<>();
 		@XmlTransient
 		Map<Mention, List<Candidate>> candidates = new HashMap<>();
 		@XmlTransient
@@ -282,12 +290,17 @@ public class EvaluationTools
 				log.info("Candidates saved to " + candidates_path);
 			}
 
-			// assign mentions and candidates to corpus objects
+			// assign mentions and candidates to sentences in corpus
 			corpus.texts.forEach(text ->
 					text.sentences.forEach(sentence ->
-							candidates.entrySet().stream()
-									.filter(e -> e.getKey().getSourceId().equals(sentence.id))
-									.forEach(e -> sentence.candidates.put(e.getKey(), e.getValue()))));
+					{
+						candidates.keySet().stream()
+								.filter(m -> m.getSourceId().equals(sentence.id))
+								.sorted(Comparator.comparingInt(m -> m.getSpan().getLeft()))
+								.forEach(m -> sentence.mentions.add(m));
+
+						sentence.mentions.forEach(m -> sentence.candidates.put(m, candidates.get(m)));
+					}));
 
 			Map<String, List<String>> glosses;
 			if (Files.exists(glosses_path))
@@ -447,23 +460,67 @@ public class EvaluationTools
 		});
 	}
 
+	// Ranking mentions based on their position in the text
 	public static void rankMentions(Options options, Corpus corpus)
 	{
-		final int context_size = 3;
 		corpus.texts.forEach(text ->
-				text.sentences.forEach(sentence ->
-				{
-					final List<Mention> mentions = sentence.disambiguated.keySet().stream()
-						.sorted(Comparator.comparing(Mention::getContextId))
-						.collect(toList());
-					BiPredicate<Mention, Mention> adjacency_function =
-							(m1, m2) -> Math.abs(mentions.indexOf(m1) - mentions.indexOf(m2)) <= context_size;
-//					BiPredicate<Mention, Mention> adjacency_function2 =
-//							(m1, m2) -> text.graph.containsEdge(m1.toString(), m2.toString());
+		{
+			// single word word_mentions are the item to rank
+			final List<Mention> word_mentions = text.sentences.stream()
+							.flatMap(s -> s.mentions.stream()
+									.filter(not(Mention::isMultiWord))
+									.sorted(Comparator.comparingInt(m -> m.getSpan().getLeft())))
+					.collect(toList());
 
-					// rank mentions
-					TextPlanner.rankMentions(mentions, sentence.disambiguated, adjacency_function, options);
-				}));
+			// determine their meanings...
+			final Map<Mention, Candidate> all_meanings = text.sentences.stream()
+							.flatMap(s -> s.disambiguated.values().stream())
+					.collect(toMap(Candidate::getMention, c -> c));
+
+			// ... single-word meanings
+			final Map<Mention, Candidate> word_meanings = all_meanings.entrySet().stream()
+					.filter(e -> word_mentions.contains(e.getKey()))
+					.collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+			final Map<Mention, Candidate> multiword_meanings = all_meanings.entrySet().stream()
+					.filter(e -> e.getKey().isMultiWord())
+					.collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+			// ... or part of a multiword with a meaning
+			multiword_meanings.forEach((mw, c) -> word_mentions.stream()
+					.filter(w -> w.getSourceId().equals(mw.getSourceId()) &&
+							mw.getSpan().getLeft() <= w.getSpan().getLeft() &&
+							mw.getSpan().getRight() >= w.getSpan().getRight())
+					.peek(w -> { assert !word_meanings.containsKey(w); })
+					.forEach(w -> word_meanings.put(w, c)));
+
+			final int context_size = 1;
+			BiPredicate<Mention, Mention> adjacency_function = (m1, m2) ->
+			{
+				if (m1.equals(m2))
+					return false;
+
+				// Adjacent words?
+				if (m1.getSourceId().equals(m2.getSourceId()) &&
+						(Math.abs(word_mentions.indexOf(m1) - word_mentions.indexOf(m2)) <= context_size))
+					return true;
+
+				// Same lemma=?
+				if (m1.getLemma().equals(m2.getLemma()))
+					return true;
+
+				// Same meaning ?
+				if (!word_meanings.containsKey(m1) || !word_meanings.containsKey(m2))
+					return false;
+
+				return word_meanings.get(m1).getMeaning().equals(word_meanings.get(m2).getMeaning());
+			};
+
+			final Map<Mention, Optional<Double>> words2weights = word_mentions.stream()
+					.collect(toMap(m -> m, m -> word_meanings.containsKey(m) ? word_meanings.get(m).getWeight() : Optional.empty()));
+
+			TextPlanner.rankMentions(words2weights, adjacency_function, options);
+		});
 	}
 
 	public static void plan(Options options, Corpus corpus)

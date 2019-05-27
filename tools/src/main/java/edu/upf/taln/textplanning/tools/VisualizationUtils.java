@@ -28,7 +28,7 @@ public class VisualizationUtils
 
 		// create vectors
 		int n = items.size();
-		final double[][] sim_matrix = MatrixFactory.createSimilarityMatrix(items, sim, (a, b) -> true, 0.0, false);
+		final double[][] sim_matrix = MatrixFactory.createTransitionMatrix(items, sim, true, (a, b) -> true, 0.0, false);
 		final double[] values = Arrays.stream(sim_matrix)
 				.flatMapToDouble(Arrays::stream)
 				.toArray();
@@ -50,7 +50,7 @@ public class VisualizationUtils
 	                                          BiFunction<String, String, OptionalDouble> sim,
 	                                          BiPredicate<String, String> f, double t, double d)
 	{
-		final double[][] ranking_arrays = MatrixFactory.createRankingMatrix(synsets, w, sim, f, t, d, true, true);
+		final double[][] ranking_arrays = MatrixFactory.createRankingMatrix(synsets, w, sim, true, f, t, d, true, true);
 		Jama.Matrix ranking_matrix = new Jama.Matrix(ranking_arrays);
 
 		JamaPowerIteration alg = new JamaPowerIteration();

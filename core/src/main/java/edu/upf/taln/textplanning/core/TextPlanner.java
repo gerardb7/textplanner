@@ -97,7 +97,7 @@ public final class TextPlanner
 		if (references.isEmpty())
 			return;
 
-		double[] ranking = Ranker.rank(references, labels, bias, similarity, meanings_similarity_filter,
+		double[] ranking = Ranker.rank(references, labels, bias, similarity, true, meanings_similarity_filter,
 				o.sim_threshold, o.damping_meanings, true, true);
 
 		// Assign weights to candidates: rank values for those with a ranked meaning
@@ -118,9 +118,9 @@ public final class TextPlanner
 
 
 	/**
-	 * 	Ranks mentions according to their initial bias_values and an adjacency function
+	 * 	Ranks mentions according to their initial bias and an adjacency function
 	 */
-	public static void rankMentions(List<Mention> mentions, Map<Mention, Candidate> candidates, BiPredicate<Mention, Mention> adjacency_function,
+	public static void rankMentions(Map<Mention, Optional<Double>> mentions, BiPredicate<Mention, Mention> adjacency_function,
 	                                Options o)
 	{
 		log.info("*Ranking mentions*");
@@ -129,22 +129,28 @@ public final class TextPlanner
 		if (!mentions.isEmpty())
 		{
 			// One variable per mention
-			final Map<String, Mention> variables2mentions = mentions.stream()
+			final Map<String, Mention> variables2mentions = mentions.keySet().stream()
 					.collect(toMap(Mention::toString, m -> m));
-			final Map<String, Double> variables2weights = candidates.keySet().stream()
-					.collect(toMap(Mention::toString, m -> candidates.get(m).getWeight().orElse(0.0)));
+
+			// Use average bias for mentions without a bias value
+			final double avg_bias = mentions.values().stream()
+					.flatMap(Optional::stream)
+					.mapToDouble(d -> d)
+					.average().orElse(0.0);
+
+			final Map<String, Double> variables2bias = mentions.keySet().stream()
+					.collect(toMap(Mention::toString, m -> mentions.get(m).orElse(avg_bias)));
 
 			List<String> variables = List.copyOf(variables2mentions.keySet());
 			final List<String> labels = variables.stream() // for debugging purposes
 					.map(v ->
 					{
 						final Mention mention = variables2mentions.get(v);
-						final Meaning meaning = candidates.get(mention).getMeaning();
-						return DebugUtils.createLabelForVariable(v, meaning, List.of(mention));
+						return DebugUtils.createLabelForVariable(v, null, List.of(mention));
 					})
 					.collect(Collectors.toList());
 
-			BiFunction<String, String, OptionalDouble> similarity =
+			BiFunction<String, String, OptionalDouble> edge_weights =
 					(v1, v2) ->
 					{
 						final Mention m1 = variables2mentions.get(v1);
@@ -152,12 +158,7 @@ public final class TextPlanner
 						return OptionalDouble.of(adjacency_function.test(m1, m2) || adjacency_function.test(m2, m1) ? 1.0 : 0.0);
 					};
 
-			// Use average weight for mentions without a ranked candidate
-			final double avg_bias = variables2weights.values().stream()
-					.mapToDouble(v -> v)
-					.filter(v -> v > 0.0) // exclude unweighted variables
-					.average().orElse(0.0);
-			double[] ranking = Ranker.rank(variables, labels, v -> variables2weights.getOrDefault(v, avg_bias), similarity,
+			double[] ranking = Ranker.rank(variables, labels, variables2bias::get, edge_weights, true,
 					(v1, v2) -> true, 0.0, o.damping_variables, true, true);
 
 			IntStream.range(0, variables.size()).boxed()

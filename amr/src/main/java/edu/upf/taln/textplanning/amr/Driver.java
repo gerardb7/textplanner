@@ -134,7 +134,7 @@ public class Driver
 			final List<Mention> mentions = graphs.getMentions(g);
 			final Map<Mention, Candidate> candidates = graphs.getCandidates(g).stream()
 					.collect(toMap(Candidate::getMention, c -> c));
-			TextPlanner.rankMentions(mentions, candidates, graphs::adjacent, options);
+			//TextPlanner.rankMentions(mentions, candidates, graphs::adjacent, options);
 		});
 
 		Path output = FileUtils.createOutputPath(graphs_file, graphs_file.getParent(),
@@ -328,7 +328,7 @@ public class Driver
 				final List<Mention> mentions = graphs.getMentions(g);
 				final Map<Mention, Candidate> graph_candidates = graphs.getCandidates(g).stream()
 						.collect(toMap(Candidate::getMention, c -> c));
-				TextPlanner.rankMentions(mentions, graph_candidates, graphs::adjacent, options);
+				//TextPlanner.rankMentions(mentions, graph_candidates, graphs::adjacent, options);
 			});
 			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
 					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), graphs_ranked2_suffix);
