@@ -21,9 +21,6 @@ import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jgrapht.graph.DefaultEdge;
-import org.jgrapht.graph.Multigraph;
-import org.jgrapht.graph.SimpleGraph;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
@@ -31,6 +28,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.*;
 import javax.xml.transform.stream.StreamSource;
+import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -189,10 +187,34 @@ public class EvaluationTools
 		}
 	}
 
+	private static final String corpus_filename = "corpus.xml";
 	private static final String candidates_filename = "candidates";
 	private static final String binary_extension = ".bin";
 	private static final String glosses_filename = "glosses";
 	private final static Logger log = LogManager.getLogger();
+
+
+	public static Corpus loadResourcesFromRawText(Path text_folder, Path output_path, InitialResourcesFactory resource_factory,
+	                                              ULocale language, int max_span_size, boolean rank_together, String noun_pos_prefix,
+	                                              Set<String> ignored_POS_Tags, Options options)
+	{
+		String corpus_contents = null;
+		try
+		{
+			Stanford2SemEvalXML stanford = new Stanford2SemEvalXML();
+			corpus_contents = stanford.convert(text_folder, output_path.resolve(corpus_filename));
+		}
+		catch (Exception e)
+		{
+			log.error("Failed to preprocess text files " + e);
+			e.printStackTrace();
+		}
+
+		if (corpus_contents != null)
+			return loadResourcesFromXML(corpus_contents, output_path, resource_factory, language, max_span_size, rank_together, noun_pos_prefix, ignored_POS_Tags, options);
+		return null;
+
+	}
 
 	public static Corpus loadResourcesFromXMI(Path xmi_folder, Path output_path, InitialResourcesFactory resource_factory,
 	                                          ULocale language, int max_span_size, boolean rank_together, String noun_pos_prefix,
@@ -235,12 +257,19 @@ public class EvaluationTools
 	                                          ULocale language, int max_span_size, boolean rank_together, String noun_pos_prefix,
 	                                          Set<String> ignored_POS_Tags, Options options)
 	{
-		log.info("Parsing XML file");
+		return loadResourcesFromXML(FileUtils.readTextFile(xml_file), output_path, resource_factory, language, max_span_size, rank_together, noun_pos_prefix, ignored_POS_Tags, options);
+	}
+
+	public static Corpus loadResourcesFromXML(String xml_contents, Path output_path, InitialResourcesFactory resource_factory,
+	                                          ULocale language, int max_span_size, boolean rank_together, String noun_pos_prefix,
+	                                          Set<String> ignored_POS_Tags, Options options)
+	{
+		log.info("Parsing XML");
 
 		try
 		{
 			JAXBContext jc = JAXBContext.newInstance(Corpus.class);
-			StreamSource xml = new StreamSource(xml_file.toString());
+			StreamSource xml = new StreamSource(new StringReader(xml_contents));
 			Unmarshaller unmarshaller = jc.createUnmarshaller();
 			JAXBElement<Corpus> je1 = unmarshaller.unmarshal(xml, Corpus.class);
 			final Corpus corpus = je1.getValue();
@@ -250,7 +279,7 @@ public class EvaluationTools
 		}
 		catch (JAXBException e)
 		{
-			log.error("Cannot parse file " + xml_file + ": " + e);
+			log.error("Failed to parse xml : " + e);
 		}
 
 		return new Corpus();
@@ -491,8 +520,18 @@ public class EvaluationTools
 					.filter(w -> w.getSourceId().equals(mw.getSourceId()) &&
 							mw.getSpan().getLeft() <= w.getSpan().getLeft() &&
 							mw.getSpan().getRight() >= w.getSpan().getRight())
-					.peek(w -> { assert !word_meanings.containsKey(w); })
-					.forEach(w -> word_meanings.put(w, c)));
+					.forEach(w -> {
+						if (!word_meanings.containsKey(w))
+							word_meanings.put(w, c);
+						else
+						{
+							// in the case of overlapping multiwords, a word may be assigned two candidates
+							// choose that with highest weight
+							final Candidate c2 = word_meanings.get(w);
+							if (c.getWeight().orElse(0.0) > c2.getWeight().orElse(0.0))
+								word_meanings.put(w, c);
+						}
+					}));
 
 			final int context_size = 1;
 			BiPredicate<Mention, Mention> adjacency_function = (m1, m2) ->

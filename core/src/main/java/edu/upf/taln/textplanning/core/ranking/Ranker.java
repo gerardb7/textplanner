@@ -23,6 +23,8 @@ import java.util.function.Function;
  * πA=π, index.e. all page ranks must be equal to each other"
  * Taken from https://math.stackexchange.com/questions/55863/when-will-pagerank-fail
  *
+ * Also look at http://tuvalu.santafe.edu/~aaronc/courses/5454/csci5454_spring2013_CSL11.pdf
+ *
  */
 public class Ranker
 {

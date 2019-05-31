@@ -5,17 +5,16 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
+import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
-import edu.upf.taln.textplanning.tools.evaluation.ExtractiveEvaluation;
-import edu.upf.taln.textplanning.tools.evaluation.GoldDisambiguationEvaluation;
-import edu.upf.taln.textplanning.tools.evaluation.RankingEvaluation;
-import edu.upf.taln.textplanning.tools.evaluation.SemEvalEvaluation;
+import edu.upf.taln.textplanning.tools.evaluation.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -176,8 +175,8 @@ public class Driver
 	@Parameters(commandDescription = "Run evaluation of ranking-based extractive summarization")
 	private static class ExtractiveEvaluationCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Path to XML input file", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		@Parameter(names = {"-i", "-input"}, description = "Path to input. Can be a folder containing text files or a single XML file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
 		private Path input;
 		@Parameter(names = {"-g", "-gold"}, description = "Path to folder containing gold summaries", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
@@ -218,18 +217,6 @@ public class Driver
 		@Parameter(names = {"-set", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
 				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
 		private VectorType sense_vector_type = VectorType.Random;
-	}
-
-	@SuppressWarnings("unused")
-	@Parameters(commandDescription = "Process text files with UIMA pipeline")
-	private static class ProcessFilesCommand
-	{
-		@Parameter(names = {"-i", "-input"}, description = "Path to folder with text files", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path input;
-		@Parameter(names = {"-o", "-output"}, description = "Path to folder where xmi files will be stored", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
-		private Path output;
 	}
 
 	@SuppressWarnings("unused")
@@ -282,7 +269,6 @@ public class Driver
 		DisambiguationEvaluationCommand wsdEval = new DisambiguationEvaluationCommand();
 		RankEvaluationCommand rankEval = new RankEvaluationCommand();
 		ExtractiveEvaluationCommand extractEval = new ExtractiveEvaluationCommand();
-		ProcessFilesCommand process = new ProcessFilesCommand();
 		CollectMeaningsCommand meanings = new CollectMeaningsCommand();
 		CreateContextVectorsCommand context = new CreateContextVectorsCommand();
 
@@ -291,7 +277,6 @@ public class Driver
 		jc.addCommand(disambiguation_eval_command, wsdEval);
 		jc.addCommand(rank_eval_command, rankEval);
 		jc.addCommand(extract_eval_command, extractEval);
-		jc.addCommand(process_files_command, process);
 		jc.addCommand(collect_meanings_vectors, meanings);
 		jc.addCommand(create_context_vectors, context);
 		jc.parse(args);
@@ -377,11 +362,6 @@ public class Driver
 
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, extractEval.dictionary, bias_resources);
 				ExtractiveEvaluation.run(extractEval.input, extractEval.gold, extractEval.output, extractEval.tmp, resources);
-				break;
-			}
-			case process_files_command:
-			{
-				ExtractiveEvaluation.preprocess(process.input, process.output);
 				break;
 			}
 			case collect_meanings_vectors:

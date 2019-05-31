@@ -10,57 +10,23 @@ import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.Corpus;
 import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.Sentence;
-import edu.upf.taln.textplanning.uima.io.TextParser;
-import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Pattern;
-import java.util.stream.IntStream;
 
 import static edu.upf.taln.textplanning.common.FileUtils.getFilesInFolder;
-import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
 
 public class ExtractiveEvaluation
 {
-	public static class DeepMindSourceParser extends TextParser
-	{
-		@Override
-		protected String parse(String file_contents)
-		{
-			final String[] parts = file_contents.split("@highlight");
-			if (parts.length == 0)
-				return "";
-			return Arrays.stream(parts[0].split("[\\r\\n]+"))
-					.filter(not(String::isEmpty))
-					.collect(joining(System.getProperty("line.separator")));
-		}
-	}
 
-	public static class DeepMindSummaryParser extends TextParser
-	{
-		@Override
-		protected String parse(String file_contents)
-		{
-			final String[] parts = file_contents.split("^\\s*@highlight\\s*$");
-			if (parts.length < 2)
-				return "";
-
-			return IntStream.range(1, parts.length)
-					.mapToObj(i -> parts[i])
-					.filter(not(String::isEmpty))
-					.map(t -> Arrays.stream(t.split("[\\r\\n]+"))
-							.filter(not(String::isEmpty))
-							.collect(joining(System.getProperty("line.separator"))))
-					.collect(joining(System.getProperty("line.separator")));
-		}
-	}
 
 	private static final int max_span_size = 3;
 	private static final boolean rank_together = false;
@@ -70,22 +36,23 @@ public class ExtractiveEvaluation
 	private static final String verb_pos_tag = "V";
 	private static final String adverb_pos_tag = "R";
 	private static final String other_pos_tag = "X";
-	private static final String document_extension = ".story";
 	private static final String summary_extension = ".summ";
 
 //	private static final Set<String> excludedPOS = Set.of("CC","DT","EX","IN","LS","MD","PDT","POS","PRP","PRP$","RB","RBR","RBS","RP","TO","UH","WDT","WP","WP$","WRB");
 	private final static Logger log = LogManager.getLogger();
 
-	public static void preprocess(Path input_folder, Path output_folder)
-	{
-		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createParsingPipeline(language);
-		if (pipeline != null)
-		{
-			UIMAWrapper.processAndSerialize(input_folder, output_folder, document_extension, DeepMindSourceParser.class, pipeline);
-		}
-	}
+//	public static void preprocess(Path input_folder, Path output_folder)
+//	{
+//		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createParsingPipeline(language);
+//		if (pipeline != null)
+//		{
+//			UIMAWrapper.processAndSerialize(input_folder, output_folder, document_extension, DeepMindSourceParser.class, pipeline);
+//		}
+//	}
 
-	public static void run(Path input_folder, Path gold_folder, Path output_path, Path tmp_folder, InitialResourcesFactory resources_factory)
+
+
+	public static void run(Path input, Path gold_folder, Path output_path, Path tmp_folder, InitialResourcesFactory resources_factory)
 	{
 		final Options options = new Options();
 		options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
@@ -93,17 +60,26 @@ public class ExtractiveEvaluation
 		options.num_first_meanings = 1;
 		options.sim_threshold = 0.8; // Pairs of meanings with sim below this value have their score set to 0
 		options.damping_meanings = 0.5; // controls balance between bias and similarity: higher value -> more bias
-		options.damping_variables = 0.2; // controls bias towards meanings rank when ranking variables
+		options.damping_variables = 0.8; // controls bias towards meanings rank when ranking variables
 
 		// Exclude POS from mention collection
 		final Set<String> excluded_mention_POS = Set.of(other_pos_tag);
 		// Include these POS in the ranking of meanings
 		options.ranking_POS_Tags = Set.of(noun_pos_tag); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
-		// Evaluate these POS tags only
 
 		// load input corpus and gold
-		final Corpus corpus = EvaluationTools.loadResourcesFromXML(input_folder, tmp_folder, resources_factory,
+		Corpus corpus = null;
+		if (Files.isRegularFile(input))
+		{
+			corpus = EvaluationTools.loadResourcesFromXML(input, tmp_folder, resources_factory,
+					language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
+		}
+		else if (Files.isDirectory(input))
+		{
+			corpus = EvaluationTools.loadResourcesFromRawText(input, tmp_folder, resources_factory,
 				language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
+		}
+
 		final Map<String, List<List<String>>> gold = parseGold(gold_folder);
 
 		// rank
@@ -147,6 +123,20 @@ public class ExtractiveEvaluation
 					.collect(joining("\n\t"));
 			log.info(num_sentences + " sentences, " + num_words + " content words, " + gold_summary.length() + " characters.");
 			log.info("Gold summary:\n\t" + gold_summary + "\n");
+
+			{
+				// Lead summary
+				final String summary = text.sentences.stream()
+						.limit(num_sentences)
+						.map(sentence -> sentence.tokens.stream().map(t -> t.wf).collect(joining(" ")))
+						.limit(num_sentences)
+						.collect(joining("\n"));
+				log.info("Lead summary:" + summary);
+				{
+					final Path summary_path = output_path.resolve(basename + "_lead" + summary_extension);
+					FileUtils.writeTextToFile(summary_path, summary);
+				}
+			}
 
 			{
 				// BoM summary
@@ -291,8 +281,6 @@ public class ExtractiveEvaluation
 				}
 			}
 		});
-
-		//EvaluationTools.plan(options, corpus);
 	}
 
 
@@ -322,5 +310,7 @@ public class ExtractiveEvaluation
 									.collect(toList());
 						}));
 	}
+
+
 }
 

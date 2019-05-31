@@ -7,6 +7,7 @@ import edu.stanford.nlp.pipeline.CoreSentence;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.util.logging.RedwoodConfiguration;
 import edu.upf.taln.textplanning.common.FileUtils;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -23,7 +24,7 @@ import static java.util.stream.Collectors.toMap;
 
 public class Stanford2SemEvalXML
 {
-	private static final String text_suffix = ".story";
+	private static final String text_suffix = ".txt";
 	private final StanfordCoreNLP pipeline;
 	private final static Logger log = LogManager.getLogger();
 
@@ -39,7 +40,7 @@ public class Stanford2SemEvalXML
 		log.info("CoreNLP pipeline created in " + timer.stop());
 	}
 
-	public void convert(Path input_folder, Path outputFile) throws Exception
+	public String convert(Path input_folder, Path outputFile) throws Exception
 	{
 		final File[] files = FileUtils.getFilesInFolder(input_folder, text_suffix);
 		if (files == null)
@@ -56,44 +57,55 @@ public class Stanford2SemEvalXML
 
 		for (String filename : texts.keySet())
 		{
-			final String text = texts.get(filename);
-			final String text_id = String.format("d%03d", text_counter++);
-			writer.append("<text id=\"d").append(text_id).append("\" filename=\"").append(filename).append("\">");
-			writer.newLine();
-
-			log.info("Processing text " + (text_counter-1));
-			CoreDocument document = new CoreDocument(text);
-			pipeline.annotate(document);
-			int sentence_counter = 1;
-
-			for (CoreSentence sentence : document.sentences())
+			try
 			{
-				final String sentence_id = text_id + "." + String.format("s%03d", sentence_counter++);
-				writer.append("<sentence id=\"").append(sentence_id).append("\">");
+				final String text = texts.get(filename);
+				final String text_id = String.format("d%03d", text_counter++);
+				writer.append("<text id=\"d").append(text_id).append("\" filename=\"").append(filename).append("\">");
 				writer.newLine();
-				int token_counter = 1;
 
-				for (CoreLabel token : sentence.tokens())
+				log.info("Processing text " + (text_counter - 1));
+				CoreDocument document = new CoreDocument(text);
+				pipeline.annotate(document);
+				int sentence_counter = 1;
+
+				for (CoreSentence sentence : document.sentences())
 				{
-					final String token_id = sentence_id + "." + String.format("t%03d", token_counter++);
-					writer.append("<wf id=\"").append(token_id)
-							.append("\" lemma=\"").append(token.lemma())
-							.append("\" pos=\"").append(convertPOS(token.tag()))
-							.append("\">").append(token.originalText())
-							.append("</wf>");
+					final String sentence_id = text_id + "." + String.format("s%03d", sentence_counter++);
+					writer.append("<sentence id=\"").append(sentence_id).append("\">");
+					writer.newLine();
+					int token_counter = 1;
+
+					for (CoreLabel token : sentence.tokens())
+					{
+						final String token_id = sentence_id + "." + String.format("t%03d", token_counter++);
+						writer.append("<wf id=\"").append(token_id)
+								.append("\" lemma=\"").append(StringEscapeUtils.escapeXml(token.lemma()))
+								.append("\" pos=\"").append(convertPOS(token.tag()))
+								.append("\">").append(StringEscapeUtils.escapeXml(token.originalText()))
+								.append("</wf>");
+						writer.newLine();
+					}
+					writer.append("</sentence>");
 					writer.newLine();
 				}
-				writer.append("</sentence>");
+
+				writer.append("</text>");
 				writer.newLine();
 			}
-
-			writer.append("</text>");
-			writer.newLine();
+			catch(Exception e)
+			{
+				log.error("Failed to preprocess file " + filename + ": " + e);
+				e.printStackTrace();
+			}
 		}
 		writer.append("</corpus>"); writer.newLine();
 		writer.flush();
-		FileUtils.writeTextToFile(outputFile, swriter.toString());
+		final String text = swriter.toString();
+		FileUtils.writeTextToFile(outputFile, text);
 		log.info(outputFile + " file created");
+
+		return text;
 	}
 
 	private static String convertPOS(String tag)
