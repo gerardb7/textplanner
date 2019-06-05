@@ -5,16 +5,14 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
-import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.common.DocumentResourcesFactory;
-import edu.upf.taln.textplanning.common.InitialResourcesFactory.ResourceParams;
+import edu.upf.taln.textplanning.common.InitialResourcesFactory;
+import edu.upf.taln.textplanning.common.PlanningProperties;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.bias.ContextFunction;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
-import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
-import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.uima.io.TextParser;
 import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
@@ -55,9 +53,6 @@ public class Driver
 		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where candidate files will be stored", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
-		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path dictionary;
 	}
 
 	@SuppressWarnings("unused")
@@ -70,15 +65,6 @@ public class Driver
 		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
-		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path dictionary;
-		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path freqsFile;
-		@Parameter(names = {"-v", "-vectors"}, description = "Path to vectors", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path vectorsPath;
 	}
 
 	@SuppressWarnings("unused")
@@ -94,30 +80,6 @@ public class Driver
 		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
-		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path freqsFile;
-		@Parameter(names = {"-svt", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1,
-				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
-		private SentenceVectorType sentence_vector_type = SentenceVectorType.Random;
-		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path word_vectors_path;
-		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1,
-				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private VectorType word_vector_type = VectorType.Random;
-		@Parameter(names = {"-cv", "-context_vectors"}, description = "Path to sense context vectors", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path context_vectors_path;
-		@Parameter(names = {"-ct", "-context_vectors_type"}, description = "Type of sense context vectors", arity = 1,
-				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private VectorType context_vector_type = VectorType.Random;
-		@Parameter(names = {"-sv", "-sense_vectors"}, description = "Path to sense vectors", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path sense_vectors_path;
-		@Parameter(names = {"-st", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1,
-				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private VectorType sense_vector_type = VectorType.Random;
 	}
 
 	private static void processFiles(Path input_folder, Path output_folder)
@@ -227,6 +189,8 @@ public class Driver
 		log.debug(dateFormat.format(date) + " running " + String.join(" ", args));
 		log.debug("*********************************************************");
 
+		PlanningProperties properties = new PlanningProperties();
+
 		switch (jc.getParsedCommand())
 		{
 			case get_candidates_command:
@@ -236,22 +200,12 @@ public class Driver
 			}
 			case get_system_UIMA_command:
 			{
-				getSystemMeaningsUIMA(system_uima.texts, system_uima.output, candidates.dictionary, system_uima.freqsFile, system_uima.vectorsPath);
+				getSystemMeaningsUIMA(system_uima.texts, system_uima.output, properties.getDictionary(), properties.getIdfPath(), properties.getWordVectorsPath());
 				break;
 			}
 			case get_system_command:
 			{
-				ResourceParams bias_resources = new ResourceParams();
-				bias_resources.bias_meanings_path = null;
-				bias_resources.idf_file = system.freqsFile;
-				bias_resources.word_vectors_path = system.word_vectors_path;
-				bias_resources.word_vectors_type = system.word_vector_type;
-				bias_resources.sentence_vectors_path = null;
-				bias_resources.sentence_vectors_type = system.sentence_vector_type;
-				bias_resources.meaning_vectors_path = system.sense_vectors_path;
-				bias_resources.meaning_vectors_type = system.sense_vector_type;
-
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources);
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				getSystemMeanings(system.texts, system.candidates, system.output, resources);
 				break;
 			}

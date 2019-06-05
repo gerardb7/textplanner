@@ -624,26 +624,17 @@ public class Driver
 		log.debug(dateFormat.format(date) + " running " + 	Arrays.stream(args).collect(joining(" ")));
 		log.debug("*********************************************************");
 
+		PlanningProperties properties = new PlanningProperties();
 		Driver driver = new Driver();
+
 		if (jc.getParsedCommand().equals(create_graphs_command))
 		{
-			InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, create_graphs.dictionary, bias_resources);
-
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 			driver.create_graphs(create_graphs.inputFile, resources, create_graphs.no_stanford);
 		}
 		else if (jc.getParsedCommand().equals(rank_meanings_command))
 		{
-			InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
-			bias_resources.bias_meanings_path = rank_meanings.biasFile;
-			bias_resources.word_vectors_path = rank_meanings.word_vectors_path;
-			bias_resources.word_vectors_type = rank_meanings.word_vector_type;
-			bias_resources.sentence_vectors_type = rank_meanings.sentence_vector_type;
-			bias_resources.idf_file = rank_meanings.freqsFile;
-			bias_resources.meaning_vectors_path = rank_meanings.sense_vectors_path;
-			bias_resources.meaning_vectors_type = rank_meanings.sense_vector_type;
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources);
-
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 			driver.rank_meanings(rank_meanings.inputFile, resources);
 		}
 		else if (jc.getParsedCommand().equals(create_global_command))
@@ -654,20 +645,12 @@ public class Driver
 			driver.extract_subgraphs(extract_subgraphs.inputFile, extract_subgraphs.num_subgraphs);
 		else if (jc.getParsedCommand().equals(remove_redundancy_command))
 		{
-			InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
-			bias_resources.meaning_vectors_path = remove_redundancy.vectorsPath;
-			bias_resources.meaning_vectors_type = remove_redundancy.vectorType;
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources);
-
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 			driver.remove_redundancy(remove_redundancy.inputFile, remove_redundancy.num_subgraphs, resources);
 		}
 		else if (jc.getParsedCommand().equals(sort_subgraphs_command))
 		{
-			InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
-			bias_resources.meaning_vectors_path = sort_subgraphs.vectorsPath;
-			bias_resources.meaning_vectors_type = sort_subgraphs.vectorType;
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources);
-
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 			driver.sort_subgraphs(sort_subgraphs.inputFile, resources);
 		}
 		else if (jc.getParsedCommand().equals(write_amr_command))
@@ -677,11 +660,7 @@ public class Driver
 		/* --- */
 		else if (jc.getParsedCommand().equals(summarize_command))
 		{
-			InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
-			bias_resources.meaning_vectors_path = summarize.vectorsPath;
-			bias_resources.meaning_vectors_type = summarize.vectorType;
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, summarize.dictionary, bias_resources);
-
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 			driver.summarize(summarize.input, resources, summarize.no_stanford,summarize.num_extract,
 					summarize.num_subgraphs, summarize.generation_resources, summarize.max_words);
 		}

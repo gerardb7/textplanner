@@ -5,16 +5,15 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
-import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
-import edu.upf.taln.textplanning.core.bias.BiasFunction;
-import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
-import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
-import edu.upf.taln.textplanning.tools.evaluation.*;
+import edu.upf.taln.textplanning.common.PlanningProperties;
+import edu.upf.taln.textplanning.tools.evaluation.ExtractiveEvaluation;
+import edu.upf.taln.textplanning.tools.evaluation.GoldDisambiguationEvaluation;
+import edu.upf.taln.textplanning.tools.evaluation.RankingEvaluation;
+import edu.upf.taln.textplanning.tools.evaluation.SemEvalEvaluation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -42,39 +41,9 @@ public class Driver
 		@Parameter(names = {"-i", "-input"}, description = "Path to XML input file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path input_file;
-		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path dictionary;
 		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
-		@Parameter(names = {"-bf", "-bias_function"}, description = "Type of bias function", arity = 1, required = true,
-				converter = CMLCheckers.BiasTypeConverter.class , validateWith = CMLCheckers.BiasTypeValidator.class)
-		private BiasFunction.Type biasType;
-		@Parameter(names = {"-m", "-meanings"}, description = "Path to text file containing meanings used to bias ranking", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path biasFile;
-		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path word_vectors_path;
-		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1, required = true,
-				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private VectorType word_vector_type = VectorType.Random;
-		@Parameter(names = {"-sev", "-sense_vectors"}, description = "Path to sense vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path sense_vectors_path;
-		@Parameter(names = {"-set", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
-				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private VectorType sense_vector_type = VectorType.Random;
-		@Parameter(names = {"-sv", "-sentence_vectors"}, description = "Path to sentence vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path sentence_vectors_path;
-		@Parameter(names = {"-st", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1, required = true,
-				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
-		private SentenceVectorType sentence_vector_type = SentenceVectorType.Random;
-		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path freqsFile;
 		@Parameter(names = {"-b", "-batch"}, description = "If true, a batch test is ran", arity = 1)
 		private boolean batch = false;
 	}
@@ -95,33 +64,6 @@ public class Driver
 		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
-		@Parameter(names = {"-bf", "-bias_function"}, description = "Type of bias function", arity = 1, required = true,
-				converter = CMLCheckers.BiasTypeConverter.class , validateWith = CMLCheckers.BiasTypeValidator.class)
-		private BiasFunction.Type biasType;
-		@Parameter(names = {"-m", "-meanings"}, description = "Path to text file containing meanings used to bias ranking", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path biasFile;
-		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path word_vectors_path;
-		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1, required = true,
-				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private VectorType word_vector_type = VectorType.Random;
-		@Parameter(names = {"-sv", "-sentence_vectors"}, description = "Path to sentence vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path sentence_vectors_path;
-		@Parameter(names = {"-st", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1, required = true,
-				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
-		private SentenceVectorType sentence_vector_type = SentenceVectorType.Random;
-		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path freqsFile;
-		@Parameter(names = {"-sev", "-sense_vectors"}, description = "Path to sense vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path sense_vectors_path;
-		@Parameter(names = {"-set", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
-				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private VectorType sense_vector_type = VectorType.Random;
 		@Parameter(names = {"-b", "-batch"}, description = "If true, a batch test is ran", arity = 1)
 		private boolean batch = false;
 	}
@@ -136,39 +78,9 @@ public class Driver
 		@Parameter(names = {"-g", "-gold"}, description = "Path to gold file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
 		private Path gold_folder;
-		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path dictionary;
 		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
 		private Path output;
-		@Parameter(names = {"-bf", "-bias_function"}, description = "Type of bias function", arity = 1, required = true,
-				converter = CMLCheckers.BiasTypeConverter.class , validateWith = CMLCheckers.BiasTypeValidator.class)
-		private BiasFunction.Type biasType;
-		@Parameter(names = {"-m", "-meanings"}, description = "Path to text file containing meanings used to bias ranking", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path biasFile;
-		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path word_vectors_path;
-		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1, required = true,
-				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private VectorType word_vector_type = VectorType.Random;
-		@Parameter(names = {"-sv", "-sentence_vectors"}, description = "Path to sentence vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path sentence_vectors_path;
-		@Parameter(names = {"-st", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1, required = true,
-				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
-		private SentenceVectorType sentence_vector_type = SentenceVectorType.Random;
-		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path freqsFile;
-		@Parameter(names = {"-sev", "-sense_vectors"}, description = "Path to sense vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path sense_vectors_path;
-		@Parameter(names = {"-set", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
-				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private VectorType sense_vector_type = VectorType.Random;
 	}
 
 	@SuppressWarnings("unused")
@@ -187,36 +99,6 @@ public class Driver
 		@Parameter(names = {"-t", "-tmp"}, description = "Path to folder where temporary files are stored", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
 		private Path tmp;
-		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path dictionary;
-		@Parameter(names = {"-bf", "-bias_function"}, description = "Type of bias function", arity = 1, required = true,
-				converter = CMLCheckers.BiasTypeConverter.class , validateWith = CMLCheckers.BiasTypeValidator.class)
-		private BiasFunction.Type biasType;
-		@Parameter(names = {"-m", "-meanings"}, description = "Path to text file containing meanings used to bias ranking", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path biasFile;
-		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path word_vectors_path;
-		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1, required = true,
-				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private VectorType word_vector_type = VectorType.Random;
-		@Parameter(names = {"-sv", "-sentence_vectors"}, description = "Path to sentence vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path sentence_vectors_path;
-		@Parameter(names = {"-st", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1, required = true,
-				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
-		private SentenceVectorType sentence_vector_type = SentenceVectorType.Random;
-		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path freqsFile;
-		@Parameter(names = {"-sev", "-sense_vectors"}, description = "Path to sense vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path sense_vectors_path;
-		@Parameter(names = {"-set", "-sense_vectors_type"}, description = "Type of sense vectors", arity = 1, required = true,
-				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private VectorType sense_vector_type = VectorType.Random;
 	}
 
 	@SuppressWarnings("unused")
@@ -246,18 +128,6 @@ public class Driver
 		private Path output;
 		@Parameter(names = {"-go", "-glosses_only"}, description = "If true, only glosses are used to generate context vectors", arity = 1, required = true)
 		private boolean glosses_only = true;
-		@Parameter(names = {"-wv", "-word_vectors"}, description = "Path to word vectors", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path word_vectors_path;
-		@Parameter(names = {"-wt", "-word_vectors_type"}, description = "Type of word vectors", arity = 1, required = true,
-				converter = CMLCheckers.VectorTypeConverter.class, validateWith = CMLCheckers.VectorTypeValidator.class)
-		private VectorType word_vector_type = VectorType.Random;
-		@Parameter(names = {"-svt", "-sentence_vectors_type"}, description = "Type of sentence vectors", arity = 1,  required = true,
-				converter = CMLCheckers.SentenceVectorTypeConverter.class, validateWith = CMLCheckers.SentenceVectorTypeValidator.class)
-		private SentenceVectorType sentence_vector_type = SentenceVectorType.Random;
-		@Parameter(names = {"-f", "-frequencies"}, description = "Path to frequencies file", arity = 1,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
-		private Path freqsFile;
 		@Parameter(names = {"-c", "-chunk_size"}, description = "Chunk size used when computing vectors", arity = 1, required = true,
 				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.IntegerGreaterThanZero.class)
 		private int chunk_size = 0;
@@ -265,6 +135,8 @@ public class Driver
 
 	public static void main(String[] args) throws Exception
 	{
+		PlanningProperties properties = new PlanningProperties();
+
 		SemEvalEvaluationCommand semEval = new SemEvalEvaluationCommand();
 		DisambiguationEvaluationCommand wsdEval = new DisambiguationEvaluationCommand();
 		RankEvaluationCommand rankEval = new RankEvaluationCommand();
@@ -290,18 +162,7 @@ public class Driver
 		{
 			case semeval_command:
 			{
-				InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
-				bias_resources.bias_function_type = semEval.biasType;
-				bias_resources.bias_meanings_path = semEval.biasFile;
-				bias_resources.word_vectors_path = semEval.word_vectors_path;
-				bias_resources.word_vectors_type = semEval.word_vector_type;
-				bias_resources.sentence_vectors_type = semEval.sentence_vector_type;
-				bias_resources.idf_file = semEval.freqsFile;
-				bias_resources.meaning_vectors_path = semEval.sense_vectors_path;
-				bias_resources.meaning_vectors_type = semEval.sense_vector_type;
-
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, semEval.dictionary, bias_resources);
-
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				SemEvalEvaluation eval = new SemEvalEvaluation(semEval.gold_file, semEval.input_file, semEval.output, resources);
 				if (semEval.batch)
 					eval.run_batch();
@@ -311,18 +172,7 @@ public class Driver
 			}
 			case disambiguation_eval_command:
 			{
-				InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
-				bias_resources.bias_function_type = wsdEval.biasType;
-				bias_resources.bias_meanings_path = wsdEval.biasFile;
-				bias_resources.word_vectors_path = wsdEval.word_vectors_path;
-				bias_resources.word_vectors_type = wsdEval.word_vector_type;
-				bias_resources.sentence_vectors_type = wsdEval.sentence_vector_type;
-				bias_resources.idf_file = wsdEval.freqsFile;
-				bias_resources.meaning_vectors_path = wsdEval.sense_vectors_path;
-				bias_resources.meaning_vectors_type = wsdEval.sense_vector_type;
-
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, wsdEval.dictionary, bias_resources);
-
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				GoldDisambiguationEvaluation eval = new GoldDisambiguationEvaluation(wsdEval.gold_file, wsdEval.input_file, wsdEval.output,
 						resources);
 				if (wsdEval.batch)
@@ -333,51 +183,26 @@ public class Driver
 			}
 			case rank_eval_command:
 			{
-				InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
-				bias_resources.bias_function_type = rankEval.biasType;
-				bias_resources.bias_meanings_path = rankEval.biasFile;
-				bias_resources.word_vectors_path = rankEval.word_vectors_path;
-				bias_resources.word_vectors_type = rankEval.word_vector_type;
-				bias_resources.sentence_vectors_type = rankEval.sentence_vector_type;
-				bias_resources.idf_file = rankEval.freqsFile;
-				bias_resources.meaning_vectors_path = rankEval.sense_vectors_path;
-				bias_resources.meaning_vectors_type = rankEval.sense_vector_type;
-
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, rankEval.dictionary, bias_resources);
-
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				RankingEvaluation.run(rankEval.gold_folder, rankEval.input_file, rankEval.output, resources);
 				break;
 			}
 			case extract_eval_command:
 			{
-				InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
-				bias_resources.bias_function_type = extractEval.biasType;
-				bias_resources.bias_meanings_path = extractEval.biasFile;
-				bias_resources.word_vectors_path = extractEval.word_vectors_path;
-				bias_resources.word_vectors_type = extractEval.word_vector_type;
-				bias_resources.sentence_vectors_type = extractEval.sentence_vector_type;
-				bias_resources.idf_file = extractEval.freqsFile;
-				bias_resources.meaning_vectors_path = extractEval.sense_vectors_path;
-				bias_resources.meaning_vectors_type = extractEval.sense_vector_type;
-
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, extractEval.dictionary, bias_resources);
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				ExtractiveEvaluation.run(extractEval.input, extractEval.gold, extractEval.output, extractEval.tmp, resources);
+				resources.serializeCache(properties);
 				break;
 			}
 			case collect_meanings_vectors:
 			{
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, meanings.dictionary);
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				MeaningsCollector.collectMeanings(meanings.output, resources, meanings.max_meanings);
 				break;
 			}
 			case create_context_vectors:
 			{
-				InitialResourcesFactory.ResourceParams bias_resources = new InitialResourcesFactory.ResourceParams();
-				bias_resources.word_vectors_path = context.word_vectors_path;
-				bias_resources.word_vectors_type = context.word_vector_type;
-				bias_resources.sentence_vectors_type = context.sentence_vector_type;
-				bias_resources.idf_file = context.freqsFile;
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, null, bias_resources);
+				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				ContextVectorsProducer.createVectors(context.meanings, context.chunk_size, context.output, resources, context.glosses_only);
 				break;
 			}

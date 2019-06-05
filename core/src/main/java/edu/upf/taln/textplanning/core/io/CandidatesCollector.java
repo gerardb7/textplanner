@@ -11,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.*;
@@ -20,6 +21,7 @@ import static java.util.stream.Collectors.*;
  */
 public class CandidatesCollector
 {
+
 	private final static Logger log = LogManager.getLogger();
 
 
@@ -37,8 +39,10 @@ public class CandidatesCollector
 				.collect(Collectors.groupingBy(m -> Triple.of(m.getSurface_form(), m.getLemma(), m.getPOS())));
 
 		// Create a map of forms and associated candidate meanings
+		AtomicLong counter = new AtomicLong();
 		log.info("\tQuerying " + forms2mentions.keySet().size() + " forms");
 		final Map<Triple<String, String, String>, List<Meaning>> forms2meanings = forms2mentions.keySet().stream()
+				.peek(t -> { if (counter.incrementAndGet() % 10000 == 0) log.info("\t\t" + counter.get()); })
 				.collect(toMap(t -> t, t -> getReferences(dictionary, language, t).stream()
 						.map(meaning -> Meaning.get(meaning, dictionary.getLabel(meaning, language).orElse(""), false))
 						.collect(toList())));

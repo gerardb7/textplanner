@@ -11,10 +11,12 @@ import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
+import it.uniroma1.lcl.babelnet.BabelExternalResource;
 import it.uniroma1.lcl.babelnet.BabelNet;
 import it.uniroma1.lcl.babelnet.BabelSynset;
 import it.uniroma1.lcl.babelnet.BabelSynsetID;
 import it.uniroma1.lcl.jlt.util.Language;
+import it.uniroma1.lcl.kb.ExternalResource;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.Logger;
@@ -80,7 +82,7 @@ public class DBPediaTypeUtils
 					try
 					{
 						BabelSynset synset = bn.getSynset(new BabelSynsetID(r));
-						List<String> dbPediaURIs = synset.getDBPediaURIs(Language.EN);
+						List<String> dbPediaURIs = synset.toURIs(BabelExternalResource.DBPEDIA, Language.EN);
 						Candidate.Type t = Candidate.Type.Other;
 						if (!dbPediaURIs.isEmpty())
 						{

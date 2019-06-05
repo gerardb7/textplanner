@@ -100,11 +100,13 @@ public class ExtractiveEvaluation
 							.collect(joining(" ")))
 					.orElse("");
 
-			String basename = FilenameUtils.removeExtension(text.filename);
-			//basename = basename.substring(0, basename.indexOf('_'));
+			final String basename = FilenameUtils.removeExtension(text.filename);
+			final String id = FilenameUtils.removeExtension(text.filename).substring(basename.indexOf('_')+ 1);
 
 			log.info("Text " + text.id + " (" + basename + ")");
-			final List<List<String>> gold_tokens = gold.get(basename);
+			final List<List<String>> gold_tokens = gold.keySet().stream()
+					.filter(k -> k.contains(id))
+					.findFirst().map(gold::get).orElse(null);
 			final int num_sentences = gold_tokens.size(); // make extractive summaries match num of sentences of gold summary
 //			log.info(gold_tokens.stream() // make bow summaries match num of content words of gold summary
 //					.map(s -> s.stream()
@@ -295,8 +297,7 @@ public class ExtractiveEvaluation
 				.map(File::toPath)
 				.collect(toMap(
 						path -> {
-							String basename = FilenameUtils.removeExtension(path.getFileName().toString());
-							return basename.substring(0, basename.indexOf('_'));
+							return FilenameUtils.removeExtension(path.getFileName().toString());
 						},
 						path ->
 						{

@@ -32,7 +32,17 @@
         <dependency>
             <groupId>it.uniroma1.lcl.babelnet</groupId>
             <artifactId>babelnet-api</artifactId>
-            <version>3.7</version>
+            <version>4.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>it.uniroma1.lcl.jlt</groupId>
+            <artifactId>jlt</artifactId>
+            <version>2.4</version>
+        </dependency>
+        <dependency>
+            <groupId>com.babelscape</groupId>
+            <artifactId>babelscape-data-commons</artifactId>
+            <version>1.0</version>
         </dependency>
     </dependencies>
 </project>
