@@ -28,7 +28,8 @@ import static java.util.stream.Collectors.toSet;
 public class InitialResourcesFactory
 {
 	private final ULocale language;
-	private  final CompactDictionary cache;
+	private final PlanningProperties properties;
+	private final CompactDictionary cache;
 	private final MeaningDictionary dictionary;
 	private final BiasFunction.Type bias_function_type;
 	private final Set<String> bias_meanings;
@@ -45,6 +46,7 @@ public class InitialResourcesFactory
 		log.info("Loading initial params");
 
 		this.language = language;
+		this.properties = properties;
 		if (properties.getDictionary() != null)
 		{
 			final BabelNetDictionary babelNet = new BabelNetDictionary(properties.getDictionary());
@@ -128,7 +130,6 @@ public class InitialResourcesFactory
 		else
 			bias_meanings = null;
 
-
 		// Similarity params
 		meaning_vectors_type = properties.getSenseVectorsType();
 		if (properties.getSenseVectorsType() != null && properties.getSenseVectorsPath() != null)
@@ -140,6 +141,8 @@ public class InitialResourcesFactory
 	public ULocale getLanguage() { return language; }
 
 	public MeaningDictionary getDictionary() { return dictionary; }
+
+	public CompactDictionary getCache() { return cache; }
 
 	public BiasFunction.Type getBiasFunctionType()
 	{
@@ -213,7 +216,7 @@ public class InitialResourcesFactory
 		}
 	}
 
-	public void serializeCache(PlanningProperties properties) throws IOException
+	public void serializeCache() throws IOException
 	{
 		if (cache != null && properties.getDictionaryCache() != null)
 			Serializer.serialize(cache, properties.getDictionaryCache());

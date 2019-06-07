@@ -7,6 +7,7 @@ import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.common.PlanningProperties;
+import edu.upf.taln.textplanning.core.io.CandidatesCollector;
 import edu.upf.taln.textplanning.tools.evaluation.ExtractiveEvaluation;
 import edu.upf.taln.textplanning.tools.evaluation.GoldDisambiguationEvaluation;
 import edu.upf.taln.textplanning.tools.evaluation.RankingEvaluation;
@@ -26,7 +27,6 @@ public class Driver
 	public static final String disambiguation_eval_command = "wsdeval";
 	private static final String rank_eval_command = "rankeval";
 	private static final String extract_eval_command = "extracteval";
-	private static final String process_files_command = "process";
 	private static final String collect_meanings_vectors = "meanings";
 	private static final String create_context_vectors = "context";
 	private final static Logger log = LogManager.getLogger();
@@ -58,12 +58,6 @@ public class Driver
 		@Parameter(names = {"-i", "-input"}, description = "Path to XML input file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path input_file;
-		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path dictionary;
-		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
-		private Path output;
 		@Parameter(names = {"-b", "-batch"}, description = "If true, a batch test is ran", arity = 1)
 		private boolean batch = false;
 	}
@@ -78,9 +72,6 @@ public class Driver
 		@Parameter(names = {"-g", "-gold"}, description = "Path to gold file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
 		private Path gold_folder;
-		@Parameter(names = {"-o", "-output"}, description = "Path to output folder where system files will be stored", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
-		private Path output;
 	}
 
 	@SuppressWarnings("unused")
@@ -105,15 +96,6 @@ public class Driver
 	@Parameters(commandDescription = "Collect meanings info from a dictionary and stores them into a binary file")
 	private static class CollectMeaningsCommand
 	{
-		@Parameter(names = {"-d", "-dictionary"}, description = "Dictionary folder", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path dictionary;
-		@Parameter(names = {"-o", "-output"}, description = "Path to output file", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFile.class)
-		private Path output;
-		@Parameter(names = {"-mx", "-max_meanings"}, description = "Maximum number of meanings to collect", arity = 1,
-				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.IntegerGreaterThanZero.class)
-		private int max_meanings = Integer.MAX_VALUE;
 	}
 
 	@SuppressWarnings("unused")
@@ -173,8 +155,7 @@ public class Driver
 			case disambiguation_eval_command:
 			{
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
-				GoldDisambiguationEvaluation eval = new GoldDisambiguationEvaluation(wsdEval.gold_file, wsdEval.input_file, wsdEval.output,
-						resources);
+				GoldDisambiguationEvaluation eval = new GoldDisambiguationEvaluation(wsdEval.gold_file, wsdEval.input_file, resources);
 				if (wsdEval.batch)
 					eval.run_batch();
 				else
@@ -184,20 +165,21 @@ public class Driver
 			case rank_eval_command:
 			{
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
-				RankingEvaluation.run(rankEval.gold_folder, rankEval.input_file, rankEval.output, resources);
+				RankingEvaluation.run(rankEval.gold_folder, rankEval.input_file, resources);
 				break;
 			}
 			case extract_eval_command:
 			{
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				ExtractiveEvaluation.run(extractEval.input, extractEval.gold, extractEval.output, extractEval.tmp, resources);
-				resources.serializeCache(properties);
+				resources.serializeCache();
 				break;
 			}
 			case collect_meanings_vectors:
 			{
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
-				MeaningsCollector.collectMeanings(meanings.output, resources, meanings.max_meanings);
+				CandidatesCollector.collect(resources.getDictionary(), language, resources.getCache());
+				resources.serializeCache();
 				break;
 			}
 			case create_context_vectors:

@@ -71,7 +71,7 @@ public class ExtractiveEvaluation
 		Corpus corpus = null;
 		if (Files.isRegularFile(input))
 		{
-			corpus = EvaluationTools.loadResourcesFromXML(input, tmp_folder, resources_factory,
+			corpus = EvaluationTools.loadResourcesFromXML(input, resources_factory,
 					language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
 		}
 		else if (Files.isDirectory(input))
@@ -296,9 +296,7 @@ public class ExtractiveEvaluation
 				.sorted(Comparator.comparing(File::getName))
 				.map(File::toPath)
 				.collect(toMap(
-						path -> {
-							return FilenameUtils.removeExtension(path.getFileName().toString());
-						},
+						path -> FilenameUtils.removeExtension(path.getFileName().toString()),
 						path ->
 						{
 							String text = FileUtils.readTextFile(path);

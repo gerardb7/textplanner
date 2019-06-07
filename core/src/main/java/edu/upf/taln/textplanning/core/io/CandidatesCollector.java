@@ -2,17 +2,14 @@ package edu.upf.taln.textplanning.core.io;
 
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
-import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.structures.Meaning;
-import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
-import edu.upf.taln.textplanning.core.structures.Mention;
-import org.apache.commons.lang3.tuple.Triple;
+import edu.upf.taln.textplanning.core.structures.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.*;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.*;
 
@@ -21,7 +18,7 @@ import static java.util.stream.Collectors.*;
  */
 public class CandidatesCollector
 {
-
+	public static final int LOGGING_STEP_SIZE = 10000;
 	private final static Logger log = LogManager.getLogger();
 
 
@@ -31,34 +28,19 @@ public class CandidatesCollector
 	 */
 	public static Map<Mention, List<Candidate>> collect(MeaningDictionary dictionary, ULocale language, List<Mention> mentions)
 	{
-		log.info("Collecting candidate meanings");
 		Stopwatch timer = Stopwatch.createStarted();
-
-		// Optimization: group mentions by anchor (triple of surface form, lemma and POS) to reduce lookups
-		Map<Triple<String, String, String>, List<Mention>> forms2mentions = mentions.stream()
-				.collect(Collectors.groupingBy(m -> Triple.of(m.getSurface_form(), m.getLemma(), m.getPOS())));
-
-		// Create a map of forms and associated candidate meanings
 		AtomicLong counter = new AtomicLong();
-		log.info("\tQuerying " + forms2mentions.keySet().size() + " forms");
-		final Map<Triple<String, String, String>, List<Meaning>> forms2meanings = forms2mentions.keySet().stream()
-				.peek(t -> { if (counter.incrementAndGet() % 10000 == 0) log.info("\t\t" + counter.get()); })
-				.collect(toMap(t -> t, t -> getReferences(dictionary, language, t).stream()
-						.map(meaning -> Meaning.get(meaning, dictionary.getLabel(meaning, language).orElse(""), false))
-						.collect(toList())));
 
-		// order of candidate lists must be preserved
-		final Map<Mention, List<Candidate>> candidates = new HashMap<>();
-		for (Triple<String, String, String> t : forms2mentions.keySet())
-		{
-			final List<Mention> form_mentions = forms2mentions.get(t);
-			final List<Meaning> form_meanings = forms2meanings.get(t);
-			for (Mention mention : form_mentions)
-			{
-				final List<Candidate> mention_candidates = form_meanings.stream().map(meaning -> new Candidate(mention, meaning)).collect(toList());
-				candidates.put(mention , mention_candidates);
-			}
-		}
+		final Map<Mention, List<Candidate>> candidates = mentions.stream()
+				.peek(mention ->
+				{
+					if (counter.incrementAndGet() % LOGGING_STEP_SIZE == 0)
+						log.info("\t\t" + counter.get());
+				})
+				.collect(toMap(mention -> mention, mention -> getReferences(dictionary, language, mention).stream()
+						.map(id -> Meaning.get(id, dictionary.getLabel(id, language).orElse(""), false))
+						.map(meaning -> new Candidate(mention, meaning))
+						.collect(toList())));
 
 		int num_references = candidates.values().stream()
 				.flatMap(List::stream)
@@ -66,20 +48,48 @@ public class CandidatesCollector
 				.map(Meaning::getReference)
 				.collect(toSet())
 				.size();
-		log.info("Created " + candidates.size() + " candidates with " + num_references +
-				" distinct references for " + forms2mentions.keySet().size() + " anchors (" +
-				dictionary.getNumQueries() +	" queries).");
-		log.info("Candidate meanings collected in " + timer.stop());
+
+		log.info("\t\tCreated " + candidates.values().stream().mapToInt(List::size).sum() + " candidates with " + num_references +
+				" distinct references for " + mentions.size() + " mentions");
+		log.info("\t\tCandidate meanings collected in " + timer.stop());
 
 		return candidates;
 	}
 
-	private static List<String> getReferences(MeaningDictionary dictionary, ULocale language, Triple<String, String, String> mention)
+	// Collects all meanings and forms
+	public static void collect(MeaningDictionary dictionary, ULocale language, CompactDictionary cache) throws Exception
+	{
+		log.info("Collecting all meanings with " + Runtime.getRuntime().availableProcessors() + " cores available");
+		final Stopwatch timer = Stopwatch.createStarted();
+		AtomicLong num_meanings = new AtomicLong(0);
+		AtomicLong num_forms = new AtomicLong(0);
+
+		final Iterator<MeaningDictionary.Info> it = dictionary.infoIterator(language);
+		while (it.hasNext())
+		{
+			final MeaningDictionary.Info m = it.next();
+			cache.addMeaning(m.id, m.label, m.glosses);
+			m.forms.stream()
+					.filter(l -> !cache.contains(l, m.POS))
+					.peek(l -> num_forms.incrementAndGet())
+					.forEach(l -> cache.addForm(l, m.POS, dictionary.getMeanings(l, m.POS, language)));
+
+			long i = num_meanings.incrementAndGet();
+			if (i % LOGGING_STEP_SIZE == 0)
+			{
+				log.info("\t" + num_meanings.get() + " meanings and " +  num_forms.get() + " forms collected in " + timer);
+			}
+		}
+
+		log.info(num_meanings.get() + " meanings and " +  num_forms.get() + " forms collected in " + timer.stop());
+	}
+
+	private static List<String> getReferences(MeaningDictionary dictionary, ULocale language, Mention mention)
 	{
 		// Use surface form of mention as label
-		String form = mention.getLeft();
-		String lemma = mention.getMiddle();
-		String pos = mention.getRight();
+		String form = mention.getSurface_form();
+		String lemma = mention.getLemma();
+		String pos = mention.getPOS();
 		// Lemma meanings first, sorted by dictionary criteria (BabelNet -> best sense)
 		List<String> references = dictionary.getMeanings(lemma, pos, language);
 

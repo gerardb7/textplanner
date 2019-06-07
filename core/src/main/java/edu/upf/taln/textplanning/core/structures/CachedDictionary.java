@@ -50,7 +50,7 @@ public class CachedDictionary implements MeaningDictionary
 		else
 		{
 			final List<String> meanings = base.getMeanings(word, pos, language);
-			cache.addWord(word, pos, meanings);
+			cache.addForm(word, pos, meanings);
 			return meanings;
 		}
 	}

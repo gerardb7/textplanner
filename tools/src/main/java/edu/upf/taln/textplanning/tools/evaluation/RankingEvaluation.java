@@ -40,7 +40,7 @@ public class RankingEvaluation
 	private static final String gold_suffix = ".gold";
 	private final static Logger log = LogManager.getLogger();
 
-	public static void run(Path gold_folder, Path xml_file, Path output_path, InitialResourcesFactory resources_factory)
+	public static void run(Path gold_folder, Path xml_file, InitialResourcesFactory resources_factory)
 	{
 		final Options options = new Options();
 		options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
@@ -57,7 +57,7 @@ public class RankingEvaluation
 		Set<String> evaluate_POS = Set.of(noun_pos_tag); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
 
 		final Map<String, Set<AlternativeMeanings>> gold = parseGoldMeanings(gold_folder);
-		final Corpus corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path, resources_factory, language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
+		final Corpus corpus = EvaluationTools.loadResourcesFromXML(xml_file, resources_factory, language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
 		assert gold.size() == corpus.texts.size();
 
 		EvaluationTools.rankMeanings(options, corpus);

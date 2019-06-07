@@ -6,30 +6,31 @@ import java.io.Serializable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public interface MeaningDictionary
 {
 	class Info implements Serializable
 	{
 		public final String id;
+		public final String label;
+		public final String POS;
 		public final List<String> glosses;
-		public final List<String> lemmas;
+		public final List<String> forms;
 		private static final long serialVersionUID = 1L;
 
-		public Info(String id, List<String> glosses, List<String> lemmas)
+		public Info(String id, String label, String POS, List<String> glosses, List<String> forms)
 		{
 			this.id = id;
+			this.label = label;
+			this.POS = POS;
 			this.glosses = glosses;
-			this.lemmas = lemmas;
+			this.forms = forms;
 		}
 
 		@Override
 		public String toString()
 		{
-			return id + "-" + String.join("|", lemmas) +
-					glosses.stream().collect(Collectors.joining("\n\t", "\n\t", ""));
+			return label;
 		}
 	}
 

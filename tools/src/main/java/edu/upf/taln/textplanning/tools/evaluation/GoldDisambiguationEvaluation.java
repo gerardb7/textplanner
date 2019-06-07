@@ -37,8 +37,7 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 	private static final String other_pos_tag = "X";
 	private static final ULocale language = ULocale.ITALIAN;
 
-	public GoldDisambiguationEvaluation(Path gold_file, Path xml_file, Path tmp_folder,
-	                                    InitialResourcesFactory resources_factory)
+	public GoldDisambiguationEvaluation(Path gold_file, Path xml_file, InitialResourcesFactory resources_factory)
 	{
 		this.options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
 		this.options.min_bias_threshold = 0.7; // minimum bias value below which candidate meanings are ignored
@@ -53,7 +52,7 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 		// Evaluate these POS tags only
 		this.evaluate_POS = Set.of(adverb_pos_tag); //noun_pos_tag, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
 
-		this.corpus = EvaluationTools.loadResourcesFromXML(xml_file, tmp_folder, resources_factory, language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
+		this.corpus = EvaluationTools.loadResourcesFromXML(xml_file, resources_factory, language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
 		this.gold = parseGoldFile(gold_file);
 
 		// Check gold anns

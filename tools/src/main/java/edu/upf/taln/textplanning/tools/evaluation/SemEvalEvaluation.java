@@ -54,7 +54,7 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 		// Evaluate these POS tags only
 		this.eval_POS = Set.of(noun_pos_tag, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
 
-		this.corpus = EvaluationTools.loadResourcesFromXML(xml_file, output_path, resources_factory, language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
+		this.corpus = EvaluationTools.loadResourcesFromXML(xml_file, resources_factory, language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
 		this.gold_file = gold_file;
 		this.xml_file = xml_file;
 		this.output_path = output_path;

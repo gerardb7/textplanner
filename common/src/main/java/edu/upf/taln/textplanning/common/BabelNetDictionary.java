@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.common;
 import com.babelscape.util.UniversalPOS;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.UnmodifiableIterator;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import it.uniroma1.lcl.babelnet.*;
@@ -86,12 +87,19 @@ public class BabelNetDictionary implements MeaningDictionary
 	@Override
 	public Iterator<Info> infoIterator(ULocale language)
 	{
+		// filter by lang
 		final Language babel_language = Language.fromISO(language.toLanguageTag());
-		// return Iterators.transform(bn.getSynsetIterator(), s -> {
-		return	Iterators.transform(bn.iterator(), s -> {
+		final UnmodifiableIterator<BabelSynset> lang_sysnsets =
+				Iterators.filter(bn.iterator(), s -> s != null && s.getLanguages().contains(babel_language));
+
+		// then transform to info class
+		return	Iterators.transform(lang_sysnsets, s -> {
 			if (s == null)
 				return null;
 
+			final String id = s.getID().getID();
+			String label = s.getMainSense().map(BabelSense::getSimpleLemma).orElse(id);
+			String pos = String.valueOf(s.getPOS().getTag());
 			final List<String> glosses = new ArrayList<>();
 			try
 			{
@@ -107,7 +115,8 @@ public class BabelNetDictionary implements MeaningDictionary
 			final List<String> lemmas = s.getSenses(babel_language).stream()
 					.map(BabelSense::getSimpleLemma)
 					.collect(toList());
-			return new Info(s.getID().getID(), glosses, lemmas);
+
+			return new Info(id, label, pos, glosses, lemmas);
 		});
 	}
 
@@ -209,6 +218,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		catch (Exception e)
 		{
 			log.info("Cannot get label for synset " + id + ": " + e);
+			e.printStackTrace();
 			return Optional.empty();
 		}
 	}

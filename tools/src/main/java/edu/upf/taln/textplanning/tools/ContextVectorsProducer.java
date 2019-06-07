@@ -64,23 +64,23 @@ public class ContextVectorsProducer
 	{
 		final long num_meanings = meanings.size();
 		final long num_meanings_with_lemmas = meanings.stream()
-				.filter(i -> !i.lemmas.isEmpty())
+				.filter(i -> !i.forms.isEmpty())
 				.count();
 		final long num_lemmas = meanings.stream()
-				.mapToLong(i -> i.lemmas.size())
+				.mapToLong(i -> i.forms.size())
 				.sum();
 		final long num_empty_lemmas = meanings.stream()
-				.mapToLong(i -> i.lemmas.stream()
+				.mapToLong(i -> i.forms.stream()
 						.filter(String::isEmpty)
 						.count())
 				.sum();
 		final int num_tokens_lemmas = meanings.stream()
-				.mapToInt(i -> i.lemmas.stream()
+				.mapToInt(i -> i.forms.stream()
 						.mapToInt(l -> l.split("\\s").length)
 						.sum())
 				.sum();
 		final double avg_tokens_lemmas = meanings.stream()
-				.map(i -> i.lemmas.stream()
+				.map(i -> i.forms.stream()
 						.filter(l -> !l.isEmpty())
 						.mapToInt(l -> l.split("_").length)
 						.average())
@@ -88,7 +88,7 @@ public class ContextVectorsProducer
 				.mapToDouble(OptionalDouble::getAsDouble)
 				.average().orElse(0.0);
 		final Set<List<String>> meanings_lemmas_tokens = meanings.stream()
-				.map(i -> i.lemmas)
+				.map(i -> i.forms)
 				.collect(toSet());
 		final long num_meanings_with_defined_vectors_lemmas = meanings_lemmas_tokens.stream()
 				.filter(sentence_vectors::isDefinedFor)
@@ -128,7 +128,7 @@ public class ContextVectorsProducer
 				.count();
 
 		final long num_meanings_with_lemmas_or_glosses = meanings.stream()
-				.filter(i -> !i.lemmas.isEmpty() || !i.glosses.isEmpty())
+				.filter(i -> !i.forms.isEmpty() || !i.glosses.isEmpty())
 				.count();
 		final Set<List<String>> meanings_tokens = meanings.stream()
 				.map(i ->
@@ -136,7 +136,7 @@ public class ContextVectorsProducer
 					final List<String> tokens = i.glosses.stream()
 							.flatMap(l -> Arrays.stream(l.split("\\s")))
 							.collect(toList());
-					tokens.addAll(i.lemmas);
+					tokens.addAll(i.forms);
 					return tokens;
 				})
 				.collect(toSet());
@@ -217,7 +217,7 @@ public class ContextVectorsProducer
 				.flatMap(g -> Arrays.stream(g.split("\\s")))
 				.collect(toList());
 		if (!glosses_only)
-			meaning.lemmas.stream()
+			meaning.forms.stream()
 					.flatMap(g -> Arrays.stream(g.split("\\s")))
 					.forEach(tokens::add);
 
