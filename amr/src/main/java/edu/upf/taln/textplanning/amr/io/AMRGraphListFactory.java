@@ -11,6 +11,7 @@ import edu.upf.taln.textplanning.core.io.CandidatesCollector;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import edu.upf.taln.textplanning.core.structures.Mention;
+import edu.upf.taln.textplanning.core.utils.POS;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -27,16 +28,18 @@ public class AMRGraphListFactory
 {
 	private final AMRReader reader;
 	private final ULocale language;
+	private final POS.Tagset tagset;
 	private final StanfordWrapper stanford;
 	private final MeaningDictionary dictionary;
 	private final TypesCollector types_collector;
 	private final static Logger log = LogManager.getLogger();
 
-	public AMRGraphListFactory(AMRReader reader, ULocale language, Path types_file, MeaningDictionary dictionary,
+	public AMRGraphListFactory(AMRReader reader, ULocale language, POS.Tagset tagset, Path types_file, MeaningDictionary dictionary,
 	                           boolean no_stanford) throws IOException
 	{
 		this.reader = reader;
 		this.language = language;
+		this.tagset = tagset;
 		this.dictionary = dictionary;
 		stanford = new StanfordWrapper(no_stanford);
 		this.types_collector = (types_file != null) ? new TypesCollector(types_file, dictionary) : null;
@@ -64,7 +67,7 @@ public class AMRGraphListFactory
 		List<CoreferenceChain> chains = stanford.process(graphs);
 
 		// Collect and classify mentions
-		final Multimap<String, Mention> mentions = AMRMentionsCollector.collectMentions(graphs, language);
+		final Multimap<String, Mention> mentions = AMRMentionsCollector.collectMentions(graphs, language, tagset);
 		final Multimap<String, Mention> singlewords = HashMultimap.create();
 		mentions.entries().stream().filter(e -> !e.getValue().isMultiWord()).forEach(e -> singlewords.put(e.getKey(), e.getValue()));
 		final Multimap<String, Mention> multiwords = HashMultimap.create();

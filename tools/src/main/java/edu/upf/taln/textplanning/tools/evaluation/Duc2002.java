@@ -41,7 +41,7 @@ public class Duc2002
 							final String text = getMatch(contents_f, text_pattern).orElseThrow().trim();
 							final String id = getMatch(contents_f, id_pattern).orElseThrow().trim().toLowerCase();
 							final String group_id = FilenameUtils.getName(f.getParent().toString()).trim().toLowerCase();
-							FileUtils.writeTextToFile(output.resolve(group_id + "_" + id + doc_extension), text);
+							FileUtils.writeTextToFile(output.resolve(group_id + "-" + id + doc_extension), text);
 						}
 						catch (Exception e)
 						{
@@ -63,8 +63,7 @@ public class Duc2002
 			final Pattern p = Pattern.compile("(<SUM[^>]+>)([^<]+)</SUM>");
 			final Pattern id_pattern = Pattern.compile("DOCREF=\"([^\"]+)\"");
 			final Pattern group_pattern = Pattern.compile("DOCSET=\"([^\"]+)\"");
-
-			final String linebreak_pattern = "[\\r\\n]+";
+			final Pattern selector_pattern = Pattern.compile("SELECTOR=\"([^\"]+)\"");
 
 			Files.walk(input)
 					.filter(Files::isRegularFile)
@@ -80,11 +79,13 @@ public class Duc2002
 										final String header = r.group(1);
 										final String id = getMatch(header, id_pattern).orElseThrow().trim().toLowerCase();
 										final String group = getMatch(header, group_pattern).orElseThrow().trim().toLowerCase();
+										final String selector = getMatch(header, selector_pattern).orElseThrow().trim().toLowerCase();
 										final String text = r.group(2)
 												.trim()
 												.replace("<\\/?\\S+>", "")
 												.replace("\n", "")
 												.replace("\r", "");
+
 
 										StringBuilder split = new StringBuilder();
 										BreakIterator iterator = BreakIterator.getSentenceInstance(language);
@@ -95,7 +96,7 @@ public class Duc2002
 											split.append(text, start, end).append(System.getProperty("line.separator"));
 										}
 
-										FileUtils.writeTextToFile(output.resolve(group + "_" + id + summ_suffix), split.toString());
+										FileUtils.writeTextToFile(output.resolve(group + selector + "-" + id + summ_suffix), split.toString());
 									});
 						}
 						catch (Exception e)
@@ -125,7 +126,7 @@ public class Duc2002
 		final Path docs_out = Paths.get("/home/gerard/ownCloud/varis_tesi/duc2002/texts");
 		//Duc2002.prepareDocs(docs_in, docs_out);
 		final Path summaries_in = Paths.get("/home/gerard/ownCloud/varis_tesi/duc2002/extracts_and_abstracts");
-		final Path summaries_out = Paths.get("/home/gerard/ownCloud/varis_tesi/duc2002/reference2");
+		final Path summaries_out = Paths.get("/home/gerard/ownCloud/varis_tesi/duc2002/reference3");
 		Duc2002.prepareSummaries(summaries_in, summaries_out);
 	}
 

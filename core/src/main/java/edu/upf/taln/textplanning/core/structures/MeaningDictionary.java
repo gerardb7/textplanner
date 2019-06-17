@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.core.structures;
 
 import com.ibm.icu.util.ULocale;
+import edu.upf.taln.textplanning.core.utils.POS;
 
 import java.io.Serializable;
 import java.util.Iterator;
@@ -13,12 +14,12 @@ public interface MeaningDictionary
 	{
 		public final String id;
 		public final String label;
-		public final String POS;
+		public final POS.Tag POS;
 		public final List<String> glosses;
 		public final List<String> forms;
 		private static final long serialVersionUID = 1L;
 
-		public Info(String id, String label, String POS, List<String> glosses, List<String> forms)
+		public Info(String id, String label, POS.Tag POS, List<String> glosses, List<String> forms)
 		{
 			this.id = id;
 			this.label = label;
@@ -39,7 +40,7 @@ public interface MeaningDictionary
 
 	// List of meanings sorted according to dictionary criteria, e.g. frequency, best sense first, etc.
 	List<String> getMeanings(String form, ULocale language);
-	List<String> getMeanings(String form, String pos, ULocale language);
+	List<String> getMeanings(String form, POS.Tag pos, ULocale language);
 	boolean contains(String id);
 	Optional<String> getLabel(String id, ULocale language);
 	Optional<Boolean> isNE(String id);

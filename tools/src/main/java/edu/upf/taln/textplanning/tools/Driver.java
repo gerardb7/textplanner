@@ -31,9 +31,16 @@ public class Driver
 	private static final String create_context_vectors = "context";
 	private final static Logger log = LogManager.getLogger();
 
+	private static abstract class BaseCommand
+	{
+		@Parameter(names = {"-p", "-properties"}, description = "Path to properties file", arity = 1, required = true,
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		protected Path properties;
+	}
+
 	@SuppressWarnings("unused")
 	@Parameters(commandDescription = "Run SemEval WSD/EL evaluation")
-	private static class SemEvalEvaluationCommand
+	private static class SemEvalEvaluationCommand extends BaseCommand
 	{
 		@Parameter(names = {"-g", "-gold"}, description = "Path to gold file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
@@ -50,7 +57,7 @@ public class Driver
 
 	@SuppressWarnings("unused")
 	@Parameters(commandDescription = "Run disambiguation evaluation")
-	private static class DisambiguationEvaluationCommand
+	private static class DisambiguationEvaluationCommand extends BaseCommand
 	{
 		@Parameter(names = {"-g", "-gold"}, description = "Path to gold file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
@@ -64,7 +71,7 @@ public class Driver
 
 	@SuppressWarnings("unused")
 	@Parameters(commandDescription = "Run evaluation of meanings ranking")
-	private static class RankEvaluationCommand
+	private static class RankEvaluationCommand extends BaseCommand
 	{
 		@Parameter(names = {"-i", "-input"}, description = "Path to XML input file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
@@ -76,7 +83,7 @@ public class Driver
 
 	@SuppressWarnings("unused")
 	@Parameters(commandDescription = "Run evaluation of ranking-based extractive summarization")
-	private static class ExtractiveEvaluationCommand
+	private static class ExtractiveEvaluationCommand extends BaseCommand
 	{
 		@Parameter(names = {"-i", "-input"}, description = "Path to input. Can be a folder containing text files or a single XML file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
@@ -94,13 +101,13 @@ public class Driver
 
 	@SuppressWarnings("unused")
 	@Parameters(commandDescription = "Collect meanings info from a dictionary and stores them into a binary file")
-	private static class CollectMeaningsCommand
+	private static class CollectMeaningsCommand extends BaseCommand
 	{
 	}
 
 	@SuppressWarnings("unused")
 	@Parameters(commandDescription = "Create context vectors for a set of meanings")
-	private static class CreateContextVectorsCommand
+	private static class CreateContextVectorsCommand extends BaseCommand
 	{
 		@Parameter(names = {"-m", "-meanings"}, description = "Path to binary file containing meanings", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
@@ -117,8 +124,6 @@ public class Driver
 
 	public static void main(String[] args) throws Exception
 	{
-		PlanningProperties properties = new PlanningProperties();
-
 		SemEvalEvaluationCommand semEval = new SemEvalEvaluationCommand();
 		DisambiguationEvaluationCommand wsdEval = new DisambiguationEvaluationCommand();
 		RankEvaluationCommand rankEval = new RankEvaluationCommand();
@@ -144,6 +149,7 @@ public class Driver
 		{
 			case semeval_command:
 			{
+				PlanningProperties properties = new PlanningProperties(semEval.properties);
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				SemEvalEvaluation eval = new SemEvalEvaluation(semEval.gold_file, semEval.input_file, semEval.output, resources);
 				if (semEval.batch)
@@ -154,6 +160,7 @@ public class Driver
 			}
 			case disambiguation_eval_command:
 			{
+				PlanningProperties properties = new PlanningProperties(wsdEval.properties);
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				GoldDisambiguationEvaluation eval = new GoldDisambiguationEvaluation(wsdEval.gold_file, wsdEval.input_file, resources);
 				if (wsdEval.batch)
@@ -164,12 +171,14 @@ public class Driver
 			}
 			case rank_eval_command:
 			{
+				PlanningProperties properties = new PlanningProperties(rankEval.properties);
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				RankingEvaluation.run(rankEval.gold_folder, rankEval.input_file, resources);
 				break;
 			}
 			case extract_eval_command:
 			{
+				PlanningProperties properties = new PlanningProperties(extractEval.properties);
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				ExtractiveEvaluation.run(extractEval.input, extractEval.gold, extractEval.output, extractEval.tmp, resources);
 				resources.serializeCache();
@@ -177,13 +186,15 @@ public class Driver
 			}
 			case collect_meanings_vectors:
 			{
+				PlanningProperties properties = new PlanningProperties(meanings.properties);
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
-				CandidatesCollector.collect(resources.getDictionary(), language, resources.getCache());
+				CandidatesCollector.collect(resources.getDictionary(), language, resources.getCache(), properties.getDictionaryCache());
 				resources.serializeCache();
 				break;
 			}
 			case create_context_vectors:
 			{
+				PlanningProperties properties = new PlanningProperties(context.properties);
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				ContextVectorsProducer.createVectors(context.meanings, context.chunk_size, context.output, resources, context.glosses_only);
 				break;
@@ -195,5 +206,4 @@ public class Driver
 
 		log.debug("\n\n");
 	}
-
 }

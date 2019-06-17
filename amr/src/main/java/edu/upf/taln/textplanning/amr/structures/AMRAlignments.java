@@ -160,8 +160,8 @@ public class AMRAlignments implements Serializable
 		}
 	}
 
-	// The POS of a span of tokens is the POS of the tokens aligned with its head vertex.
-	// If there is no top vertex or it is unaligned, then there is no POS
+	// The Tag of a span of tokens is the Tag of the tokens aligned with its head vertex.
+	// If there is no top vertex or it is unaligned, then there is no Tag
 	public Optional<String> getPOS(Pair<Integer, Integer> span)
 	{
 		final Optional<String> vertex = getSpanTopVertex(span);
@@ -172,7 +172,7 @@ public class AMRAlignments implements Serializable
 		if (tokens.isEmpty())
 			return Optional.empty();
 		else // (tokens.size() >= 1)
-			return Optional.of(getPOS(tokens.iterator().next())); // assume all tokens share the same POS
+			return Optional.of(getPOS(tokens.iterator().next())); // assume all tokens share the same Tag
 	}
 
 	// The NE type of a span of tokens is the NE type of the tokens aligned with its head vertex.

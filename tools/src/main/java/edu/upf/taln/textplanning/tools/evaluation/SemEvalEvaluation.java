@@ -6,8 +6,10 @@ import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
-import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.Corpus;
-import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.Text;
+import edu.upf.taln.textplanning.core.utils.POS;
+import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus;
+import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus.Corpus;
+import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus.Text;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,18 +28,17 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 	private final Corpus corpus;
 	private final Options options = new Options();
 	private final Map<String, String> gold;
-	private final Set<String> eval_POS;
-	private final static Logger log = LogManager.getLogger();
-
-	private static final int max_span_size = 3;
-	private static final boolean rank_together = false;
-	private static boolean exclude_multiwords = false;
+	private final Set<POS.Tag> eval_POS;
+	private final int max_span_size = 3;
+	private final boolean rank_together = false;
+	private boolean exclude_multiwords = false;
 	private static final String noun_pos_tag = "N";
 	private static final String adj_pos_tag = "J";
 	private static final String verb_pos_tag = "V";
 	private static final String adverb_pos_tag = "R";
 	private static final String other_pos_tag = "X";
 	private static final ULocale language = ULocale.ENGLISH;
+	private final static Logger log = LogManager.getLogger();
 
 	public SemEvalEvaluation(   Path gold_file, Path xml_file, Path output_path, InitialResourcesFactory resources_factory)
 	{
@@ -47,14 +48,14 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 		this.options.sim_threshold = 0.8; // Pairs of meanings with sim below this value have their score set to 0
 		this.options.damping_meanings = 0.5; // controls balance between bias and similarity: higher value -> more bias
 
-		// Exclude POS from mention collection
-		final Set<String> excluded_mention_POS = Set.of(other_pos_tag);
-		// Include these POS in the ranking of meanings
-		options.ranking_POS_Tags = Set.of(noun_pos_tag); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
-		// Evaluate these POS tags only
-		this.eval_POS = Set.of(noun_pos_tag, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+		// Exclude Tag from mention collection
+		final Set<POS.Tag> excluded_mention_POS = Set.of(POS.Tag.X);
+		// Include these Tag in the ranking of meanings
+		options.ranking_POS_Tags = Set.of(POS.Tag.NOUN); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+		// Evaluate these Tag tags only
+		this.eval_POS = Set.of(POS.Tag.NOUN, POS.Tag.ADJ, POS.Tag.VERB, POS.Tag.ADV);
 
-		this.corpus = EvaluationTools.loadResourcesFromXML(xml_file, resources_factory, language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
+		this.corpus = EvaluationCorpus.createFromXML(xml_file);
 		this.gold_file = gold_file;
 		this.xml_file = xml_file;
 		this.output_path = output_path;
@@ -65,6 +66,8 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 				.filter(a -> a.length >= 3)
 				.collect(toMap(a -> a[0].equals(a[1]) ? a[0] : (a[0] + "-" + a[1]), a -> a[2]));
 		log.info(gold.keySet().size() + " lines read from gold");
+
+		EvaluationTools.createResources(corpus, tagset, resources_factory, max_span_size, rank_together, excluded_mention_POS, options);
 	}
 
 	@Override
@@ -88,7 +91,6 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 		return options;
 	}
 
-
 	@Override
 	protected void checkCandidates(Corpus corpus)
 	{
@@ -106,7 +108,7 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 	}
 
 	@Override
-	protected Set<String> getEvaluatePOS() { return eval_POS; }
+	protected Set<POS.Tag> getEvaluatePOS() { return eval_POS; }
 
 	@Override
 	protected boolean evaluateMultiwordsOnly()
@@ -139,11 +141,11 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 					final Text document = corpus.texts.stream()
 							.filter(d -> sourceId.startsWith(d.id))
 							.findFirst().orElseThrow(() -> new RuntimeException());
-					final EvaluationTools.Sentence sentence = document.sentences.stream()
+					final EvaluationCorpus.Sentence sentence = document.sentences.stream()
 							.filter(s -> sourceId.equals(s.id))
 							.findFirst().orElseThrow(() -> new RuntimeException());
-					final EvaluationTools.Token first_token = sentence.tokens.get(mention.getSpan().getLeft());
-					final EvaluationTools.Token last_token = sentence.tokens.get(mention.getSpan().getRight() - 1);
+					final EvaluationCorpus.Token first_token = sentence.tokens.get(mention.getSpan().getLeft());
+					final EvaluationCorpus.Token last_token = sentence.tokens.get(mention.getSpan().getRight() - 1);
 
 					return first_token.id + "\t" + last_token.id + "\t" + c.getMeaning().getReference();
 				})
@@ -152,7 +154,7 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 		final Path results_file = FileUtils.createOutputPath(xml_file, output_path, "xml", sufix);
 		FileUtils.writeTextToFile(results_file, results);
 		log.info("Results file written to " + results_file);
-		log.info("Evaluated POS : " + eval_POS);
+		log.info("Evaluated Tag : " + eval_POS);
 
 
 		try

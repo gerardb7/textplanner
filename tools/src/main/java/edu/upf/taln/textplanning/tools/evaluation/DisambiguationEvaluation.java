@@ -5,7 +5,9 @@ import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.ranking.Disambiguation;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
-import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.Corpus;
+import edu.upf.taln.textplanning.core.utils.POS;
+import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus;
+import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus.Corpus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -18,7 +20,7 @@ import static java.util.stream.Collectors.toList;
 
 public abstract class DisambiguationEvaluation
 {
-
+	protected static final POS.Tagset tagset = POS.Tagset.Simple;
 	private final static Logger log = LogManager.getLogger();
 
 	abstract protected void checkCandidates(Corpus corpus);
@@ -26,15 +28,14 @@ public abstract class DisambiguationEvaluation
 	abstract protected Corpus getCorpus();
 	abstract protected Options getOptions();
 	abstract protected void evaluate(List<Candidate> system, String sufix);
-	abstract protected Set<String> getEvaluatePOS();
+	abstract protected Set<POS.Tag> getEvaluatePOS();
 	abstract protected boolean evaluateMultiwordsOnly();
 
 	public void run()
 	{
 		final Corpus corpus = getCorpus();
 		checkCandidates(corpus);
-
-		EvaluationTools.rankMeanings(getOptions(), corpus);
+		EvaluationTools.rankMeanings(corpus, getOptions());
 
 		log.info("********************************");
 		{
@@ -84,8 +85,8 @@ public abstract class DisambiguationEvaluation
 
 		for (Options options : batch_options)
 		{
-			EvaluationTools.reset(corpus);
-			EvaluationTools.rankMeanings(options, corpus);
+			EvaluationCorpus.reset(corpus);
+			EvaluationTools.rankMeanings(corpus, options);
 			log.info("********************************");
 			{
 				final List<Candidate> ranked_candidates = chooseTopRankOrFirst(corpus);

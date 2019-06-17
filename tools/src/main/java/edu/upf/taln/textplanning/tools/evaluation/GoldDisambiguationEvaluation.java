@@ -1,14 +1,15 @@
 package edu.upf.taln.textplanning.tools.evaluation;
 
-import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
+import edu.upf.taln.textplanning.core.utils.POS;
 import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.AlternativeMeanings;
-import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.Corpus;
+import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus;
+import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus.Corpus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -17,25 +18,24 @@ import java.util.*;
 import java.util.function.Predicate;
 
 import static java.util.function.Predicate.not;
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 {
 	private final Corpus corpus;
 	final Map<String, AlternativeMeanings> gold;
 	private final Options options = new Options();
-	private final Set<String> evaluate_POS;
+	private final Set<POS.Tag> evaluate_POS;
 	private final static Logger log = LogManager.getLogger();
 
 	private static final int max_span_size = 3;
 	private static final boolean multiwords_only = false;
-	private static final boolean rank_together = true;
 	private static final String noun_pos_tag = "N";
 	private static final String adj_pos_tag = "J";
 	private static final String verb_pos_tag = "V";
 	private static final String adverb_pos_tag = "R";
 	private static final String other_pos_tag = "X";
-	private static final ULocale language = ULocale.ITALIAN;
 
 	public GoldDisambiguationEvaluation(Path gold_file, Path xml_file, InitialResourcesFactory resources_factory)
 	{
@@ -45,14 +45,15 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 		this.options.sim_threshold = 0.0; // Pairs of meanings with sim below this value have their score set to 0
 		this.options.damping_meanings = 0.5; // controls balance between bias and similarity: higher value -> more bias
 
-		// Exclude POS from mention collection
-		final Set<String> excluded_mention_POS = Set.of(other_pos_tag);
-		// Include these POS in the ranking of meanings
-		options.ranking_POS_Tags = Set.of(noun_pos_tag, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
-		// Evaluate these POS tags only
-		this.evaluate_POS = Set.of(adverb_pos_tag); //noun_pos_tag, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+		// Exclude Tag from mention collection
+		final Set<POS.Tag> excluded_mention_POS = Set.of(POS.Tag.X);
+		// Include these Tag in the ranking of meanings
+		options.ranking_POS_Tags = Set.of(POS.Tag.NOUN, POS.Tag.ADJ, POS.Tag.VERB, POS.Tag.ADV);
+		// Evaluate these Tag tags only
+		this.evaluate_POS = Set.of(POS.Tag.ADV); //noun_pos_tag, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
 
-		this.corpus = EvaluationTools.loadResourcesFromXML(xml_file, resources_factory, language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
+		this.corpus = EvaluationCorpus.createFromXML(xml_file);
+		EvaluationTools.createResources(corpus, tagset, resources_factory, max_span_size, true, excluded_mention_POS, options);
 		this.gold = parseGoldFile(gold_file);
 
 		// Check gold anns
@@ -125,7 +126,7 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 	}
 
 	@Override
-	protected Set<String> getEvaluatePOS() { return evaluate_POS; }
+	protected Set<POS.Tag> getEvaluatePOS() { return evaluate_POS; }
 
 	@Override
 	protected boolean evaluateMultiwordsOnly()
@@ -187,7 +188,7 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 		double precision = (double)true_positives.size() / (double)(true_positives.size() + false_positives.size());
 		double recall = (double)true_positives.size() / (double)(true_positives.size() + false_negatives.size());
 		double fscore = 2.0*(precision * recall) / (precision + recall);
-		log.info("\tEvaluated POS : " + evaluate_POS);
+		log.info("\tEvaluated Tag : " + evaluate_POS);
 		log.info("\tPrecision = " + DebugUtils.printDouble(precision, 2));
 		log.info("\tRecall = " + DebugUtils.printDouble(recall, 2));
 		log.info("\tF1 score = " + DebugUtils.printDouble(fscore, 2));

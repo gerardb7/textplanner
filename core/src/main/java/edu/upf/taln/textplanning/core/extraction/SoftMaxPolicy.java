@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.core.extraction;
 
 import java.util.Arrays;
+import java.util.stream.IntStream;
 
 public class SoftMaxPolicy implements Policy
 {
@@ -15,6 +16,12 @@ public class SoftMaxPolicy implements Policy
 		if (weights.length == 1)
 			return 0;
 
+		double accum = Arrays.stream(weights).sum();
+		IntStream.range(0, weights.length).forEach(i -> {
+			weights[i] = weights[i] / accum;
+			assert !Double.isNaN(weights[i]) : "NaN value at " + i;
+		});
+
 		// Create distribution
 		double[] exps = Arrays.stream(weights)
 				.map(v -> v / temperature)
@@ -23,7 +30,9 @@ public class SoftMaxPolicy implements Policy
 		double sum_exps = Arrays.stream(exps).sum();
 		double[] softmax = Arrays.stream(exps)
 				.map(e -> e / sum_exps)
+				.peek(d -> { assert !Double.isNaN(d); })
 				.toArray();
+
 
 		// Choose key
 		double p = Math.random();

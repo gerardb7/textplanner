@@ -1,7 +1,6 @@
 package edu.upf.taln.textplanning.core.structures;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Stopwatch;
 import com.google.common.primitives.Shorts;
 import com.ibm.icu.util.ULocale;
 import gnu.trove.map.TIntIntMap;
@@ -35,15 +34,15 @@ public class CompactDictionary implements Serializable
 	private static class Entry
 	{
 		final String form;
-		final String pos;
+		final char pos;
 		final List<String> meanings;
 
-		public Entry(String form, String pos)
+		public Entry(String form, char pos)
 		{
 			this(form, pos, null);
 		}
 
-		public Entry(String form, String pos, List<String> meanings)
+		public Entry(String form, char pos, List<String> meanings)
 		{
 			this.form = form;
 			this.pos = pos;
@@ -59,14 +58,14 @@ public class CompactDictionary implements Serializable
 			Entry that = (Entry) o;
 
 			if (!form.equals(that.form)) return false;
-			return pos.equals(that.pos);
+			return pos == that.pos;
 		}
 
 		@Override
 		public int hashCode()
 		{
 			int result = form.hashCode();
-			result = 31 * result + pos.hashCode();
+			result = 31 * result + Character.valueOf(pos).hashCode();
 			return result;
 		}
 	}
@@ -96,7 +95,7 @@ public class CompactDictionary implements Serializable
 		return language;
 	}
 
-	public boolean contains(String form, String pos)
+	public boolean contains(String form, char pos)
 	{
 		final Entry e = new Entry(form, pos);
 		return forms_index.containsKey(e) || forms_hash_index.containsKey(e.hashCode());
@@ -107,7 +106,7 @@ public class CompactDictionary implements Serializable
 		return meanings_index.containsKey(meaning) || meanings_hash_index.containsKey(meaning.hashCode());
 	}
 
-	public void addForm(String form, String pos, List<String> meanings)
+	public void addForm(String form, char pos, List<String> meanings)
 	{
 		if (meanings.isEmpty())
 			return;
@@ -223,7 +222,7 @@ public class CompactDictionary implements Serializable
 			meanings_hash_index.put(hash, glosses_pos);
 	}
 
-	public List<String> getMeanings(String form, String pos)
+	public List<String> getMeanings(String form, char pos)
 	{
 		int position = getFormsPosition(new Entry(form, pos)).orElse(-1);
 		if (position == -1)

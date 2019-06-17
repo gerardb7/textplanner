@@ -8,9 +8,24 @@ import java.util.Set;
 
 public class SingleVertexExplorer extends Explorer
 {
-	public SingleVertexExplorer(GraphSemantics semantics, boolean start_from_verbs, ExpansionPolicy policy)
+	private static class NoSemantics implements GraphSemantics
 	{
-		super(semantics, start_from_verbs, policy);
+		@Override
+		public boolean isCore(String role)
+		{
+			return false;
+		}
+
+		@Override
+		public boolean isRequired(String v, String source, String target, String role, SemanticGraph g)
+		{
+			return false;
+		}
+	}
+
+	public SingleVertexExplorer(boolean start_from_verbs, ExpansionPolicy policy)
+	{
+		super(new NoSemantics(), start_from_verbs, policy);
 	}
 
 	@Override

@@ -17,6 +17,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -75,7 +76,7 @@ public final class TextPlanner
 		log.info("*Ranking meanings*");
 		Stopwatch timer = Stopwatch.createStarted();
 
-		// Rank candidates that pass the filter, e.g. have certain POS
+		// Rank candidates that pass the filter, e.g. have certain Tag
 		final List<Candidate> filtered_candidates = candidates.stream()
 				.filter(candidates_to_rank_filter)
 				.collect(toList());
@@ -99,6 +100,7 @@ public final class TextPlanner
 
 		double[] ranking = Ranker.rank(references, labels, bias, similarity, true, meanings_similarity_filter,
 				o.sim_threshold, o.damping_meanings, true, true);
+		final double[] rebased_ranking = rebaseRankingValues(ranking);
 
 		// Assign weights to candidates: rank values for those with a ranked meaning
 		candidates.forEach(candidate ->
@@ -109,7 +111,7 @@ public final class TextPlanner
 			if (references.contains(reference))
 			{
 				int i = references.indexOf(candidate.getMeaning().getReference());
-				candidate.setWeight(ranking[i]);
+				candidate.setWeight(rebased_ranking[i]);
 			}
 		});
 
@@ -158,11 +160,12 @@ public final class TextPlanner
 						return OptionalDouble.of(adjacency_function.test(m1, m2) || adjacency_function.test(m2, m1) ? 1.0 : 0.0);
 					};
 
-			double[] ranking = Ranker.rank(variables, labels, variables2bias::get, edge_weights, true,
+			final double[] ranking = Ranker.rank(variables, labels, variables2bias::get, edge_weights, true,
 					(v1, v2) -> true, 0.0, o.damping_variables, true, true);
+			final double[] rebased_ranking = rebaseRankingValues(ranking);
 
 			IntStream.range(0, variables.size()).boxed()
-					.forEach(i -> variables2mentions.get(variables.get(i)).setWeight(ranking[i]));
+					.forEach(i -> variables2mentions.get(variables.get(i)).setWeight(rebased_ranking[i]));
 		}
 
 		log.info("Ranking completed in " + timer.stop() + "\n");
@@ -177,6 +180,23 @@ public final class TextPlanner
 		Stopwatch timer = Stopwatch.createStarted();
 
 		Explorer e = new RequirementsExplorer(semantics, true, Explorer.ExpansionPolicy.Non_core_only);
+		Policy p = new SoftMaxPolicy();
+		SubgraphExtraction extractor = new SubgraphExtraction(e, p, Math.min(o.num_subgraphs_extract, o.extraction_lambda));
+		Collection<SemanticSubgraph> subgraphs = extractor.multipleExtraction(graph, o.num_subgraphs_extract);
+		log.info("Extraction done in " + timer.stop());
+
+		return subgraphs;
+	}
+
+	/**
+	 * 	Extract subgraphs from a semantic graph
+	 */
+	public static Collection<SemanticSubgraph> extractSubgraphs(SemanticGraph graph, Options o)
+	{
+		log.info("*Extracting subgraphs*");
+		Stopwatch timer = Stopwatch.createStarted();
+
+		Explorer e = new SingleVertexExplorer(true, Explorer.ExpansionPolicy.All);
 		Policy p = new SoftMaxPolicy();
 		SubgraphExtraction extractor = new SubgraphExtraction(e, p, Math.min(o.num_subgraphs_extract, o.extraction_lambda));
 		Collection<SemanticSubgraph> subgraphs = extractor.multipleExtraction(graph, o.num_subgraphs_extract);
@@ -217,5 +237,18 @@ public final class TextPlanner
 		log.info("Sorting done in " + timer.stop());
 
 		return text_plan;
+	}
+
+	// rebases ranking values to [0..1] range
+	private static double[] rebaseRankingValues(double[] ranking)
+	{
+		final DoubleSummaryStatistics stats = Arrays.stream(ranking)
+				.summaryStatistics();
+
+		//(((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
+		Function<Double, Double> rebase = w -> (w - stats.getMin()) / (stats.getMax() - stats.getMin());
+		return Arrays.stream(ranking)
+				.map(rebase::apply)
+				.toArray();
 	}
 }

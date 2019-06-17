@@ -8,6 +8,7 @@ import edu.upf.taln.textplanning.amr.structures.AMRAlignments;
 import edu.upf.taln.textplanning.amr.structures.AMRGraph;
 import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.structures.Mention;
+import edu.upf.taln.textplanning.core.utils.POS;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,13 +26,13 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 	private static final int max_tokens = 5;
 	private final static Logger log = LogManager.getLogger();
 
-	public static Multimap<String, Mention> collectMentions(Collection<AMRGraph> graphs, ULocale language)
+	public static Multimap<String, Mention> collectMentions(Collection<AMRGraph> graphs, ULocale language, POS.Tagset tagset)
 	{
 		log.info("Collecting mentions");
 		Stopwatch timer = Stopwatch.createStarted();
 
-		final Multimap<String, Mention> multiwords = collectMultiwordMentions(graphs);
-		final Multimap<String, Mention> singlewords = collectoSingleWordMentions(graphs, language);
+		final Multimap<String, Mention> multiwords = collectMultiwordMentions(graphs, tagset);
+		final Multimap<String, Mention> singlewords = collectoSingleWordMentions(graphs, language, tagset);
 		Multimap<String, Mention> mentions = HashMultimap.create(multiwords);
 		mentions.putAll(singlewords);
 
@@ -46,7 +47,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 	 * Returns a mention for each sequence of up to 2 to max_tokens, provided there is a node
 	 * in the graph spanning over it.
 	 */
-	private static Multimap<String, Mention> collectMultiwordMentions(Collection<AMRGraph> graphs)
+	private static Multimap<String, Mention> collectMultiwordMentions(Collection<AMRGraph> graphs, POS.Tagset tagset)
 	{
 		Multimap<String, Mention> vertices2Mentions = HashMultimap.create();
 		graphs.forEach(g ->
@@ -70,7 +71,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 									span,
 									a.getSurfaceForm(span),
 									a.getLemma(span).orElse(a.getSurfaceForm(span)),
-									a.getPOS(span).orElse("NN"), // in case of doubt, assume it's a noun phrase!
+									a.getPOS(span).map(p -> POS.get(p, tagset)).orElse(POS.Tag.NOUN), // in case of doubt, assume it's a noun phrase!
 									isName(span, g),
 									getType(span, g)))
 							.forEach(m -> vertices2Mentions.put(a.getSpanTopVertex(m.getSpan()).get(), m)));
@@ -81,7 +82,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 	/**
 	 * Returns a mention for every individual token
 	 */
-	private static Multimap<String, Mention> collectoSingleWordMentions(Collection<AMRGraph> graphs, ULocale language)
+	private static Multimap<String, Mention> collectoSingleWordMentions(Collection<AMRGraph> graphs, ULocale language, POS.Tagset tagset)
 	{
 		Multimap<String, Mention> vertices2Mentions = HashMultimap.create();
 		graphs.forEach(g ->
@@ -93,7 +94,8 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 					.map(i ->
 					{
 						Pair<Integer, Integer> span = Pair.of(i, i + 1);
-						return new Mention(a.getSurfaceForm(span), g.getContextId(), span, a.getSurfaceForm(span), a.getLemma(i), a.getPOS(i),
+						final POS.Tag tag = POS.get(a.getPOS(i), tagset);
+						return new Mention(a.getSurfaceForm(span), g.getContextId(), span, a.getSurfaceForm(span), a.getLemma(i), tag,
 								isName(span, g), getType(span, g));
 					})
 					.filter(m -> FunctionWordsFilter.test(m, language)) // use list of non-ambiguous function words

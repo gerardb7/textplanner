@@ -90,14 +90,14 @@ public class SemanticTree extends SimpleDirectedGraph<String, Role>
 			return incomingEdgesOf(v).iterator().next().toString();
 	}
 
-	public double getWeight(String v)
+	public Optional<Double> getWeight(String v)
 	{
 		if (subgraph.containsVertex(v))
 			return subgraph.getBase().getWeight(v);
 		else if (correspondences.containsKey(v))
 			return subgraph.getBase().getWeight(correspondences.get(v));
 		else
-			return 0.0;
+			return Optional.empty();
 	}
 
 

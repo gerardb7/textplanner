@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.core.structures;
 
 import org.jgrapht.graph.AsSubgraph;
 
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -27,8 +28,9 @@ public class SemanticSubgraph extends AsSubgraph<String, Role>
 	public double getAverageWeight()
 	{
 		return vertexSet().stream()
-				.mapToDouble(v -> getBase().getWeight(v))
-				.filter(d -> d != 0.0)
+				.map(v -> getBase().getWeight(v))
+				.flatMap(Optional::stream)
+				.mapToDouble(d -> d)
 				.average().orElse(0.0);
 	}
 }

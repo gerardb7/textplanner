@@ -61,7 +61,7 @@ public class Stanford2SemEvalXML
 			{
 				final String text = texts.get(filename);
 				final String text_id = String.format("d%03d", text_counter++);
-				writer.append("<text id=\"d").append(text_id).append("\" filename=\"").append(filename).append("\">");
+				writer.append("<text id=\"").append(text_id).append("\" filename=\"").append(filename).append("\">");
 				writer.newLine();
 
 				log.info("Processing text " + (text_counter - 1));
@@ -119,7 +119,9 @@ public class Stanford2SemEvalXML
 
 	public static void main(String[] args) throws Exception
 	{
+		final Path docs_in = Paths.get("/home/gerard/ownCloud/Feina/tensor/tensor_evaluation/reference");
+		final Path doc_out = Paths.get("/home/gerard/ownCloud/Feina/tensor/tensor_evaluation/temp/input.xml");
 		final Stanford2SemEvalXML converter = new Stanford2SemEvalXML();
-		converter.convert(Paths.get(args[0]), Paths.get(args[1]));
+		converter.convert(docs_in, doc_out);
 	}
 }

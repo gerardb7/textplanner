@@ -35,16 +35,21 @@ public class SemanticGraph extends SimpleDirectedGraph<String, Role> implements 
 	public SemanticGraph(Map<String, Meaning> meanings,
 	                     Map<String, Double> weights,
 	                     Map<String, List<Mention>> mentions,
+	                     Map<String, List<String>> sources,
 	                     BiPredicate<String, String> adjacency_function,
 	                     BinaryOperator<String> labelling_function)
 	{
 		super(Role.class);
+
+		// all vertices have a meaning, a list of mentions and a list of sources
+		assert meanings.keySet().equals(mentions.keySet());
+		assert sources.keySet().equals(mentions.keySet());
+
 		this.meanings.putAll(meanings);
 		this.weights.putAll(weights);
 		mentions.forEach((key, value) -> value.forEach(m -> this.mentions.put(key, m)));
+		sources.forEach((v, l) -> l.forEach(s -> this.sources.put(v, s)));
 
-		assert meanings.keySet().equals(weights.keySet()); // all vertices have a meaning and a weight
-		assert meanings.keySet().equals(mentions.keySet()); // all vertices have mentions
 
 		meanings.keySet().forEach(this::addVertex);
 		meanings.keySet().forEach(v1 ->
@@ -53,7 +58,7 @@ public class SemanticGraph extends SimpleDirectedGraph<String, Role> implements 
 						.forEach(v2 -> addNewEdge(v1, v2, labelling_function.apply(v1, v2))));
 	}
 
-	public double getWeight(String v) { return weights.getOrDefault(v,0.0); }
+	public Optional<Double> getWeight(String v) { return Optional.ofNullable(weights.get(v)); }
 	public void setWeight(String v, double w) { if (containsVertex(v)) weights.put(v, w); }
 	public Map<String, Double> getWeights() { return new HashMap<>(weights); }
 

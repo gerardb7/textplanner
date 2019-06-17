@@ -3,9 +3,14 @@ package edu.upf.taln.textplanning.core.io;
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.structures.*;
+import edu.upf.taln.textplanning.core.utils.POS;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -56,8 +61,8 @@ public class CandidatesCollector
 		return candidates;
 	}
 
-	// Collects all meanings and forms
-	public static void collect(MeaningDictionary dictionary, ULocale language, CompactDictionary cache) throws Exception
+	// Collects all meanings and forms from a dictionary. May take a very long time!
+	public static void collect(MeaningDictionary dictionary, ULocale language, CompactDictionary cache, Path cache_file) throws IOException
 	{
 		log.info("Collecting all meanings with " + Runtime.getRuntime().availableProcessors() + " cores available");
 		final Stopwatch timer = Stopwatch.createStarted();
@@ -70,14 +75,18 @@ public class CandidatesCollector
 			final MeaningDictionary.Info m = it.next();
 			cache.addMeaning(m.id, m.label, m.glosses);
 			m.forms.stream()
-					.filter(l -> !cache.contains(l, m.POS))
+					.filter(l -> !cache.contains(l, POS.toTag.get(m.POS)))
 					.peek(l -> num_forms.incrementAndGet())
-					.forEach(l -> cache.addForm(l, m.POS, dictionary.getMeanings(l, m.POS, language)));
+					.forEach(l -> cache.addForm(l, POS.toTag.get(m.POS), dictionary.getMeanings(l, m.POS, language)));
 
 			long i = num_meanings.incrementAndGet();
 			if (i % LOGGING_STEP_SIZE == 0)
 			{
 				log.info("\t" + num_meanings.get() + " meanings and " +  num_forms.get() + " forms collected in " + timer);
+				FileOutputStream fos = new FileOutputStream(cache_file.toString());
+				ObjectOutputStream oos = new ObjectOutputStream(fos);
+				oos.writeObject(cache);
+				fos.close();
 			}
 		}
 
@@ -89,7 +98,7 @@ public class CandidatesCollector
 		// Use surface form of mention as label
 		String form = mention.getSurface_form();
 		String lemma = mention.getLemma();
-		String pos = mention.getPOS();
+		POS.Tag pos = mention.getPOS();
 		// Lemma meanings first, sorted by dictionary criteria (BabelNet -> best sense)
 		List<String> references = dictionary.getMeanings(lemma, pos, language);
 

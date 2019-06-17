@@ -35,16 +35,10 @@ public class DocumentResourcesFactory
 
 	public DocumentResourcesFactory(InitialResourcesFactory factory, Options options,
 	                                List<Candidate> candidates,
-	                                ContextFunction context,
-	                                Map<String, List<String>> glosses)
+	                                ContextFunction context)
 	{
 		// Glosses
-		Function<String, List<String>> glosses_function;
-		if (glosses == null)
-			glosses_function = s -> factory.getDictionary().getGlosses(s, factory.getLanguage());
-		else
-			glosses_function = s -> glosses.getOrDefault(s, List.of());
-
+		Function<String, List<String>> glosses_function = s -> factory.getDictionary().getGlosses(s, factory.getLanguage());
 		final SentenceVectors sentence_vectors = factory.getSentenceVectors();
 		Vectors glosses_vectors = new SenseGlossesVectors(factory.getLanguage(), candidates, glosses_function, sentence_vectors);
 

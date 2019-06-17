@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.core.structures;
 
 import com.ibm.icu.util.ULocale;
+import edu.upf.taln.textplanning.core.utils.POS;
 
 import java.util.Iterator;
 import java.util.List;
@@ -40,17 +41,18 @@ public class CachedDictionary implements MeaningDictionary
 	}
 
 	@Override
-	public List<String> getMeanings(String word, String pos, ULocale language)
+	public List<String> getMeanings(String word, POS.Tag pos, ULocale language)
 	{
 		if (!cache.getLanguage().equals(language))
 			return base.getMeanings(word, pos, language);
 
-		if (cache.contains(word, pos))
-			return cache.getMeanings(word, pos);
+		final Character tag = POS.toTag.get(pos);
+		if (cache.contains(word, tag))
+			return cache.getMeanings(word, tag);
 		else
 		{
 			final List<String> meanings = base.getMeanings(word, pos, language);
-			cache.addForm(word, pos, meanings);
+			cache.addForm(word, tag, meanings);
 			return meanings;
 		}
 	}

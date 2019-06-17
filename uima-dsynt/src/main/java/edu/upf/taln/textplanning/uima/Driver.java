@@ -14,6 +14,7 @@ import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.bias.ContextFunction;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.core.utils.POS;
 import edu.upf.taln.textplanning.uima.io.TextParser;
 import edu.upf.taln.textplanning.uima.io.UIMAWrapper;
 import org.apache.commons.io.FilenameUtils;
@@ -21,6 +22,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -41,6 +43,7 @@ public class Driver
 	private static final String get_system_command = "system";
 
 	private static final ULocale language = ULocale.ENGLISH;
+	private static final POS.Tagset tagset = POS.Tagset.EnglishPTB;
 	private final static Logger log = LogManager.getLogger();
 
 	@SuppressWarnings("unused")
@@ -84,7 +87,7 @@ public class Driver
 
 	private static void processFiles(Path input_folder, Path output_folder)
 	{
-		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createSpanPipeline(language, false);
+		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createSpanPipeline(language, tagset, false);
 		if (pipeline != null)
 		{
 			UIMAWrapper.processAndSerialize(input_folder, output_folder, text_suffix, TextParser.class, pipeline);
@@ -93,7 +96,7 @@ public class Driver
 
 	private static void getSystemMeaningsUIMA(Path input_folder, Path output_folder, Path babel_config, Path freqs_file, Path vectors)
 	{
-		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createRankingPipeline(language, false, babel_config, freqs_file, vectors);
+		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createRankingPipeline(language, tagset, false, babel_config, freqs_file, vectors);
 		if (pipeline != null)
 		{
 			UIMAWrapper.processAndSerialize(input_folder, output_folder, text_suffix, TextParser.class, pipeline);
@@ -103,7 +106,7 @@ public class Driver
 	private static void getSystemMeanings(Path text_folder, Path xmi_folder, Path output_folder, InitialResourcesFactory resources)
 	{
 		log.info("Setting up UIMA pipeline");
-		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createSpanPipeline(language, false);
+		final UIMAWrapper.Pipeline pipeline = UIMAWrapper.createSpanPipeline(language, tagset, false);
 		if (pipeline == null)
 			return;
 
@@ -111,7 +114,7 @@ public class Driver
 		final List<UIMAWrapper> text_files = UIMAWrapper.process(text_folder, text_suffix, TextParser.class, pipeline).stream()
 				.sorted(Comparator.comparing(UIMAWrapper::getId))
 				.collect(toList());
-		final List<UIMAWrapper> xmi_files = UIMAWrapper.readFromXMI(xmi_folder).stream()
+		final List<UIMAWrapper> xmi_files = UIMAWrapper.readFromXMI(xmi_folder, tagset).stream()
 				.sorted(Comparator.comparing(UIMAWrapper::getId))
 				.collect(toList());
 
@@ -144,7 +147,7 @@ public class Driver
 					ContextFunction context = null;
 							//new Context(sentences, candidates_list, language, options.min_context_freq, options.window_size);
 
-					DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, null, null);
+					DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, null);
 					final BiasFunction context_weighter = process.getBiasFunction();
 					final SimilarityFunction sim = process.getSimilarityFunction();
 					final BiPredicate<String, String> meanings_filter = process.getMeaningPairsSimilarityFilter();
@@ -189,7 +192,7 @@ public class Driver
 		log.debug(dateFormat.format(date) + " running " + String.join(" ", args));
 		log.debug("*********************************************************");
 
-		PlanningProperties properties = new PlanningProperties();
+		PlanningProperties properties = new PlanningProperties(Paths.get(""));
 
 		switch (jc.getParsedCommand())
 		{

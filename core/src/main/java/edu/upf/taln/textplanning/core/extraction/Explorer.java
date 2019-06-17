@@ -6,10 +6,7 @@ import edu.upf.taln.textplanning.core.io.GraphSemantics;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.Role;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public abstract class Explorer
@@ -51,7 +48,15 @@ public abstract class Explorer
 
 	public List<State> getStartStates(SemanticGraph g)
 	{
-		Set<String> start_vertices = start_from_verbs ? getFiniteVerbalVertices(g) : g.vertexSet();
+		final Set<String> start_vertices = new HashSet<>();
+		if (start_from_verbs)
+		{
+			start_vertices.addAll(getVerbalVertices(g));
+		}
+
+		// if no start vertices, consider the whole set
+		if (start_vertices.isEmpty())
+			start_vertices.addAll(g.vertexSet());
 
 		return start_vertices.stream()
 				.flatMap(v -> g.getSources(v).stream()
@@ -107,12 +112,12 @@ public abstract class Explorer
 
 	protected abstract Set<String> getRequiredVertices(String v, State s, SemanticGraph g);
 
-	// returns list of finite verbal vertices sorted by weight
-	private static Set<String> getFiniteVerbalVertices(SemanticGraph g)
+	// returns list of verbal vertices sorted by weight
+	private static Set<String> getVerbalVertices(SemanticGraph g)
 	{
 		return g.vertexSet().stream()
 				.filter(v -> g.getMentions(v).stream()
-						.anyMatch(Mention::isFiniteVerb))
+						.anyMatch(Mention::isVerbal))
 				.collect(Collectors.toSet());
 	}
 }

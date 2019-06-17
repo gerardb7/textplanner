@@ -11,6 +11,7 @@ import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
+import edu.upf.taln.textplanning.core.utils.POS;
 import it.uniroma1.lcl.babelnet.BabelExternalResource;
 import it.uniroma1.lcl.babelnet.BabelNet;
 import it.uniroma1.lcl.babelnet.BabelSynset;
@@ -39,12 +40,13 @@ import static org.apache.commons.io.FileUtils.readFileToString;
 public class DBPediaTypeUtils
 {
 	private final static ULocale language = ULocale.ENGLISH;
+	private final static POS.Tagset tagset = POS.Tagset.EnglishPTB;
 	private final static Logger log = LogManager.getLogger();
 
 	private static void getTypes(Path amrPath, String extension, Path o, Path babel_config) throws IOException
 	{
 		log.info("Reading structures");
-		AMRGraphListFactory factory = new AMRGraphListFactory(new AMRReader(), language, null, null, false);
+		AMRGraphListFactory factory = new AMRGraphListFactory(new AMRReader(), language, tagset,null, null, false);
 		List<AMRGraphList> graphs = Files.walk(amrPath.toAbsolutePath())
 				.filter(Files::isRegularFile)
 				.filter(p -> p.toString().endsWith(extension))

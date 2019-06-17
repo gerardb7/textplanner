@@ -26,6 +26,7 @@ import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
+import edu.upf.taln.textplanning.core.utils.POS;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.util.CombinatoricsUtils;
@@ -54,24 +55,17 @@ public class EmpiricalStudy
 
 
 //	private static final int lists_size = 25;
-	private static final String content = "CONTENT";
 	private static final String function = "FUNCTION";
-	private static final List<String> pos = Arrays.asList("JJ", "RB", "NN", "CD", "VB", content, function);
-	//	private static final List<String> content_tags = Arrays.asList("CD", "JJ", "JJR", "JJS", "NN", "NNS", "NNP", "NNPS", "RB", "RBR", "RBS", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ");
-	private static final List<String> number_tags = Collections.singletonList("CD");
-	private static final List<String> noun_tags = Arrays.asList("NN", "NNS", "NNP", "NNPS");
-	private static final List<String> adjective_tags = Arrays.asList("JJ", "JJR", "JJS");
-	private static final List<String> adverb_tags = Arrays.asList("RB", "RBR", "RBS");
-	private static final List<String> verb_tags = Arrays.asList("VB", "VBD", "VBG", "VBN", "VBP", "VBZ");
 	private static final ULocale language = ULocale.ENGLISH;
+	private static final POS.Tagset tagset = POS.Tagset.EnglishPTB;
 	private final static Logger log = LogManager.getLogger();
 
 	private static class CorpusInfo implements Serializable
 	{
 		private int num_docs = 0;
-		private final Map<String, Long> tokens_counts_total = new HashMap<>();
-		private final List<Map<String, List<Integer>>> tokens_per_doc = new ArrayList<>();
-		private final List<Map<String, List<Candidate>>> candidates_pee_doc = new ArrayList<>();
+		private final Map<POS.Tag, Long> tokens_counts_total = new HashMap<>();
+		private final List<Map<POS.Tag, List<Integer>>> tokens_per_doc = new ArrayList<>();
+		private final List<Map<POS.Tag, List<Candidate>>> candidates_per_doc = new ArrayList<>();
 		private final List<Annotation> annotation = new ArrayList<>();
 		private final static long serialVersionUID = 1L;
 	}
@@ -349,9 +343,9 @@ public class EmpiricalStudy
 
 			// Get number of tokens
 			int num_tokens = document.tokens().size();
-			final Map<String, List<Integer>> tokens_by_pos = IntStream.range(0, num_tokens)
+			final Map<POS.Tag, List<Integer>> tokens_by_pos = IntStream.range(0, num_tokens)
 					.boxed()
-					.collect(groupingBy(i -> simplifyTag(document.tokens().get(i).tag())));
+					.collect(groupingBy(i -> simplifyTag(POS.get(document.tokens().get(i).tag(), tagset))));
 
 			// Add a new category for content tokens
 			final List<Integer> content_tokens = tokens_by_pos.keySet().stream()
@@ -359,7 +353,6 @@ public class EmpiricalStudy
 					.map(tokens_by_pos::get)
 					.flatMap(List::stream)
 					.collect(toList());
-			tokens_by_pos.put(content, content_tokens);
 			corpus.tokens_per_doc.add(tokens_by_pos);
 
 			// Update global map
@@ -374,10 +367,9 @@ public class EmpiricalStudy
 			final List<Candidate> candidates = mentions2candidates.values().stream()
 					.flatMap(List::stream)
 					.collect(toList());
-			final Map<String, List<Candidate>> candidates_by_pos = candidates.stream()
+			final Map<POS.Tag, List<Candidate>> candidates_by_pos = candidates.stream()
 					.collect(groupingBy(c -> simplifyTag(c.getMention().getPOS())));
-			candidates_by_pos.put(content, candidates); // Add a new category for all (content) mentions
-			corpus.candidates_pee_doc.add(candidates_by_pos);
+			corpus.candidates_per_doc.add(candidates_by_pos);
 
 			log.info("Document " + doc_idx + " processed in " + timer.stop());
 		}
@@ -407,39 +399,30 @@ public class EmpiricalStudy
 		for (int doc_idx = 0; doc_idx < corpus.num_docs; ++doc_idx)
 		{
 			Stopwatch timer = Stopwatch.createStarted();
-			final Map<String, List<Integer>> tokens = corpus.tokens_per_doc.get(doc_idx);
-			final Map<String, List<Candidate>> candidates = corpus.candidates_pee_doc.get(doc_idx);
+			final Map<POS.Tag, List<Integer>> tokens = corpus.tokens_per_doc.get(doc_idx);
+			final Map<POS.Tag, List<Candidate>> candidates = corpus.candidates_per_doc.get(doc_idx);
 			final Set<Candidate> candidates_set = candidates.values().stream().flatMap(List::stream).collect(Collectors.toSet());
 			final Set<Integer> tokensInMentions = getTokensInMentions(candidates_set);
 			final Set<Integer> tokensInMultiwordMentions = getTokensInMultiwordMentions(candidates_set);
 
 			log.info("Calculating NER & coreference stats");
 			CoreDocument document = new CoreDocument(corpus.annotation.get(doc_idx));
-			NECorefStats ncstats = tokens.containsKey(content) ?
-					getNERCorefStats(document, new HashSet<>(tokens.get(content)), tokensInMentions)
-					: new NECorefStats();
-			ne_coref_stats.add(ncstats);
+//			NECorefStats ncstats = tokens.containsKey(content) ?
+//					getNERCorefStats(document, new HashSet<>(tokens.get(content)), tokensInMentions)
+//					: new NECorefStats();
+			//ne_coref_stats.add(ncstats);
 
 			log.info("Calculating candidate coverage stats");
-			final Map<Integer, Double> tokenPolysemyAverages = getTokenPolysemyAverages(candidates_set);
-			pos.forEach(pos ->
-			{
-
-				final CoverageStats stats = tokens.containsKey(pos) ?
-						getCoverageStats(new HashSet<>(tokens.get(pos)), tokensInMentions, tokensInMultiwordMentions, tokenPolysemyAverages)
-						: new CoverageStats();
-				coverage_stats.merge(pos, Collections.singletonList(stats), (l1, l2) -> Stream.of(l1, l2).flatMap(List::stream).collect(toList()));
-			});
+//			final Map<Integer, Double> tokenPolysemyAverages = getTokenPolysemyAverages(candidates_set);
+//			{
+//
+//				final CoverageStats stats = tokens.containsKey(pos) ?
+//						getCoverageStats(new HashSet<>(tokens.get(pos)), tokensInMentions, tokensInMultiwordMentions, tokenPolysemyAverages)
+//						: new CoverageStats();
+//				coverage_stats.merge(pos, Collections.singletonList(stats), (l1, l2) -> Stream.of(l1, l2).flatMap(List::stream).collect(toList()));
+//			});
 
 			log.info("Calculating similarity stats");
-			pos.forEach(pos ->
-			{
-				final SimilarityStats stats = candidates.containsKey(pos) ?
-						getSimilarityStats(candidates.get(pos), sim, do_pairwise_similarity)
-						: new SimilarityStats();
-				similarity_stats.merge(pos, Collections.singletonList(stats), (l1, l2) -> Stream.of(l1, l2).flatMap(List::stream).collect(toList()));
-
-			});
 
 //			log.info("Calculating frequency stats");
 //			pos.forEach(pos ->
@@ -497,20 +480,12 @@ public class EmpiricalStudy
 		log.info("All stats completed in " + gtimer.stop());
 	}
 
-	private static String simplifyTag(String pos)
+	private static POS.Tag simplifyTag(POS.Tag pos)
 	{
-		if (adjective_tags.contains(pos))
-			return "JJ";
-		if (adverb_tags.contains(pos))
-			return "RB";
-		if (noun_tags.contains(pos))
-			return "NN";
-		if (number_tags.contains(pos))
-			return "CD";
-		if (verb_tags.contains(pos))
-			return "VB";
-
-		return function;
+		if (pos == POS.Tag.NOUN || pos == POS.Tag.ADJ || pos == POS.Tag.ADV || pos == POS.Tag.VERB)
+			return pos;
+		else
+			return POS.Tag.X;
 	}
 
 	private static Set<Integer> getTokensInMentions(Collection<Candidate> candidates)
@@ -920,7 +895,7 @@ public class EmpiricalStudy
 									.mapToObj(tokens::get)
 									.map(CoreLabel::lemma)
 									.collect(Collectors.joining(" ")) + tokens.get(span.getRight()).lemma();
-							final String pos = tokens.get(span.getRight() - 1).tag(); // right-most tag
+							final POS.Tag pos = POS.get(tokens.get(span.getRight() - 1).tag(), tagset); // right-most tag
 							final Candidate.Type ne = ne_offsets.contains(span) ?
 									ne_types.get(ne_offsets.indexOf(span)) : Candidate.Type.Other;
 

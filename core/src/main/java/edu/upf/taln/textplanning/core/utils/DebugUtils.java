@@ -126,7 +126,9 @@ public class DebugUtils
 		final SemanticSubgraph s = t.asGraph();
 		final SemanticGraph g = s.getBase();
 		String stats = s.vertexSet().stream()
-				.mapToDouble(g::getWeight)
+				.map(g::getWeight)
+				.flatMap(Optional::stream)
+				.mapToDouble(d -> d)
 				.summaryStatistics().toString();
 
 		return "Subgraph " + i + " value=" + format.format(s.getValue()) + " " + stats + "\n\t" +
@@ -139,7 +141,7 @@ public class DebugUtils
 				.mapToObj(i -> "\t")
 				.collect(Collectors.joining());
 		String s = tabs + role + " -> " + DebugUtils.createLabelForVariable(v, t.getMeaning(v).orElse(null), t.getMentions(v)) +
-				" " + format.format(t.getWeight(v)) + "\n";
+				" " + t.getWeight(v).map(format::format).orElse("") + "\n";
 
 		return s + t.outgoingEdgesOf(v).stream()
 				.map(e -> printVertex(t, e.getLabel(), t.getEdgeTarget(e), depth + 1))

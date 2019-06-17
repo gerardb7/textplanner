@@ -8,7 +8,7 @@ import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.InputStream;
+import java.io.FileInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -16,30 +16,25 @@ import java.util.Properties;
 
 public class PlanningProperties
 {
-	private Path dictionary = null;
-	private Path dictionaryCache = null;
+	private Path dictionary;
+	private Path dictionaryCache;
 	private VectorType senseVectorsType;
-	private Path senseVectorsPath = null;
+	private Path senseVectorsPath;
 	private VectorType wordVectorsType;
-	private Path wordVectorsPath = null;
+	private Path wordVectorsPath;
 	private SentenceVectorType sentenceVectorsType;
-	private Path sentenceVectorsPath = null;
-	private Path idfPath = null;
+	private Path sentenceVectorsPath;
+	private Path idfPath;
 	private BiasFunction.Type biasFunction;
-	private Path meaningsPath = null;
+	private Path meaningsPath;
 
 	private final static Logger log = LogManager.getLogger();
 
-	public PlanningProperties()
+	public PlanningProperties(Path properties_file)
 	{
 		Properties prop = new Properties();
-		try (InputStream input = PlanningProperties.class.getClassLoader().getResourceAsStream("config.properties"))
+		try (FileInputStream input = new FileInputStream(properties_file.toFile()))
 		{
-			if (input == null)
-			{
-				log.error("Sorry, unable to find config.properties");
-				return;
-			}
 			prop.load(input);
 		}
 		catch (Exception ex)

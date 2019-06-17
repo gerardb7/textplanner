@@ -23,6 +23,7 @@ import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
+import edu.upf.taln.textplanning.core.utils.POS;
 import main.AmrMain;
 import net.sf.extjwnl.JWNLException;
 import org.apache.commons.io.FilenameUtils;
@@ -32,6 +33,7 @@ import org.apache.logging.log4j.Logger;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -47,6 +49,7 @@ import static java.util.stream.Collectors.*;
 public class Driver
 {
 	private final static ULocale language = ULocale.ENGLISH;
+	private final static POS.Tagset tagset = POS.Tagset.EnglishPTB;
 	private final static String output_folder = "out/";
 	private final static String process_suffix = ".processed.bin";
 	private final static String graphs_suffix = ".graphs.bin";
@@ -83,7 +86,7 @@ public class Driver
 		String amr_bank = FileUtils.readTextFile(amr_bank_file);
 
 		AMRReader reader = new AMRReader();
-		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language, null, resources.getDictionary(), no_stanford);
+		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language, tagset, null, resources.getDictionary(), no_stanford);
 		AMRGraphList graphs = factory.create(amr_bank);
 
 		Path output = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
@@ -109,7 +112,7 @@ public class Driver
 		ContextFunction context = null;
 		//new Context(sentences, candidates_list, language, options.min_context_freq, options.window_size);
 
-		DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, context, null);
+		DocumentResourcesFactory process = new DocumentResourcesFactory(resources, options, candidates, context);
 
 		final BiasFunction context_weighter = process.getBiasFunction();
 		final SimilarityFunction sim = process.getSimilarityFunction();
@@ -245,7 +248,7 @@ public class Driver
 		log.info("*****Setting up planner*****");
 //		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
 		AMRReader reader = new AMRReader();
-		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language,null, resources.getDictionary(), no_stanford);
+		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language, tagset, null, resources.getDictionary(), no_stanford);
 		AMRSemanticGraphFactory globalFactory = new AMRSemanticGraphFactory();
 
 		AmrMain generator = new AmrMain(generation_resources);
@@ -624,7 +627,7 @@ public class Driver
 		log.debug(dateFormat.format(date) + " running " + 	Arrays.stream(args).collect(joining(" ")));
 		log.debug("*********************************************************");
 
-		PlanningProperties properties = new PlanningProperties();
+		PlanningProperties properties = new PlanningProperties(Paths.get(""));
 		Driver driver = new Driver();
 
 		if (jc.getParsedCommand().equals(create_graphs_command))

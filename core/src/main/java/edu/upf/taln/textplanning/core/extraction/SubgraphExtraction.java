@@ -78,10 +78,10 @@ public class SubgraphExtraction
 		if (V.isEmpty())
 			return null;
 
+		// Select intitial state and q value
 		State start_state;
 		State current_state;
-
-		// Select intitial nodes
+		double q;
 		{
 			final List<State> candidates = explorer.getStartStates(g);
 			if (candidates.isEmpty())
@@ -93,10 +93,8 @@ public class SubgraphExtraction
 			int i = policy.select(candidate_weights);
 			start_state = candidates.get(i);
 			current_state = new State(start_state.root, start_state.source, start_state.vertices);
+			q = candidate_weights[i];
 		}
-
-		// Declare q and q'
-		double q = calculateWeight(V, current_state.vertices, g.getWeights(), cost);
 		double q_old = q;
 
 		do
@@ -132,6 +130,7 @@ public class SubgraphExtraction
 	private double calculateWeight(Set<String> V, Set<String> S, Map<String, Double> W, double C)
 	{
 		double WS = S.stream()
+				.filter(W::containsKey) // ignore vertices with no weight -but they compute towards higher cost CS anyway
 				.mapToDouble(W::get)
 				.sum(); // weight of S
 		double CS = S.size() * C; // cost of the graph induced by S

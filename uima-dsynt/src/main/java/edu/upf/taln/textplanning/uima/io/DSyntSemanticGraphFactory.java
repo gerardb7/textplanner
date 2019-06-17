@@ -11,6 +11,7 @@ import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.Role;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
+import edu.upf.taln.textplanning.core.utils.POS;
 import edu.upf.taln.textplanning.uima.types.ConceptRelevance;
 import edu.upf.taln.uima.wsd.types.BabelNetSense;
 import org.apache.commons.lang3.tuple.Pair;
@@ -27,7 +28,13 @@ import java.util.stream.Collectors;
 
 public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 {
+	private final POS.Tagset tagset;
 	private final static Logger log = LogManager.getLogger();
+
+	public DSyntSemanticGraphFactory(POS.Tagset tagset)
+	{
+		this.tagset = tagset;
+	}
 
 	@Override
 	public SemanticGraph create(JCas jcas)
@@ -44,8 +51,8 @@ public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 						if (!d.getDependencyType().equals("ROOT"))
 						{
 							// Add vertices
-							final String governor_id = createVertex(graph, jcas, sentence, d.getGovernor());
-							final String dependent_id = createVertex(graph, jcas, sentence, d.getDependent());
+							final String governor_id = createVertex(graph, jcas, sentence, d.getGovernor(), tagset);
+							final String dependent_id = createVertex(graph, jcas, sentence, d.getDependent(), tagset);
 
 							// Add edge
 							Role role = Role.create(d.getDependencyType());
@@ -67,9 +74,9 @@ public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 		return graph;
 	}
 
-	private static String createVertex(SemanticGraph graph, JCas jcas, Sentence sentence, DeepToken deep_token)
+	private static String createVertex(SemanticGraph graph, JCas jcas, Sentence sentence, DeepToken deep_token, POS.Tagset tagset)
 	{
-		final Mention mention = createMention(jcas, sentence, deep_token);
+		final Mention mention = createMention(jcas, sentence, deep_token, tagset);
 		final String id = mention.toString();
 		final Optional<Pair<Meaning, Double>> meaning = createMeaning(jcas, deep_token);
 
@@ -83,7 +90,7 @@ public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 		return id;
 	}
 
-	private static Mention createMention(JCas jcas, Sentence sentence, DeepToken deep_token)
+	private static Mention createMention(JCas jcas, Sentence sentence, DeepToken deep_token, POS.Tagset tagset)
 	{
 		// Collect surface linguistic info and create mention object
 		final String surface_form = deep_token.getCoveredText();
@@ -93,6 +100,7 @@ public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 				.map(Lemma::getValue)
 				.collect(Collectors.joining(" "));
 		final String pos = deep_token.getPos().getPosValue();
+		final POS.Tag tag = POS.get(pos, tagset);
 		final List<Token> sentence_tokens = JCasUtil.selectCovered(jcas, Token.class, sentence);
 		final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
 		final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1));
@@ -100,7 +108,7 @@ public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 			throw new RuntimeException("Cannot get offsets for \"" + surface_form + "\" in sentence " + createId(sentence));
 		final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
 
-		return new Mention(String.valueOf(deep_token.getAddress()), createId(sentence), offsets, surface_form, lemma, pos, false, "");
+		return new Mention(String.valueOf(deep_token.getAddress()), createId(sentence), offsets, surface_form, lemma, tag, false, "");
 	}
 
 	private static Optional<Pair<Meaning, Double>> createMeaning(JCas jcas, DeepToken deep_token)

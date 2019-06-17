@@ -16,6 +16,7 @@ import edu.upf.taln.textplanning.amr.structures.AMRAlignments;
 import edu.upf.taln.textplanning.amr.structures.AMRGraph;
 import edu.upf.taln.textplanning.core.structures.Candidate.Type;
 import edu.upf.taln.textplanning.core.structures.Mention;
+import edu.upf.taln.textplanning.core.utils.POS;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,7 +32,8 @@ import static java.util.stream.Collectors.toMap;
 public class StanfordWrapper
 {
 	private final StanfordCoreNLP pipeline;
-	private final static Logger log = LogManager.getLogger();
+	private static final POS.Tagset tagset = POS.Tagset.EnglishPTB;
+	private static final Logger log = LogManager.getLogger();
 
 	public StanfordWrapper(boolean no_stanford)
 	{
@@ -69,7 +71,7 @@ public class StanfordWrapper
 		CoreDocument document = new CoreDocument(text);
 		pipeline.annotate(document);
 
-		// Collect POS
+		// Collect Tag
 		List<List<String>> pos = document.sentences().stream()
 				.map(CoreSentence::posTags)
 				.collect(toList());
@@ -102,7 +104,7 @@ public class StanfordWrapper
 						.collect(toList()))
 				.collect(toList());
 
-		// Assign POS & NER
+		// Assign Tag & NER
 		IntStream.range(0, graphs.size()).forEach(i ->
 		{
 			List<String> lemma_i = lemma.get(i);
@@ -140,8 +142,9 @@ public class StanfordWrapper
 							final String v = top_v.get();
 							String lemma_v = a.getLemma(span).orElse("");
 							String pos_v = a.getPOS(span).orElse("N"); // assume nominal
+							final POS.Tag tag = POS.get(pos_v, tagset);
 //							FunctionType ner_v = a.getNEType(span).orElse(FunctionType.Other);
-							Mention mention = new Mention(String.valueOf(m.mentionID), g.getContextId(), span, a.getSurfaceForm(span), lemma_v, pos_v,
+							Mention mention = new Mention(String.valueOf(m.mentionID), g.getContextId(), span, a.getSurfaceForm(span), lemma_v, tag,
 									AMRMentionsCollector.isName(span, g), AMRMentionsCollector.getType(span, g));
 							chain.put(v, mention);
 						}

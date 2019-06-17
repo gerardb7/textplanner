@@ -21,6 +21,7 @@ import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
+import edu.upf.taln.textplanning.core.utils.POS;
 import edu.upf.taln.textplanning.uima.TextPlanningAnnotator;
 import edu.upf.taln.uima.disambiguation.core.WSDAnnotatorCollectiveContext;
 import edu.upf.taln.uima.disambiguation.core.inventory.BabelnetSenseInventoryResource;
@@ -61,11 +62,13 @@ public class UIMAWrapper
 	{
 		private final List<AnalysisEngineDescription> pipeline;
 		private final ULocale language;
+		private final POS.Tagset tagset;
 
-		public Pipeline(List<AnalysisEngineDescription> uima_pipeline, ULocale language)
+		public Pipeline(List<AnalysisEngineDescription> uima_pipeline, ULocale language, POS.Tagset tagset)
 		{
 			this.pipeline = uima_pipeline;
 			this.language = language;
+			this.tagset = tagset;
 		}
 
 		private List<AnalysisEngineDescription> getPipeline() { return pipeline; }
@@ -74,6 +77,8 @@ public class UIMAWrapper
 		{
 			return language;
 		}
+
+		public POS.Tagset getTagset() { return tagset; }
 	}
 
 	private final String id;
@@ -85,7 +90,7 @@ public class UIMAWrapper
 	private static final String noun_pos_tag = "NN"; // PTB
 	private final static Logger log = LogManager.getLogger();
 
-	private UIMAWrapper(JCas doc)
+	private UIMAWrapper(JCas doc, POS.Tagset tagset)
 	{
 		id = DocumentMetaData.get(doc).getDocumentId();
 		tokens_info = JCasUtil.select(doc, Sentence.class).stream()
@@ -107,11 +112,12 @@ public class UIMAWrapper
 									.map(Lemma::getValue)
 									.collect(Collectors.joining(" "));
 							final String pos = surface_tokens.size() == 1 ? surface_tokens.get(0).getPos().getPosValue() : noun_pos_tag;
+							final POS.Tag tag = POS.get(pos, tagset);
 							final List<Token> sentence_tokens = JCasUtil.selectCovered(Token.class, sentence);
 							final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
 							final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1));
 							final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
-							final Mention mention = new Mention(surface_form, "s" + sentences.indexOf(sentence), offsets, surface_form, lemma, pos, false, "");
+							final Mention mention = new Mention(surface_form, "s" + sentences.indexOf(sentence), offsets, surface_form, lemma, tag, false, "");
 
 							return JCasUtil.selectAt(doc, WSDResult.class, span.getBegin(), span.getEnd()).stream()
 									.map(a ->
@@ -129,7 +135,7 @@ public class UIMAWrapper
 						.collect(toList()))
 				.collect(toList());
 
-		DSyntSemanticGraphFactory factory = new DSyntSemanticGraphFactory();
+		DSyntSemanticGraphFactory factory = new DSyntSemanticGraphFactory(tagset);
 		graph = factory.create(doc);
 
 	}
@@ -181,7 +187,7 @@ public class UIMAWrapper
 			AnalysisEngineDescription desc = createEngineDescription(components.toArray(new AnalysisEngineDescription[0]));
 
 			final JCasIterable jCas = SimplePipeline.iteratePipeline(reader, desc);
-			jCas.forEach(d -> docs.add(new UIMAWrapper(d)));
+			jCas.forEach(d -> docs.add(new UIMAWrapper(d, pipeline.tagset)));
 		}
 		catch (UIMAException e)
 		{
@@ -193,7 +199,7 @@ public class UIMAWrapper
 	}
 
 
-	public static List<UIMAWrapper> readFromXMI(Path input_folder)
+	public static List<UIMAWrapper> readFromXMI(Path input_folder, POS.Tagset tagset)
 	{
 		try
 		{
@@ -208,11 +214,11 @@ public class UIMAWrapper
 
 			final JCasIterator jcasIt = SimplePipeline.iteratePipeline(reader, createEngineDescription(StanfordLemmatizer.class)).iterator();
 			List<UIMAWrapper> wrappers = new ArrayList<>();
-//			while (jcasIt.hasNext())
-//			{
+			while (jcasIt.hasNext())
+			{
 				final JCas next = jcasIt.next();
-				wrappers.add(new UIMAWrapper(next));
-//			}
+				wrappers.add(new UIMAWrapper(next, tagset));
+			}
 
 			log.info(wrappers.size() + " docs read");
 			return wrappers;
@@ -224,7 +230,7 @@ public class UIMAWrapper
 		}
 	}
 
-	public static Pipeline createSpanPipeline(ULocale language, boolean use_concept_extractor)
+	public static Pipeline createSpanPipeline(ULocale language, POS.Tagset tagset, boolean use_concept_extractor)
 	{
 		try
 		{
@@ -245,7 +251,7 @@ public class UIMAWrapper
 			components.add(lemma);
 			components.add(spans);
 
-			return new Pipeline(components, language);
+			return new Pipeline(components, language, tagset);
 		}
 		catch (UIMAException e)
 		{
@@ -254,7 +260,7 @@ public class UIMAWrapper
 		}
 	}
 
-	public static Pipeline createRankingPipeline(ULocale language, boolean use_concept_extractor, Path babel_config,
+	public static Pipeline createRankingPipeline(ULocale language, POS.Tagset tagset, boolean use_concept_extractor, Path babel_config,
 	                                             Path freqs_file, Path vectors)
 	{
 		try
@@ -301,7 +307,7 @@ public class UIMAWrapper
 			components.add(extender);
 			components.add(textplanner);
 
-			return new Pipeline(components, language);
+			return new Pipeline(components, language, tagset);
 		}
 		catch (UIMAException e)
 		{
@@ -310,7 +316,7 @@ public class UIMAWrapper
 		}
 	}
 
-	public static Pipeline createParsingPipeline(ULocale language)
+	public static Pipeline createParsingPipeline(ULocale language, POS.Tagset tagset)
 	{
 		try
 		{
@@ -338,7 +344,7 @@ public class UIMAWrapper
 					DeepParser.PARAM_TYPE, "taln");
 			components.add(deepParser);
 
-			return new Pipeline(components, language);
+			return new Pipeline(components, language, tagset);
 		}
 		catch (UIMAException e)
 		{

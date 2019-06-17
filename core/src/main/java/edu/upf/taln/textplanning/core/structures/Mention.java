@@ -1,5 +1,6 @@
 package edu.upf.taln.textplanning.core.structures;
 
+import edu.upf.taln.textplanning.core.utils.POS;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.Serializable;
@@ -18,7 +19,7 @@ public final class Mention implements Comparable<Mention>, Serializable
 	private final Pair<Integer, Integer> span; // Token-based offsets
 	private final String surface_form;
 	private final String lemma;
-	private final String pos; // POS tag
+	private final POS.Tag pos; // POS tag
 	private final boolean isNE; // is NE
 	private final String type; // e.g. AMR concept label
 	private Double weight = null;
@@ -26,7 +27,7 @@ public final class Mention implements Comparable<Mention>, Serializable
 	private static int id_counter = 0;
 
 	public Mention(String context_id, String source_id, Pair<Integer, Integer> tokens_span, String surface_form, String lemma,
-	                String POS, boolean isNE, String type)
+	               POS.Tag POS, boolean isNE, String type)
 	{
 		this.id = id_counter++;
 		this.context_id = context_id;
@@ -45,7 +46,7 @@ public final class Mention implements Comparable<Mention>, Serializable
 	public Pair<Integer, Integer> getSpan() { return span; }
 	public String getSurface_form() { return surface_form; }
 	public String getLemma() { return lemma; }
-	public String getPOS() { return pos;}
+	public POS.Tag getPOS() { return pos;}
 	public boolean isNE() { return isNE; }
 	public String getType() { return type; }
 
@@ -62,8 +63,8 @@ public final class Mention implements Comparable<Mention>, Serializable
 		this.weight = weight;
 	}
 
-	public boolean isNominal() { return pos.startsWith("N"); }
-	public boolean isFiniteVerb() {	return pos.startsWith("VB") && !pos.equals("VB"); } // very crude
+	public boolean isNominal() { return pos == POS.Tag.NOUN; }
+	public boolean isVerbal() {	return pos == POS.Tag.VERB; }
 	public boolean isMultiWord() { return span.getRight() - span.getLeft() > 1; }
 
 	@Override

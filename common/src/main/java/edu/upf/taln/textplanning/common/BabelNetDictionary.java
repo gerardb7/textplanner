@@ -6,6 +6,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.UnmodifiableIterator;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
+import edu.upf.taln.textplanning.core.utils.POS;
 import it.uniroma1.lcl.babelnet.*;
 import it.uniroma1.lcl.babelnet.data.BabelGloss;
 import it.uniroma1.lcl.jlt.Configuration;
@@ -20,7 +21,6 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static edu.upf.taln.textplanning.common.POSConverter.BN_POS_EN;
 import static java.util.stream.Collectors.toList;
 
 public class BabelNetDictionary implements MeaningDictionary
@@ -99,7 +99,7 @@ public class BabelNetDictionary implements MeaningDictionary
 
 			final String id = s.getID().getID();
 			String label = s.getMainSense().map(BabelSense::getSimpleLemma).orElse(id);
-			String pos = String.valueOf(s.getPOS().getTag());
+			POS.Tag pos = POS.BabelNet.get(String.valueOf(s.getPOS().getTag()));
 			final List<String> glosses = new ArrayList<>();
 			try
 			{
@@ -148,7 +148,7 @@ public class BabelNetDictionary implements MeaningDictionary
 	}
 
 	@Override
-	public List<String> getMeanings(String form, String pos, ULocale language)
+	public List<String> getMeanings(String form, POS.Tag pos, ULocale language)
 	{
 		if (bn == null)
 			return Collections.emptyList();
@@ -157,10 +157,10 @@ public class BabelNetDictionary implements MeaningDictionary
 		try
 		{
 			num_queries.getAndIncrement();
-			//BabelPOS bnPOS = BN_POS_EN.get(pos);
-			UniversalPOS bnPOS = BN_POS_EN.get(pos);
+
+			UniversalPOS bnPOS = UniversalPOS.valueOf(POS.toTag.get(pos));
 			if (bnPOS == null)
-				log.error("Failed to map POS tag " + pos);
+				log.error("Failed to map Tag tag " + pos);
 			final Language bnLang = Language.fromISO(language.toLanguageTag());
 			if (bnLang == null)
 				log.error("Failed to map language tag " + language.toLanguageTag());

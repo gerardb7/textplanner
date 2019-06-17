@@ -1,6 +1,5 @@
 package edu.upf.taln.textplanning.tools.evaluation;
 
-import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
@@ -8,8 +7,10 @@ import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
+import edu.upf.taln.textplanning.core.utils.POS;
 import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.AlternativeMeanings;
-import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.Corpus;
+import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus;
+import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus.Corpus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -31,13 +32,8 @@ public class RankingEvaluation
 
 	private static final int max_span_size = 3;
 	private static final boolean rank_together = false;
-	private static final ULocale language = ULocale.ENGLISH;
-	private static final String noun_pos_tag = "N";
-	private static final String adj_pos_tag = "J";
-	private static final String verb_pos_tag = "V";
-	private static final String adverb_pos_tag = "R";
-	private static final String other_pos_tag = "X";
 	private static final String gold_suffix = ".gold";
+	private static final POS.Tagset tagset = POS.Tagset.Simple;
 	private final static Logger log = LogManager.getLogger();
 
 	public static void run(Path gold_folder, Path xml_file, InitialResourcesFactory resources_factory)
@@ -49,18 +45,19 @@ public class RankingEvaluation
 		options.sim_threshold = 0.8; // Pairs of meanings with sim below this value have their score set to 0
 		options.damping_meanings = 0.5; // controls balance between bias and similarity: higher value -> more bias
 
-		// Exclude POS from mention collection
-		final Set<String> excluded_mention_POS = Set.of(other_pos_tag);
-		// Include these POS in the ranking of meanings
-		options.ranking_POS_Tags = Set.of(noun_pos_tag); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
-		// Evaluate these POS tags only
-		Set<String> evaluate_POS = Set.of(noun_pos_tag); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+		// Exclude Tag from mention collection
+		final Set<POS.Tag> excluded_mention_POS = Set.of(POS.Tag.X);
+		// Include these Tag in the ranking of meanings
+		options.ranking_POS_Tags = Set.of(POS.Tag.NOUN); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+		// Evaluate these Tag tags only
+		Set<POS.Tag> evaluate_POS = Set.of(POS.Tag.NOUN); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
 
 		final Map<String, Set<AlternativeMeanings>> gold = parseGoldMeanings(gold_folder);
-		final Corpus corpus = EvaluationTools.loadResourcesFromXML(xml_file, resources_factory, language, max_span_size, rank_together, noun_pos_tag, excluded_mention_POS, options);
+		final Corpus corpus = EvaluationCorpus.createFromXML(xml_file);
+		EvaluationTools.createResources(corpus, tagset, resources_factory, max_span_size, rank_together, excluded_mention_POS, options);
 		assert gold.size() == corpus.texts.size();
 
-		EvaluationTools.rankMeanings(options, corpus);
+		EvaluationTools.rankMeanings(corpus, options);
 		EvaluationTools.disambiguate(corpus);
 
 //		final Path disamb_file = resources_path.resolve("meanings_" + language.toLanguageTag() + ".txt");
@@ -246,7 +243,7 @@ public class RankingEvaluation
 				}));
 	}
 
-	private static double evaluate(Map<String, List<Meaning>> system, Map<String, Set<AlternativeMeanings>> gold, Set<String> POS)
+	private static double evaluate(Map<String, List<Meaning>> system, Map<String, Set<AlternativeMeanings>> gold, Set<POS.Tag> eval_POS)
 	{
 		List<Double> avg_precisions = new ArrayList<>();
 		system.forEach((text_id, meanings) ->
@@ -257,10 +254,10 @@ public class RankingEvaluation
 					.collect(toSet());
 
 			Predicate<String> filter_by_POS = m ->
-					(m.endsWith("n") && POS.contains(noun_pos_tag)) ||
-					(m.endsWith("v") && POS.contains(verb_pos_tag)) ||
-					(m.endsWith("a") && POS.contains(adj_pos_tag)) ||
-					(m.endsWith("r") && POS.contains(adverb_pos_tag));
+					(m.endsWith("n") && eval_POS.contains(POS.Tag.NOUN)) ||
+					(m.endsWith("v") && eval_POS.contains(POS.Tag.VERB)) ||
+					(m.endsWith("a") && eval_POS.contains(POS.Tag.ADJ)) ||
+					(m.endsWith("r") && eval_POS.contains(POS.Tag.ADV));
 
 			// Determine the actual subset of the gold to be used in the evaluation
 			final Set<String> evaluated_gold = gold_set.stream()

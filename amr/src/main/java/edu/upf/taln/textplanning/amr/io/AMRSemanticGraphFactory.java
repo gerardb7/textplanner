@@ -159,7 +159,7 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 					Collection<String> C = c.getVertices();
 					// v node, whose meaning is kept, corresponds to that with the highest scored meaning
 					String v = C.stream()
-							.max(comparingDouble(graph::getWeight)).orElse(null);
+							.max(comparingDouble(v_i -> graph.getWeight(v_i).orElse(0.0))).orElse(null);
 					C.remove(v);
 					log.debug(DebugUtils.printCorefMerge(v, C, graph));
 
