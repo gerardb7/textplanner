@@ -1,5 +1,6 @@
 package edu.upf.taln.textplanning.tools.evaluation;
 
+import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
@@ -7,6 +8,7 @@ import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
+import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.core.utils.POS;
 import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus;
@@ -20,6 +22,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
@@ -38,6 +41,7 @@ public class ExtractiveEvaluation
 
 	public static void run(Path input, Path gold_folder, Path output_path, Path tmp_folder, InitialResourcesFactory resources_factory)
 	{
+		Stopwatch gtimer = Stopwatch.createStarted();
 		final Options options = new Options();
 		options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
 		options.min_bias_threshold = 0.8; // minimum bias value below which candidate meanings are ignored
@@ -50,6 +54,7 @@ public class ExtractiveEvaluation
 		final Set<POS.Tag> excluded_mention_POS = Set.of(POS.Tag.X);
 		// Include these Tag in the ranking of meanings
 		options.ranking_POS_Tags = Set.of(POS.Tag.NOUN); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+		log.info(options + "\n");
 
 		// load input corpus and gold
 		final Corpus corpus;
@@ -71,6 +76,11 @@ public class ExtractiveEvaluation
 		{
 			corpus.texts.forEach(text ->
 			{
+				Stopwatch timer = Stopwatch.createStarted();
+				final String basename = FilenameUtils.removeExtension(text.filename);
+				final String id = FilenameUtils.removeExtension(text.filename).substring(basename.indexOf('_') + 1);
+				log.info("\n***Text " + text.id + " (" + basename + ")***");
+
 				EvaluationTools.createResources(text, tagset, resources_factory, max_span_size, excluded_mention_POS, true, options);
 				EvaluationTools.rankMeanings(text, options);
 				EvaluationTools.disambiguate(text);
@@ -87,10 +97,6 @@ public class ExtractiveEvaluation
 								.collect(joining(" ")))
 						.orElse("");
 
-				final String basename = FilenameUtils.removeExtension(text.filename);
-				final String id = FilenameUtils.removeExtension(text.filename).substring(basename.indexOf('_') + 1);
-
-				log.info("Text " + text.id + " (" + basename + ")");
 				final List<List<String>> gold_tokens = gold.keySet().stream()
 						.filter(k -> k.contains(id))
 						.findFirst().map(gold::get).orElse(null);
@@ -103,6 +109,7 @@ public class ExtractiveEvaluation
 									.count())
 							.sum();
 
+					log.info("*Printing summaries*");
 					final String gold_summary = gold_tokens.stream()
 							.map(s -> String.join(" ", s))
 							.collect(joining("\n\t"));
@@ -138,9 +145,19 @@ public class ExtractiveEvaluation
 						final Path summary_path = output_path.resolve(basename + "_extrmention" + summary_extension);
 						FileUtils.writeTextToFile(summary_path, summary);
 					}
+
+					{
+						final String summary = getExtractivePlanSummary(text, num_words);
+						final Path summary_path = output_path.resolve(basename + "_extrplan" + summary_extension);
+						FileUtils.writeTextToFile(summary_path, summary);
+					}
 				}
+
+				log.info("Text finished in " + timer.stop());
 			});
 		}
+
+		log.info("Corpus finished in " + gtimer.stop());
 	}
 
 	private static Map<String, List<List<String>>> parseGold(Path gold_folder)
@@ -173,8 +190,8 @@ public class ExtractiveEvaluation
 				.limit(num_sentences)
 				.map(sentence -> sentence.tokens.stream().map(t -> t.wf).collect(joining(" ")))
 				.limit(num_sentences)
-				.collect(joining("\n"));
-		log.info("Lead summary:" + summary);
+				.collect(joining("\n\t"));
+		log.info("Lead summary:\n\t" + summary + "\n");
 
 		return summary;
 	}
@@ -198,7 +215,8 @@ public class ExtractiveEvaluation
 				.limit(num_words)
 				.map(c -> c.getMention().toString() + "\t" + print_context.apply(c.getMention()))
 				.collect(joining("\n\t"));
-		log.info("BoM summary: " + summary + "\n\t" + candidates_str + "\n");
+		log.info("BoM summary: " + summary + "\n");
+		log.debug("BoM summary:\n\t" + candidates_str + "\n");
 
 		return summary;
 	}
@@ -223,7 +241,8 @@ public class ExtractiveEvaluation
 				.limit(num_words)
 				.map(c -> c.getMention().toString() + "\t" + print_context.apply(c.getMention()))
 				.collect(joining("\n\t"));
-		log.info("BoW summary: " + summary + "\n\t" + candidates_str + "\n");
+		log.info("BoW summary: " + summary + "\n");
+		log.debug("BoW summary:\n\t" + candidates_str + "\n");
 
 		return summary;
 	}
@@ -238,7 +257,7 @@ public class ExtractiveEvaluation
 		// Extractive meaning summary
 		final Map<Sentence, String> sentences2weightlists = sentences2meanings.entrySet().stream()
 				.collect(toMap(Map.Entry::getKey, e -> e.getValue().stream()
-						.map(c -> c.getMention().getSurface_form() + " " +
+						.map(c -> c.getMention().getSurfaceForm() + " " +
 								DebugUtils.printDouble(c.getWeight().orElseThrow()))
 						.collect(joining(", "))));
 
@@ -260,12 +279,16 @@ public class ExtractiveEvaluation
 						"\t" + DebugUtils.printDouble(sentences2weights.get(sentence)) + "\t" + sentences2weightlists.get(sentence))
 				.limit(num_sentences)
 				.collect(joining("\n\t", "\n\t", "\n"));
-		log.info("Extractive meaning summary:" + debug);
 
-		return sorted_sentences.stream()
+		final List<String> summary_sentences = sorted_sentences.stream()
 				.map(sentence -> sentence.tokens.stream().map(t -> t.wf).collect(joining(" ")))
 				.limit(num_sentences)
-				.collect(joining("\n"));
+				.collect(toList());
+
+		log.debug("Extractive meaning summary:" + debug);
+		log.info("Extractive meaning summary:\n\t" + String.join("\n\t", summary_sentences) + "\n");
+
+		return String.join("\n", summary_sentences);
 
 	}
 
@@ -283,7 +306,7 @@ public class ExtractiveEvaluation
 		final Map<Sentence, String> sentences2weightlists = sentences2mentions.entrySet().stream()
 				.collect(toMap(Map.Entry::getKey, e -> e.getValue().stream()
 						.filter(m -> m.getWeight().isPresent())
-						.map(m -> m.getSurface_form() + " " + DebugUtils.printDouble(m.getWeight().get()))
+						.map(m -> m.getSurfaceForm() + " " + DebugUtils.printDouble(m.getWeight().get()))
 						.collect(joining(", "))));
 
 		final Map<Sentence, Double> sentences2weights = sentences2mentions.entrySet().stream()
@@ -303,14 +326,63 @@ public class ExtractiveEvaluation
 						"\t" + DebugUtils.printDouble(sentences2weights.get(sentence)) + "\t" + sentences2weightlists.get(sentence))
 				.limit(num_sentences)
 				.collect(joining("\n\t", "\n\t", "\n"));
-		log.info("Extractive mention summary:" + debug);
 
-		return sorted_sentences.stream()
+		final List<String> summary_sentences = sorted_sentences.stream()
 				.map(sentence -> sentence.tokens.stream().map(t -> t.wf).collect(joining(" ")))
 				.limit(num_sentences)
-				.collect(joining("\n"));
+				.collect(toList());
+
+		log.debug("Extractive mention summary:" + debug);
+		log.info("Extractive mention summary:\n\t" + String.join("\n\t", summary_sentences) + "\n");
+
+		return String.join("\n", summary_sentences);
 	}
 
+	private static String getExtractivePlanSummary(EvaluationCorpus.Text text, long num_words)
+	{
+		final Map<SemanticSubgraph, List<Mention>> subgraphs2mentions = text.subgraphs.stream()
+				.collect(toMap(subgraph -> subgraph, subgraph -> subgraph.vertexSet().stream()
+						.map(v -> subgraph.getBase().getMentions(v))
+						.flatMap(Collection::stream)
+						.sorted(Comparator.comparingInt(m -> m.getSpan().getLeft()))
+						.collect(toList())));
 
+		final Map<SemanticSubgraph, String> subgraphs2weightlists = subgraphs2mentions.entrySet().stream()
+				.collect(toMap(Map.Entry::getKey, e -> e.getValue().stream()
+						.filter(m -> m.getWeight().isPresent())
+						.map(m -> m.getSurfaceForm() + " " + DebugUtils.printDouble(m.getWeight().get()))
+						.collect(joining(", "))));
+
+		final Map<SemanticSubgraph, OptionalDouble> subgraphs2weights = subgraphs2mentions.entrySet().stream()
+				.collect(toMap(Map.Entry::getKey, e -> e.getValue().stream()
+						.map(Mention::getWeight)
+						.flatMap(Optional::stream)
+						.mapToDouble(w -> w)
+						.average()));
+
+		AtomicInteger num_tokens = new AtomicInteger();
+
+		final Map<SemanticSubgraph, String> subgraphs2texts = subgraphs2mentions.entrySet().stream()
+				.peek(e ->
+				{
+					final int subgraph_tokens = e.getValue().stream()
+							.mapToInt(Mention::numTokens)
+							.sum();
+					num_tokens.accumulateAndGet(subgraph_tokens, Integer::sum);
+				})
+				.takeWhile(mentions -> num_tokens.get() < num_words)
+				.collect(toMap(Map.Entry::getKey, e -> e.getValue().stream()
+						.map(Mention::getSurfaceForm)
+						.collect(joining(" "))));
+
+
+		final String debug = subgraphs2texts.keySet().stream()
+				.map(s -> subgraphs2texts.get(s) + ".\t" + DebugUtils.printDouble(subgraphs2weights.get(s).orElse(0.9)) + "\t-\t" + subgraphs2weightlists.get(s))
+				.collect(joining("\n\t", "\n\t", "\n"));
+		log.debug("Extractive plan summary:" + debug);
+		log.info("Extractive plan summary:\n\t" + String.join("\n\t", subgraphs2texts.values()) + "\n");
+
+		return String.join("\n", subgraphs2texts.values());
+	}
 }
 

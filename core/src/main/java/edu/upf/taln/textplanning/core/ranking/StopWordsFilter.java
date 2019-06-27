@@ -34,7 +34,7 @@ public class StopWordsFilter
 
 	public static boolean test(Mention mention, ULocale language)
 	{
-		return test(mention.getSurface_form(), language);
+		return test(mention.getSurfaceForm(), language);
 	}
 
 	public static boolean test(String form, ULocale language)

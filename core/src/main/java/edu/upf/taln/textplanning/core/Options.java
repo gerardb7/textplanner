@@ -1,5 +1,6 @@
 package edu.upf.taln.textplanning.core;
 
+import edu.upf.taln.textplanning.core.extraction.Policy;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.core.utils.POS;
 
@@ -13,15 +14,18 @@ public class Options
 	public Set<POS.Tag> ranking_POS_Tags = new HashSet<>(); // only rank meanings of words with these Tag - other meanings are excluded from the ranking but disambiguated anyway
 	public int min_context_freq = 3; // Minimum frequency of document tokens used to calculate nominal context vectors
 	public int window_size = 5; // Size of window in number of tokens used to calculate non-nominal context vectors
-	public double min_bias_threshold = 0.7; // minimum bias value below which candidate meanings are ignored
-	public int num_first_meanings = 1;
-	public double sim_threshold = 0.0; // Pairs of meanings with sim below this value have their score set to 0
-	public double damping_meanings = 0.2; // controls balance between bias and similarity: higher value -> more bias
-	public double damping_variables = 0.2; // controls bias towards meanings rank when ranking variables
-	public int num_subgraphs_extract = 1000; // Number of subgraphs to extract
-	public double extraction_lambda = 1.0; // Controls balance between weight of nodes and cost of edges during subgraph extraction
-	public int num_subgraphs = 10; // Number of subgraphs to include in the plan
-	public double tree_edit_lambda = 0.1; // Controls impact of roles when calculating similarity between semantic trees
+	public double min_bias_threshold = 0.7; // minimum bias value below which candidate meanings are ignored.  Values in range [0..1].
+	public int num_first_meanings = 1; // Number of top dictionary meanings to be included in ranking
+	public double sim_threshold = 0.0; // Pairs of meanings with sim below this value have their score set to 0. Values in range [0..1].
+	public double damping_meanings = 0.2; // controls balance between bias and similarity. Values in range [0..1]. 0 -> no bias. 1 -> only bias
+	public double damping_variables = 0.2; // controls bias towards meanings rank when ranking variables. Values in range [0..1]. 0 -> no bias. 1 -> only bias
+	public int num_subgraphs_extract = 100; // Number of sampled subgraphs during extraction
+	public double extraction_lambda = 0.8; // Controls size of extracted graphs by balancing value and cost. Values in range [0..1]. higher value -> smaller graphs
+	public Policy.Type start_policy = Policy.Type.Softmax; // policy to select a start node from which sample a subgraph
+	public Policy.Type expand_policy = Policy.Type.ArgMax; // policy to select additional nodes to add to a subgraph
+	public double softmax_temperature = 0.5; // Controls randomness of softmax policy. Values in range [0..1]. 1 is default softamx. 0 is argmax.
+	public int num_subgraphs = 10; // Number of subgraphs to include in the plan after redundancy removal
+	public double tree_edit_lambda = 0.0; // Controls impact of roles in similarity between semantic trees. Values in range [0..1]. 0 ignores roles.
 
 	public Options() {}
 
@@ -37,6 +41,9 @@ public class Options
 		this.damping_variables = o.damping_variables;
 		this.num_subgraphs_extract = o.num_subgraphs_extract;
 		this.extraction_lambda = o.extraction_lambda;
+		this.start_policy = o.start_policy;
+		this.expand_policy = o.expand_policy;
+		this.softmax_temperature = o.softmax_temperature;
 		this.num_subgraphs = o.num_subgraphs;
 		this.tree_edit_lambda = o.tree_edit_lambda;
 	}
@@ -59,6 +66,9 @@ public class Options
 				"\n\tdamping_variables = " + f.format(damping_variables) +
 				"\n\tnum_subgraphs_extract = " + num_subgraphs_extract +
 				"\n\textraction_lambda = " + f.format(extraction_lambda) +
+				"\n\tstart_policy = " + start_policy +
+				"\n\texpand_policy = " + expand_policy +
+				"\n\tsoftmax_temperature = " + softmax_temperature +
 				"\n\tnum_subgraphs = " + num_subgraphs +
 				"\n\tredundancy lambda = " + f.format(tree_edit_lambda);
 	}
@@ -74,6 +84,9 @@ public class Options
 				".dv" + DebugUtils.printDouble(damping_variables) +
 				".ns" + num_subgraphs_extract +
 				".el" + DebugUtils.printDouble(extraction_lambda) +
+				".sp" + start_policy +
+				".ep" + expand_policy +
+				".st" + softmax_temperature +
 				".ns" + num_subgraphs +
 				".rl" + DebugUtils.printDouble(tree_edit_lambda);
 	}

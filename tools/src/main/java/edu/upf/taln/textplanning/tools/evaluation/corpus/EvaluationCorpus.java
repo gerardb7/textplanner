@@ -51,6 +51,8 @@ public class EvaluationCorpus
 		@XmlTransient
 		public DocumentResourcesFactory resources;
 		@XmlTransient
+		public SemanticGraph graph = null;
+		@XmlTransient
 		public List<SemanticSubgraph> subgraphs = new ArrayList<>();
 	}
 
@@ -67,8 +69,6 @@ public class EvaluationCorpus
 		public Map<Mention, List<Candidate>> candidates = new HashMap<>();
 		@XmlTransient
 		public Map<Mention, Candidate> disambiguated = new HashMap<>();
-		@XmlTransient
-		public SemanticGraph graph = null;
 	}
 
 	@XmlAccessorType(XmlAccessType.FIELD)
@@ -106,9 +106,10 @@ public class EvaluationCorpus
 		return new Corpus();
 	}
 
-	public static void createGraph(EvaluationCorpus.Sentence sentence, CorpusAdjacencyFunction adjacency)
+	public static void createGraph(EvaluationCorpus.Text text, CorpusAdjacencyFunction adjacency)
 	{
-		final Map<Mention, Candidate> mentions2candidates = sentence.disambiguated.values().stream()
+		final Map<Mention, Candidate> mentions2candidates = text.sentences.stream()
+				.flatMap(s -> s.disambiguated.values().stream())
 				.collect(toMap(Candidate::getMention, c -> c));
 
 		final Map<String, Meaning> meanings = mentions2candidates.keySet().stream()
@@ -122,7 +123,7 @@ public class EvaluationCorpus
 		final Map<String, List<String>> sources = mentions2candidates.keySet().stream()
 				.collect(toMap(Mention::getContextId, m -> List.of(m.getSourceId())));
 
-		sentence.graph = new SemanticGraph(meanings, weights, mentions, sources,
+		text.graph = new SemanticGraph(meanings, weights, mentions, sources,
 				(id1, id2) -> adjacency.test(mentions.get(id1).get(0), mentions.get(id2).get(0)),
 				(id1, id2) -> "edge");
 	}

@@ -143,7 +143,7 @@ public class Driver
 		DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 		Date date = new Date();
 		log.info(dateFormat.format(date) + " running \n\t" + String.join("\n\t", args));
-		log.debug("*********************************************************");
+		log.info("\n*********************************************************");
 
 		switch (jc.getParsedCommand())
 		{

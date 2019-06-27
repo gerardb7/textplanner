@@ -57,20 +57,25 @@ public class DeepMind
 				.forEach(f -> {
 					final String contents = FileUtils.readTextFile(f.toPath());
 					final String[] parts = contents.split("@highlight");
+
 					FileUtils.writeTextToFile(docs_folder.resolve(f.toPath().getFileName()), parts[0]);
 					final String summary = Arrays.stream(parts, 1, parts.length)
 							.collect(joining());
 
-					final String summary_filename = FilenameUtils.removeExtension(f.getName()) + summary_extension;
+					final String summary_filename = FilenameUtils.removeExtension(f.getName()) + "_reference1" + summary_extension;
 					FileUtils.writeTextToFile(summaries_folder.resolve(Paths.get(summary_filename)), summary);
 				});
 	}
 
-	public static void main(String[] args)
+	public static void main(String[] args) throws Exception
 	{
-		final Path input = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_subset_100/texts/original");
-		final Path stories = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_subset_100/texts/stories");
-		final Path summaries = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_subset_100/reference");
+		// splits texts in input folder between stories and summaries
+		final Path input = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_subset_500/texts/original");
+		final Path stories = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_subset_500/texts/stories");
+		final Path summaries = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_subset_500/reference");
+		final Path xml_file = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_subset_500/texts/input.xml");
 		DeepMind.split(input, stories, summaries);
+		Stanford2SemEvalXML stanford = new Stanford2SemEvalXML();
+		stanford.convert(stories, ".story", xml_file);
 	}
 }

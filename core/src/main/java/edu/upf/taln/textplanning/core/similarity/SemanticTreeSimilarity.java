@@ -15,12 +15,12 @@ import java.util.function.BiFunction;
 public final class SemanticTreeSimilarity
 {
 	private final BiFunction<String, String, OptionalDouble> sim;
-	private final double delta;
+	private final double lambda;
 
-	public SemanticTreeSimilarity(BiFunction<String, String, OptionalDouble>  s, double delta)
+	public SemanticTreeSimilarity(BiFunction<String, String, OptionalDouble>  s, double lambda)
 	{
 		sim = s;
-		this.delta = delta;
+		this.lambda = lambda;
 	}
 
 	/**
@@ -32,7 +32,7 @@ public final class SemanticTreeSimilarity
 	{
 		SemanticTreeProxy p1 = new SemanticTreeProxy(t1);
 		SemanticTreeProxy p2 = new SemanticTreeProxy(t2);
-		EditScore scorer = new SemanticTreeEditScorer(this, delta, p1, p2);
+		EditScore scorer = new SemanticTreeEditScorer(this, lambda, p1, p2);
 //		Mapping mapping = new Mapping(p1, p2);
 		double distance = new TreeEditDistance(scorer).calc(p1, p2);//, mapping);
 

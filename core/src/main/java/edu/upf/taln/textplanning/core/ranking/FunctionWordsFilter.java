@@ -3,9 +3,6 @@ package edu.upf.taln.textplanning.core.ranking;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.structures.Mention;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -21,7 +18,7 @@ public class FunctionWordsFilter
 
 	public static boolean test(Mention mention, ULocale language)
 	{
-		return test(mention.getSurface_form(), language);
+		return test(mention.getSurfaceForm(), language);
 	}
 
 	public static boolean test(String form, ULocale language)

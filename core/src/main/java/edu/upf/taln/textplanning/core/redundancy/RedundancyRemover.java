@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.*;
 import java.util.stream.IntStream;
 
+import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
@@ -84,12 +85,12 @@ public class RedundancyRemover
 					});
 		}
 
-		trees.removeAll(pruned);
-		Set<SemanticSubgraph> selected = trees.stream()
+		final List<SemanticTree> selected_trees = trees.stream().filter(not(pruned::contains)).collect(toList());
+		Set<SemanticSubgraph> selected = selected_trees.stream()
 				.map(SemanticTree::asGraph)
 				.collect(toSet());
 
-		log.info("Selected " + num_graphs + " subgraphs out of " + G.size());
+		log.info("Selected " + selected_trees.size() + " subgraphs out of " + G.size());
 		log.debug("Selected subgraphs:\n" + DebugUtils.printSubgraphs(new ArrayList<>(selected)));
 		return selected;
 	}

@@ -64,7 +64,7 @@ public class DebugUtils
 				.map(DebugUtils::printCandidate)
 				.collect(joining(", "));
 		final String weight_str = chosen.getWeight().map(DebugUtils::printDouble).orElse("no weight");
-		return "Disambiguated \"" + chosen.getMention().getSurface_form() +
+		return "Disambiguated \"" + chosen.getMention().getSurfaceForm() +
 				"\" to " + chosen.getMeaning() + " " + weight_str +
 				"\t\t" + other.stream()
 				.filter(c2 -> c2 != chosen)
@@ -77,7 +77,7 @@ public class DebugUtils
 
 	public static String printCandidate(Candidate c)
 	{
-		return "\"" + c.getMention().getSurface_form() + "\"\t\t" + c.getMeaning().toString();
+		return "\"" + c.getMention().getSurfaceForm() + "\"\t\t" + c.getMeaning().toString();
 	}
 
 	public static String printCorefMerge(String v, Collection<String> C, SemanticGraph g)
@@ -152,7 +152,7 @@ public class DebugUtils
 	{
 		final String meaning = m != null ? m.toString() : "";
 		final String surface_forms = mentions.stream()
-				.map(mention -> mention.getId() + "-" + mention.getSurface_form())
+				.map(mention -> mention.getId() + "-" + mention.getSurfaceForm())
 				.distinct()
 				.map(f -> "\"" + f + "\"")
 				.collect(Collectors.joining(", "));

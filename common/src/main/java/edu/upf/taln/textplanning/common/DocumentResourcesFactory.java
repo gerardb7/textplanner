@@ -87,7 +87,7 @@ public class DocumentResourcesFactory
 		final Map<Mention, List<Candidate>> mentions2candidates = candidates.stream()
 				.collect(groupingBy(Candidate::getMention));
 		// exclude function words for ranking, but be careful not to remove words just because they're frequent -e.g. stop words
-		final Predicate<Candidate> function_words_filter = (c) -> FunctionWordsFilter.test(c.getMention().getSurface_form(), language);
+		final Predicate<Candidate> function_words_filter = (c) -> FunctionWordsFilter.test(c.getMention().getSurfaceForm(), language);
 		final TopCandidatesFilter top_filter =
 				new TopCandidatesFilter(mentions2candidates, weighter, options.num_first_meanings, options.min_bias_threshold);
 		final Predicate<Candidate> pos_filter =	c -> options.ranking_POS_Tags.contains(c.getMention().getPOS());

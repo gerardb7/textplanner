@@ -47,27 +47,32 @@ public class InitialResourcesFactory
 
 		this.language = language;
 		this.properties = properties;
+
+		if (properties.getDictionaryCache() != null)
+		{
+			if (Files.exists(properties.getDictionaryCache()))
+				cache = (CompactDictionary) Serializer.deserialize(properties.getDictionaryCache());
+			else
+				cache = new CompactDictionary(language);
+		}
+		else
+			cache = null;
+
 		if (properties.getDictionary() != null)
 		{
-			final BabelNetDictionary babelNet = new BabelNetDictionary(properties.getDictionary());
-			if (properties.getDictionaryCache() == null)
-			{
-				cache = null;
-				dictionary = babelNet;
-			}
+			MeaningDictionary babelnet = new BabelNetDictionary(properties.getDictionary());
+
+			if (cache != null)
+				dictionary =  new CachedDictionary(babelnet, cache);
 			else
-			{
-				if (Files.exists(properties.getDictionaryCache()))
-					cache = (CompactDictionary)Serializer.deserialize(properties.getDictionaryCache());
-				else
-					cache = new CompactDictionary(language);
-				dictionary = new CachedDictionary(babelNet, cache);
-			}
+				dictionary = babelnet;
 		}
 		else
 		{
-			cache = null;
-			dictionary = null;
+			if (cache != null)
+				dictionary = new CachedDictionary(cache);
+			else
+				dictionary = null;
 		}
 
 		// Bias params
@@ -219,6 +224,11 @@ public class InitialResourcesFactory
 	public void serializeCache() throws IOException
 	{
 		if (cache != null && properties.getDictionaryCache() != null)
-			Serializer.serialize(cache, properties.getDictionaryCache());
+		{
+			if (cache.num_added_forms == 0 && cache.num_added_meanings == 0)
+				log.info("No forms nor meanings added to the dictionary, skipping serialization");
+			else
+				Serializer.serialize(cache, properties.getDictionaryCache());
+		}
 	}
 }

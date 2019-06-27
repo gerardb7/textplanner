@@ -78,7 +78,7 @@ public class EvaluationTools
 		try
 		{
 			Stanford2SemEvalXML stanford = new Stanford2SemEvalXML();
-			corpus_contents = stanford.convert(text_folder, output_path.resolve(corpus_filename));
+			corpus_contents = stanford.convert(text_folder, "txt", output_path.resolve(corpus_filename));
 		}
 		catch (Exception e)
 		{
@@ -120,14 +120,14 @@ public class EvaluationTools
 			corpus.resouces = new DocumentResourcesFactory(resources, options, candidates_list, context);
 		}
 
-		log.info("Corpus resources created in " + timer.stop());
+		log.info("Corpus resources created in " + timer.stop() + "\n");
 	}
 
 	public static void createResources(EvaluationCorpus.Text text, POS.Tagset tagset, InitialResourcesFactory resources,
 	                                   int max_span_size,
 	                                   Set<POS.Tag> ignored_POS_Tags, boolean create_context, Options options)
 	{
-		log.info("\tCreating resources for document " + text.id  + " ( " + text.filename +  ")");
+		log.info("Creating resources for document " + text.id  + " ( " + text.filename +  ")");
 		Stopwatch timer = Stopwatch.createStarted();
 
 		try
@@ -165,7 +165,7 @@ public class EvaluationTools
 				text.resources = new DocumentResourcesFactory(resources, options, text_candidates, context);
 			}
 
-			log.info("\tResources created in " + timer.stop());
+			log.info("Document resources created in " + timer.stop() + "\n");
 		}
 		catch (Exception e)
 		{
@@ -192,8 +192,6 @@ public class EvaluationTools
 
 	public static void rankMeanings(List<EvaluationCorpus.Sentence> sentences, DocumentResourcesFactory resources, Options options)
 	{
-		log.info(options);
-
 		final BiasFunction bias = resources.getBiasFunction();
 		final SimilarityFunction similarity = resources.getSimilarityFunction();
 		final Predicate<Candidate> candidates_filter = resources.getCandidatesFilter();
@@ -274,11 +272,8 @@ public class EvaluationTools
 		final CorpusAdjacencyFunction adjacency = new CorpusAdjacencyFunction(text, context_size, false);
 
 		final List<SemanticSubgraph> subgraphs = new ArrayList<>();
-		text.sentences.forEach(sentence ->
-		{
-			EvaluationCorpus.createGraph(sentence, adjacency);
-			subgraphs.addAll(TextPlanner.extractSubgraphs(sentence.graph, options));
-		});
+		EvaluationCorpus.createGraph(text, adjacency);
+		subgraphs.addAll(TextPlanner.extractSubgraphs(text.graph, options));
 
 		final Collection<SemanticSubgraph> selected_subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, sim, options);
 		text.subgraphs.addAll(TextPlanner.sortSubgraphs(selected_subgraphs, sim, options));
@@ -316,7 +311,7 @@ public class EvaluationTools
 
 									return new Mention(contextId, s.id, Pair.of(start, end), form, lemma, pos, false, "");
 								})
-								.filter(m -> FunctionWordsFilter.test(m.getSurface_form(), language)))
+								.filter(m -> FunctionWordsFilter.test(m.getSurfaceForm(), language)))
 						.flatMap(stream -> stream))
 				.flatMap(stream -> stream)
 				.collect(toList());
@@ -445,7 +440,7 @@ public class EvaluationTools
 										id = id + "\t" + id;
 									return id + "\t" +
 											sentence.disambiguated.get(mention).getMeaning().getReference() + "\t\"" +
-											mention.getSurface_form() + "\"";
+											mention.getSurfaceForm() + "\"";
 								})
 								.collect(joining("\n")))
 						.collect(joining("\n")))
