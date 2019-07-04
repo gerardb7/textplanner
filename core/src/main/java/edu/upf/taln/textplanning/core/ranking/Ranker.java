@@ -34,7 +34,7 @@ public class Ranker
 	                         double sim_threshold, double d,
 	                         boolean make_positive, boolean row_normalize)
 	{
-		double[][] rankingArrays = MatrixFactory.createRankingMatrix(items, bias, edge_weights, symmetric, filter,
+		double[][] rankingArrays = MatrixFactory.createRankingMatrix(items, labels, bias, edge_weights, symmetric, filter,
 				sim_threshold, d, make_positive, row_normalize);
 		Matrix rankingMatrix = new Matrix(rankingArrays);
 		JamaPowerIteration alg = new JamaPowerIteration();

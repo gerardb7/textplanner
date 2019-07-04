@@ -1,6 +1,5 @@
 package edu.upf.taln.textplanning.core.utils;
 
-import Jama.Matrix;
 import edu.upf.taln.textplanning.core.structures.*;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.Logger;
@@ -86,13 +85,15 @@ public class DebugUtils
 				DebugUtils.createLabelForVariable(v, g.getMeaning(v).orElse(null), g.getMentions(v));
 	}
 
-	public static String printRank(Matrix v, int n, List<String> labels)
+	public static String printRank(double[] v, int n, List<String> labels)
 	{
+		assert v.length == labels.size();
+
 		final List<Pair<String, Double>> sorted_items = new ArrayList<>();
-		for (int i =0; i < n; ++i)
+		for (int i =0; i < v.length; ++i)
 		{
 			final String l = labels.get(i);
-			final double v_i = v.getColumnPackedCopy()[i];
+			final double v_i = v[i];
 			sorted_items.add(Pair.of(l, v_i));
 		}
 		sorted_items.sort(Comparator.comparingDouble(Pair<String, Double>::getRight).reversed());

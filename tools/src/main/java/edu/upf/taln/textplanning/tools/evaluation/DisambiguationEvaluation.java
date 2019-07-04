@@ -33,9 +33,11 @@ public abstract class DisambiguationEvaluation
 
 	public void run()
 	{
+		final Options options = getOptions();
 		final Corpus corpus = getCorpus();
 		checkCandidates(corpus);
-		EvaluationTools.rankMeanings(corpus, getOptions());
+		corpus.texts.forEach(text -> EvaluationTools.rankMeanings(text, options));
+
 
 		log.info("********************************");
 		{
@@ -49,13 +51,12 @@ public abstract class DisambiguationEvaluation
 			evaluate(ranked_candidates, "first.results");
 		}
 		{
-			final List<Candidate> ranked_candidates = chooseTopContext(corpus);
+			final List<Candidate> ranked_candidates = chooseTopContext(corpus, options.disambiguation_lambda);
 			log.info("Context results:");
 			evaluate(ranked_candidates, "context.results");
 		}
-
 		{
-			final List<Candidate> ranked_candidates = chooseTopRank(corpus);
+			final List<Candidate> ranked_candidates = chooseTopRank(corpus, options.disambiguation_lambda);
 			log.info("Rank results:");
 			evaluate(ranked_candidates, "rank.results");
 		}
@@ -68,6 +69,7 @@ public abstract class DisambiguationEvaluation
 	{
 		Options base_options = getOptions();
 		final Corpus corpus = getCorpus();
+		corpus.texts.forEach(text -> EvaluationTools.rankMeanings(text, getOptions()));
 
 		log.info("Ranking meanings (full)");
 		final int num_values = 11; final double min_value = 0.0; final double max_value = 1.0;
@@ -86,15 +88,16 @@ public abstract class DisambiguationEvaluation
 		for (Options options : batch_options)
 		{
 			EvaluationCorpus.reset(corpus);
+			Disambiguation disambiguation = new Disambiguation(options.disambiguation_lambda);
 			EvaluationTools.rankMeanings(corpus, options);
 			log.info("********************************");
 			{
-				final List<Candidate> ranked_candidates = chooseTopRankOrFirst(corpus);
+				final List<Candidate> ranked_candidates = chooseTopRankOrFirst(corpus, disambiguation);
 				log.info("Rank results:");
 				evaluate(ranked_candidates, "rank." + options.toShortString() + ".results");
 			}
 			{
-				final List<Candidate> ranked_candidates = chooseTopRankOrFirst(corpus);
+				final List<Candidate> ranked_candidates = chooseTopRankOrFirst(corpus, disambiguation);
 				log.info("Rank or first results:");
 				evaluate(ranked_candidates, "rank." + options.toShortString() + ".results");
 			}
@@ -116,7 +119,9 @@ public abstract class DisambiguationEvaluation
 						.flatMap(sentence -> sentence.candidates.values().stream()
 								.flatMap(Collection::stream)))
 				.collect(toList());
-		final Map<Mention, Candidate> disambiguated = Disambiguation.disambiguate(candidates, mention_selector, candidate_selector);
+
+		Disambiguation disambiguation = new Disambiguation(1.0); // no multiwords
+		final Map<Mention, Candidate> disambiguated = disambiguation.disambiguate(candidates, mention_selector, candidate_selector);
 
 		return List.copyOf(disambiguated.values());
 	}
@@ -130,6 +135,7 @@ public abstract class DisambiguationEvaluation
 		Function<List<Candidate>, Optional<Candidate>> candidate_selector =
 				l -> l.isEmpty() ? Optional.empty() : Optional.of(l.get(0));
 
+		Disambiguation disambiguation = new Disambiguation(1.0); // no multiwords
 		return corpus.texts.stream()
 				.map(text ->
 				{
@@ -137,7 +143,7 @@ public abstract class DisambiguationEvaluation
 							.flatMap(sentence -> sentence.candidates.values().stream()
 									.flatMap(Collection::stream))
 							.collect(toList());
-					final Map<Mention, Candidate> disambiguated = Disambiguation.disambiguate(candidates, mention_selector, candidate_selector);
+					final Map<Mention, Candidate> disambiguated = disambiguation.disambiguate(candidates, mention_selector, candidate_selector);
 
 					return disambiguated.values();
 				})
@@ -146,8 +152,9 @@ public abstract class DisambiguationEvaluation
 	}
 
 	// Uses default multiword selection strategy and bias function
-	protected static List<Candidate> chooseTopContext(Corpus corpus)
+	protected static List<Candidate> chooseTopContext(Corpus corpus, double disambiguation_lambda)
 	{
+		Disambiguation disambiguation = new Disambiguation(disambiguation_lambda);
 		return corpus.texts.stream()
 				.map(text ->
 				{
@@ -159,7 +166,7 @@ public abstract class DisambiguationEvaluation
 
 					Function<List<Candidate>, Optional<Candidate>> candidate_selector =
 							l -> l.stream().max(Comparator.comparingDouble(c -> bias.apply(c.getMeaning().getReference())));
-					final Map<Mention, Candidate> disambiguated = Disambiguation.disambiguate(candidates, candidate_selector);
+					final Map<Mention, Candidate> disambiguated = disambiguation.disambiguate(candidates, candidate_selector);
 					return disambiguated.values();
 				})
 				.flatMap(Collection::stream)
@@ -167,7 +174,7 @@ public abstract class DisambiguationEvaluation
 	}
 
 	// Default multiword selection strategy + bias function iff above threshold, otherwise first sense
-	protected static List<Candidate> chooseTopContextOrFirst(Corpus corpus, double threshold)
+	protected static List<Candidate> chooseTopContextOrFirst(Corpus corpus, Disambiguation disambiguation, double threshold)
 	{
 		return corpus.texts.stream()
 				.map(text ->
@@ -182,7 +189,7 @@ public abstract class DisambiguationEvaluation
 							l -> l.stream()
 									.max(Comparator.comparingDouble(c -> bias.apply(c.getMeaning().getReference())))
 									.map(c -> bias.apply(c.getMeaning().getReference()) >= threshold ? c : l.get(0));
-					final Map<Mention, Candidate> disambiguated = Disambiguation.disambiguate(candidates, candidate_selector);
+					final Map<Mention, Candidate> disambiguated = disambiguation.disambiguate(candidates, candidate_selector);
 					return disambiguated.values();
 				})
 				.flatMap(Collection::stream)
@@ -190,8 +197,9 @@ public abstract class DisambiguationEvaluation
 	}
 
 	// Default multiword and candidate selection stratgies based on ranking values
-	protected static List<Candidate> chooseTopRank(Corpus corpus)
+	protected static List<Candidate> chooseTopRank(Corpus corpus, double disambiguation_lambda)
 	{
+		Disambiguation disambiguation = new Disambiguation(disambiguation_lambda);
 		return corpus.texts.stream()
 				.map(text ->
 				{
@@ -200,14 +208,14 @@ public abstract class DisambiguationEvaluation
 									.flatMap(Collection::stream))
 							.collect(toList());
 
-					final Map<Mention, Candidate> disambiguated = Disambiguation.disambiguate(candidates);
+					final Map<Mention, Candidate> disambiguated = disambiguation.disambiguate(candidates);
 					return disambiguated.values();
 				})
 				.flatMap(Collection::stream)
 				.collect(toList());
 	}
 
-	protected static List<Candidate> chooseTopRankOrFirst(Corpus corpus)
+	protected static List<Candidate> chooseTopRankOrFirst(Corpus corpus, Disambiguation disambiguation)
 	{
 		Function<List<Candidate>, Optional<Candidate>> candidate_selector =
 				l -> l.stream()
@@ -222,7 +230,7 @@ public abstract class DisambiguationEvaluation
 									.flatMap(Collection::stream))
 							.collect(toList());
 
-					final Map<Mention, Candidate> disambiguated = Disambiguation.disambiguate(candidates, candidate_selector);
+					final Map<Mention, Candidate> disambiguated = disambiguation.disambiguate(candidates, candidate_selector);
 					return disambiguated.values();
 				})
 				.flatMap(Collection::stream)

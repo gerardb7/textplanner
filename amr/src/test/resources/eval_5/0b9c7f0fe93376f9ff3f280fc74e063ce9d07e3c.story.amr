@@ -785,7 +785,7 @@
 (x5 / assume-02
 	:ARG0 (x1 / i)
 	:ARG1 (x11 / woman
-		:ARG1-of (x9 / neighbour
+		:ARG1-of (x9 / node
 			:quant (x6 / none))))
 
 # ::id 36

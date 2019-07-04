@@ -151,7 +151,7 @@ public class Driver
 		log.info("Running from " + graphs_file);
 		AMRGraphList graphs = (AMRGraphList) Serializer.deserialize(graphs_file);
 
-		AMRSemanticGraphFactory factory = new AMRSemanticGraphFactory();
+		AMRSemanticGraphFactory factory = new AMRSemanticGraphFactory(new Options());
 		SemanticGraph graph = factory.create(graphs);
 
 		Path output = FileUtils.createOutputPath(graphs_file, graphs_file.getParent(),
@@ -246,17 +246,18 @@ public class Driver
 
 		// Set up
 		log.info("*****Setting up planner*****");
-//		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
-		AMRReader reader = new AMRReader();
-		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language, tagset, null, resources.getDictionary(), no_stanford);
-		AMRSemanticGraphFactory globalFactory = new AMRSemanticGraphFactory();
-
-		AmrMain generator = new AmrMain(generation_resources);
-
 		Options options = new Options();
 		options.num_subgraphs_extract = num_subgraphs_extract;
 		options.num_subgraphs = num_subgraphs;
 		log.info("Options: " + options);
+
+//		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
+		AMRReader reader = new AMRReader();
+		AMRGraphListFactory factory = new AMRGraphListFactory(reader, language, tagset, null, resources.getDictionary(), no_stanford);
+		AMRSemanticGraphFactory globalFactory = new AMRSemanticGraphFactory(options);
+
+		AmrMain generator = new AmrMain(generation_resources);
+
 		log.info("*****Set up took " + timer.stop() + "*****");
 		timer.reset(); timer.start();
 

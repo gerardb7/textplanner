@@ -66,7 +66,7 @@ public class JamaPowerIteration implements PowerIterationRanking
 		while (delta >= e); // stopping criterion: delta falls below a certain threshold
 
 		log.info("Power iteration completed after " + numIterations + " iterations");
-		log.debug("Ranking:\n" + DebugUtils.printRank(v, n, labels));
+		log.debug("Ranking:\n" + DebugUtils.printRank(v.getColumnPackedCopy(), n, labels));
 		return v;
 	}
 

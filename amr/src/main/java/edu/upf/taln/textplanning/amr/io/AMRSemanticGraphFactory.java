@@ -6,6 +6,7 @@ import com.google.common.collect.Multimap;
 import edu.upf.taln.textplanning.amr.structures.AMRGraph;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.amr.structures.CoreferenceChain;
+import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.io.SemanticGraphFactory;
 import edu.upf.taln.textplanning.core.ranking.Disambiguation;
 import edu.upf.taln.textplanning.core.structures.*;
@@ -24,7 +25,13 @@ import static java.util.stream.Collectors.toSet;
 // Creates a single semantic graph from a lists of AMR-like semantic graphs
 public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphList>
 {
+	private final Options options;
 	private final static Logger log = LogManager.getLogger();
+
+	public AMRSemanticGraphFactory(Options options)
+	{
+		this.options = options;
+	}
 
 	public SemanticGraph create(AMRGraphList graphs)
 	{
@@ -36,7 +43,8 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 		Map<String, String> concepts = remove_concepts(graphs);
 
 		// 2- disambiguate candidates
-		final Map<Mention, Candidate> selected_candidates = Disambiguation.disambiguate(List.copyOf(graphs.getCandidates()));
+		Disambiguation disambiguation = new Disambiguation(options.disambiguation_lambda);
+		final Map<Mention, Candidate> selected_candidates = disambiguation.disambiguate(List.copyOf(graphs.getCandidates()));
 
 		// 3- create merged graph and assign to it disambiguated meanings
 		SemanticGraph graph = mergeAMRGraphs(graphs, selected_candidates, concepts);

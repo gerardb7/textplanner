@@ -1,5 +1,6 @@
 package edu.upf.taln.textplanning.core.ranking;
 
+import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.core.utils.DebugUtils.ThreadReporter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -46,7 +47,7 @@ public class MatrixFactory
 	 * matrix made irreducible, aperiodic and positive.
 	 * If @row_normalize is set to true, the matrix returned is row stochastic
 	 */
-	public static double[][] createRankingMatrix(List<String> items, Function<String, Double> bias,
+	public static double[][] createRankingMatrix(List<String> items, List<String> labels, Function<String, Double> bias,
 	                                             BiFunction<String, String, OptionalDouble> edge_weights,
 	                                             boolean simmetric,
 	                                             BiPredicate<String, String> filter,
@@ -58,6 +59,8 @@ public class MatrixFactory
 
 		// Create non-negative bias row vector for the set of items
 		double[] L = createBiasVector(items, bias);
+		log.debug("Bias:\n" + DebugUtils.printRank(L, n, labels));
+
 
 		// Create non-negative transition matrix
 		double[][] X = createTransitionMatrix(items, edge_weights, simmetric, filter, sim_threshold, true);

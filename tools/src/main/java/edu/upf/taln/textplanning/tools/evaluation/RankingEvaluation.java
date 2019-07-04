@@ -24,6 +24,7 @@ import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import static edu.upf.taln.textplanning.common.FileUtils.getFilesInFolder;
+import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
 
 public class RankingEvaluation
@@ -36,7 +37,7 @@ public class RankingEvaluation
 	private static final POS.Tagset tagset = POS.Tagset.Simple;
 	private final static Logger log = LogManager.getLogger();
 
-	public static void run(Path gold_folder, Path xml_file, InitialResourcesFactory resources_factory)
+	public static void run(Path gold_file, Path xml_file, InitialResourcesFactory resources_factory)
 	{
 		final Options options = new Options();
 		options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
@@ -52,16 +53,13 @@ public class RankingEvaluation
 		// Evaluate these Tag tags only
 		Set<POS.Tag> evaluate_POS = Set.of(POS.Tag.NOUN); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
 
-		final Map<String, Set<AlternativeMeanings>> gold = parseGoldMeanings(gold_folder);
+		final Map<String, AlternativeMeanings> gold = parseGoldFile(gold_file);
 		final Corpus corpus = EvaluationCorpus.createFromXML(xml_file);
 		EvaluationTools.createResources(corpus, tagset, resources_factory, max_span_size, rank_together, excluded_mention_POS, options);
 		assert gold.size() == corpus.texts.size();
 
-		EvaluationTools.rankMeanings(corpus, options);
-		EvaluationTools.disambiguate(corpus);
-
-//		final Path disamb_file = resources_path.resolve("meanings_" + language.toLanguageTag() + ".txt");
-//		EvaluationTools.writeDisambiguatedResultsToFile(corpus, disamb_file);
+		corpus.texts.forEach(text -> EvaluationTools.rankMeanings(text, options));
+		corpus.texts.forEach(text -> EvaluationTools.disambiguate(text, options));
 
 		log.info("\n********************************");
 		{
@@ -92,86 +90,24 @@ public class RankingEvaluation
 		}
 		log.info("********************************\n");
 
-		final Map<String, Set<String>> gold_meanings = gold.entrySet().stream()
-				.collect(toMap(Map.Entry::getKey, e -> e.getValue().stream()
-						.flatMap(a -> a.alternatives.stream())
-						.collect(toSet())));
-		EvaluationTools.printMeaningRankings(corpus, gold_meanings, false, evaluate_POS);
+		EvaluationTools.printMeaningRankings(corpus, gold, false, evaluate_POS);
 	}
 
-	private static Map<String, Set<AlternativeMeanings>> parseGoldMeanings(Path gold_folder)
+	private static Map<String, AlternativeMeanings> parseGoldFile(Path gold_file)
 	{
-		log.info("Parsing gold_meanings files");
-		final File[] gold_files = getFilesInFolder(gold_folder, gold_suffix);
-		assert gold_files != null;
-
-		final List<List<String>> lines = Arrays.stream(gold_files)
-				.sorted(Comparator.comparing(File::getName))
-				.map(File::toPath)
-				.map(FileUtils::readTextFile)
-				.map(text ->
-						Pattern.compile("\n+").splitAsStream(text)
-								.filter(l -> !l.isEmpty())
-								.collect(toList()))
-				.collect(toList());
-
-//		final Predicate<String> is_meta = Pattern.compile("^@").asPredicate();
-//		final List<String> summaries = lines.stream()
-//				.map(f -> f.stream()
-//						.filter(not(is_meta))
-//						.collect(joining(" .\n")))
-//				.collect(toList());
-		final String doc_regex = "@text\\s+(d\\d{3})";
-		final Pattern doc_pattern = Pattern.compile(doc_regex);
-		final Predicate<String> is_doc = doc_pattern.asPredicate();
-
-		final List<String> doc_ids = lines.stream()
-				.map(doc_lines -> doc_lines.stream()
-						.filter(is_doc)
-						.findFirst()
-						.map(doc_pattern::matcher)
-						.filter(Matcher::matches)
-						.map(m -> m.group(1))
-						.orElseThrow())
-				.collect(toList());
-
-		final String regex = "(bn:\\d{8}[r|a|v|n](\\|bn:\\d{8}[r|a|v|n])*)-\"([^\"]+)\"";
-		final Pattern pattern = Pattern.compile(regex);
-		final Predicate<String> is_meanings = pattern.asPredicate();
-
-		final List<Set<AlternativeMeanings>> gold_meanings = lines.stream()
-				.map(doc_lines -> doc_lines.stream()
-						.filter(is_meanings)
-						.map(pattern::matcher)
-						.map(m ->
-						{
-							final List<AlternativeMeanings> meanings = new ArrayList<>();
-							while (m.find())
-							{
-								final String meanings_string = m.group(1);
-								final String[] meanings_parts = meanings_string.split("\\|");
-								final Set<String> alternatives = Arrays.stream(meanings_parts)
-										.map(p -> p.startsWith("\"") && p.endsWith("\"") ? p.substring(1, p.length() - 1) : p)
-										.collect(toSet());
-								final String covered_text = m.group(3);
-								meanings.add(new AlternativeMeanings(alternatives, covered_text));
-							}
-
-							return meanings;
-						})
-						.flatMap(List::stream)
-						.collect(toSet()))
-				.collect(toList());
-
-		log.info(gold_meanings.stream()
-				.flatMap(Set::stream)
-				.mapToLong(l -> l.alternatives.size())
-				.sum() + " meanings read from gold_meanings");
-
-		return IntStream.range(0, doc_ids.size())
-				.boxed()
-				.collect(toMap(doc_ids::get, gold_meanings::get));
+		log.info("Parsing gold file");
+		return Arrays.stream(FileUtils.readTextFile(gold_file).split("\n"))
+				.filter(not(String::isEmpty))
+				.filter(l -> !l.startsWith("@text"))
+				.map(l -> l.split("\t"))
+				.filter(a -> a.length == 4)
+				.map(a -> Arrays.stream(a).map(String::trim).collect(toList()))
+				.collect(toMap(
+						a -> a.get(0).equals(a.get(1)) ? a.get(0) : a.get(0) + "-" + a.get(1),
+						a ->  new AlternativeMeanings(Arrays.asList(a.get(2).split("\\|")),
+								a.get(3).substring(1, a.get(3).length() -1), a.get(0), a.get(1))));
 	}
+
 
 	private static Map<String, List<Meaning>> randomRank(Corpus corpus)
 	{
@@ -243,13 +179,15 @@ public class RankingEvaluation
 				}));
 	}
 
-	private static double evaluate(Map<String, List<Meaning>> system, Map<String, Set<AlternativeMeanings>> gold, Set<POS.Tag> eval_POS)
+	private static double evaluate(Map<String, List<Meaning>> system, Map<String, AlternativeMeanings> gold, Set<POS.Tag> eval_POS)
 	{
 		List<Double> avg_precisions = new ArrayList<>();
 		system.forEach((text_id, meanings) ->
 		{
 			final List<String> system_set = meanings.stream().map(Meaning::getReference).collect(toList());
-			final Set<String> gold_set = gold.get(text_id).stream()
+			final Set<String> gold_set = gold.keySet().stream()
+					.filter(id -> id.startsWith(text_id + "."))
+					.map(gold::get)
 					.flatMap(a -> a.alternatives.stream())
 					.collect(toSet());
 

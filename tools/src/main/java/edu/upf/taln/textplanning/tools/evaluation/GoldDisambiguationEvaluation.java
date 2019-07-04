@@ -24,25 +24,19 @@ import static java.util.stream.Collectors.toMap;
 public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 {
 	private final Corpus corpus;
-	final Map<String, AlternativeMeanings> gold;
 	private final Options options = new Options();
-	private final Set<POS.Tag> evaluate_POS;
-	private final static Logger log = LogManager.getLogger();
-
+	final Map<String, AlternativeMeanings> gold;
+	private final Set<POS.Tag> eval_POS;
 	private static final int max_span_size = 3;
 	private static final boolean multiwords_only = false;
-	private static final String noun_pos_tag = "N";
-	private static final String adj_pos_tag = "J";
-	private static final String verb_pos_tag = "V";
-	private static final String adverb_pos_tag = "R";
-	private static final String other_pos_tag = "X";
+	private final static Logger log = LogManager.getLogger();
 
 	public GoldDisambiguationEvaluation(Path gold_file, Path xml_file, InitialResourcesFactory resources_factory)
 	{
 		this.options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
 		this.options.min_bias_threshold = 0.7; // minimum bias value below which candidate meanings are ignored
 		this.options.num_first_meanings = 1;
-		this.options.sim_threshold = 0.0; // Pairs of meanings with sim below this value have their score set to 0
+		this.options.sim_threshold = 0.8; // Pairs of meanings with sim below this value have their score set to 0
 		this.options.damping_meanings = 0.5; // controls balance between bias and similarity: higher value -> more bias
 
 		// Exclude Tag from mention collection
@@ -50,10 +44,10 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 		// Include these Tag in the ranking of meanings
 		options.ranking_POS_Tags = Set.of(POS.Tag.NOUN, POS.Tag.ADJ, POS.Tag.VERB, POS.Tag.ADV);
 		// Evaluate these Tag tags only
-		this.evaluate_POS = Set.of(POS.Tag.ADV); //noun_pos_tag, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+		this.eval_POS = Set.of(POS.Tag.NOUN, POS.Tag.ADJ, POS.Tag.VERB, POS.Tag.ADV);
 
 		this.corpus = EvaluationCorpus.createFromXML(xml_file);
-		EvaluationTools.createResources(corpus, tagset, resources_factory, max_span_size, true, excluded_mention_POS, options);
+		EvaluationTools.createResources(corpus, tagset, resources_factory, max_span_size, false, excluded_mention_POS, options);
 		this.gold = parseGoldFile(gold_file);
 
 		// Check gold anns
@@ -96,10 +90,8 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 				.distinct()
 				.forEach(m -> {
 					final AlternativeMeanings meanings = gold.get(m.getContextId());
-					if (meanings == null)
-						log.info("\tMention " + m + " not in gold");
-					else if (!m.getSurfaceForm().equalsIgnoreCase(meanings.text))
-						log.info("\tMention from XML: " + m.getSurfaceForm() + " doesn't match mention from gold: " + meanings.text);
+					if (meanings != null && !(m.getSurfaceForm().equalsIgnoreCase(meanings.text) || m.getLemma().equalsIgnoreCase(meanings.text)))
+						log.info("\tMention from XML: " + m.getSurfaceForm() + "/" + m.getLemma() + " doesn't match mention from gold: " + meanings.text);
 				});
 	}
 
@@ -126,7 +118,7 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 	}
 
 	@Override
-	protected Set<POS.Tag> getEvaluatePOS() { return evaluate_POS; }
+	protected Set<POS.Tag> getEvaluatePOS() { return eval_POS; }
 
 	@Override
 	protected boolean evaluateMultiwordsOnly()
@@ -138,10 +130,10 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 	protected void evaluate(List<Candidate> candidates, String sufix)
 	{
 		Predicate<AlternativeMeanings> filter_by_POS = a ->
-				(a.alternatives.stream().anyMatch(m -> m.endsWith("n")) && evaluate_POS.contains(noun_pos_tag)) ||
-				(a.alternatives.stream().anyMatch(m -> m.endsWith("v")) && evaluate_POS.contains(verb_pos_tag)) ||
-				(a.alternatives.stream().anyMatch(m -> m.endsWith("a")) && evaluate_POS.contains(adj_pos_tag)) ||
-				(a.alternatives.stream().anyMatch(m -> m.endsWith("r")) && evaluate_POS.contains(adverb_pos_tag));
+				(a.alternatives.stream().anyMatch(m -> m.endsWith("n")) && eval_POS.contains(POS.Tag.NOUN)) ||
+				(a.alternatives.stream().anyMatch(m -> m.endsWith("v")) && eval_POS.contains(POS.Tag.VERB)) ||
+				(a.alternatives.stream().anyMatch(m -> m.endsWith("a")) && eval_POS.contains(POS.Tag.ADJ)) ||
+				(a.alternatives.stream().anyMatch(m -> m.endsWith("r")) && eval_POS.contains(POS.Tag.ADV));
 
 		// Determine the actual subset of the gold to be used in the evaluation
 		final Map<String, Set<String>> evaluated_gold = new HashMap<>();
@@ -164,7 +156,7 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 		{
 			final Mention mention = candidate.getMention();
 			if (    (multiwords_only && mention.isMultiWord()) ||
-					(!multiwords_only && evaluate_POS.contains(mention.getPOS())))
+					(!multiwords_only && eval_POS.contains(mention.getPOS())))
 			{
 				system.put(mention.getContextId(), candidate.getMeaning().getReference());
 			}
@@ -188,7 +180,7 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 		double precision = (double)true_positives.size() / (double)(true_positives.size() + false_positives.size());
 		double recall = (double)true_positives.size() / (double)(true_positives.size() + false_negatives.size());
 		double fscore = 2.0*(precision * recall) / (precision + recall);
-		log.info("\tEvaluated Tag : " + evaluate_POS);
+		log.info("\tEvaluated Tag : " + eval_POS);
 		log.info("\tPrecision = " + DebugUtils.printDouble(precision, 2));
 		log.info("\tRecall = " + DebugUtils.printDouble(recall, 2));
 		log.info("\tF1 score = " + DebugUtils.printDouble(fscore, 2));

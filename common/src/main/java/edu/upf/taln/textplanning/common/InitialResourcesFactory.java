@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.common;
 
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
+import edu.upf.taln.textplanning.babelnet.BabelNetDictionary;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.*;
@@ -48,7 +49,7 @@ public class InitialResourcesFactory
 		this.language = language;
 		this.properties = properties;
 
-		if (properties.getDictionaryCache() != null)
+		if (properties.getDictionaryCache() != null && !properties.getDictionaryCache().toString().isEmpty())
 		{
 			if (Files.exists(properties.getDictionaryCache()))
 				cache = (CompactDictionary) Serializer.deserialize(properties.getDictionaryCache());

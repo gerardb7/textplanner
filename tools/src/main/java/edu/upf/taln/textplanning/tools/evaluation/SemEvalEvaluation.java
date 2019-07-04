@@ -32,11 +32,6 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 	private final int max_span_size = 3;
 	private final boolean rank_together = false;
 	private boolean exclude_multiwords = false;
-	private static final String noun_pos_tag = "N";
-	private static final String adj_pos_tag = "J";
-	private static final String verb_pos_tag = "V";
-	private static final String adverb_pos_tag = "R";
-	private static final String other_pos_tag = "X";
 	private static final ULocale language = ULocale.ENGLISH;
 	private final static Logger log = LogManager.getLogger();
 
@@ -51,7 +46,7 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 		// Exclude Tag from mention collection
 		final Set<POS.Tag> excluded_mention_POS = Set.of(POS.Tag.X);
 		// Include these Tag in the ranking of meanings
-		options.ranking_POS_Tags = Set.of(POS.Tag.NOUN); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+		options.ranking_POS_Tags = Set.of(POS.Tag.NOUN); //, POS.Tag.ADJ, POS.Tag.VERB, POS.Tag.ADV);
 		// Evaluate these Tag tags only
 		this.eval_POS = Set.of(POS.Tag.NOUN, POS.Tag.ADJ, POS.Tag.VERB, POS.Tag.ADV);
 

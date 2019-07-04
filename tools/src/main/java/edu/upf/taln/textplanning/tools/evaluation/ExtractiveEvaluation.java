@@ -44,11 +44,11 @@ public class ExtractiveEvaluation
 		Stopwatch gtimer = Stopwatch.createStarted();
 		final Options options = new Options();
 		options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
-		options.min_bias_threshold = 0.8; // minimum bias value below which candidate meanings are ignored
+		options.min_bias_threshold = 0.7; // minimum bias value below which candidate meanings are ignored
 		options.num_first_meanings = 1;
 		options.sim_threshold = 0.8; // Pairs of meanings with sim below this value have their score set to 0
-		options.damping_meanings = 0.5; // controls balance between bias and similarity: higher value -> more bias
-		options.damping_variables = 0.8; // controls bias towards meanings rank when ranking variables
+		options.damping_meanings = 0.4; // controls balance between bias and similarity: higher value -> more bias
+		options.damping_variables = 0.2; // controls bias towards meanings rank when ranking variables
 
 		// Exclude Tag from mention collection
 		final Set<POS.Tag> excluded_mention_POS = Set.of(POS.Tag.X);
@@ -83,7 +83,7 @@ public class ExtractiveEvaluation
 
 				EvaluationTools.createResources(text, tagset, resources_factory, max_span_size, excluded_mention_POS, true, options);
 				EvaluationTools.rankMeanings(text, options);
-				EvaluationTools.disambiguate(text);
+				EvaluationTools.disambiguate(text, options);
 				EvaluationTools.rankMentions(text, options);
 				EvaluationTools.plan(text, options);
 				text.resources = null; // free memory!

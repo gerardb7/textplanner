@@ -15,7 +15,13 @@ import static java.util.stream.Collectors.*;
 
 public class Disambiguation
 {
+	private final double lambda; // penalizes shorter mentions. Value in range [0..1]. 0 -> always choose longest span. 1 -> always choose shortest span. 0.5 strictly prefer span with highest weight
 	private final static Logger log = LogManager.getLogger();
+
+	public Disambiguation(double lambda)
+	{
+		this.lambda = lambda;
+	}
 
 	private final static BiPredicate<Mention, Mention> spans_over =
 			(m1, m2) -> m1.getSourceId().equals(m2.getSourceId()) &&
@@ -23,14 +29,14 @@ public class Disambiguation
 						m1.getSpan().getRight() >= m2.getSpan().getRight();
 
 
-	public static Map<Mention, Candidate> disambiguate(List<Candidate> candidates)
+	public Map<Mention, Candidate> disambiguate(List<Candidate> candidates)
 	{
 		// Uses default weight-based strategies for mention and candidate selection
 		Set<Mention> selected_mentions = selectMaxWeightMentions(candidates);
 		return disambiguate(candidates, selected_mentions::contains, Disambiguation::selectMaxWeightCandidate);
 	}
 
-	public static Map<Mention, Candidate> disambiguate(List<Candidate> candidates,
+	public Map<Mention, Candidate> disambiguate(List<Candidate> candidates,
 	                                                   Function<List<Candidate>, Optional<Candidate>> candidate_selector)
 	{
 		// Uses default weight-based strategies for mention and candidate selection
@@ -38,9 +44,9 @@ public class Disambiguation
 		return disambiguate(candidates, selected_mentions::contains, candidate_selector);
 	}
 
-	public static Map<Mention, Candidate> disambiguate(List<Candidate> candidates,
-	                                                   Predicate<Mention> mention_selector,
-	                                                   Function<List<Candidate>, Optional<Candidate>> candidate_selector)
+	public Map<Mention, Candidate> disambiguate(List<Candidate> candidates,
+	                                            Predicate<Mention> mention_selector,
+	                                            Function<List<Candidate>, Optional<Candidate>> candidate_selector)
 	{
 		// filter candidates by mention
 		final List<Candidate> filtered_candidates = candidates.stream()
@@ -59,7 +65,7 @@ public class Disambiguation
 	}
 
 	// Default strategy for mention selection
-	private static Set<Mention> selectMaxWeightMentions(List<Candidate> candidates)
+	private Set<Mention> selectMaxWeightMentions(List<Candidate> candidates)
 	{
 		final List<Mention> mentions = candidates.stream()
 				.map(Candidate::getMention)
@@ -88,7 +94,15 @@ public class Disambiguation
 						.collect(toList())));
 
 		// Select mentions which don't have any subsumer or subsumed mention with a higher weight
-		BiPredicate<Mention, Mention> weights_more = (m1, m2) -> mentions2weights.get(m1) > mentions2weights.get(m2);
+		BiPredicate<Mention, Mention> weights_more = (m1, m2) -> {
+			if (m1.numTokens() == m2.numTokens())
+				return mentions2weights.get(m1) > mentions2weights.get(m2);
+			else if (m1.numTokens() > m2.numTokens())
+				return (1.0 - lambda) * mentions2weights.get(m1) > lambda * mentions2weights.get(m2);
+			else //if (m1.numTokens() < m2.numTokens())
+				return (1.0 - lambda) * mentions2weights.get(m2) > lambda * mentions2weights.get(m1);
+		};
+
 		final Map<Mention, List<Mention>> top_mentions = mentions.stream()
 				.filter(m1 -> mentions2subsumed.get(m1).stream().allMatch(m2 -> weights_more.test(m1, m2)))
 				.filter(m1 -> mentions2subsumers.get(m1).stream().noneMatch(m2 -> weights_more.test(m2, m1)))
@@ -103,7 +117,7 @@ public class Disambiguation
 		return candidates.stream().max(Comparator.comparingDouble(c -> c.getWeight().orElse(0.0)));
 	}
 
-	private static Map<Mention, Candidate> selectCandidates(List<Candidate> candidates,
+	private Map<Mention, Candidate> selectCandidates(List<Candidate> candidates,
 	                                                        Function<List<Candidate>, Optional<Candidate>> selector)
 	{
 		final Map<Mention, List<Candidate>> mentions2candidates = candidates.stream()

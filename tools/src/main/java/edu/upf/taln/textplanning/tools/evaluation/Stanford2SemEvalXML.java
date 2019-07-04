@@ -118,9 +118,13 @@ public class Stanford2SemEvalXML
 
 	public static void main(String[] args) throws Exception
 	{
-		final Path docs_in = Paths.get("/home/gerard/ownCloud/Feina/tensor/tensor_evaluation/reference");
-		final Path doc_out = Paths.get("/home/gerard/ownCloud/Feina/tensor/tensor_evaluation/temp/input.xml");
+//		final Path docs_in = Paths.get("/home/gerard/ownCloud/Feina/tensor/tensor_evaluation/reference");
+//		final Path doc_out = Paths.get("/home/gerard/ownCloud/Feina/tensor/tensor_evaluation/temp/input.xml");
+//		final String texts_suffix = "txt";
+		final Path docs_in = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_annotated/reference");
+		final Path doc_out = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_annotated/input_summaries.xml");
+		final String texts_suffix = "summ";
 		final Stanford2SemEvalXML converter = new Stanford2SemEvalXML();
-		converter.convert(docs_in, "txt", doc_out);
+		converter.convert(docs_in, texts_suffix, doc_out);
 	}
 }

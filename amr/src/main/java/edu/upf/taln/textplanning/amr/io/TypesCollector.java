@@ -66,7 +66,7 @@ class TypesCollector
 		refs2query.forEach(r -> {
 			try
 			{
-				List<String> dbPediaURIs  = ((BabelNetDictionary) dictionary).getdbPediaURIs(r);
+				List<String> dbPediaURIs  = List.of();//((BabelNet4Dictionary) dictionary).getdbPediaURIs(r);
 				Candidate.Type t = Candidate.Type.Other;
 				if (!dbPediaURIs.isEmpty())
 				{

@@ -305,7 +305,7 @@ public class EmpiricalStudy
 
 	public static void processText(String text, Path output, Path bn_config_folder) throws IOException
 	{
-		final MeaningDictionary bn = new BabelNetDictionary(bn_config_folder, false);
+		final MeaningDictionary bn = null; //new BabelNet4Dictionary(bn_config_folder, false);
 
 		log.info("Setting up Stanford CoreNLP");
 		Properties props = new Properties();

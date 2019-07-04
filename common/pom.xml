@@ -24,25 +24,15 @@
             </exclusions>
         </dependency>
         <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>BabelNet3.7</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <!--command line helper-->
             <groupId>com.beust</groupId>
             <artifactId>jcommander</artifactId>
             <version>1.58</version>
-        </dependency>
-        <dependency>
-            <groupId>it.uniroma1.lcl.babelnet</groupId>
-            <artifactId>babelnet-api</artifactId>
-            <version>4.0.1</version>
-        </dependency>
-        <dependency>
-            <groupId>it.uniroma1.lcl.jlt</groupId>
-            <artifactId>jlt</artifactId>
-            <version>2.4</version>
-        </dependency>
-        <dependency>
-            <groupId>com.babelscape</groupId>
-            <artifactId>babelscape-data-commons</artifactId>
-            <version>1.0</version>
         </dependency>
     </dependencies>
 </project>

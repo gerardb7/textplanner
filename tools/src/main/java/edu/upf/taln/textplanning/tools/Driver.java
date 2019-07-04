@@ -77,8 +77,8 @@ public class Driver
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		private Path input_file;
 		@Parameter(names = {"-g", "-gold"}, description = "Path to gold file", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path gold_folder;
+				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
+		private Path gold_file;
 	}
 
 	@SuppressWarnings("unused")
@@ -173,7 +173,7 @@ public class Driver
 			{
 				PlanningProperties properties = new PlanningProperties(rankEval.properties);
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
-				RankingEvaluation.run(rankEval.gold_folder, rankEval.input_file, resources);
+				RankingEvaluation.run(rankEval.gold_file, rankEval.input_file, resources);
 				break;
 			}
 			case extract_eval_command:

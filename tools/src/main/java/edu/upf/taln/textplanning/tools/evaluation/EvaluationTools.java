@@ -224,19 +224,20 @@ public class EvaluationTools
 		TextPlanner.rankMeanings(candidates, candidates_filter, similarity_filter, bias, similarity, options);
 	}
 
-	public static void disambiguate(EvaluationCorpus.Corpus corpus)
+	public static void disambiguate(EvaluationCorpus.Corpus corpus, Options options)
 	{
-		corpus.texts.forEach(EvaluationTools::disambiguate);
+		corpus.texts.forEach(t -> disambiguate(t, options));
 	}
 
-	public static void disambiguate(EvaluationCorpus.Text text)
+	public static void disambiguate(EvaluationCorpus.Text text, Options options)
 	{
 		final List<Candidate> candidates = text.sentences.stream()
 				.flatMap(sentence -> sentence.candidates.values().stream()
 						.flatMap(Collection::stream))
 				.collect(toList());
 
-		final Map<Mention, Candidate> disambiguated = Disambiguation.disambiguate(candidates);
+		Disambiguation disambiguation = new Disambiguation(options.disambiguation_lambda);
+		final Map<Mention, Candidate> disambiguated = disambiguation.disambiguate(candidates);
 		disambiguated.forEach((m, c) -> text.sentences.stream()
 				.filter(s -> s.id.equals(m.getSourceId()))
 				.findFirst()
@@ -317,13 +318,18 @@ public class EvaluationTools
 				.collect(toList());
 	}
 
-	public static void printMeaningRankings(EvaluationCorpus.Corpus corpus, Map<String, Set<String>> gold, boolean multiwords_only, Set<POS.Tag> eval_POS)
+	public static void printMeaningRankings(EvaluationCorpus.Corpus corpus, Map<String, AlternativeMeanings> gold, boolean multiwords_only, Set<POS.Tag> eval_POS)
 	{
 		IntStream.range(0, corpus.texts.size()).forEach(i ->
 		{
 			log.info("TEXT " + i);
 			final EvaluationCorpus.Text text = corpus.texts.get(i);
-			final Set<String> text_gold = gold.get(text.id);
+			final Set<String> text_gold = gold.keySet().stream()
+					.filter(id -> id.startsWith(text.id + "."))
+					.map(gold::get)
+					.flatMap(a -> a.alternatives.stream())
+					.collect(toSet());
+
 
 			final int max_length = text.sentences.stream()
 					.flatMap(s -> s.candidates.values().stream())

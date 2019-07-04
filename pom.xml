@@ -27,6 +27,8 @@
         <module>uima-dsynt</module>
         <module>tools</module>
         <module>optimization</module>
+        <module>BabelNet3.7</module>
+        <module>BabelNet4.0.1</module>
     </modules>
 
     <dependencies>

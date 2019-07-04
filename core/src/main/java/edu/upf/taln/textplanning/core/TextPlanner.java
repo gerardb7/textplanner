@@ -179,7 +179,7 @@ public final class TextPlanner
 		log.info("*Extracting subgraphs*");
 		Stopwatch timer = Stopwatch.createStarted();
 
-		Explorer explorer = new RequirementsExplorer(semantics, true, Explorer.ExpansionPolicy.Non_core_only);
+		Explorer explorer = new RequirementsExplorer(semantics, false, Explorer.ExpansionPolicy.Non_core_only);
 		Policy start_policy = o.start_policy == Policy.Type.ArgMax ? new ArgMaxPolicy() : new SoftMaxPolicy(o.softmax_temperature);
 		Policy expand_policy = o.start_policy == Policy.Type.ArgMax ? new ArgMaxPolicy() : new SoftMaxPolicy(o.softmax_temperature);
 		SubgraphExtraction extractor = new SubgraphExtraction(explorer, start_policy, expand_policy, Math.min(o.num_subgraphs_extract, o.extraction_lambda));
@@ -197,7 +197,7 @@ public final class TextPlanner
 		log.info("*Extracting subgraphs*");
 		Stopwatch timer = Stopwatch.createStarted();
 
-		Explorer explorer = new SingleVertexExplorer(true, Explorer.ExpansionPolicy.All);
+		Explorer explorer = new SingleVertexExplorer(false, Explorer.ExpansionPolicy.All);
 		Policy start_policy = o.start_policy == Policy.Type.ArgMax ? new ArgMaxPolicy() : new SoftMaxPolicy(o.softmax_temperature);
 		Policy expand_policy = o.start_policy == Policy.Type.ArgMax ? new ArgMaxPolicy() : new SoftMaxPolicy(o.softmax_temperature);
 		SubgraphExtraction extractor = new SubgraphExtraction(explorer, start_policy, expand_policy, o.extraction_lambda);
