@@ -148,7 +148,7 @@ public class AMRWriter implements DocumentWriter
 				.mapToObj(i -> "\t")
 				.collect(Collectors.joining());
 
-		final String[] tokens = m.getSurface_form().split(" ");
+		final String[] tokens = m.getSurfaceForm().split(" ");
 		final String names = IntStream.range(0, tokens.length)
 				.mapToObj(i -> tabs + AMRSemantics.op + (i + 1) + " \"" + tokens[i] + "\"")
 				.collect(Collectors.joining("\n"));

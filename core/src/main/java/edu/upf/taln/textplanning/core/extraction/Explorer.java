@@ -1,35 +1,33 @@
 package edu.upf.taln.textplanning.core.extraction;
 
-import com.google.common.collect.Sets;
-import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.io.GraphSemantics;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.Role;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
+import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import static java.util.function.Predicate.not;
 
 public abstract class Explorer
 {
-	public static class State
-	{
-		public final String root; // root vertex
-		public final String source; // source/sentence of the root (vertices can have multiple sources)
-		public final Set<String> vertices = new HashSet<>(); // selected vertices, including the root
-		public State(String root, String source, Set<String> vertices)
-		{
-			this.root = root;
-			this.source = source;
-			this.vertices.addAll(vertices);
-			this.vertices.add(this.root);
-		}
-	}
-
 	protected static class Neighbour
 	{
-		public final String vertex;
+		public final String node;
 		public final Role edge;
-		public Neighbour(String vertex, Role edge) { this.vertex = vertex; this.edge = edge; }
+		public Neighbour(String node, Role edge)
+		{
+			this.node = node;
+			this.edge = edge;
+		}
 	}
 
 	public enum ExpansionPolicy
@@ -46,7 +44,7 @@ public abstract class Explorer
 		this.policy = policy;
 	}
 
-	public List<State> getStartStates(SemanticGraph g)
+	public List<SemanticSubgraph> getStartStates(SemanticGraph g)
 	{
 		final Set<String> start_vertices = new HashSet<>();
 		if (start_from_verbs)
@@ -60,29 +58,36 @@ public abstract class Explorer
 
 		return start_vertices.stream()
 				.flatMap(v -> g.getSources(v).stream()
-						.map(source -> new State(v, source, Collections.singleton(v))) // Create initial state
-						.map(state -> new State(state.root, state.source, getRequiredVertices(v, state, g)))
-						)
+						.map(source -> new SemanticSubgraph(g, v, Set.of(v), Set.of(), 0)))
 				.distinct()
 				.collect(Collectors.toList());
 	}
 
-	public List<State> getNextStates(State s, SemanticGraph g)
+	public static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor){
+		Set<Object> seen = ConcurrentHashMap.newKeySet();
+		return t -> seen.add(keyExtractor.apply(t));
+	}
+
+	public List<SemanticSubgraph> getNextStates(SemanticSubgraph s, SemanticGraph g)
 	{
-		return s.vertices.stream()
-				.map(v -> getNeighboursAndRoles(v, g))
+		return s.vertexSet().stream()
+				.map(v -> getNeighbours(v, s))
 				.flatMap(Set::stream)
-				.filter(n -> isAllowed(n, s, g))
-				.map(n -> getRequiredVertices(n.vertex, s, g))
-				.map(r -> Sets.union(r, s.vertices)) // each candidate extends 'vertices'
-				.distinct()
-				.map(r -> new State(s.root, s.source, r))
+				.filter(n -> isAllowed(n, s))
+				.map(n -> getExtendedSubgraph(n, s))
+				.filter(distinctByKey(SemanticSubgraph::vertexSet)) // See SemanticSubgraph and jGraphT AbstractGraph implementations of equals
 				.collect(Collectors.toList());
 	}
 
-	protected Set<Neighbour> getNeighboursAndRoles(String v, SemanticGraph g)
+	// Given a subgraph s o a graph g, returns neighbours of a vertex v of s.
+	// A neighbour n must satisfy the following:
+	//  1- be connected to v via an edge e in g but not in s
+	//  2- not be part of s
+	protected Set<Neighbour> getNeighbours(String v, SemanticSubgraph s)
 	{
+		final SemanticGraph g = s.getBase();
 		return g.edgesOf(v).stream()
+				.filter(not(s::containsEdge)) // avoid visited edges
 				.map(e ->
 				{
 					String source_v = g.getEdgeSource(e);
@@ -90,27 +95,33 @@ public abstract class Explorer
 					return source_v.equals(v)   ? new Neighbour(target_v, e)
 												: new Neighbour(source_v, e);
 				})
+				.filter(n -> !s.containsVertex(n.node)) // avoid loops and cycles
 				.collect(Collectors.toSet());
 	}
 
-	protected boolean isAllowed(Neighbour n, State s, SemanticGraph g)
+	// What neighbours are allowed for expanding a subgraph?
+	protected boolean isAllowed(Neighbour n, SemanticSubgraph s)
 	{
-		boolean allow = !s.vertices.contains(n.vertex);
+		final SemanticGraph g = s.getBase();
+		final Collection<String> root_sources = g.getSources(s.getRoot());
+		final Set<String> n_sources = g.getSources(n.node);
+		final boolean same_source = n_sources.stream().anyMatch(root_sources::contains);
+
 		switch (policy)
 		{
 			case Same_source:
-				return allow && g.getSources(n.vertex).contains(s.source);
+				return same_source;
 			case Non_core_only:
-				return allow && (g.getSources(n.vertex).contains(s.source) ||
+				return same_source ||
 						// Allow neighbours pointed by non-core relations
-						(!semantics.isCore(n.edge.getLabel()) && g.getEdgeTarget(n.edge).equals(n.vertex)));
+						(!semantics.isCore(n.edge.getLabel()) && g.getEdgeTarget(n.edge).equals(n.node));
 			case All:
 			default:
-				return allow;
+				return true;
 		}
 	}
 
-	protected abstract Set<String> getRequiredVertices(String v, State s, SemanticGraph g);
+	protected abstract SemanticSubgraph getExtendedSubgraph(Neighbour n, SemanticSubgraph s);
 
 	// returns list of verbal vertices sorted by weight
 	private static Set<String> getVerbalVertices(SemanticGraph g)

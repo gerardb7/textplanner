@@ -111,10 +111,10 @@ public class SemanticGraph extends SimpleDirectedGraph<String, Role> implements 
 
 	public Optional<Meaning> getMeaning(String v) { return Optional.ofNullable(meanings.get(v)); }
 	public void setMeaning(String v, Meaning m) { meanings.put(v, m); }
-	public Collection<Mention> getMentions(String v) { return mentions.get(v); }
+	public Set<Mention> getMentions(String v) { return Set.copyOf(mentions.get(v)); }
 	public void addMention(String v, Mention m) { mentions.put(v, m); }
-	public Collection<String> getSources(String v) { return sources.get(v); }
+	public Set<String> getSources(String v) { return Set.copyOf(sources.get(v)); }
 	public void addSource(String v, String s) { sources.put(v, s); }
-	public Collection<String> getTypes(String v) { return types.get(v); }
+	public Set<String> getTypes(String v) { return Set.copyOf(types.get(v)); }
 	public void addType(String v, String t) { types.put(v, t); }
 }

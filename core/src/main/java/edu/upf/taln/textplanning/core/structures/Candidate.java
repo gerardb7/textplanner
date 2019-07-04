@@ -42,7 +42,7 @@ public class Candidate implements Serializable
 	@Override
 	public String toString()
 	{
-		return mention.getSurface_form() + "-" + meaning;
+		return mention.getSurfaceForm() + "-" + meaning;
 	}
 
 	// Two candidates are the same if they have same vertex and meaning. Mentions are ignored!

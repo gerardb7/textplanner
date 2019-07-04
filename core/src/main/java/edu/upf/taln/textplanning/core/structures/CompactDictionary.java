@@ -44,7 +44,7 @@ public class CompactDictionary implements Serializable
 
 		public Entry(String form, char pos, List<String> meanings)
 		{
-			this.form = form;
+			this.form = form.replace(' ', '_');
 			this.pos = pos;
 			this.meanings = meanings;
 		}
@@ -78,8 +78,8 @@ public class CompactDictionary implements Serializable
 	private TIntIntMap meanings_hash_index = new TIntIntHashMap( 1000, 0.75f, -1, -1);
 	transient private ByteBuffer glosses_data = ByteBuffer.allocate(BUFFER_SIZE_STEP);
 	private final ULocale language;
-	private int num_added_forms = 0;
-	private int num_added_meanings = 0;
+	public int num_added_forms = 0;
+	public int num_added_meanings = 0;
 	private int meanings_position = 0; // used to keep buffer position when serializing
 	private int glosses_position = 0;
 	private final static long serialVersionUID = 1L;
@@ -330,7 +330,6 @@ public class CompactDictionary implements Serializable
 	private void writeObject(ObjectOutputStream out) throws IOException
 	{
 		log.info(num_added_forms + " forms and " + num_added_meanings + " meanings have been added to dictionary");
-
 		meanings_position = meanings_data.position();
 		glosses_position = glosses_data.position();
 
@@ -374,7 +373,7 @@ public class CompactDictionary implements Serializable
 		num_added_meanings = 0;
 
 		log.info("Dictionary cache loaded");
-		log.info("Dictionary contains " + forms_hash_index.size() + forms_index.size() + " forms and " +
-				meanings_hash_index.size() + meanings_index.size() + " meanings");
+		log.info("Dictionary contains " + (forms_hash_index.keySet().size() + forms_index.keySet().size()) + " forms and " +
+				(meanings_hash_index.keySet().size() + meanings_index.keySet().size()) + " meanings");
 	}
 }

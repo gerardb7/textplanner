@@ -7,6 +7,7 @@ import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A sequence of one or more consecutive tokens
@@ -17,23 +18,23 @@ public final class Mention implements Comparable<Mention>, Serializable
 	private final String context_id; // identifier from context, e.g. annotation id
 	private final String source_id; // Identifies context in which mention occurs, e.g. sentence, document, etc.
 	private final Pair<Integer, Integer> span; // Token-based offsets
-	private final String surface_form;
+	private final String surfaceForm;
 	private final String lemma;
 	private final POS.Tag pos; // POS tag
 	private final boolean isNE; // is NE
 	private final String type; // e.g. AMR concept label
 	private Double weight = null;
 	private final static long serialVersionUID = 1L;
-	private static int id_counter = 0;
+	private static AtomicInteger id_counter = new AtomicInteger(0);
 
-	public Mention(String context_id, String source_id, Pair<Integer, Integer> tokens_span, String surface_form, String lemma,
+	public Mention(String context_id, String source_id, Pair<Integer, Integer> tokens_span, String surfaceForm, String lemma,
 	               POS.Tag POS, boolean isNE, String type)
 	{
-		this.id = id_counter++;
+		this.id = id_counter.incrementAndGet();
 		this.context_id = context_id;
 		this.source_id = source_id;
 		this.span = tokens_span;
-		this.surface_form = surface_form;
+		this.surfaceForm = surfaceForm;
 		this.lemma = lemma;
 		this.pos = POS;
 		this.isNE = isNE;
@@ -44,7 +45,7 @@ public final class Mention implements Comparable<Mention>, Serializable
 	public String getContextId() { return context_id; }
 	public String getSourceId() { return source_id; }
 	public Pair<Integer, Integer> getSpan() { return span; }
-	public String getSurface_form() { return surface_form; }
+	public String getSurfaceForm() { return surfaceForm; }
 	public String getLemma() { return lemma; }
 	public POS.Tag getPOS() { return pos;}
 	public boolean isNE() { return isNE; }
@@ -66,11 +67,12 @@ public final class Mention implements Comparable<Mention>, Serializable
 	public boolean isNominal() { return pos == POS.Tag.NOUN; }
 	public boolean isVerbal() {	return pos == POS.Tag.VERB; }
 	public boolean isMultiWord() { return span.getRight() - span.getLeft() > 1; }
+	public int numTokens() {  return span.getRight() - span.getLeft(); }
 
 	@Override
 	public String toString()
 	{
-		return getId() + "_" + getContextId() + "_" + getSpan() + "_" + getSurface_form();
+		return getId() + "_" + getContextId() + "_" + getSpan() + "_" + getSurfaceForm();
 	}
 
 	@Override

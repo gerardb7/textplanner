@@ -54,9 +54,9 @@ public class CandidatesCollector
 				.collect(toSet())
 				.size();
 
-		log.info("\t\tCreated " + candidates.values().stream().mapToInt(List::size).sum() + " candidates with " + num_references +
+		log.info("Created " + candidates.values().stream().mapToInt(List::size).sum() + " candidates with " + num_references +
 				" distinct references for " + mentions.size() + " mentions");
-		log.info("\t\tCandidate meanings collected in " + timer.stop());
+		log.info("Candidate meanings collected in " + timer.stop());
 
 		return candidates;
 	}
@@ -96,7 +96,7 @@ public class CandidatesCollector
 	private static List<String> getReferences(MeaningDictionary dictionary, ULocale language, Mention mention)
 	{
 		// Use surface form of mention as label
-		String form = mention.getSurface_form();
+		String form = mention.getSurfaceForm();
 		String lemma = mention.getLemma();
 		POS.Tag pos = mention.getPOS();
 		// Lemma meanings first, sorted by dictionary criteria (BabelNet -> best sense)

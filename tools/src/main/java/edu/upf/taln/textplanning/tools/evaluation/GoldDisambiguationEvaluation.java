@@ -98,8 +98,8 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 					final AlternativeMeanings meanings = gold.get(m.getContextId());
 					if (meanings == null)
 						log.info("\tMention " + m + " not in gold");
-					else if (!m.getSurface_form().equalsIgnoreCase(meanings.text))
-						log.info("\tMention from XML: " + m.getSurface_form() + " doesn't match mention from gold: " + meanings.text);
+					else if (!m.getSurfaceForm().equalsIgnoreCase(meanings.text))
+						log.info("\tMention from XML: " + m.getSurfaceForm() + " doesn't match mention from gold: " + meanings.text);
 				});
 	}
 

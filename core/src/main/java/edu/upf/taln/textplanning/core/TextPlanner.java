@@ -179,11 +179,12 @@ public final class TextPlanner
 		log.info("*Extracting subgraphs*");
 		Stopwatch timer = Stopwatch.createStarted();
 
-		Explorer e = new RequirementsExplorer(semantics, true, Explorer.ExpansionPolicy.Non_core_only);
-		Policy p = new SoftMaxPolicy();
-		SubgraphExtraction extractor = new SubgraphExtraction(e, p, Math.min(o.num_subgraphs_extract, o.extraction_lambda));
+		Explorer explorer = new RequirementsExplorer(semantics, true, Explorer.ExpansionPolicy.Non_core_only);
+		Policy start_policy = o.start_policy == Policy.Type.ArgMax ? new ArgMaxPolicy() : new SoftMaxPolicy(o.softmax_temperature);
+		Policy expand_policy = o.start_policy == Policy.Type.ArgMax ? new ArgMaxPolicy() : new SoftMaxPolicy(o.softmax_temperature);
+		SubgraphExtraction extractor = new SubgraphExtraction(explorer, start_policy, expand_policy, Math.min(o.num_subgraphs_extract, o.extraction_lambda));
 		Collection<SemanticSubgraph> subgraphs = extractor.multipleExtraction(graph, o.num_subgraphs_extract);
-		log.info("Extraction done in " + timer.stop());
+		log.info("Extraction done in " + timer.stop() + "\n");
 
 		return subgraphs;
 	}
@@ -196,11 +197,12 @@ public final class TextPlanner
 		log.info("*Extracting subgraphs*");
 		Stopwatch timer = Stopwatch.createStarted();
 
-		Explorer e = new SingleVertexExplorer(true, Explorer.ExpansionPolicy.All);
-		Policy p = new SoftMaxPolicy();
-		SubgraphExtraction extractor = new SubgraphExtraction(e, p, Math.min(o.num_subgraphs_extract, o.extraction_lambda));
+		Explorer explorer = new SingleVertexExplorer(true, Explorer.ExpansionPolicy.All);
+		Policy start_policy = o.start_policy == Policy.Type.ArgMax ? new ArgMaxPolicy() : new SoftMaxPolicy(o.softmax_temperature);
+		Policy expand_policy = o.start_policy == Policy.Type.ArgMax ? new ArgMaxPolicy() : new SoftMaxPolicy(o.softmax_temperature);
+		SubgraphExtraction extractor = new SubgraphExtraction(explorer, start_policy, expand_policy, o.extraction_lambda);
 		Collection<SemanticSubgraph> subgraphs = extractor.multipleExtraction(graph, o.num_subgraphs_extract);
-		log.info("Extraction done in " + timer.stop());
+		log.info("Extraction done in " + timer.stop() + "\n");
 
 		return subgraphs;
 	}
@@ -217,7 +219,7 @@ public final class TextPlanner
 		SemanticTreeSimilarity tsim = new SemanticTreeSimilarity(similarity, o.tree_edit_lambda);
 		RedundancyRemover remover = new RedundancyRemover(tsim);
 		Collection<SemanticSubgraph> out_subgraphs = remover.filter(subgraphs, o.num_subgraphs);
-		log.info("Redundancy removal done in " + timer.stop());
+		log.info("Redundancy removal done in " + timer.stop() + "\n");
 
 		return out_subgraphs;
 	}
@@ -234,7 +236,7 @@ public final class TextPlanner
 		SemanticTreeSimilarity tsim = new SemanticTreeSimilarity(similarity, o.tree_edit_lambda);
 		DiscoursePlanner discourse = new DiscoursePlanner(tsim);
 		List<SemanticSubgraph> text_plan = discourse.structureSubgraphs(subgraphs);
-		log.info("Sorting done in " + timer.stop());
+		log.info("Sorting done in " + timer.stop() + "\n");
 
 		return text_plan;
 	}

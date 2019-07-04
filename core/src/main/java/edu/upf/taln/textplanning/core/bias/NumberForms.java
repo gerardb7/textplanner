@@ -23,7 +23,7 @@ public class NumberForms
 				.map(c -> Pair.of(c.getMeaning(), candidates.stream()
 						.filter(c2 -> c2.getMeaning().equals(c.getMeaning()))
 						.map(Candidate::getMention)
-						.map(Mention::getSurface_form)
+						.map(Mention::getSurfaceForm)
 						.distinct()
 						.count()))
 				.sorted(comparingLong(Pair<Meaning, Long>::getRight).reversed())

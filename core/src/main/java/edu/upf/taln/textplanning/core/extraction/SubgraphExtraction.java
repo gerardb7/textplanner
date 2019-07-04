@@ -1,14 +1,13 @@
 package edu.upf.taln.textplanning.core.extraction;
 
 import com.google.common.base.Stopwatch;
-import edu.upf.taln.textplanning.core.extraction.Explorer.State;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jgrapht.alg.ConnectivityInspector;
-import org.jgrapht.graph.AsSubgraph;
+import org.jgrapht.alg.CycleDetector;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,15 +21,17 @@ import java.util.stream.Collectors;
 public class SubgraphExtraction
 {
 	private final Explorer explorer;
-	private final Policy policy;
+	private final Policy start_policy;
+	private final Policy expand_policy;
 	private final double lambda;
 	private final static int max_num_extractions = 1000;
 	private final static Logger log = LogManager.getLogger();
 
-	public SubgraphExtraction(Explorer explorer, Policy policy, double lambda)
+	public SubgraphExtraction(Explorer explorer, Policy start_policy, Policy expand_policy, double lambda)
 	{
 		this.explorer = explorer;
-		this.policy = policy;
+		this.start_policy = start_policy;
+		this.expand_policy = expand_policy;
 		this.lambda = lambda;
 	}
 
@@ -59,17 +60,20 @@ public class SubgraphExtraction
 		return subgraphs;
 	}
 
+	// valid subgraphs must be connected and simple
 	private boolean isValid(SemanticSubgraph s)
 	{
-		// ignore unconnected graphs
-		return s != null && !s.edgeSet().isEmpty() && new ConnectivityInspector<>(s).isGraphConnected();
+		final boolean is_empty = s.vertexSet().isEmpty();
+		final boolean is_connected = new ConnectivityInspector<>(s).isGraphConnected();
+		final boolean has_cycles = new CycleDetector<>(s).detectCycles();
+
+		return !is_empty && is_connected && !has_cycles;
 	}
 
 	private boolean isRedundant(SemanticSubgraph s, List<SemanticSubgraph> subgraphs)
 	{
 		return subgraphs.stream()
-				.map(AsSubgraph::vertexSet)
-				.anyMatch(V -> V.equals(s.vertexSet()));
+				.anyMatch(s2 -> s.vertexSet().equals(s2.vertexSet())); // see implementation of equals in SemanticSubgraph and jGraphT AbstractGraph
 	}
 
 	private SemanticSubgraph extract(SemanticGraph g, double cost)
@@ -79,36 +83,32 @@ public class SubgraphExtraction
 			return null;
 
 		// Select intitial state and q value
-		State start_state;
-		State current_state;
-		double q;
+		SemanticSubgraph current_state;
 		{
-			final List<State> candidates = explorer.getStartStates(g);
+			final List<SemanticSubgraph> candidates = explorer.getStartStates(g);
 			if (candidates.isEmpty())
 				return null;
 
 			final double[] candidate_weights = candidates.stream()
-					.mapToDouble(c -> calculateWeight(V, c.vertices, g.getWeights(), cost))
+					.mapToDouble(c -> calculateValue(c, cost))
 					.toArray();
-			int i = policy.select(candidate_weights);
-			start_state = candidates.get(i);
-			current_state = new State(start_state.root, start_state.source, start_state.vertices);
-			q = candidate_weights[i];
+			int i = start_policy.select(candidate_weights);
+			current_state = candidates.get(i);
 		}
-		double q_old = q;
+		double q = 0.0, q_old;
 
 		do
 		{
 			// candidate sets extending (and therefore including) current_state
-			List<State> candidate_states = explorer.getNextStates(current_state, g);
+			List<SemanticSubgraph> candidate_states = explorer.getNextStates(current_state, g);
 			if (candidate_states.isEmpty())
 				break;
 
 			final double[] candidate_weights = candidate_states.stream()
-					.mapToDouble(c -> calculateWeight(V, c.vertices, g.getWeights(), cost))
+					.mapToDouble(c -> calculateValue(c, cost))
 					.toArray();
-			int i = policy.select(candidate_weights);
-			State next_state = candidate_states.get(i);
+			int i = expand_policy.select(candidate_weights);
+			SemanticSubgraph next_state = candidate_states.get(i);
 
 			// Update function values
 			q_old = q;
@@ -121,21 +121,28 @@ public class SubgraphExtraction
 		while (q > q_old);
 
 		// return induced subgraph
-		return new SemanticSubgraph(g, current_state.root, current_state.vertices, q_old);
+		return current_state;
 	}
 
 	/**
-	 * Calculates the cost of a subgraph as a combination of node weights and edge distances
+	 * Calculates the value of a subgraph as a combination of node weights and edge distances
 	 */
-	private double calculateWeight(Set<String> V, Set<String> S, Map<String, Double> W, double C)
+	private double calculateValue(SemanticSubgraph s, double C)
 	{
-		double WS = S.stream()
+		final Set<String> V = s.getBase().vertexSet();
+		final Set<String> S = s.vertexSet();
+		final Map<String, Double> W = s.getBase().getWeights();
+
+		final double WS = S.stream()
 				.filter(W::containsKey) // ignore vertices with no weight -but they compute towards higher cost CS anyway
 				.mapToDouble(W::get)
 				.sum(); // weight of S
-		double CS = S.size() * C; // cost of the graph induced by S
-		double CV = V.size() * C; // cost of V, used to keep weighting function non-negative
-		return lambda*WS - CS + CV;
+		final double CS = S.size() * C; // cost of the graph induced by S
+		final double CV = V.size() * C; // cost of V, used to keep weighting function non-negative
+		final double value = lambda*WS - CS + CV;
+
+		s.setValue(value);
+		return value;
 	}
 
 

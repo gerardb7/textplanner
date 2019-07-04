@@ -1,10 +1,8 @@
 package edu.upf.taln.textplanning.core.extraction;
 
-import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.io.GraphSemantics;
-
-import java.util.Collections;
-import java.util.Set;
+import edu.upf.taln.textplanning.core.structures.SemanticGraph;
+import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 
 public class SingleVertexExplorer extends Explorer
 {
@@ -29,8 +27,11 @@ public class SingleVertexExplorer extends Explorer
 	}
 
 	@Override
-	protected Set<String> getRequiredVertices(String v, State s, SemanticGraph g)
+	protected SemanticSubgraph getExtendedSubgraph(Neighbour n, SemanticSubgraph s)
 	{
-		return Collections.singleton(v);
+		final SemanticSubgraph s_extended = new SemanticSubgraph(s);
+		s_extended.addVertex(n.node);
+		s_extended.addEdge(s.getBase().getEdgeSource(n.edge), s.getBase().getEdgeTarget(n.edge), n.edge);
+		return s_extended;
 	}
 }

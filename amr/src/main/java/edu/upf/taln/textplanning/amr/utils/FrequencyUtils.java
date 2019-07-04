@@ -155,7 +155,7 @@ public class FrequencyUtils
 		AMRGraphList graphs = (AMRGraphList) Serializer.deserialize(graphs_file);
 
 		Map<String, Set<String>> forms = graphs.getCandidates().stream()
-				.collect(groupingBy(c -> c.getMention().getSurface_form(),
+				.collect(groupingBy(c -> c.getMention().getSurfaceForm(),
 									mapping(c -> c.getMeaning().getReference(), toSet())));
 		long num_pairs = forms.values().stream()
 				.mapToLong(Set::size)

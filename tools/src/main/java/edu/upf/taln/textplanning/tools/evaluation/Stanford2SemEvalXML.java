@@ -24,7 +24,6 @@ import static java.util.stream.Collectors.toMap;
 
 public class Stanford2SemEvalXML
 {
-	private static final String text_suffix = ".txt";
 	private final StanfordCoreNLP pipeline;
 	private final static Logger log = LogManager.getLogger();
 
@@ -40,7 +39,7 @@ public class Stanford2SemEvalXML
 		log.info("CoreNLP pipeline created in " + timer.stop());
 	}
 
-	public String convert(Path input_folder, Path outputFile) throws Exception
+	public String convert(Path input_folder, String text_suffix, Path outputFile) throws Exception
 	{
 		final File[] files = FileUtils.getFilesInFolder(input_folder, text_suffix);
 		if (files == null)
@@ -122,6 +121,6 @@ public class Stanford2SemEvalXML
 		final Path docs_in = Paths.get("/home/gerard/ownCloud/Feina/tensor/tensor_evaluation/reference");
 		final Path doc_out = Paths.get("/home/gerard/ownCloud/Feina/tensor/tensor_evaluation/temp/input.xml");
 		final Stanford2SemEvalXML converter = new Stanford2SemEvalXML();
-		converter.convert(docs_in, doc_out);
+		converter.convert(docs_in, "txt", doc_out);
 	}
 }
