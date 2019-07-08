@@ -272,9 +272,8 @@ public class EvaluationTools
 		final SimilarityFunction sim = text.resources.getSimilarityFunction();
 		final CorpusAdjacencyFunction adjacency = new CorpusAdjacencyFunction(text, context_size, false);
 
-		final List<SemanticSubgraph> subgraphs = new ArrayList<>();
 		EvaluationCorpus.createGraph(text, adjacency);
-		subgraphs.addAll(TextPlanner.extractSubgraphs(text.graph, options));
+		final List<SemanticSubgraph> subgraphs = new ArrayList<>(TextPlanner.extractSubgraphs(text.graph, options));
 
 		final Collection<SemanticSubgraph> selected_subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, sim, options);
 		text.subgraphs.addAll(TextPlanner.sortSubgraphs(selected_subgraphs, sim, options));
@@ -318,22 +317,19 @@ public class EvaluationTools
 				.collect(toList());
 	}
 
-	public static void printMeaningRankings(EvaluationCorpus.Corpus corpus, Map<String, AlternativeMeanings> gold, boolean multiwords_only, Set<POS.Tag> eval_POS)
+	public static void printMeaningRankings(EvaluationCorpus.Corpus corpus, Map<String, Set<AlternativeMeanings>> gold, boolean multiwords_only, Set<POS.Tag> eval_POS)
 	{
 		IntStream.range(0, corpus.texts.size()).forEach(i ->
 		{
 			log.info("TEXT " + i);
 			final EvaluationCorpus.Text text = corpus.texts.get(i);
-			final Set<String> text_gold = gold.keySet().stream()
-					.filter(id -> id.startsWith(text.id + "."))
-					.map(gold::get)
+			final Set<String> text_gold = gold.get(text.id).stream()
 					.flatMap(a -> a.alternatives.stream())
 					.collect(toSet());
 
 
 			final int max_length = text.sentences.stream()
-					.flatMap(s -> s.candidates.values().stream())
-					.flatMap(Collection::stream)
+					.flatMap(s -> s.disambiguated.values().stream())
 					.map(Candidate::getMeaning)
 					.map(Meaning::toString)
 					.mapToInt(String::length)
@@ -343,8 +339,7 @@ public class EvaluationTools
 					corpus.resouces != null ? corpus.resouces.getBiasFunction() : text.resources.getBiasFunction();
 
 			final Map<Meaning, Double> weights = text.sentences.stream()
-					.flatMap(s -> s.candidates.values().stream())
-					.flatMap(Collection::stream)
+					.flatMap(s -> s.disambiguated.values().stream())
 					.filter(m -> (multiwords_only && m.getMention().isMultiWord()) || (!multiwords_only && eval_POS.contains(m.getMention().getPOS())))
 					.collect(groupingBy(Candidate::getMeaning, averagingDouble(c -> c.getWeight().orElse(0.0))));
 
@@ -352,14 +347,14 @@ public class EvaluationTools
 			Function<Meaning, String> inGold = m -> text_gold.contains(m.getReference()) ? "GOLD" : "";
 
 			log.info(meanings.stream()
-					.filter(m -> weights.get(m) > 0.0)
+//					.filter(m -> weights.get(m) > 0.0)
 					.sorted(Comparator.<Meaning>comparingDouble(weights::get).reversed())
 					.map(m -> String.format("%-" + max_length + "s%-11s%-11s%-8s",
 							m.toString(),
 							DebugUtils.printDouble(weights.get(m)),
 							DebugUtils.printDouble(weighter.apply(m.getReference())),
 							inGold.apply(m)))
-					.collect(joining("\n\t", "Meaning ranking by ranking score:\n\t",
+					.collect(joining("\n\t", "Meaning ranking by ranking score (and bias) :\n\t",
 							"\n--------------------------------------------------------------------------------------------")));
 		});
 	}

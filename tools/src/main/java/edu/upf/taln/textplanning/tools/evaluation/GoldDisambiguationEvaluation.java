@@ -34,7 +34,7 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 	public GoldDisambiguationEvaluation(Path gold_file, Path xml_file, InitialResourcesFactory resources_factory)
 	{
 		this.options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
-		this.options.min_bias_threshold = 0.7; // minimum bias value below which candidate meanings are ignored
+		this.options.min_bias_threshold = 0.0; // minimum bias value below which candidate meanings are ignored
 		this.options.num_first_meanings = 1;
 		this.options.sim_threshold = 0.8; // Pairs of meanings with sim below this value have their score set to 0
 		this.options.damping_meanings = 0.5; // controls balance between bias and similarity: higher value -> more bias

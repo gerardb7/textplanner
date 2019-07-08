@@ -22,13 +22,13 @@ public class RandomVectors extends Vectors implements SentenceVectors
 	}
 
 	@Override
-	public Optional<double[]> getVector(String item)
+	synchronized public Optional<double[]> getVector(String item)
 	{
 		return Optional.of(vectors.computeIfAbsent(item, RandomVectors::generateNewVector));
 	}
 
 	@Override
-	public Optional<double[]> getVector(List<String> tokens)
+	synchronized public Optional<double[]> getVector(List<String> tokens)
 	{
 		return Optional.of(vectors.computeIfAbsent(String.join("", tokens), RandomVectors::generateNewVector));
 	}

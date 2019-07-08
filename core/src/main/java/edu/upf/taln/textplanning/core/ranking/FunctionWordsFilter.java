@@ -30,7 +30,7 @@ public class FunctionWordsFilter
 		{
 			return !en_list.contains(form.toLowerCase());
 		}
-		else if (language.toLanguageTag().equals("es-ES"))
+		else if (language.toLanguageTag().equalsIgnoreCase("es"))
 		{
 			return !es_list.contains(form.toLowerCase());
 		}

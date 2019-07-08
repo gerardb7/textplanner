@@ -25,7 +25,7 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>BabelNet3.7</artifactId>
+            <artifactId>BabelNet4.0.1</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

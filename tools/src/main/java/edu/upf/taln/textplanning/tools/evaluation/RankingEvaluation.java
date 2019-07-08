@@ -11,19 +11,16 @@ import edu.upf.taln.textplanning.core.utils.POS;
 import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.AlternativeMeanings;
 import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus;
 import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus.Corpus;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
-import static edu.upf.taln.textplanning.common.FileUtils.getFilesInFolder;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
 
@@ -33,7 +30,6 @@ public class RankingEvaluation
 
 	private static final int max_span_size = 3;
 	private static final boolean rank_together = false;
-	private static final String gold_suffix = ".gold";
 	private static final POS.Tagset tagset = POS.Tagset.Simple;
 	private final static Logger log = LogManager.getLogger();
 
@@ -41,10 +37,10 @@ public class RankingEvaluation
 	{
 		final Options options = new Options();
 		options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
-		options.min_bias_threshold = 0.8; // minimum bias value below which candidate meanings are ignored
+		options.min_bias_threshold = 0.7; // minimum bias value below which candidate meanings are ignored
 		options.num_first_meanings = 1;
 		options.sim_threshold = 0.8; // Pairs of meanings with sim below this value have their score set to 0
-		options.damping_meanings = 0.5; // controls balance between bias and similarity: higher value -> more bias
+		options.damping_meanings = 0.4; // controls balance between bias and similarity: higher value -> more bias
 
 		// Exclude Tag from mention collection
 		final Set<POS.Tag> excluded_mention_POS = Set.of(POS.Tag.X);
@@ -53,10 +49,9 @@ public class RankingEvaluation
 		// Evaluate these Tag tags only
 		Set<POS.Tag> evaluate_POS = Set.of(POS.Tag.NOUN); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
 
-		final Map<String, AlternativeMeanings> gold = parseGoldFile(gold_file);
+		final Map<String, Set<AlternativeMeanings>> gold = parseGoldFile(gold_file);
 		final Corpus corpus = EvaluationCorpus.createFromXML(xml_file);
 		EvaluationTools.createResources(corpus, tagset, resources_factory, max_span_size, rank_together, excluded_mention_POS, options);
-		assert gold.size() == corpus.texts.size();
 
 		corpus.texts.forEach(text -> EvaluationTools.rankMeanings(text, options));
 		corpus.texts.forEach(text -> EvaluationTools.disambiguate(text, options));
@@ -76,7 +71,7 @@ public class RankingEvaluation
 		{
 			final Map<String, List<Meaning>> system_meanings = frequencyRank(corpus);
 			final double map = evaluate(system_meanings, gold, evaluate_POS);
-			log.info("First sense + frequency rank MAP = " + DebugUtils.printDouble(map));
+			log.info("Frequency rank MAP = " + DebugUtils.printDouble(map));
 		}
 		{
 			final Map<String, List<Meaning>> system_meanings = contextRank(corpus);
@@ -93,21 +88,21 @@ public class RankingEvaluation
 		EvaluationTools.printMeaningRankings(corpus, gold, false, evaluate_POS);
 	}
 
-	private static Map<String, AlternativeMeanings> parseGoldFile(Path gold_file)
+	private static Map<String, Set<AlternativeMeanings>> parseGoldFile(Path gold_file)
 	{
 		log.info("Parsing gold file");
 		return Arrays.stream(FileUtils.readTextFile(gold_file).split("\n"))
 				.filter(not(String::isEmpty))
 				.filter(l -> !l.startsWith("@text"))
 				.map(l -> l.split("\t"))
+				.peek(a ->
+				{ if (a.length != 4) log.error("Can't parse line " + String.join(" ", a)); })
 				.filter(a -> a.length == 4)
 				.map(a -> Arrays.stream(a).map(String::trim).collect(toList()))
-				.collect(toMap(
-						a -> a.get(0).equals(a.get(1)) ? a.get(0) : a.get(0) + "-" + a.get(1),
-						a ->  new AlternativeMeanings(Arrays.asList(a.get(2).split("\\|")),
-								a.get(3).substring(1, a.get(3).length() -1), a.get(0), a.get(1))));
+				.map(a -> Pair.of(a.get(0).substring(0, 4), new AlternativeMeanings(Arrays.asList(a.get(2).split("\\|")),
+						a.get(3).substring(1, a.get(3).length() - 1), a.get(0), a.get(1))))
+				.collect(groupingBy(Pair::getLeft, mapping(Pair::getRight, toSet())));
 	}
-
 
 	private static Map<String, List<Meaning>> randomRank(Corpus corpus)
 	{
@@ -158,6 +153,7 @@ public class RankingEvaluation
 
 					return meanings.stream()
 							.distinct()
+							.filter(m -> weights.get(m) > 0.0)
 							.sorted(Comparator.<Meaning>comparingDouble(weights::get).reversed())
 							.collect(toList());
 				}));
@@ -179,15 +175,13 @@ public class RankingEvaluation
 				}));
 	}
 
-	private static double evaluate(Map<String, List<Meaning>> system, Map<String, AlternativeMeanings> gold, Set<POS.Tag> eval_POS)
+	private static double evaluate(Map<String, List<Meaning>> system, Map<String, Set<AlternativeMeanings>> gold, Set<POS.Tag> eval_POS)
 	{
 		List<Double> avg_precisions = new ArrayList<>();
 		system.forEach((text_id, meanings) ->
 		{
 			final List<String> system_set = meanings.stream().map(Meaning::getReference).collect(toList());
-			final Set<String> gold_set = gold.keySet().stream()
-					.filter(id -> id.startsWith(text_id + "."))
-					.map(gold::get)
+			final Set<String> gold_set = gold.get(text_id).stream()
 					.flatMap(a -> a.alternatives.stream())
 					.collect(toSet());
 

@@ -28,8 +28,7 @@ public class CandidatesCollector
 
 
 	/**
-	 * Assigns candidate entities to nodes (tokens) of a given set of structures.
-	 * Assumes unique vertex labels across graphs.
+	 * Assigns candidate entities to mentions.
 	 */
 	public static Map<Mention, List<Candidate>> collect(MeaningDictionary dictionary, ULocale language, List<Mention> mentions)
 	{

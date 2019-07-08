@@ -19,6 +19,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toMap;
 
@@ -54,7 +55,7 @@ public class Stanford2SemEvalXML
 		writer.append("<corpus lang=\"en\">"); writer.newLine();
 		int text_counter = 1;
 
-		for (String filename : texts.keySet())
+		for (String filename : texts.keySet().stream().sorted().collect(Collectors.toList()))
 		{
 			try
 			{
@@ -118,12 +119,12 @@ public class Stanford2SemEvalXML
 
 	public static void main(String[] args) throws Exception
 	{
-//		final Path docs_in = Paths.get("/home/gerard/ownCloud/Feina/tensor/tensor_evaluation/reference");
-//		final Path doc_out = Paths.get("/home/gerard/ownCloud/Feina/tensor/tensor_evaluation/temp/input.xml");
-//		final String texts_suffix = "txt";
-		final Path docs_in = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_annotated/reference");
-		final Path doc_out = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_annotated/input_summaries.xml");
-		final String texts_suffix = "summ";
+		final Path docs_in = Paths.get("/home/gerard/ownCloud/Feina/tensor/tensor_evaluation/texts");
+		final Path doc_out = Paths.get("/home/gerard/ownCloud/Feina/tensor/tensor_evaluation/input.xml");
+		final String texts_suffix = "txt";
+//		final Path docs_in = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_annotated/reference");
+//		final Path doc_out = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_annotated/input_summaries.xml");
+//		final String texts_suffix = "summ";
 		final Stanford2SemEvalXML converter = new Stanford2SemEvalXML();
 		converter.convert(docs_in, texts_suffix, doc_out);
 	}
