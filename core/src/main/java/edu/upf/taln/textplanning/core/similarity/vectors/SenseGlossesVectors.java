@@ -2,8 +2,6 @@ package edu.upf.taln.textplanning.core.similarity.vectors;
 
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.ranking.StopWordsFilter;
-import edu.upf.taln.textplanning.core.structures.Candidate;
-import edu.upf.taln.textplanning.core.structures.Meaning;
 
 import java.util.*;
 import java.util.function.Function;
@@ -18,17 +16,11 @@ public class SenseGlossesVectors extends Vectors
 	private final SentenceVectors sentence_vectors;
 	private final Map<String, Optional<double[]>> vectors;
 
-	public SenseGlossesVectors(ULocale language, List<Candidate> candidates, Function<String, List<String>> glosses, SentenceVectors sentence_vectors)
+	public SenseGlossesVectors(ULocale language, List<String> meanings, Function<String, List<String>> glosses, SentenceVectors sentence_vectors)
 	{
 		this.language = language;
 		this.glosses = glosses;
 		this.sentence_vectors = sentence_vectors;
-
-		final List<String> meanings = candidates.stream()
-				.map(Candidate::getMeaning)
-				.map(Meaning::getReference)
-				.distinct()
-				.collect(toList());
 
 		vectors = meanings.stream()
 				.collect(toMap(r -> r, r ->

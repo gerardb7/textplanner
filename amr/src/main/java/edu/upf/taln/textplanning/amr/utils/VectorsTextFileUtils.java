@@ -81,7 +81,7 @@ public class VectorsTextFileUtils
 
 
 	/**
-	 * Writes distributional vectors to a text file
+	 * Writes distributional vectors to a text file in Text_Word2vec format
 	 */
 	private static void writeVectorsToFile(Map<String, double[]> vectors, VectorType vectorType, Path out_path) throws FileNotFoundException
 	{

@@ -16,15 +16,18 @@ import edu.upf.taln.textplanning.core.similarity.vectors.SenseGlossesVectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
 import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
 
 public class DocumentResourcesFactory
 {
@@ -40,7 +43,16 @@ public class DocumentResourcesFactory
 		// Glosses
 		Function<String, List<String>> glosses_function = s -> factory.getDictionary().getGlosses(s, factory.getLanguage());
 		final SentenceVectors sentence_vectors = factory.getSentenceVectors();
-		Vectors glosses_vectors = new SenseGlossesVectors(factory.getLanguage(), candidates, glosses_function, sentence_vectors);
+		final List<String> meanings = candidates.stream()
+				.map(Candidate::getMeaning)
+				.map(Meaning::getReference)
+				.distinct()
+				.collect(toList());
+		// include bias meanings too
+		final Set<String> bias_meanings = factory.getBiasMeanings();
+		if (factory.getBiasFunctionType() == BiasFunction.Type.Domain && bias_meanings != null)
+			meanings.addAll(bias_meanings);
+		Vectors glosses_vectors = new SenseGlossesVectors(factory.getLanguage(), meanings, glosses_function, sentence_vectors);
 
 		// Bias function
 		if (factory.getBiasFunctionType() != null)
@@ -49,9 +61,9 @@ public class DocumentResourcesFactory
 			{
 				bias = new ContextBias(candidates, glosses_vectors, sentence_vectors, context, factory.getSentenceSimilarityFunction());
 			}
-			else if (factory.getBiasFunctionType() == BiasFunction.Type.Domain)
+			else if (factory.getBiasFunctionType() == BiasFunction.Type.Domain && bias_meanings != null && !bias_meanings.isEmpty())
 			{
-				bias = new DomainBias(candidates, factory.getBiasMeanings(), glosses_vectors, factory.getSentenceSimilarityFunction());
+				bias = new DomainBias(candidates, bias_meanings, glosses_vectors, factory.getSentenceSimilarityFunction());
 			}
 			else
 				bias = null;
@@ -62,7 +74,7 @@ public class DocumentResourcesFactory
 		// Similarity function
 		if (factory.getMeaningVectorsType() == Vectors.VectorType.SenseGlosses)
 		{
-			final Vectors meaning_vectors = new SenseGlossesVectors(factory.getLanguage(), candidates, glosses_function, sentence_vectors);
+			final Vectors meaning_vectors = new SenseGlossesVectors(factory.getLanguage(), meanings, glosses_function, sentence_vectors);
 			similarity = new VectorsSimilarity(meaning_vectors, new CosineSimilarity());
 		}
 		else
