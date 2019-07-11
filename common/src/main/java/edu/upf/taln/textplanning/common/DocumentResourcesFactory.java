@@ -40,8 +40,23 @@ public class DocumentResourcesFactory
 	                                List<Candidate> candidates,
 	                                ContextFunction context)
 	{
+		this(factory, options, candidates, context, s -> factory.getDictionary().getGlosses(s, factory.getLanguage()));
+	}
+
+	public DocumentResourcesFactory(InitialResourcesFactory factory, Options options,
+	                                List<Candidate> candidates,
+	                                ContextFunction context,
+	                                Map<String, List<String>> glosses)
+	{
+		this(factory, options, candidates, context, glosses::get);
+	}
+
+	private DocumentResourcesFactory(InitialResourcesFactory factory, Options options,
+	                                List<Candidate> candidates,
+	                                ContextFunction context,
+	                                Function<String, List<String>> glosses_function)
+	{
 		// Glosses
-		Function<String, List<String>> glosses_function = s -> factory.getDictionary().getGlosses(s, factory.getLanguage());
 		final SentenceVectors sentence_vectors = factory.getSentenceVectors();
 		final List<String> meanings = candidates.stream()
 				.map(Candidate::getMeaning)
