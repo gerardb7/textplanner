@@ -11,7 +11,7 @@ import java.util.Set;
 
 public class Options
 {
-	public Set<POS.Tag> ranking_POS_Tags = new HashSet<>(); // only rank meanings of words with these Tag - other meanings are excluded from the ranking but disambiguated anyway
+	public Set<POS.Tag> ranking_POS_Tags = Set.of(POS.Tag.NOUN, POS.Tag.ADJ); // only rank meanings of words with these Tag - other meanings are excluded from the ranking but disambiguated anyway
 	public int min_context_freq = 3; // Minimum frequency of document tokens used to calculate nominal context vectors
 	public int window_size = 5; // Size of window in number of tokens used to calculate non-nominal context vectors
 	public double min_bias_threshold = 0.7; // minimum bias value below which candidate meanings are ignored.  Values in range [0..1].
