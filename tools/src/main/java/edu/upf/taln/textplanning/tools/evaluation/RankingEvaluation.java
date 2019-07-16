@@ -37,17 +37,17 @@ public class RankingEvaluation
 	{
 		final Options options = new Options();
 		options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
-		options.min_bias_threshold = 0.7; // minimum bias value below which candidate meanings are ignored
+		options.min_bias_threshold = 0.8; // minimum bias value below which candidate meanings are ignored
 		options.num_first_meanings = 1;
 		options.sim_threshold = 0.8; // Pairs of meanings with sim below this value have their score set to 0
-		options.damping_meanings = 0.4; // controls balance between bias and similarity: higher value -> more bias
+		options.damping_meanings = 0.99; // controls balance between bias and similarity: higher value -> more bias
 
 		// Exclude Tag from mention collection
 		final Set<POS.Tag> excluded_mention_POS = Set.of(POS.Tag.X);
 		// Include these Tag in the ranking of meanings
-		options.ranking_POS_Tags = Set.of(POS.Tag.NOUN); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+		options.ranking_POS_Tags = Set.of(POS.Tag.NOUN); //, POS.Tag.ADJ); //, POS.Tag.VERB, POS.Tag.ADV);
 		// Evaluate these Tag tags only
-		Set<POS.Tag> evaluate_POS = Set.of(POS.Tag.NOUN); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+		Set<POS.Tag> evaluate_POS = options.ranking_POS_Tags; // Only evaluate ranked POS to avoid bias against full rank versus frequency and context
 
 		final Map<String, Set<AlternativeMeanings>> gold = parseGoldFile(gold_file);
 		final Corpus corpus = EvaluationCorpus.createFromXML(xml_file);
@@ -111,7 +111,7 @@ public class RankingEvaluation
 				.collect(toMap(text -> text.id, text ->
 				{
 					final List<Meaning> meanings = text.sentences.stream()
-							.flatMap(sentence -> sentence.disambiguated.values().stream()
+							.flatMap(sentence -> sentence.candidates.values().stream().flatMap(List::stream)
 								.map(Candidate::getMeaning))
 							.collect(toList());
 					Collections.shuffle(meanings, random);
@@ -125,11 +125,11 @@ public class RankingEvaluation
 		return corpus.texts.stream()
 				.collect(toMap(text -> text.id, text ->
 				{
-					final List<Candidate> disambiguated = text.sentences.stream()
-							.flatMap(sentence -> sentence.disambiguated.values().stream())
+					final List<Candidate> candidates = text.sentences.stream()
+							.flatMap(sentence -> sentence.candidates.values().stream().flatMap(List::stream))
 							.collect(toList());
-					Function<Candidate, Long> frequency = c -> disambiguated.stream().filter(c2 -> c2 == c).count();
-					return disambiguated.stream()
+					Function<Candidate, Long> frequency = c -> candidates.stream().filter(c2 -> c2 == c).count();
+					return candidates.stream()
 							.sorted(Comparator.comparingLong(frequency::apply).reversed())
 							.map(Candidate::getMeaning)
 							.collect(toList());
@@ -142,7 +142,7 @@ public class RankingEvaluation
 				.collect(toMap(text -> text.id, text ->
 				{
 					final List<Meaning> meanings = text.sentences.stream()
-							.flatMap(sentence -> sentence.disambiguated.values().stream())
+							.flatMap(sentence -> sentence.candidates.values().stream().flatMap(List::stream))
 							.map(Candidate::getMeaning)
 							.collect(toList());
 
@@ -165,7 +165,7 @@ public class RankingEvaluation
 				.collect(toMap(text -> text.id, text ->
 				{
 					Map<Meaning, Double> weights = text.sentences.stream()
-							.flatMap(sentence -> sentence.disambiguated.values().stream())
+							.flatMap(sentence -> sentence.candidates.values().stream().flatMap(List::stream))
 							.collect(groupingBy(Candidate::getMeaning, averagingDouble(c -> c.getWeight().orElse(0.0))));
 					final List<Meaning> file_meanings = new ArrayList<>(weights.keySet());
 					return file_meanings.stream()
@@ -215,7 +215,14 @@ public class RankingEvaluation
 					++false_positives_partial;
 			}
 
-			rank_precisions.values().stream().mapToDouble(d -> d).average().ifPresent(avg_precisions::add);
+			final OptionalDouble average = rank_precisions.values().stream().mapToDouble(d -> d).average();
+			if (average.isEmpty())
+				log.error("Cannot calculate map for " + text_id);
+			else
+			{
+				avg_precisions.add(average.getAsDouble());
+				log.info("\t" + text_id + ": " + DebugUtils.printDouble(average.getAsDouble()));
+			}
 		});
 
 		return avg_precisions.stream().mapToDouble(d -> d).average().orElse(0.0);
