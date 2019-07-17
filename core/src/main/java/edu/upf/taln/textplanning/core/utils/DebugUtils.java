@@ -45,6 +45,7 @@ public class DebugUtils
 	public static String printDouble(double w) { return format.format(w); }
 	public static String printDouble(double w, int fraction_digits)
 	{
+		format.setRoundingMode(RoundingMode.CEILING);
 		final int old = format.getMaximumFractionDigits();
 		format.setMaximumFractionDigits(fraction_digits);
 		final String s = DebugUtils.format.format(w);
