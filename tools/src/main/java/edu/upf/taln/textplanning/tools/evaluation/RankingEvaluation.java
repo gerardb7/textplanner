@@ -40,7 +40,8 @@ public class RankingEvaluation
 		options.min_bias_threshold = 0.8; // minimum bias value below which candidate meanings are ignored
 		options.num_first_meanings = 1;
 		options.sim_threshold = 0.8; // Pairs of meanings with sim below this value have their score set to 0
-		options.damping_meanings = 0.4; // controls balance between bias and similarity: higher value -> more bias
+		options.damping_meanings = 0.2; // controls balance between bias and similarity: higher value -> more bias
+		options.stopping_threshold = 0.001;
 
 		// Exclude Tag from mention collection
 		final Set<POS.Tag> excluded_mention_POS = Set.of(POS.Tag.X);

@@ -99,7 +99,7 @@ public final class TextPlanner
 			return;
 
 		double[] ranking = Ranker.rank(references, labels, bias, similarity, true, meanings_similarity_filter,
-				o.sim_threshold, o.damping_meanings, true, true);
+				o.sim_threshold, o.damping_meanings, o.stopping_threshold);
 		final double[] rebased_ranking = rebaseRankingValues(ranking);
 
 		// Assign weights to candidates: rank values for those with a ranked meaning
@@ -161,7 +161,7 @@ public final class TextPlanner
 					};
 
 			final double[] ranking = Ranker.rank(variables, labels, variables2bias::get, edge_weights, true,
-					(v1, v2) -> true, 0.0, o.damping_variables, true, true);
+					(v1, v2) -> true, 0.0, o.damping_variables, o.stopping_threshold);
 			final double[] rebased_ranking = rebaseRankingValues(ranking);
 
 			IntStream.range(0, variables.size()).boxed()

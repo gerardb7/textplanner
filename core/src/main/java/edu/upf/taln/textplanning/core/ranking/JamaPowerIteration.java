@@ -12,7 +12,13 @@ import java.util.stream.IntStream;
 
 public class JamaPowerIteration implements PowerIterationRanking
 {
+	private final double stopping_threshold;
 	private final static Logger log = LogManager.getLogger();
+
+	public JamaPowerIteration(double stopping_threshold)
+	{
+		this.stopping_threshold = stopping_threshold;
+	}
 
 	/**
 	 * Power iteration method to obtain a final stationary distribution of a Markov chain
@@ -39,7 +45,6 @@ public class JamaPowerIteration implements PowerIterationRanking
 
 		// Create initial state as a column vector
 		final int n = at.getColumnDimension();
-		final double e = 1.0/(n*1000); // quadratic error, used as stopping threshold
 		Matrix v = new Matrix(n, 1, 1.0 / n); // v is the distribution vector that will be iteratively updated
 
 		log.info("Starting power iteration");
@@ -58,12 +63,12 @@ public class JamaPowerIteration implements PowerIterationRanking
 					.map(Math::abs)
 					.max().orElse(0.0);
 			v = tmp;
-			if (++numIterations % 100 == 0)
+			if (++numIterations % 1000 == 0)
 			{
 				log.info("..." + numIterations + " iterations");
 			}
 		}
-		while (delta >= e); // stopping criterion: delta falls below a certain threshold
+		while (delta >= stopping_threshold); // stopping criterion: delta falls below a certain threshold
 
 		log.info("Power iteration completed after " + numIterations + " iterations");
 		log.debug("Ranking:\n" + DebugUtils.printRank(v.getColumnPackedCopy(), n, labels));

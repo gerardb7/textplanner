@@ -51,67 +51,69 @@ public class MatrixFactory
 	                                             BiFunction<String, String, OptionalDouble> edge_weights,
 	                                             boolean simmetric,
 	                                             BiPredicate<String, String> filter,
-	                                             double sim_threshold, double d,
-	                                             boolean make_positive, boolean row_normalize)
+	                                             double sim_threshold, double d)
 	{
+		if (d <= 0.0)
+			throw new RuntimeException("Damping value must be greater than 0");
+
 		log.info("Creating ranking matrix for " + items.size() + " items");
 		int n = items.size();
 
-		// Create non-negative bias row vector for the set of items
+		// Create strictly positive, normalized bias row vector for the set of items (use standard PageRank damping array if d is set to 0)
 		double[] L = createBiasVector(items, bias);
 		log.debug("Bias:\n" + DebugUtils.printRank(L, n, labels));
 
-
-		// Create non-negative transition matrix
+		// Create non-negative, row-normalized transition matrix
 		double[][] X = createTransitionMatrix(items, edge_weights, simmetric, filter, sim_threshold, true);
 
 		// Create ranking matrix:
 		double[][] R = new double[n][n];
 
-		// Bias each row in X using bias L and d factor d
+		// Bias each row in X using bias L and factor d
 		// Ru = d*Lu + (1.0-d)* SUM Xvu, for all v pointing to u
-		// Rvu = d*Lu + (1.0-d)*Xvu
+		// Rvu = d*Lu/n + (1.0-d)*Xvu, for all v
 		IntStream.range(0, n).parallel().forEach(u -> // row for u
 				IntStream.range(0, n).forEach(v -> { // from v to u
 					double Lu = L[u]; // bias towards u
 					double Xvu = X[u][v]; // similarity from v to u
-					double Ruv = d * Lu + (1.0 - d)*Xvu;
+					double Ruv = (d * Lu) / n + (1.0 - d)*Xvu; // distribute d*Lu across row -> add (d*Lu)/n to each cell
 
 					assert !Double.isNaN(Ruv);
 					R[u][v] = Ruv;
 				}));
 
-		log.info("Matrix created"); // guaranteed to be non-negative
-
-		if (make_positive)
-			makePositive(R);
-
-		if (row_normalize)
-			rowNormalize(R);
+		// L is normalized, R is row-normalized, d is between 0 an 1.0 -> R is row-normalized
+		log.info("Matrix created"); // guaranteed to be non-negative and row-normalized
 
 		return R;
 	}
 
-	// Creates non-negative bias row vector by applying the bias function to a set of items
+	// Creates non-negative, normalized bias vector by applying the bias function to a set of items
 	public static double[] createBiasVector(List<String> items, Function<String, Double> bias)
 	{
-		return items.parallelStream()
+		final double[] v = items.parallelStream()
 				.mapToDouble(i ->
 				{
 					final Double w = bias.apply(i);
-					if (w < 0.0)
+					if (w <= 0.0)
 					{
 						// only positive bias_values are allowed!
-						log.warn("Negative weight for item " + i);
+						log.warn("Non-positive weight for item " + i);
 						return 0.0;
 					}
 
 					return w;
 				})
 				.toArray();
+
+		if (Arrays.stream(v).anyMatch(d -> d == 0.0))
+			makePositive(v);
+
+		normalize(v);
+		return v;
 	}
 
-	// Creates a symmetric non-negative matrix
+	// Creates a symmetric, non-negative, row-normalized matrix
 	public static double[][] createTransitionMatrix(List<String> items,
 	                                                BiFunction<String, String, OptionalDouble> edge_weights,
 	                                                boolean simmetric,
@@ -132,39 +134,41 @@ public class MatrixFactory
 		IntStream.range(0, n)
 				.parallel() // each thread writes to separate portions (rows) of the matrix
 				.peek(i -> reporter.report())
-				.forEach(i -> IntStream.range(simmetric ? i : 0, n).forEach(j ->
-				{
-					double wji = 0.0;
-					final String ej = items.get(j);
-					final String ei = items.get(i);
-					if (filter.test(ej, ei))
+				.forEach(i -> {
+					IntStream.range(simmetric ? i : 0, n).forEach(j ->
 					{
-						final OptionalDouble o = edge_weights.apply(ej, ei);
-						o.ifPresent(d -> num_defined.incrementAndGet());
-						wji = o.orElse(0.0);
-
-						if (wji < 0.0)
+						double wji = 0.0;
+						final String ej = items.get(j);
+						final String ei = items.get(i);
+						if (filter.test(ej, ei))
 						{
-							num_negative.incrementAndGet();
-							wji = 0.0;
+							final OptionalDouble o = edge_weights.apply(ej, ei);
+							o.ifPresent(d -> num_defined.incrementAndGet());
+							wji = o.orElse(0.0);
+
+							if (wji < 0.0)
+							{
+								num_negative.incrementAndGet();
+								wji = 0.0;
+							}
 						}
-					}
-					else
-						num_filtered.incrementAndGet();
+						else
+							num_filtered.incrementAndGet();
 
-					if (wji < sim_threshold)
-						wji = 0.0;
+						if (wji < sim_threshold)
+							wji = 0.0;
 
-					m[i][j] = wji; // weight for edge going from j to i
-					if (simmetric)
-						m[j][i] = wji; // weight for edge going from i to j -> same if symmetric
+						m[i][j] = wji; // weight for edge going from j to i
+						if (simmetric)
+							m[j][i] = wji; // weight for edge going from i to j -> same if symmetric
 
-					if (counter_pairs.incrementAndGet() % 100000 == 0)
-						log.info(counter_pairs.get() + " out of " + total_pairs);
-				}));
+						if (counter_pairs.incrementAndGet() % 100000 == 0)
+							log.info(counter_pairs.get() + " out of " + total_pairs);
+					});
+				});
 
 		if (Arrays.stream(m).anyMatch(row -> Arrays.stream(row).allMatch(v -> v == 0.0)))
-			log.warn("Transition matrix has an all-zero row");
+			log.warn("Transition matrix has one or more zero-filled rows");
 
 		if (report_stats)
 		{
@@ -172,6 +176,7 @@ public class MatrixFactory
 			log.info("Weights are negative for " + num_negative.get() + " edges out of " + total_pairs);
 		}
 
+		rowNormalize(m);
 		return m;
 	}
 
@@ -201,30 +206,61 @@ public class MatrixFactory
 	}
 
 	/**
+	 * Smooths values to make each row positive.
+	 * Required when bias vector isn't guaranteed to be strictly positive
+	 */
+	private static void makePositive(double[] v)
+	{
+		int n = v.length;
+
+		double accum = Arrays.stream(v).average().orElse(0.0);
+		if (accum == 0.0)
+			accum = 1.0;
+		final double alpha = accum / 100.0; // pseudocount α for additive smoothing of rank values
+
+		IntStream.range(0, n).forEach(i ->
+		{
+			if (v[i] == 0.0)
+				v[i] = alpha;
+
+			assert !Double.isNaN(v[i]) : "NaN value at " + i;
+		});
+	}
+
+	/**
 	 * Row-normalizes a square matrix, e.g normalizes adjacency links, similarity values, etc.
 	 */
 	private static void rowNormalize(double[][] m)
 	{
 		// Normalize matrix with sum of each row (adjacent lists)
 		int n = m.length;
+		IntStream.range(0, n).parallel().forEach(i -> normalize(m[i]));
 
-		IntStream.range(0, n).parallel().forEach(i ->
+	}
+
+	/**
+	 * Normalize a one-dimensional vector.
+	 * After calculation, checks that sum is 1 and there are no NaN values.
+	 * @param v vector to normalize
+	 */
+	private static void normalize(double[] v)
+	{
+		int n = v.length;
+
+		double accum = Arrays.stream(v).sum();
+		if (accum != 0.0)
 		{
-			double accum = Arrays.stream(m[i]).sum();
-			IntStream.range(0, n).forEach(j -> {
-				m[i][j] = m[i][j] / accum;
-				assert !Double.isNaN(m[i][j]) : "NaN value at " + i + "-" + j;
+			IntStream.range(0, n).forEach(i ->
+			{
+				v[i] = v[i] / accum;
+				assert !Double.isNaN(v[i]) : "NaN value at " + i;
 			});
-		});
 
-		// This check accounts for precision of 64-bit doubles, as explained in
-		// http://stackoverflow.com/questions/6837007/comparing-float-double-values-using-operator
-		// http://www.ibm.com/developerworks/java/library/j-jtp0114/#N10255
-		// and http://en.wikipedia.org/wiki/Machine_epsilon#Values_for_standard_hardware_floating_point_arithmetics
-		assert Arrays.stream(m).allMatch(row ->
-		{
-			double sum = Math.abs(Arrays.stream(row).sum() - 1.0);
-			return sum < 2*2.22e-16; //2*2.22e-16
-		});
+			// This check accounts for precision of 64-bit doubles, as explained in
+			// http://stackoverflow.com/questions/6837007/comparing-float-double-values-using-operator
+			// http://www.ibm.com/developerworks/java/library/j-jtp0114/#N10255
+			// and http://en.wikipedia.org/wiki/Machine_epsilon#Values_for_standard_hardware_floating_point_arithmetics
+			assert (Math.abs(Arrays.stream(v).sum() - 1.0) < 2 * 2.22e-16);
+		}
 	}
 }

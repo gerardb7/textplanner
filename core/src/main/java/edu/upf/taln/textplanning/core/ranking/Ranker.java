@@ -31,13 +31,12 @@ public class Ranker
 	public static double[] rank(List<String> items, List<String> labels, Function<String, Double> bias,
 	                         BiFunction<String, String, OptionalDouble> edge_weights, boolean symmetric,
 	                         BiPredicate<String, String> filter,
-	                         double sim_threshold, double d,
-	                         boolean make_positive, boolean row_normalize)
+	                         double sim_threshold, double d, double stopping_threshold)
 	{
 		double[][] rankingArrays = MatrixFactory.createRankingMatrix(items, labels, bias, edge_weights, symmetric, filter,
-				sim_threshold, d, make_positive, row_normalize);
+				sim_threshold, d);
 		Matrix rankingMatrix = new Matrix(rankingArrays);
-		JamaPowerIteration alg = new JamaPowerIteration();
+		JamaPowerIteration alg = new JamaPowerIteration(stopping_threshold);
 		Matrix finalDistribution = alg.run(rankingMatrix, labels);
 		return finalDistribution.getColumnPackedCopy();
 	}
