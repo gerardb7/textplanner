@@ -4,6 +4,7 @@ import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.core.discourse.DiscoursePlanner;
 import edu.upf.taln.textplanning.core.extraction.*;
 import edu.upf.taln.textplanning.core.io.GraphSemantics;
+import edu.upf.taln.textplanning.core.ranking.MatrixFactory;
 import edu.upf.taln.textplanning.core.ranking.Ranker;
 import edu.upf.taln.textplanning.core.redundancy.RedundancyRemover;
 import edu.upf.taln.textplanning.core.similarity.SemanticTreeSimilarity;
@@ -17,7 +18,6 @@ import org.apache.logging.log4j.Logger;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -99,8 +99,8 @@ public final class TextPlanner
 			return;
 
 		double[] ranking = Ranker.rank(references, labels, bias, similarity, true, meanings_similarity_filter,
-				o.sim_threshold, o.damping_meanings, true, true);
-		final double[] rebased_ranking = rebaseRankingValues(ranking);
+				o.sim_threshold, o.damping_meanings, o.stopping_threshold);
+		final double[] rebased_ranking = MatrixFactory.rebase(ranking);
 
 		// Assign weights to candidates: rank values for those with a ranked meaning
 		candidates.forEach(candidate ->
@@ -161,8 +161,8 @@ public final class TextPlanner
 					};
 
 			final double[] ranking = Ranker.rank(variables, labels, variables2bias::get, edge_weights, true,
-					(v1, v2) -> true, 0.0, o.damping_variables, true, true);
-			final double[] rebased_ranking = rebaseRankingValues(ranking);
+					(v1, v2) -> true, 0.0, o.damping_variables, o.stopping_threshold);
+			final double[] rebased_ranking = MatrixFactory.rebase(ranking);
 
 			IntStream.range(0, variables.size()).boxed()
 					.forEach(i -> variables2mentions.get(variables.get(i)).setWeight(rebased_ranking[i]));
@@ -241,16 +241,4 @@ public final class TextPlanner
 		return text_plan;
 	}
 
-	// rebases ranking values to [0..1] range
-	private static double[] rebaseRankingValues(double[] ranking)
-	{
-		final DoubleSummaryStatistics stats = Arrays.stream(ranking)
-				.summaryStatistics();
-
-		//(((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
-		Function<Double, Double> rebase = w -> (w - stats.getMin()) / (stats.getMax() - stats.getMin());
-		return Arrays.stream(ranking)
-				.map(rebase::apply)
-				.toArray();
-	}
 }

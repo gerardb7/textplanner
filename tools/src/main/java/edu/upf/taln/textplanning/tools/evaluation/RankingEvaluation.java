@@ -37,17 +37,18 @@ public class RankingEvaluation
 	{
 		final Options options = new Options();
 		options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
-		options.min_bias_threshold = 0.7; // minimum bias value below which candidate meanings are ignored
+		options.min_bias_threshold = 0.8; // minimum bias value below which candidate meanings are ignored
 		options.num_first_meanings = 1;
 		options.sim_threshold = 0.8; // Pairs of meanings with sim below this value have their score set to 0
-		options.damping_meanings = 0.4; // controls balance between bias and similarity: higher value -> more bias
+		options.damping_meanings = 0.1;  // controls balance between bias and similarity. Values in range (0..1]. ~0 -> no bias. 1 -> only bias
+		options.stopping_threshold = 0.0001;
 
 		// Exclude Tag from mention collection
 		final Set<POS.Tag> excluded_mention_POS = Set.of(POS.Tag.X);
 		// Include these Tag in the ranking of meanings
-		options.ranking_POS_Tags = Set.of(POS.Tag.NOUN); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+		options.ranking_POS_Tags = Set.of(POS.Tag.NOUN, POS.Tag.ADJ, POS.Tag.VERB, POS.Tag.ADV); // ranking MUST include all; let threshold params filter out suprious meanings
 		// Evaluate these Tag tags only
-		Set<POS.Tag> evaluate_POS = Set.of(POS.Tag.NOUN); //, adj_pos_tag, verb_pos_tag, adverb_pos_tag);
+		Set<POS.Tag> evaluate_POS = Set.of(POS.Tag.NOUN, POS.Tag.ADJ, POS.Tag.VERB, POS.Tag.ADV);
 
 		final Map<String, Set<AlternativeMeanings>> gold = parseGoldFile(gold_file);
 		final Corpus corpus = EvaluationCorpus.createFromXML(xml_file);
@@ -56,32 +57,73 @@ public class RankingEvaluation
 		corpus.texts.forEach(text -> EvaluationTools.rankMeanings(text, options));
 		corpus.texts.forEach(text -> EvaluationTools.disambiguate(text, options));
 
+		log.info("***\n" + options + "\n***");
+
 		log.info("\n********************************");
 		{
 			final int num_runs = 10;
-			final double map = IntStream.range(0, num_runs)
-					.mapToDouble(i ->
-							{
-								final Map<String, List<Meaning>> system_meanings = randomRank(corpus);
-								return evaluate(system_meanings, gold, evaluate_POS);
-							})
+			final List<Pair<Double, Double>> pairs = IntStream.range(0, num_runs)
+					.mapToObj(i ->
+					{
+						final Map<String, List<Meaning>> system_meanings = randomRank(corpus);
+						final Map<String, Pair<Double, Double>> values = evaluate(system_meanings, gold, evaluate_POS);
+						final double map_i = values.values().stream()
+								.mapToDouble(Pair::getLeft)
+								.average()
+								.orElse(0.0);
+						final double limited_map_i = values.values().stream()
+								.mapToDouble(Pair::getRight)
+								.average()
+								.orElse(0.0);
+						return Pair.of(map_i, limited_map_i);
+
+					})
+					.collect(toList());
+			final double map = pairs.stream()
+					.mapToDouble(Pair::getLeft)
 					.average().orElse(0.0);
-				log.info("Random rank (" + num_runs + " runs) MAP = " + DebugUtils.printDouble(map));
+			final double limited_map = pairs.stream()
+					.mapToDouble(Pair::getRight)
+					.average().orElse(0.0);
+
+			log.info("Random rank (" + num_runs + " runs) MAP = " + DebugUtils.printDouble(map) +
+					" limited MAP = " + DebugUtils.printDouble(limited_map));
 		}
 		{
 			final Map<String, List<Meaning>> system_meanings = frequencyRank(corpus);
-			final double map = evaluate(system_meanings, gold, evaluate_POS);
-			log.info("Frequency rank MAP = " + DebugUtils.printDouble(map));
+			final Map<String, Pair<Double, Double>> avg_precisions = evaluate(system_meanings, gold, evaluate_POS);
+			final double map = avg_precisions.values().stream().mapToDouble(Pair::getLeft).average().orElse(Double.NaN);
+			final double limited_map = avg_precisions.values().stream().mapToDouble(Pair::getRight).average().orElse(Double.NaN);
+			log.info("Frequency rank MAP = " + DebugUtils.printDouble(map) + " limited MAP = " + DebugUtils.printDouble(limited_map));
+			avg_precisions.keySet().stream().sorted().forEach(text_id -> {
+				final Pair<Double, Double> averages = avg_precisions.get(text_id);
+				log.info("\t" + text_id + ": " + DebugUtils.printDouble(averages.getLeft()) +
+						"\t" + DebugUtils.printDouble(averages.getRight()));
+			});
 		}
 		{
 			final Map<String, List<Meaning>> system_meanings = contextRank(corpus);
-			final double map = evaluate(system_meanings, gold, evaluate_POS);
-			log.info("Context rank MAP = " + DebugUtils.printDouble(map));
+			final Map<String, Pair<Double, Double>> avg_precisions = evaluate(system_meanings, gold, evaluate_POS);
+			final double map = avg_precisions.values().stream().mapToDouble(Pair::getLeft).average().orElse(Double.NaN);
+			final double limited_map = avg_precisions.values().stream().mapToDouble(Pair::getRight).average().orElse(Double.NaN);
+			log.info("Context rank MAP = " + DebugUtils.printDouble(map) + " limited MAP = " + DebugUtils.printDouble(limited_map));
+			avg_precisions.keySet().stream().sorted().forEach(text_id -> {
+				final Pair<Double, Double> averages = avg_precisions.get(text_id);
+				log.info("\t" + text_id + ": " + DebugUtils.printDouble(averages.getLeft()) +
+						"\t" + DebugUtils.printDouble(averages.getRight()));
+			});
 		}
 		{
 			final Map<String, List<Meaning>> system_meanings = fullRank(corpus);
-			final double map = evaluate(system_meanings, gold, evaluate_POS);
-			log.info("Full rank MAP = " + DebugUtils.printDouble(map));
+			final Map<String, Pair<Double, Double>> avg_precisions = evaluate(system_meanings, gold, evaluate_POS);
+			final double map = avg_precisions.values().stream().mapToDouble(Pair::getLeft).average().orElse(Double.NaN);
+			final double limited_map = avg_precisions.values().stream().mapToDouble(Pair::getRight).average().orElse(Double.NaN);
+			log.info("Full rank MAP = " + DebugUtils.printDouble(map) + " limited MAP = " + DebugUtils.printDouble(limited_map));
+			avg_precisions.keySet().stream().sorted().forEach(text_id -> {
+				final Pair<Double, Double> averages = avg_precisions.get(text_id);
+				log.info("\t" + text_id + ": " + DebugUtils.printDouble(averages.getLeft()) +
+						"\t" + DebugUtils.printDouble(averages.getRight()));
+			});
 		}
 		log.info("********************************\n");
 
@@ -111,7 +153,7 @@ public class RankingEvaluation
 				.collect(toMap(text -> text.id, text ->
 				{
 					final List<Meaning> meanings = text.sentences.stream()
-							.flatMap(sentence -> sentence.disambiguated.values().stream()
+							.flatMap(sentence -> sentence.candidates.values().stream().flatMap(List::stream)
 								.map(Candidate::getMeaning))
 							.collect(toList());
 					Collections.shuffle(meanings, random);
@@ -125,11 +167,11 @@ public class RankingEvaluation
 		return corpus.texts.stream()
 				.collect(toMap(text -> text.id, text ->
 				{
-					final List<Candidate> disambiguated = text.sentences.stream()
-							.flatMap(sentence -> sentence.disambiguated.values().stream())
+					final List<Candidate> candidates = text.sentences.stream()
+							.flatMap(sentence -> sentence.candidates.values().stream().flatMap(List::stream))
 							.collect(toList());
-					Function<Candidate, Long> frequency = c -> disambiguated.stream().filter(c2 -> c2 == c).count();
-					return disambiguated.stream()
+					Function<Candidate, Long> frequency = c -> candidates.stream().filter(c2 -> c2 == c).count();
+					return candidates.stream()
 							.sorted(Comparator.comparingLong(frequency::apply).reversed())
 							.map(Candidate::getMeaning)
 							.collect(toList());
@@ -142,7 +184,7 @@ public class RankingEvaluation
 				.collect(toMap(text -> text.id, text ->
 				{
 					final List<Meaning> meanings = text.sentences.stream()
-							.flatMap(sentence -> sentence.disambiguated.values().stream())
+							.flatMap(sentence -> sentence.candidates.values().stream().flatMap(List::stream))
 							.map(Candidate::getMeaning)
 							.collect(toList());
 
@@ -165,7 +207,7 @@ public class RankingEvaluation
 				.collect(toMap(text -> text.id, text ->
 				{
 					Map<Meaning, Double> weights = text.sentences.stream()
-							.flatMap(sentence -> sentence.disambiguated.values().stream())
+							.flatMap(sentence -> sentence.candidates.values().stream().flatMap(List::stream))
 							.collect(groupingBy(Candidate::getMeaning, averagingDouble(c -> c.getWeight().orElse(0.0))));
 					final List<Meaning> file_meanings = new ArrayList<>(weights.keySet());
 					return file_meanings.stream()
@@ -175,9 +217,9 @@ public class RankingEvaluation
 				}));
 	}
 
-	private static double evaluate(Map<String, List<Meaning>> system, Map<String, Set<AlternativeMeanings>> gold, Set<POS.Tag> eval_POS)
+	private static Map<String, Pair<Double, Double>> evaluate(Map<String, List<Meaning>> system, Map<String, Set<AlternativeMeanings>> gold, Set<POS.Tag> eval_POS)
 	{
-		List<Double> avg_precisions = new ArrayList<>();
+		Map<String, Pair<Double, Double>> avg_precisions = new HashMap<>();
 		system.forEach((text_id, meanings) ->
 		{
 			final List<String> system_set = meanings.stream().map(Meaning::getReference).collect(toList());
@@ -195,6 +237,10 @@ public class RankingEvaluation
 			final Set<String> evaluated_gold = gold_set.stream()
 					.filter(filter_by_POS)
 					.collect(toSet());
+			final long num_evaluated_gold = gold.get(text_id).stream()
+					.filter(s -> s.alternatives.stream()
+							.anyMatch(filter_by_POS))
+					.count();
 
 			// Now determine the subset of the system candidates to be evaluated
 			final List<String> evaluated_system = system_set.stream()
@@ -203,21 +249,27 @@ public class RankingEvaluation
 
 			int true_positives_partial = 0;
 			int false_positives_partial = 0;
-			Map<Integer, Double> rank_precisions = new HashMap<>();
+			List<Double> rank_precisions = new ArrayList<>();
+			List<Double> limited_rank_precisions = new ArrayList<>();
+
 			for (int k = 0; k < evaluated_system.size(); ++k)
 			{
 				if (evaluated_gold.contains(evaluated_system.get(k)))
 				{
 					final double p = (double) ++true_positives_partial / (double) (true_positives_partial + false_positives_partial);
-					rank_precisions.put(k, p);
+					rank_precisions.add(p);
+					if (k < num_evaluated_gold)
+						limited_rank_precisions.add(p);
 				}
 				else
 					++false_positives_partial;
 			}
 
-			rank_precisions.values().stream().mapToDouble(d -> d).average().ifPresent(avg_precisions::add);
+			final double average = rank_precisions.stream().mapToDouble(d -> d).average().orElse(0.0);
+			final double lim_average = limited_rank_precisions.stream().mapToDouble(d -> d).average().orElse(0.0);
+			avg_precisions.put(text_id, Pair.of(average, lim_average));
 		});
 
-		return avg_precisions.stream().mapToDouble(d -> d).average().orElse(0.0);
+		return avg_precisions;
 	}
 }

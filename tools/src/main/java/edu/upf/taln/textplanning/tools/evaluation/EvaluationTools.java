@@ -321,7 +321,7 @@ public class EvaluationTools
 	{
 		IntStream.range(0, corpus.texts.size()).forEach(i ->
 		{
-			log.info("TEXT " + i);
+			log.debug("TEXT " + i);
 			final EvaluationCorpus.Text text = corpus.texts.get(i);
 			final Set<String> text_gold = gold.get(text.id).stream()
 					.flatMap(a -> a.alternatives.stream())
@@ -346,7 +346,7 @@ public class EvaluationTools
 			final List<Meaning> meanings = new ArrayList<>(weights.keySet());
 			Function<Meaning, String> inGold = m -> text_gold.contains(m.getReference()) ? "GOLD" : "";
 
-			log.info(meanings.stream()
+			log.debug(meanings.stream()
 //					.filter(m -> weights.get(m) > 0.0)
 					.sorted(Comparator.<Meaning>comparingDouble(weights::get).reversed())
 					.map(m -> String.format("%-" + max_length + "s%-11s%-11s%-8s",

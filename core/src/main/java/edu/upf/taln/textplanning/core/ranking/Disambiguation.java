@@ -53,7 +53,7 @@ public class Disambiguation
 				.filter(c -> mention_selector.test(c.getMention()))
 				.collect(toList());
 
-		log.info("Selected multiwords: " + filtered_candidates.stream()
+		log.debug("Selected multiwords: " + filtered_candidates.stream()
 				.map(Candidate::getMention)
 				.distinct()
 				.filter(Mention::isMultiWord)

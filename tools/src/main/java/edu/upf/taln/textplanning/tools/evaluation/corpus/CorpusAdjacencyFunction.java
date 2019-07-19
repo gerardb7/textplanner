@@ -71,7 +71,7 @@ public class CorpusAdjacencyFunction implements BiPredicate<Mention, Mention>
 		if (m1.equals(m2))
 			return false;
 
-		// Adjacent words?
+		// Adjacent words? <- rewards words adjacent to highly ranked words. Side effect ->  penalizes words at the start and end of a sentence!
 		if (m1.getSourceId().equals(m2.getSourceId()) &&
 				(Math.abs(word_mentions.indexOf(m1) - word_mentions.indexOf(m2)) <= context_size))
 			return true;
@@ -80,11 +80,11 @@ public class CorpusAdjacencyFunction implements BiPredicate<Mention, Mention>
 		if (!additional_links)
 			return false;
 
-		// Same lemma=?
-		if (m1.getLemma().equals(m2.getLemma()))
-			return true;
+//		// Same lemma=? <- this rewards frequent lemmas
+//		if (m1.getLemma().equals(m2.getLemma()))
+//			return true;
 
-		// Same meaning ?
+		// Same meaning ? <- this rewards frequent meanings
 		if (!word_meanings.containsKey(m1) || !word_meanings.containsKey(m2))
 			return false;
 

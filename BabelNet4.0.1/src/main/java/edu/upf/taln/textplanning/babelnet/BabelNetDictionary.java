@@ -133,7 +133,15 @@ public class BabelNetDictionary implements MeaningDictionary
 			num_queries.getAndIncrement();
 			final Language bnLang = Language.fromISO(language.toLanguageTag());
 			final List<BabelSynset> synsets = bn.getSynsets(form, bnLang);
-			synsets.sort(new BabelSynsetComparator(form, bnLang));
+
+			try
+			{
+				synsets.sort(new BabelSynsetComparator(form, bnLang));
+			}
+			catch (Exception e)
+			{
+				log.warn("Sorting failed for synsets of \"" + form + "\":" + e);
+			}
 
 			return synsets.stream()
 					.map(BabelSynset::getID)
