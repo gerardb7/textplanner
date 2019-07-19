@@ -11,13 +11,13 @@ import java.util.Set;
 
 public class Options
 {
-	public Set<POS.Tag> ranking_POS_Tags = Set.of(POS.Tag.NOUN, POS.Tag.ADJ); // only rank meanings of words with these Tag - other meanings are excluded from the ranking but disambiguated anyway
+	public Set<POS.Tag> ranking_POS_Tags = Set.of(POS.Tag.NOUN, POS.Tag.ADJ, POS.Tag.VERB, POS.Tag.ADV); // only rank meanings of words with these Tag - other meanings are excluded from the ranking but disambiguated anyway
 	public int min_context_freq = 3; // Minimum frequency of document tokens used to calculate nominal context vectors
 	public int window_size = 5; // Size of window in number of tokens used to calculate non-nominal context vectors
-	public double min_bias_threshold = 0.7; // minimum bias value below which candidate meanings are ignored.  Values in range [0..1]. 0 -> larger ranking matrix. 1 -> no ranking.
+	public double min_bias_threshold = 0.8; // minimum bias value below which candidate meanings are ignored.  Values in range [0..1]. 0 -> larger ranking matrix. 1 -> no ranking.
 	public int num_first_meanings = 1; // Number of top dictionary meanings to be included in ranking
-	public double sim_threshold = 0.0; // Pairs of meanings with sim below this value have their score set to 0. Values in range [0..1]. 0 -> denser ranking matrix. 1 -> no ranking
-	public double damping_meanings = 0.2; // controls balance between bias and similarity. Values in range (0..1]. ~0 -> no bias. 1 -> only bias
+	public double sim_threshold = 0.8; // Pairs of meanings with sim below this value have their score set to 0. Values in range [0..1]. 0 -> denser ranking matrix. 1 -> no ranking
+	public double damping_meanings = 0.3; // controls balance between bias and similarity. Values in range (0..1]. ~0 -> no bias. 1 -> only bias
 	public double stopping_threshold = 0.0001; // ranking stops when rank udpates fall below this value. Values in range [0..1]. 0 -> loooong time to converge. 1 -> no ranking.
 	public double disambiguation_lambda = 0.2; // penalizes shorter mentions. Value in range [0..1]. 0 -> always choose longest span. 0.5 strictly prefer span with highest weight. 1 -> always choose shortest span.
 	public double damping_variables = 0.2; // controls bias towards meanings rank when ranking variables. Values in range (0..1]. ~0 -> no bias. 1 -> only bias
