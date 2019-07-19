@@ -1,7 +1,6 @@
 package edu.upf.taln.textplanning.core.ranking;
 
 import Jama.Matrix;
-import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -12,7 +11,7 @@ import java.util.stream.IntStream;
 
 public class JamaPowerIteration implements PowerIterationRanking
 {
-	private final double stopping_threshold;
+	private double stopping_threshold;
 	private final static Logger log = LogManager.getLogger();
 
 	public JamaPowerIteration(double stopping_threshold)
@@ -47,6 +46,7 @@ public class JamaPowerIteration implements PowerIterationRanking
 		log.info("Starting power iteration");
 		int numIterations = 0;
 		double delta;
+		final double corrected_stopping_threshold = stopping_threshold / n;
 		do
 		{
 			// Core operation: transform distribution according to stochastic matrix
@@ -65,10 +65,10 @@ public class JamaPowerIteration implements PowerIterationRanking
 				log.info("..." + numIterations + " iterations");
 			}
 		}
-		while (delta >= stopping_threshold); // stopping criterion: delta falls below a certain threshold
+		while (delta >= corrected_stopping_threshold); // stopping criterion: delta falls below a certain threshold
 
 		log.info("Power iteration completed after " + numIterations + " iterations");
-		log.debug("Ranking:\n" + DebugUtils.printRank(v.getColumnPackedCopy(), n, labels));
+//		log.debug("Ranking:\n" + DebugUtils.printRank(v.getColumnPackedCopy(), n, labels));
 		return v;
 	}
 

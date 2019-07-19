@@ -18,7 +18,7 @@ public class Options
 	public int num_first_meanings = 1; // Number of top dictionary meanings to be included in ranking
 	public double sim_threshold = 0.0; // Pairs of meanings with sim below this value have their score set to 0. Values in range [0..1]. 0 -> denser ranking matrix. 1 -> no ranking
 	public double damping_meanings = 0.2; // controls balance between bias and similarity. Values in range (0..1]. ~0 -> no bias. 1 -> only bias
-	public double stopping_threshold = 0.001; // ranking stops when rank udpates fall below this value. Values in range [0..1]. 0 -> loooong time to converge. 1 -> no ranking.
+	public double stopping_threshold = 0.0001; // ranking stops when rank udpates fall below this value. Values in range [0..1]. 0 -> loooong time to converge. 1 -> no ranking.
 	public double disambiguation_lambda = 0.2; // penalizes shorter mentions. Value in range [0..1]. 0 -> always choose longest span. 0.5 strictly prefer span with highest weight. 1 -> always choose shortest span.
 	public double damping_variables = 0.2; // controls bias towards meanings rank when ranking variables. Values in range (0..1]. ~0 -> no bias. 1 -> only bias
 	public int num_subgraphs_extract = 100; // Number of sampled subgraphs during extraction

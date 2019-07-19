@@ -100,7 +100,7 @@ public final class TextPlanner
 
 		double[] ranking = Ranker.rank(references, labels, bias, similarity, true, meanings_similarity_filter,
 				o.sim_threshold, o.damping_meanings, o.stopping_threshold);
-		final double[] rebased_ranking = MatrixFactory.rebaseRankingValues(ranking);
+		final double[] rebased_ranking = MatrixFactory.rebase(ranking);
 
 		// Assign weights to candidates: rank values for those with a ranked meaning
 		candidates.forEach(candidate ->
@@ -162,7 +162,7 @@ public final class TextPlanner
 
 			final double[] ranking = Ranker.rank(variables, labels, variables2bias::get, edge_weights, true,
 					(v1, v2) -> true, 0.0, o.damping_variables, o.stopping_threshold);
-			final double[] rebased_ranking = MatrixFactory.rebaseRankingValues(ranking);
+			final double[] rebased_ranking = MatrixFactory.rebase(ranking);
 
 			IntStream.range(0, variables.size()).boxed()
 					.forEach(i -> variables2mentions.get(variables.get(i)).setWeight(rebased_ranking[i]));

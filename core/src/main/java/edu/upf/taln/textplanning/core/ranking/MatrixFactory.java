@@ -1,6 +1,5 @@
 package edu.upf.taln.textplanning.core.ranking;
 
-import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.core.utils.DebugUtils.ThreadReporter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -67,7 +66,7 @@ public class MatrixFactory
 
 		// Create strictly positive bias row vector with values in range [0..1]
 		double[] L = createBiasVector(items, bias);
-		log.debug("Bias:\n" + DebugUtils.printRank(L, n, labels));
+		//log.debug("Bias:\n" + DebugUtils.printRank(L, n, labels));
 
 		// Create non-negative, row-normalized transition matrix
 		double[][] X = createTransitionMatrix(items, edge_weights, simmetric, filter, sim_threshold, true);
@@ -78,15 +77,19 @@ public class MatrixFactory
 		// Bias each row in X using bias L and factor d
 		// Ru = d*Lu + (1.0-d)* SUM Xvu, for all v pointing to u
 		// Rvu = d*Lu/n + (1.0-d)*Xvu, for all v
-		IntStream.range(0, n).parallel().forEach(u -> // row for u
-				IntStream.range(0, n).forEach(v -> { // from v to u
-					double Lu = L[u]; // bias towards u
-					double Xvu = X[u][v]; // similarity from v to u
-					double Ruv = (d * Lu)/n + (1.0 - d)*Xvu; // distribute bias across row -> divided by n
+		IntStream.range(0, n).parallel().forEach(u -> { // row for u
+			final double Lu = L[u]; // bias towards u
+			final double bias_term = (d * Lu) / n; // distribute bias across row -> divided by n
 
-					assert !Double.isNaN(Ruv);
-					R[u][v] = Ruv;
-				}));
+			IntStream.range(0, n).forEach(v -> { // edge from u to u
+				final double Xuv = X[u][v]; // weight of edge from u to v
+				final double trans_term = (1.0 - d) * Xuv;
+				final double Ruv = bias_term + trans_term;
+
+				assert !Double.isNaN(Ruv);
+				R[u][v] = Ruv;
+			});
+		});
 
 		// rows in resulting matrix don't sum 1 anymore, but that's ok
 		log.info("Matrix created");
@@ -105,11 +108,13 @@ public class MatrixFactory
 					return w;
 				})
 				.toArray();
+		final double[] v2 = rebase(v);
 
-		if (Arrays.stream(v).anyMatch(d -> d == 0.0))
-			makePositive(v);
+		if (Arrays.stream(v2).anyMatch(d -> d == 0.0))
+			makePositive(v2);
 
-		return rebaseRankingValues(v);
+		//normalize(v2); // by normalizing we make the magnitude of the bias term comparable to magnitude of the transition term
+		return v2;
 	}
 
 	// Creates a symmetric, non-negative, row-normalized matrix
@@ -271,7 +276,7 @@ public class MatrixFactory
 	}
 
 	// rebases ranking values to [0..1] range
-	public static double[] rebaseRankingValues(double[] ranking)
+	public static double[] rebase(double[] ranking)
 	{
 		final DoubleSummaryStatistics stats = Arrays.stream(ranking)
 				.summaryStatistics();
