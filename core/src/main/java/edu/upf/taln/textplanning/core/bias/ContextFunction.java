@@ -49,7 +49,7 @@ public abstract class ContextFunction
 				stop = true;
 		}
 
-		log.info("Nominal context set to: " + context_tokens);
+		log.debug("Nominal context set to: " + context_tokens);
 
 
 		this.meanings2mentions = candidates.stream()

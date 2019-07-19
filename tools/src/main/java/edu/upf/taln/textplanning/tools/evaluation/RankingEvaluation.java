@@ -40,7 +40,7 @@ public class RankingEvaluation
 		options.min_bias_threshold = 0.8; // minimum bias value below which candidate meanings are ignored
 		options.num_first_meanings = 1;
 		options.sim_threshold = 0.8; // Pairs of meanings with sim below this value have their score set to 0
-		options.damping_meanings = 0.2; // controls balance between bias and similarity: higher value -> more bias
+		options.damping_meanings = 1.0;  // controls balance between bias and similarity. Values in range (0..1]. ~0 -> no bias. 1 -> only bias
 		options.stopping_threshold = 0.001;
 
 		// Exclude Tag from mention collection
@@ -49,8 +49,6 @@ public class RankingEvaluation
 		options.ranking_POS_Tags = Set.of(POS.Tag.NOUN, POS.Tag.ADJ, POS.Tag.VERB, POS.Tag.ADV); // ranking MUST include all; let threshold params filter out suprious meanings
 		// Evaluate these Tag tags only
 		Set<POS.Tag> evaluate_POS = Set.of(POS.Tag.NOUN, POS.Tag.ADJ, POS.Tag.VERB, POS.Tag.ADV);
-		log.info("***\n" + options + "\n***");
-
 
 		final Map<String, Set<AlternativeMeanings>> gold = parseGoldFile(gold_file);
 		final Corpus corpus = EvaluationCorpus.createFromXML(xml_file);
@@ -58,6 +56,8 @@ public class RankingEvaluation
 
 		corpus.texts.forEach(text -> EvaluationTools.rankMeanings(text, options));
 		corpus.texts.forEach(text -> EvaluationTools.disambiguate(text, options));
+
+		log.info("***\n" + options + "\n***");
 
 		log.info("\n********************************");
 		{

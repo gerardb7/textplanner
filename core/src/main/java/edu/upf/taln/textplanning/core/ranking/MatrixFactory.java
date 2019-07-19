@@ -6,8 +6,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Arrays;
+import java.util.DoubleSummaryStatistics;
 import java.util.List;
 import java.util.OptionalDouble;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -46,6 +48,10 @@ public class MatrixFactory
 	 * If @param make_positive is set to true then the underlying graph is turned into a complete graph, and the stochastic
 	 * matrix made irreducible, aperiodic and positive.
 	 * If @row_normalize is set to true, the matrix returned is row stochastic
+	 *
+	 * On normalization and other implementation details followed "CSL: PageRank Algorithm" by Nicole Beckage and Marina Kogan, 2013
+	 * http://tuvalu.santafe.edu/~aaronc/courses/5454/csci5454_spring2013_CSL11.pdf
+	 *
 	 */
 	public static double[][] createRankingMatrix(List<String> items, List<String> labels, Function<String, Double> bias,
 	                                             BiFunction<String, String, OptionalDouble> edge_weights,
@@ -59,14 +65,14 @@ public class MatrixFactory
 		log.info("Creating ranking matrix for " + items.size() + " items");
 		int n = items.size();
 
-		// Create strictly positive, normalized bias row vector for the set of items (use standard PageRank damping array if d is set to 0)
+		// Create strictly positive bias row vector with values in range [0..1]
 		double[] L = createBiasVector(items, bias);
 		log.debug("Bias:\n" + DebugUtils.printRank(L, n, labels));
 
 		// Create non-negative, row-normalized transition matrix
 		double[][] X = createTransitionMatrix(items, edge_weights, simmetric, filter, sim_threshold, true);
 
-		// Create ranking matrix:
+		// Create ranking matrix
 		double[][] R = new double[n][n];
 
 		// Bias each row in X using bias L and factor d
@@ -76,32 +82,26 @@ public class MatrixFactory
 				IntStream.range(0, n).forEach(v -> { // from v to u
 					double Lu = L[u]; // bias towards u
 					double Xvu = X[u][v]; // similarity from v to u
-					double Ruv = (d * Lu) / n + (1.0 - d)*Xvu; // distribute d*Lu across row -> add (d*Lu)/n to each cell
+					double Ruv = (d * Lu)/n + (1.0 - d)*Xvu; // distribute bias across row -> divided by n
 
 					assert !Double.isNaN(Ruv);
 					R[u][v] = Ruv;
 				}));
 
-		// L is normalized, R is row-normalized, d is between 0 an 1.0 -> R is row-normalized
-		log.info("Matrix created"); // guaranteed to be non-negative and row-normalized
+		// rows in resulting matrix don't sum 1 anymore, but that's ok
+		log.info("Matrix created");
 
-		return R;
+		return R; // each row corresponds to an item to be ranked
 	}
 
-	// Creates non-negative, normalized bias vector by applying the bias function to a set of items
+	// Creates strictly positive bias vector by applying the bias function to a set of items
 	public static double[] createBiasVector(List<String> items, Function<String, Double> bias)
 	{
 		final double[] v = items.parallelStream()
 				.mapToDouble(i ->
 				{
 					final Double w = bias.apply(i);
-					if (w <= 0.0)
-					{
-						// only positive bias_values are allowed!
-						log.warn("Non-positive weight for item " + i);
-						return 0.0;
-					}
-
+					assert w >= 0.0 && w <= 1.0;
 					return w;
 				})
 				.toArray();
@@ -109,8 +109,7 @@ public class MatrixFactory
 		if (Arrays.stream(v).anyMatch(d -> d == 0.0))
 			makePositive(v);
 
-		normalize(v);
-		return v;
+		return rebaseRankingValues(v);
 	}
 
 	// Creates a symmetric, non-negative, row-normalized matrix
@@ -130,52 +129,59 @@ public class MatrixFactory
 		AtomicLong num_negative = new AtomicLong(0);
 		ThreadReporter reporter = new ThreadReporter(log);
 
-		// Fill matrix
+		// Fill matrix as an adjacency matrix: each row corresponds to a node and contains weights of outgoing edges
 		IntStream.range(0, n)
 				.parallel() // each thread writes to separate portions (rows) of the matrix
 				.peek(i -> reporter.report())
-				.forEach(i -> {
-					IntStream.range(simmetric ? i : 0, n).forEach(j ->
+				.forEach(i -> IntStream.range(simmetric ? i : 0, n).forEach(j ->
+				{
+					double wij = 0.0;
+					final String ei = items.get(i);
+					final String ej = items.get(j);
+					if (filter.test(ej, ei))
 					{
-						double wji = 0.0;
-						final String ej = items.get(j);
-						final String ei = items.get(i);
-						if (filter.test(ej, ei))
+						final OptionalDouble o = edge_weights.apply(ei, ej);
+						o.ifPresent(d -> num_defined.incrementAndGet());
+						wij = o.orElse(0.0);
+
+						if (wij < 0.0)
 						{
-							final OptionalDouble o = edge_weights.apply(ej, ei);
-							o.ifPresent(d -> num_defined.incrementAndGet());
-							wji = o.orElse(0.0);
-
-							if (wji < 0.0)
-							{
-								num_negative.incrementAndGet();
-								wji = 0.0;
-							}
+							num_negative.incrementAndGet();
+							wij = 0.0;
 						}
-						else
-							num_filtered.incrementAndGet();
+					}
+					else
+						num_filtered.incrementAndGet();
 
-						if (wji < sim_threshold)
-							wji = 0.0;
+					if (wij < sim_threshold)
+						wij = 0.0;
 
-						m[i][j] = wji; // weight for edge going from j to i
-						if (simmetric)
-							m[j][i] = wji; // weight for edge going from i to j -> same if symmetric
+					m[i][j] = wij; // weight for edge going from i to j
+					if (simmetric)
+						m[j][i] = wij; // weight for edge going from j to i -> same if symmetric
 
-						if (counter_pairs.incrementAndGet() % 100000 == 0)
-							log.info(counter_pairs.get() + " out of " + total_pairs);
-					});
-				});
+					if (counter_pairs.incrementAndGet() % 100000 == 0)
+						log.info(counter_pairs.get() + " out of " + total_pairs);
+				}));
 
-		if (Arrays.stream(m).anyMatch(row -> Arrays.stream(row).allMatch(v -> v == 0.0)))
-			log.warn("Transition matrix has one or more zero-filled rows");
+		// Remove sinks
+		AtomicInteger num_sinks = new AtomicInteger();
+		Arrays.stream(m).forEach(row -> {
+			if (Arrays.stream(row).allMatch(d -> d == 0.0))
+			{
+				Arrays.fill(row, 1.0 / n);
+				num_sinks.incrementAndGet();
+			}
+		});
 
 		if (report_stats)
 		{
 			log.info( num_filtered.intValue() + " edge weights set to 0");
+			log.info( num_sinks.get() + " sinks");
 			log.info("Weights are negative for " + num_negative.get() + " edges out of " + total_pairs);
 		}
 
+		// we row-normalize becuase it is the rows that will be multiplied with the ranking vector
 		rowNormalize(m);
 		return m;
 	}
@@ -262,5 +268,20 @@ public class MatrixFactory
 			// and http://en.wikipedia.org/wiki/Machine_epsilon#Values_for_standard_hardware_floating_point_arithmetics
 			assert (Math.abs(Arrays.stream(v).sum() - 1.0) < 2 * 2.22e-16);
 		}
+	}
+
+	// rebases ranking values to [0..1] range
+	public static double[] rebaseRankingValues(double[] ranking)
+	{
+		final DoubleSummaryStatistics stats = Arrays.stream(ranking)
+				.summaryStatistics();
+		if(stats.getMin() == stats.getMax())
+			return ranking;
+
+		//(((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
+		Function<Double, Double> rebase = w -> (w - stats.getMin()) / (stats.getMax() - stats.getMin());
+		return Arrays.stream(ranking)
+				.map(rebase::apply)
+				.toArray();
 	}
 }
