@@ -24,10 +24,9 @@ public class Disambiguation
 	}
 
 	private final static BiPredicate<Mention, Mention> spans_over =
-			(m1, m2) -> m1.getSourceId().equals(m2.getSourceId()) &&
+			(m1, m2) -> m1.getContextId().equals(m2.getContextId()) &&
 						m1.getSpan().getLeft() <= m2.getSpan().getLeft() &&
 						m1.getSpan().getRight() >= m2.getSpan().getRight();
-
 
 	public Map<Mention, Candidate> disambiguate(List<Candidate> candidates)
 	{

@@ -52,7 +52,7 @@ public class MatrixFactory
 	 * http://tuvalu.santafe.edu/~aaronc/courses/5454/csci5454_spring2013_CSL11.pdf
 	 *
 	 */
-	public static double[][] createRankingMatrix(List<String> items, List<String> labels, Function<String, Double> bias,
+	public static double[][] createRankingMatrix(List<String> items, Function<String, Double> bias,
 	                                             BiFunction<String, String, OptionalDouble> edge_weights,
 	                                             boolean simmetric,
 	                                             BiPredicate<String, String> filter,
@@ -66,7 +66,6 @@ public class MatrixFactory
 
 		// Create strictly positive bias row vector with values in range [0..1]
 		double[] L = createBiasVector(items, bias);
-		//log.debug("Bias:\n" + DebugUtils.printRank(L, n, labels));
 
 		// Create non-negative, row-normalized transition matrix
 		double[][] X = createTransitionMatrix(items, edge_weights, simmetric, filter, sim_threshold, true);

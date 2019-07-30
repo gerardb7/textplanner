@@ -254,7 +254,7 @@ public abstract class DisambiguationEvaluation
 //			return;
 //
 //		final Mention mention = candidates.get(0).getMention();
-//		log.info(mention.getSourceId() + " \"" + mention + "\" " + mention.getPOS() + candidates.stream()
+//		log.info(mention.getContextId() + " \"" + mention + "\" " + mention.getPOS() + candidates.stream()
 //				.map(c -> c.toString() + " " + DebugUtils.printDouble(c.getWeight()))
 //				.collect(joining("\n\t", "\n\t", "")));
 //	}

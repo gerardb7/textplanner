@@ -144,7 +144,7 @@ public class StanfordWrapper
 							String pos_v = a.getPOS(span).orElse("N"); // assume nominal
 							final POS.Tag tag = POS.get(pos_v, tagset);
 //							FunctionType ner_v = a.getNEType(span).orElse(FunctionType.Other);
-							Mention mention = new Mention(String.valueOf(m.mentionID), g.getContextId(), span, a.getSurfaceForm(span), lemma_v, tag,
+							Mention mention = new Mention(String.valueOf(m.mentionID), g.getContextId(), span, a.getTokens(span), lemma_v, tag,
 									AMRMentionsCollector.isName(span, g), AMRMentionsCollector.getType(span, g));
 							chain.put(v, mention);
 						}

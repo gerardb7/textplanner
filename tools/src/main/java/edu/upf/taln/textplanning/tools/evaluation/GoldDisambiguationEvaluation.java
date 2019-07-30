@@ -89,7 +89,7 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 				.map(Candidate::getMention)
 				.distinct()
 				.forEach(m -> {
-					final AlternativeMeanings meanings = gold.get(m.getContextId());
+					final AlternativeMeanings meanings = gold.get(m.getId());
 					if (meanings != null && !(m.getSurfaceForm().equalsIgnoreCase(meanings.text) || m.getLemma().equalsIgnoreCase(meanings.text)))
 						log.info("\tMention from XML: " + m.getSurfaceForm() + "/" + m.getLemma() + " doesn't match mention from gold: " + meanings.text);
 				});
@@ -98,7 +98,7 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 	@Override
 	protected Set<String> getGold(Mention m)
 	{
-		final AlternativeMeanings meanings = gold.get(m.getContextId());
+		final AlternativeMeanings meanings = gold.get(m.getId());
 		if (meanings == null)
 			return Set.of();
 
@@ -158,7 +158,7 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 			if (    (multiwords_only && mention.isMultiWord()) ||
 					(!multiwords_only && eval_POS.contains(mention.getPOS())))
 			{
-				system.put(mention.getContextId(), candidate.getMeaning().getReference());
+				system.put(mention.getId(), candidate.getMeaning().getReference());
 			}
 		}
 

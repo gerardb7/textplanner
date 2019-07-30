@@ -13,6 +13,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
 // Maps vertices in semantic graphs to tokens and their linguistic annotations
@@ -124,6 +125,13 @@ public class AMRAlignments implements Serializable
 			return Optional.empty();
 
 		return top_vertex;
+	}
+
+	public List<String> getTokens(Pair<Integer, Integer> span)
+	{
+		return IntStream.range(span.getLeft(), span.getRight())
+				.mapToObj(this::getToken)
+				.collect(toList());
 	}
 
 	public String getSurfaceForm(Pair<Integer, Integer> span)

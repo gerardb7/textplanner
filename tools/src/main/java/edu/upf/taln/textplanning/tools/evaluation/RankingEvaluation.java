@@ -40,7 +40,7 @@ public class RankingEvaluation
 		options.min_bias_threshold = 0.8; // minimum bias value below which candidate meanings are ignored
 		options.num_first_meanings = 1;
 		options.sim_threshold = 0.8; // Pairs of meanings with sim below this value have their score set to 0
-		options.damping_meanings = 0.1;  // controls balance between bias and similarity. Values in range (0..1]. ~0 -> no bias. 1 -> only bias
+		options.damping_meanings = 0.3;  // controls balance between bias and similarity. Values in range (0..1]. ~0 -> no bias. 1 -> only bias
 		options.stopping_threshold = 0.0001;
 
 		// Exclude Tag from mention collection
@@ -76,7 +76,6 @@ public class RankingEvaluation
 								.average()
 								.orElse(0.0);
 						return Pair.of(map_i, limited_map_i);
-
 					})
 					.collect(toList());
 			final double map = pairs.stream()

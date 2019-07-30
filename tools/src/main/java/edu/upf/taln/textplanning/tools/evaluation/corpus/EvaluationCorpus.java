@@ -113,15 +113,15 @@ public class EvaluationCorpus
 				.collect(toMap(Candidate::getMention, c -> c));
 
 		final Map<String, Meaning> meanings = mentions2candidates.keySet().stream()
-				.collect(toMap(Mention::getContextId, m -> mentions2candidates.get(m).getMeaning()));
+				.collect(toMap(Mention::getId, m -> mentions2candidates.get(m).getMeaning()));
 		final Map<String, Double> weights = mentions2candidates.keySet().stream()
-				.map(m -> Pair.of(m.getContextId(), m.getWeight()))
+				.map(m -> Pair.of(m.getId(), m.getWeight()))
 				.filter(p -> p.getRight().isPresent())
 				.collect(toMap(Pair::getLeft, p -> p.getRight().get()));
 		final Map<String, List<Mention>> mentions = mentions2candidates.keySet().stream()
-				.collect(toMap(Mention::getContextId, List::of));
+				.collect(toMap(Mention::getId, List::of));
 		final Map<String, List<String>> sources = mentions2candidates.keySet().stream()
-				.collect(toMap(Mention::getContextId, m -> List.of(m.getSourceId())));
+				.collect(toMap(Mention::getId, m -> List.of(m.getContextId())));
 
 		text.graph = new SemanticGraph(meanings, weights, mentions, sources,
 				(id1, id2) -> adjacency.test(mentions.get(id1).get(0), mentions.get(id2).get(0)),

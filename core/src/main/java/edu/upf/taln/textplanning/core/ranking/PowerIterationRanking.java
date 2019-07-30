@@ -1,12 +1,6 @@
 package edu.upf.taln.textplanning.core.ranking;
 
 import Jama.Matrix;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.DoubleStream;
 
 /**
  * Interface for implementations of a power iteration algorithm for ranking with Markov chains.
@@ -28,5 +22,5 @@ import java.util.stream.DoubleStream;
 @FunctionalInterface
 interface PowerIterationRanking
 {
-	Matrix run(Matrix a, List<String> labels);
+	Matrix run(Matrix a);
 }

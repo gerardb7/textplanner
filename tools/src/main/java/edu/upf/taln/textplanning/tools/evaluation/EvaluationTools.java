@@ -53,14 +53,6 @@ public class EvaluationTools
 			this.end = end;
 		}
 
-		AlternativeMeanings(Collection<String> meanings, String text)
-		{
-			alternatives.addAll(meanings);
-			this.text = text;
-			this.begin = "";
-			this.end = "";
-		}
-
 		@Override
 		public String toString()
 		{
@@ -141,7 +133,7 @@ public class EvaluationTools
 			text.sentences.forEach(sentence ->
 			{
 				candidates.keySet().stream()
-						.filter(m -> m.getSourceId().equals(sentence.id))
+						.filter(m -> m.getContextId().equals(sentence.id))
 						.sorted(Comparator.comparingInt(m -> m.getSpan().getLeft()))
 						.forEach(m -> sentence.mentions.add(m));
 
@@ -239,7 +231,7 @@ public class EvaluationTools
 		Disambiguation disambiguation = new Disambiguation(options.disambiguation_lambda);
 		final Map<Mention, Candidate> disambiguated = disambiguation.disambiguate(candidates);
 		disambiguated.forEach((m, c) -> text.sentences.stream()
-				.filter(s -> s.id.equals(m.getSourceId()))
+				.filter(s -> s.id.equals(m.getContextId()))
 				.findFirst()
 				.orElseThrow()
 				.disambiguated.put(m, c));
@@ -282,34 +274,50 @@ public class EvaluationTools
 	public static List<Mention> collectMentions(EvaluationCorpus.Text text, POS.Tagset tagset, int max_span_size,
 	                                            Set<POS.Tag> ignore_pos_tags, ULocale language)
 	{
+		if (text.sentences.isEmpty())
+			return List.of();
+
+		// Calculate sentence boundaries in token offsets
+		final List<Integer> sentence_offsets = new ArrayList<>();
+		sentence_offsets.add(0);
+
+		for (int i=1; i < text.sentences.size(); ++i)
+		{
+			final Integer offset = sentence_offsets.get(i - 1);
+			final int num_tokens = text.sentences.get(i - 1).tokens.size();
+			sentence_offsets.add(offset + num_tokens);
+		}
+
 		// create mention objects
-		return text.sentences.stream()
-				.map(s -> IntStream.range(0, s.tokens.size())
-						.mapToObj(start -> IntStream.range(start + 1, min(start + max_span_size + 1, s.tokens.size() + 1))
+		return IntStream.range(0, text.sentences.size())
+				.mapToObj(s_i ->
+					IntStream.range(0, text.sentences.get(s_i).tokens.size())
+						.mapToObj(start -> IntStream.range(start + 1, min(start + max_span_size + 1, text.sentences.get(s_i).tokens.size() + 1))
 								.filter(end ->
 								{
-									final POS.Tag tag = POS.get(s.tokens.get(start).pos, tagset);
+									final POS.Tag tag = POS.get(text.sentences.get(s_i).tokens.get(start).pos, tagset);
 									// single words must have a pos tag other than 'X'
 									if (end - start == 1)
 										return !ignore_pos_tags.contains(tag);
 										// multiwords must contain at least one nominal token
 									else
-										return s.tokens.subList(start, end).stream()
+										return text.sentences.get(s_i).tokens.subList(start, end).stream()
 												.anyMatch(t -> POS.get(t.pos, tagset) == POS.Tag.NOUN);
 								})
 								.mapToObj(end ->
 								{
-									final List<EvaluationCorpus.Token> tokens = s.tokens.subList(start, end);
-									final String form = tokens.stream()
+									final List<EvaluationCorpus.Token> tokens = text.sentences.get(s_i).tokens.subList(start, end);
+									final List<String> token_forms = tokens.stream()
 											.map(t -> t.wf)
-											.collect(joining(" "));
+											.collect(toList());
 									final String lemma = tokens.stream()
 											.map(t -> t.lemma != null ? t.lemma : t.wf)
 											.collect(joining(" "));
 									POS.Tag pos = tokens.size() == 1 ? POS.get(tokens.get(0).pos, tagset) : POS.Tag.NOUN;
 									String contextId = tokens.size() == 1 ? tokens.get(0).id : tokens.get(0).id + "-" + tokens.get(tokens.size()-1).id;
+									final Pair<Integer, Integer> span = Pair.of(sentence_offsets.get(s_i) + start, sentence_offsets.get(s_i) + end);
 
-									return new Mention(contextId, s.id, Pair.of(start, end), form, lemma, pos, false, "");
+									return new Mention(contextId, text.sentences.get(s_i).id, span, token_forms, lemma, pos, false, "");
 								})
 								.filter(m -> FunctionWordsFilter.test(m.getSurfaceForm(), language)))
 						.flatMap(stream -> stream))
@@ -428,10 +436,10 @@ public class EvaluationTools
 		final String str = corpus.texts.stream()
 				.map(text -> text.sentences.stream()
 						.map(sentence -> sentence.disambiguated.keySet().stream()
-								.sorted(Comparator.comparing(Mention::getContextId))
+								.sorted(Comparator.comparing(Mention::getId))
 								.map(mention ->
 								{
-									String id = mention.getContextId();
+									String id = mention.getId();
 									if (id.contains("-"))
 									{
 										final String[] parts = id.split("-");
@@ -449,24 +457,4 @@ public class EvaluationTools
 
 		FileUtils.writeTextToFile(output_file, str);
 	}
-
-	private static void rebaseCandidateWeights(List<EvaluationCorpus.Sentence> sentences)
-	{
-		final DoubleSummaryStatistics stats = sentences.stream()
-						.flatMap(s -> s.candidates.values().stream()
-								.flatMap(List::stream))
-				.map(Candidate::getWeight)
-				.flatMap(Optional::stream)
-				.mapToDouble(w -> w)
-				.summaryStatistics();
-
-		//(((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
-		Function<Double, Double> rebase = w -> (w - stats.getMin()) / (stats.getMax() - stats.getMin());
-		sentences.forEach(s ->
-				s.candidates.values().forEach(l ->
-						l.forEach(c ->
-								c.getWeight().ifPresent(w -> c.setWeight(rebase.apply(w))))));
-	}
-
-
 }

@@ -21,7 +21,7 @@ public class CorpusAdjacencyFunction implements BiPredicate<Mention, Mention>
 
 	public CorpusAdjacencyFunction(EvaluationCorpus.Text text, int context_size, boolean additional_links)
 	{
-		// single word word_mentions are the item to rank
+		// single word mentions are the item to rank
 		word_mentions = text.sentences.stream()
 				.flatMap(s -> s.mentions.stream()
 						.filter(not(Mention::isMultiWord))
@@ -44,7 +44,7 @@ public class CorpusAdjacencyFunction implements BiPredicate<Mention, Mention>
 
 		// ... or part of a multiword with a meaning
 		multiword_meanings.forEach((mw, c) -> word_mentions.stream()
-				.filter(w -> w.getSourceId().equals(mw.getSourceId()) &&
+				.filter(w -> w.getContextId().equals(mw.getContextId()) &&
 						mw.getSpan().getLeft() <= w.getSpan().getLeft() &&
 						mw.getSpan().getRight() >= w.getSpan().getRight())
 				.forEach(w ->
@@ -72,7 +72,7 @@ public class CorpusAdjacencyFunction implements BiPredicate<Mention, Mention>
 			return false;
 
 		// Adjacent words? <- rewards words adjacent to highly ranked words. Side effect ->  penalizes words at the start and end of a sentence!
-		if (m1.getSourceId().equals(m2.getSourceId()) &&
+		if (m1.getContextId().equals(m2.getContextId()) &&
 				(Math.abs(word_mentions.indexOf(m1) - word_mentions.indexOf(m2)) <= context_size))
 			return true;
 
@@ -80,11 +80,11 @@ public class CorpusAdjacencyFunction implements BiPredicate<Mention, Mention>
 		if (!additional_links)
 			return false;
 
-//		// Same lemma=? <- this rewards frequent lemmas
+		// Same lemma? <- this rewards frequent lemmas
 //		if (m1.getLemma().equals(m2.getLemma()))
 //			return true;
 
-		// Same meaning ? <- this rewards frequent meanings
+		// Same meaning? <- this rewards frequent meanings
 		if (!word_meanings.containsKey(m1) || !word_meanings.containsKey(m2))
 			return false;
 

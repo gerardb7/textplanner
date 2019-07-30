@@ -106,18 +106,23 @@ public class UIMAWrapper
 						.map(span ->
 						{
 							final String surface_form = span.getCoveredText();
+
 							final List<Token> surface_tokens = JCasUtil.selectCovered(Token.class, span);
+							final List<String> token_forms = surface_tokens.stream()
+									.map(Token::getFormValue)
+									.collect(toList());
 							final String lemma = surface_tokens.stream()
 									.map(Token::getLemma)
 									.map(Lemma::getValue)
 									.collect(Collectors.joining(" "));
 							final String pos = surface_tokens.size() == 1 ? surface_tokens.get(0).getPos().getPosValue() : noun_pos_tag;
 							final POS.Tag tag = POS.get(pos, tagset);
-							final List<Token> sentence_tokens = JCasUtil.selectCovered(Token.class, sentence);
-							final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
-							final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1));
+
+							final List<Token> tokens = new ArrayList<>(JCasUtil.select(doc, Token.class));
+							final int token_based_offset_begin = tokens.indexOf(surface_tokens.get(0));
+							final int token_based_offset_end = tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1));
 							final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
-							final Mention mention = new Mention(surface_form, "s" + sentences.indexOf(sentence), offsets, surface_form, lemma, tag, false, "");
+							final Mention mention = new Mention(surface_form, "s" + sentences.indexOf(sentence), offsets, token_forms, lemma, tag, false, "");
 
 							return JCasUtil.selectAt(doc, WSDResult.class, span.getBegin(), span.getEnd()).stream()
 									.map(a ->

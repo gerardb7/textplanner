@@ -50,11 +50,11 @@ public class VisualizationUtils
 	                                          BiFunction<String, String, OptionalDouble> sim,
 	                                          BiPredicate<String, String> f, double t, double d)
 	{
-		final double[][] ranking_arrays = MatrixFactory.createRankingMatrix(synsets, labels, w, sim, true, f, t, d);
+		final double[][] ranking_arrays = MatrixFactory.createRankingMatrix(synsets, w, sim, true, f, t, d);
 		Jama.Matrix ranking_matrix = new Jama.Matrix(ranking_arrays);
 
 		JamaPowerIteration alg = new JamaPowerIteration(0.0001);
-		Matrix finalDistribution = alg.run(ranking_matrix, labels);
+		Matrix finalDistribution = alg.run(ranking_matrix);
 		double[] ranking = finalDistribution.getColumnPackedCopy();
 		final List<Triple<String, String, Double>> sorted = IntStream.range(0, synsets.size())
 				.mapToObj(i -> Triple.of(synsets.get(i), labels.get(i), ranking[i]))

@@ -68,10 +68,10 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 	@Override
 	protected Set<String> getGold(Mention m)
 	{
-		if (!gold.containsKey(m.getContextId()))
+		if (!gold.containsKey(m.getId()))
 			return Set.of();
 
-		return Set.of(gold.get(m.getContextId()));
+		return Set.of(gold.get(m.getId()));
 	}
 
 	@Override
@@ -97,7 +97,7 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 				.map(Candidate::getMention)
 				.distinct()
 				.forEach(m -> {
-	//				if (!gold.containsKey(m.getContextId()))
+	//				if (!gold.containsKey(m.getId()))
 	//					log.info("\tMention " + m + " not in gold");
 				});
 	}
@@ -117,7 +117,7 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 		final Map<Mention, List<Candidate>> mentions2candidates = system.stream()
 				.collect(groupingBy(Candidate::getMention));
 		final List<Pair<Mention, List<Candidate>>> sorted_candidates = mentions2candidates.keySet().stream()
-				.sorted(Comparator.comparing(Mention::getContextId).thenComparing(Mention::getSpan))
+				.sorted(Comparator.comparing(Mention::getId).thenComparing(Mention::getSpan))
 				.map(m -> Pair.of(m, mentions2candidates.get(m).stream()
 						.sorted(Comparator.<Candidate>comparingDouble(c -> c.getWeight().orElse(0.0)).reversed())
 						.collect(toList())))
@@ -132,7 +132,7 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 				.map(c ->
 				{
 					final Mention mention = c.getMention();
-					final String sourceId = mention.getSourceId();
+					final String sourceId = mention.getContextId();
 					final Text document = corpus.texts.stream()
 							.filter(d -> sourceId.startsWith(d.id))
 							.findFirst().orElseThrow(() -> new RuntimeException());

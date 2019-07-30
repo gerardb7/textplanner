@@ -28,16 +28,17 @@ import java.util.function.Function;
  */
 public class Ranker
 {
-	public static double[] rank(List<String> items, List<String> labels, Function<String, Double> bias,
+	public static double[] rank(List<String> items, Function<String, Double> bias,
 	                         BiFunction<String, String, OptionalDouble> edge_weights, boolean symmetric,
 	                         BiPredicate<String, String> filter,
 	                         double sim_threshold, double d, double stopping_threshold)
 	{
-		double[][] rankingArrays = MatrixFactory.createRankingMatrix(items, labels, bias, edge_weights, symmetric, filter,
+		double[][] rankingArrays = MatrixFactory.createRankingMatrix(items, bias, edge_weights, symmetric, filter,
 				sim_threshold, d);
 		Matrix rankingMatrix = new Matrix(rankingArrays);
 		JamaPowerIteration alg = new JamaPowerIteration(stopping_threshold);
-		Matrix finalDistribution = alg.run(rankingMatrix, labels);
+		Matrix finalDistribution = alg.run(rankingMatrix);
+
 		return finalDistribution.getColumnPackedCopy();
 	}
 }

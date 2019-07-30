@@ -1,7 +1,7 @@
 package edu.upf.taln.textplanning.core.utils;
 
 import edu.upf.taln.textplanning.core.structures.*;
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.logging.log4j.Logger;
 
 import java.math.RoundingMode;
@@ -86,20 +86,21 @@ public class DebugUtils
 				DebugUtils.createLabelForVariable(v, g.getMeaning(v).orElse(null), g.getMentions(v));
 	}
 
-	public static String printRank(double[] v, int n, List<String> labels)
+	public static String printRank(double[] v, int n, double[] bias, List<String> labels)
 	{
 		assert v.length == labels.size();
 
-		final List<Pair<String, Double>> sorted_items = new ArrayList<>();
+		final List<Triple<String, Double, Double>> sorted_items = new ArrayList<>();
 		for (int i =0; i < v.length; ++i)
 		{
 			final String l = labels.get(i);
 			final double v_i = v[i];
-			sorted_items.add(Pair.of(l, v_i));
+			final double b_i = bias[i];
+			sorted_items.add(Triple.of(l, v_i, b_i));
 		}
-		sorted_items.sort(Comparator.comparingDouble(Pair<String, Double>::getRight).reversed());
-		return 	sorted_items.subList(0, Math.min(n, 100)).stream()
-				.map(p -> format.format(p.getRight()) + "\t" + p.getLeft())
+		sorted_items.sort(Comparator.comparingDouble(Triple<String, Double, Double>::getMiddle).reversed());
+		return 	sorted_items.subList(0, n).stream()
+				.map(p -> format.format(p.getMiddle()) + "\t(" + format.format(p.getRight()) + ")\t" + p.getLeft())
 				.collect(Collectors.joining("\n"));
 	}
 

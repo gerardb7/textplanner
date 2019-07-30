@@ -158,7 +158,7 @@ public class Driver
 
 					// Let's group and sort the plain list of candidates by sentence and offsets.
 					final List<List<Set<Candidate>>> grouped_candidates = candidates.stream()
-							.collect(groupingBy(c -> c.getMention().getSourceId(), groupingBy(c -> c.getMention().getSpan(), toSet())))
+							.collect(groupingBy(c -> c.getMention().getContextId(), groupingBy(c -> c.getMention().getSpan(), toSet())))
 							.entrySet().stream()
 							.sorted(Comparator.comparing(Map.Entry::getKey))
 							.map(Map.Entry::getValue)

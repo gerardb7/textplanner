@@ -25,11 +25,10 @@ public class DifferentMentionsFilter implements BiPredicate<String, String>
 				.distinct()
 				.collect(toList());
 
-		final Map<String, Set<Integer>> references2mentions = references.stream()
+		final Map<String, Set<Mention>> references2mentions = references.stream()
 				.collect(toMap(r -> r, r -> candidates.stream()
 						.filter(c -> c.getMeaning().getReference().equals(r))
 						.map(Candidate::getMention)
-						.map(Mention::getId)
 						.collect(toSet())));
 		same_mentions_sets = new HashSet<>(references.stream()
 				.collect(groupingBy(references2mentions::get, toSet())).values());

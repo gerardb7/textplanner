@@ -91,14 +91,11 @@ public final class TextPlanner
 		final List<String> references = ranked_meanings.stream()
 				.map(Meaning::getReference)
 				.collect(toList());
-		final List<String> labels = ranked_meanings.stream() // for debugging purposes
-				.map(Meaning::toString)
-				.collect(toList());
 
 		if (references.isEmpty())
 			return;
 
-		double[] ranking = Ranker.rank(references, labels, bias, similarity, true, meanings_similarity_filter,
+		double[] ranking = Ranker.rank(references, bias, similarity, true, meanings_similarity_filter,
 				o.sim_threshold, o.damping_meanings, o.stopping_threshold);
 		final double[] rebased_ranking = MatrixFactory.rebase(ranking);
 
@@ -116,6 +113,13 @@ public final class TextPlanner
 		});
 
 		log.info("Ranking completed in " + timer.stop() + "\n");
+
+		// for debugging purposes
+		final List<String> labels = ranked_meanings.stream()
+				.map(Meaning::toString)
+				.collect(toList());
+		final double[] rebased_bias = MatrixFactory.rebase(references.stream().mapToDouble(bias::apply).toArray());
+		log.debug("Ranking of meanings:\n" + DebugUtils.printRank(rebased_ranking, references.size(), rebased_bias, labels));
 	}
 
 
@@ -128,47 +132,50 @@ public final class TextPlanner
 		log.info("*Ranking mentions*");
 		Stopwatch timer = Stopwatch.createStarted();
 
-		if (!mentions.isEmpty())
-		{
-			// One variable per mention
-			final Map<String, Mention> variables2mentions = mentions.keySet().stream()
-					.collect(toMap(Mention::toString, m -> m));
+		if (mentions.isEmpty())
+			return;
 
-			// Use average bias for mentions without a bias value
-			final double avg_bias = mentions.values().stream()
-					.flatMap(Optional::stream)
-					.mapToDouble(d -> d)
-					.average().orElse(0.0);
+		// One variable per mention
+		final Map<String, Mention> variables2mentions = mentions.keySet().stream()
+				.collect(toMap(Mention::toString, m -> m));
 
-			final Map<String, Double> variables2bias = mentions.keySet().stream()
-					.collect(toMap(Mention::toString, m -> mentions.get(m).orElse(avg_bias)));
+		// Use average bias for mentions without a bias value
+		final double avg_bias = mentions.values().stream()
+				.flatMap(Optional::stream)
+				.mapToDouble(d -> d)
+				.average().orElse(0.0);
 
-			List<String> variables = List.copyOf(variables2mentions.keySet());
-			final List<String> labels = variables.stream() // for debugging purposes
-					.map(v ->
-					{
-						final Mention mention = variables2mentions.get(v);
-						return DebugUtils.createLabelForVariable(v, null, List.of(mention));
-					})
-					.collect(Collectors.toList());
+		final Map<String, Double> variables2bias = mentions.keySet().stream()
+				.collect(toMap(Mention::toString, m -> mentions.get(m).orElse(avg_bias)));
 
-			BiFunction<String, String, OptionalDouble> edge_weights =
-					(v1, v2) ->
-					{
-						final Mention m1 = variables2mentions.get(v1);
-						final Mention m2 = variables2mentions.get(v2);
-						return OptionalDouble.of(adjacency_function.test(m1, m2) || adjacency_function.test(m2, m1) ? 1.0 : 0.0);
-					};
+		List<String> variables = List.copyOf(variables2mentions.keySet());
+		BiFunction<String, String, OptionalDouble> edge_weights =
+				(v1, v2) ->
+				{
+					final Mention m1 = variables2mentions.get(v1);
+					final Mention m2 = variables2mentions.get(v2);
+					return OptionalDouble.of(adjacency_function.test(m1, m2) || adjacency_function.test(m2, m1) ? 1.0 : 0.0);
+				};
 
-			final double[] ranking = Ranker.rank(variables, labels, variables2bias::get, edge_weights, true,
-					(v1, v2) -> true, 0.0, o.damping_variables, o.stopping_threshold);
-			final double[] rebased_ranking = MatrixFactory.rebase(ranking);
+		final double[] ranking = Ranker.rank(variables, variables2bias::get, edge_weights, true,
+				(v1, v2) -> true, 0.0, o.damping_variables, o.stopping_threshold);
+		final double[] rebased_ranking = MatrixFactory.rebase(ranking);
 
-			IntStream.range(0, variables.size()).boxed()
-					.forEach(i -> variables2mentions.get(variables.get(i)).setWeight(rebased_ranking[i]));
-		}
-
+		IntStream.range(0, variables.size()).boxed()
+				.forEach(i -> variables2mentions.get(variables.get(i)).setWeight(rebased_ranking[i]));
 		log.info("Ranking completed in " + timer.stop() + "\n");
+
+		// for debugging purposes
+		final List<String> labels = variables.stream()
+				.map(v ->
+				{
+					final Mention mention = variables2mentions.get(v);
+					return DebugUtils.createLabelForVariable(v, null, List.of(mention));
+				})
+				.collect(Collectors.toList());
+		final double[] rebased_bias = variables.stream().mapToDouble(variables2bias::get).toArray();
+		log.debug("Ranking of mentions:\n" + DebugUtils.printRank(rebased_ranking, variables.size(), rebased_bias, labels));
+
 	}
 
 	/**

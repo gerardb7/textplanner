@@ -21,10 +21,10 @@ import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.tcas.Annotation;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.OptionalDouble;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toList;
 
 public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 {
@@ -95,20 +95,23 @@ public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 		// Collect surface linguistic info and create mention object
 		final String surface_form = deep_token.getCoveredText();
 		final List<Token> surface_tokens = JCasUtil.selectAt(jcas, Token.class, deep_token.getBegin(), deep_token.getEnd());
+		final List<String> token_forms = surface_tokens.stream()
+				.map(Token::getFormValue)
+				.collect(toList());
 		final String lemma = surface_tokens.stream()
 				.map(Token::getLemma)
 				.map(Lemma::getValue)
 				.collect(Collectors.joining(" "));
 		final String pos = deep_token.getPos().getPosValue();
 		final POS.Tag tag = POS.get(pos, tagset);
-		final List<Token> sentence_tokens = JCasUtil.selectCovered(jcas, Token.class, sentence);
-		final int token_based_offset_begin = sentence_tokens.indexOf(surface_tokens.get(0));
-		final int token_based_offset_end = sentence_tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1));
+		final List<Token> tokens = new ArrayList<>(JCasUtil.select(jcas, Token.class));
+		final int token_based_offset_begin = tokens.indexOf(surface_tokens.get(0));
+		final int token_based_offset_end = tokens.indexOf(surface_tokens.get(surface_tokens.size() - 1));
 		if (token_based_offset_begin == -1 || token_based_offset_end == -1)
 			throw new RuntimeException("Cannot get offsets for \"" + surface_form + "\" in sentence " + createId(sentence));
 		final Pair<Integer, Integer> offsets = Pair.of(token_based_offset_begin, token_based_offset_end);
 
-		return new Mention(String.valueOf(deep_token.getAddress()), createId(sentence), offsets, surface_form, lemma, tag, false, "");
+		return new Mention(String.valueOf(deep_token.getAddress()), createId(sentence), offsets, token_forms, lemma, tag, false, "");
 	}
 
 	private static Optional<Pair<Meaning, Double>> createMeaning(JCas jcas, DeepToken deep_token)

@@ -69,7 +69,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 									a.getSurfaceForm(span),
 									g.getContextId(),
 									span,
-									a.getSurfaceForm(span),
+									a.getTokens(span),
 									a.getLemma(span).orElse(a.getSurfaceForm(span)),
 									a.getPOS(span).map(p -> POS.get(p, tagset)).orElse(POS.Tag.NOUN), // in case of doubt, assume it's a noun phrase!
 									isName(span, g),
@@ -85,6 +85,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 	private static Multimap<String, Mention> collectoSingleWordMentions(Collection<AMRGraph> graphs, ULocale language, POS.Tagset tagset)
 	{
 		Multimap<String, Mention> vertices2Mentions = HashMultimap.create();
+
 		graphs.forEach(g ->
 		{
 			AMRAlignments a = g.getAlignments();
@@ -95,7 +96,7 @@ public class AMRMentionsCollector //implements MentionsCollector<Collection<AMRG
 					{
 						Pair<Integer, Integer> span = Pair.of(i, i + 1);
 						final POS.Tag tag = POS.get(a.getPOS(i), tagset);
-						return new Mention(a.getSurfaceForm(span), g.getContextId(), span, a.getSurfaceForm(span), a.getLemma(i), tag,
+						return new Mention(a.getSurfaceForm(span), g.getContextId(), span, a.getTokens(span), a.getLemma(i), tag,
 								isName(span, g), getType(span, g));
 					})
 					.filter(m -> FunctionWordsFilter.test(m, language)) // use list of non-ambiguous function words

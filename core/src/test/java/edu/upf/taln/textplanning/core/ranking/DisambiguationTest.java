@@ -36,7 +36,7 @@ public class DisambiguationTest
 		final List<Candidate> candidates = IntStream.range(0, 10)
 				.mapToObj(i -> IntStream.range(0, 3)
 						.mapToObj(j -> Meaning.get("mention" + i + "_meaning" + j, "", false))
-						.map(meaning -> new Candidate(new Mention("mention" + i, "", Pair.of(i, i + 1), "", "", POS.Tag.NOUN, false, ""), meaning)))
+						.map(meaning -> new Candidate(new Mention("mention" + i, "", Pair.of(i, i + 1), List.of(), "", POS.Tag.NOUN, false, ""), meaning)))
 				.flatMap(s -> s)
 				.collect(toList());
 		Set<String> domain_synsets = Set.of();
@@ -59,17 +59,17 @@ public class DisambiguationTest
 
 		// Mentions to look uo
 		// 0-Riesgo de 2-incendio en 4-el 5-Saler , 7-altas 8-temperaturas y 10-fuerte 11-viento , 13-estad 14-alerta
-		Mention mention1 = new Mention("mention1", "s1", Pair.of(0,1), "Riesgo", "riesgo", POS.Tag.NOUN, false, "");
-		Mention mention2 = new Mention("mention2", "s1", Pair.of(2,3), "incendio", "incendio", POS.Tag.NOUN, false, "");
-		Mention mention3 = new Mention("mention3", "s1", Pair.of(4,6), "el Saler", "el Saler", POS.Tag.NOUN, true, "");
-		Mention mention4 = new Mention("mention4", "s1", Pair.of(5,6), "Saler", "Saler", POS.Tag.NOUN, false, "");
-		Mention mention5 = new Mention("mention5", "s1", Pair.of(7,8), "altas", "alta", POS.Tag.ADJ, false, "");
-		Mention mention6 = new Mention("mention6", "s1", Pair.of(8,9), "temperaturas", "temperatura", POS.Tag.NOUN, false, "");
-		Mention mention7 = new Mention("mention7", "s1", Pair.of(10,11), "fuerte", "fuerte", POS.Tag.ADJ, false, "");
-		Mention mention8 = new Mention("mention8", "s1", Pair.of(11,12), "viento", "viento", POS.Tag.NOUN, false, "");
-		Mention mention9 = new Mention("mention9", "s1", Pair.of(13,14), "estad", "estar", POS.Tag.VERB, false, "");
-		Mention mention10 = new Mention("mention10", "s1", Pair.of(14,15), "alerta", "alerta", POS.Tag.ADJ, false, "");
-		Mention mention11 = new Mention("mention11", "s1", Pair.of(13,15), "estad alerta", "estar alerta", POS.Tag.VERB, false, "");
+		Mention mention1 = new Mention("mention1", "s1", Pair.of(0,1), List.of("Riesgo"), "riesgo", POS.Tag.NOUN, false, "");
+		Mention mention2 = new Mention("mention2", "s1", Pair.of(2,3), List.of("incendio"), "incendio", POS.Tag.NOUN, false, "");
+		Mention mention3 = new Mention("mention3", "s1", Pair.of(4,6), List.of("el Saler"), "el Saler", POS.Tag.NOUN, true, "");
+		Mention mention4 = new Mention("mention4", "s1", Pair.of(5,6), List.of("Saler"), "Saler", POS.Tag.NOUN, false, "");
+		Mention mention5 = new Mention("mention5", "s1", Pair.of(7,8), List.of("altas"), "alta", POS.Tag.ADJ, false, "");
+		Mention mention6 = new Mention("mention6", "s1", Pair.of(8,9), List.of("temperaturas"), "temperatura", POS.Tag.NOUN, false, "");
+		Mention mention7 = new Mention("mention7", "s1", Pair.of(10,11), List.of("fuerte"), "fuerte", POS.Tag.ADJ, false, "");
+		Mention mention8 = new Mention("mention8", "s1", Pair.of(11,12), List.of("viento"), "viento", POS.Tag.NOUN, false, "");
+		Mention mention9 = new Mention("mention9", "s1", Pair.of(13,14), List.of("estad"), "estar", POS.Tag.VERB, false, "");
+		Mention mention10 = new Mention("mention10", "s1", Pair.of(14,15), List.of("alerta"), "alerta", POS.Tag.ADJ, false, "");
+		Mention mention11 = new Mention("mention11", "s1", Pair.of(13,15), List.of("estad alerta"), "estar alerta", POS.Tag.VERB, false, "");
 		final List<Mention> mentions = List.of(mention1, mention2, mention3, mention4, mention5, mention6, mention7, mention8, mention9, mention10, mention11);
 
 		// València, forest fire, heat, emergency

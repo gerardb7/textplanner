@@ -43,27 +43,21 @@ public class CorpusContextFunction extends ContextFunction
 
 	private List<String> calculateWindow(Mention mention)
 	{
-		final String contextId = mention.getSourceId();
-
-		final List<String> sentence_tokens = sentences.stream()
-				.filter(s -> contextId.equals(s.id))
-				.findFirst()
-				.map(s -> s.tokens.stream()
-						.map(t -> t.wf)
-						.collect(toList()))
-				.orElse(List.of());
-
+		final List<EvaluationCorpus.Token> tokens = sentences.stream()
+				.flatMap(s -> s.tokens.stream())
+				.collect(toList());
 
 		final Pair<Integer, Integer> span = mention.getSpan();
 		final Integer start = span.getLeft();
 		final Integer end = span.getRight();
-		final int size = sentence_tokens.size();
+		final int size = tokens.size();
 
-		final List<String> tokens_left = start == 0 ?  List.of() : sentence_tokens.subList(max(0, start - window_size), start);
-		final List<String> tokens_right = end == size ? List.of() : sentence_tokens.subList(end, min(size, end + window_size));
-		List<String> window = new ArrayList<>(tokens_left);
+		final List<EvaluationCorpus.Token> tokens_left = start == 0 ?  List.of() : tokens.subList(max(0, start - window_size), start);
+		final List<EvaluationCorpus.Token> tokens_right = end == size ? List.of() : tokens.subList(end, min(size, end + window_size));
+		List<EvaluationCorpus.Token> window = new ArrayList<>(tokens_left);
 		window.addAll(tokens_right);
+		final List<String> window_forms = window.stream().filter(t -> t.id.startsWith(mention.getContextId())).map(t -> t.wf).collect(toList());
 
-		return filterTokens(window);
+		return filterTokens(window_forms);
 	}
 }

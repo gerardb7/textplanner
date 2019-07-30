@@ -5,7 +5,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 
@@ -24,10 +23,9 @@ public class JamaPowerIteration implements PowerIterationRanking
 	 * Implementation based on first method in http://introcs.cs.princeton.edu/java/95linear/MarkovChain.java.html
 	 *
 	 * @param a a transition stochastic matrix of a Markov chain
-	 * @param labels labels identifying items in matrix, used for debugging purposes
 	 * @return the stationary distribution of the chain
 	 */
-	public Matrix run(final Matrix a, List<String> labels)
+	public Matrix run(final Matrix a)
 	{
 		// Check that a is a row-stochastic matrix
 		assert a.getColumnDimension() == a.getRowDimension(); // Is it square?
@@ -68,7 +66,6 @@ public class JamaPowerIteration implements PowerIterationRanking
 		while (delta >= corrected_stopping_threshold); // stopping criterion: delta falls below a certain threshold
 
 		log.info("Power iteration completed after " + numIterations + " iterations");
-//		log.debug("Ranking:\n" + DebugUtils.printRank(v.getColumnPackedCopy(), n, labels));
 		return v;
 	}
 

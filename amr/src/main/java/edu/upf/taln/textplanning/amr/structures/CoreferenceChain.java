@@ -31,7 +31,7 @@ public class CoreferenceChain implements Serializable
 	{
 		return "Chain of size " + getSize() + ": " + coreferents.values().stream()
 				.sorted()
-				.map(m ->  m + " in " + m.getSourceId())
+				.map(m ->  m + " in " + m.getContextId())
 				.collect(Collectors.joining(","));
 	}
 }

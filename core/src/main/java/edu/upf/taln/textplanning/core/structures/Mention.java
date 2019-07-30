@@ -3,49 +3,44 @@ package edu.upf.taln.textplanning.core.structures;
 import edu.upf.taln.textplanning.core.utils.POS;
 import org.apache.commons.lang3.tuple.Pair;
 
+import javax.annotation.Nonnull;
 import java.io.Serializable;
-import java.util.Comparator;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.*;
 
 /**
  * A sequence of one or more consecutive tokens
  */
 public final class Mention implements Comparable<Mention>, Serializable
 {
-	private final int id; // automatically generated unique identifier
-	private final String context_id; // identifier from context, e.g. annotation id
-	private final String source_id; // Identifies context in which mention occurs, e.g. sentence, document, etc.
-	private final Pair<Integer, Integer> span; // Token-based offsets
-	private final String surfaceForm;
+	private final String id; // externally provided id
+	private final String context_id; // Identifies context in which mention occurs, e.g. sentence, document, etc.
+	private final Pair<Integer, Integer> span; // Token-based offsets at document-level
 	private final String lemma;
+	private final List<String> tokens;
 	private final POS.Tag pos; // POS tag
 	private final boolean isNE; // is NE
 	private final String type; // e.g. AMR concept label
 	private Double weight = null;
 	private final static long serialVersionUID = 1L;
-	private static AtomicInteger id_counter = new AtomicInteger(0);
 
-	public Mention(String context_id, String source_id, Pair<Integer, Integer> tokens_span, String surfaceForm, String lemma,
+	public Mention(String id, String context_id, Pair<Integer, Integer> tokens_span, List<String> tokens, String lemma,
 	               POS.Tag POS, boolean isNE, String type)
 	{
-		this.id = id_counter.incrementAndGet();
+		this.id = id;
 		this.context_id = context_id;
-		this.source_id = source_id;
 		this.span = tokens_span;
-		this.surfaceForm = surfaceForm;
+		this.tokens = tokens;
 		this.lemma = lemma;
 		this.pos = POS;
 		this.isNE = isNE;
 		this.type = type;
 	}
 
-	public int getId() { return id;}
+	public String getId() { return id; }
 	public String getContextId() { return context_id; }
-	public String getSourceId() { return source_id; }
 	public Pair<Integer, Integer> getSpan() { return span; }
-	public String getSurfaceForm() { return surfaceForm; }
+	public List<String> getTokens() { return tokens; }
+	public String getSurfaceForm() { return String.join(" ", tokens); }
 	public String getLemma() { return lemma; }
 	public POS.Tag getPOS() { return pos;}
 	public boolean isNE() { return isNE; }
@@ -72,19 +67,22 @@ public final class Mention implements Comparable<Mention>, Serializable
 	@Override
 	public String toString()
 	{
-		return getId() + "_" + getContextId() + "_" + getSpan() + "_" + getSurfaceForm();
+		return getContextId() + "_" + getSpan() + "_" + getSurfaceForm();
 	}
 
 	@Override
 	public int hashCode()
 	{
-		return Objects.hash(id);
+		return Objects.hash(context_id) + Objects.hash(getSpan());
 	}
 
 	@Override
-	public int compareTo(Mention o)
+	public int compareTo(@Nonnull Mention o)
 	{
-		return Comparator.comparing(Mention::getId).compare(this, o);
+		return Comparator.comparing(Mention::getContextId)
+				.thenComparingInt(m -> m.getSpan().getLeft())
+				.thenComparingInt(m -> m.getSpan().getRight())
+				.compare(this, o);
 	}
 
 	@Override
@@ -93,6 +91,7 @@ public final class Mention implements Comparable<Mention>, Serializable
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
 
-		return this.id == ((Mention)o).id;
+		Mention other = ((Mention)o);
+		return this.getContextId().equals(other.getContextId()) && this.getSpan().equals(other.getSpan());
 	}
 }

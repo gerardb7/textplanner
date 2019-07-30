@@ -85,18 +85,9 @@ public class Driver
 	@Parameters(commandDescription = "Run evaluation of ranking-based extractive summarization")
 	private static class ExtractiveEvaluationCommand extends BaseCommand
 	{
-		@Parameter(names = {"-i", "-input"}, description = "Path to input. Can be a folder containing text files or a single XML file", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFileOrFolder.class)
-		private Path input;
-		@Parameter(names = {"-g", "-gold"}, description = "Path to folder containing gold summaries", arity = 1, required = true,
+		@Parameter(names = {"-pr", "-project"}, description = "Path to project folder containing gold summaries", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path gold;
-		@Parameter(names = {"-o", "-output"}, description = "Path to folder where system summaries are created", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.ValidPathToFolder.class)
-		private Path output;
-		@Parameter(names = {"-t", "-tmp"}, description = "Path to folder where temporary files are stored", arity = 1, required = true,
-				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFolder.class)
-		private Path tmp;
+		private Path project;
 	}
 
 	@SuppressWarnings("unused")
@@ -180,7 +171,7 @@ public class Driver
 			{
 				PlanningProperties properties = new PlanningProperties(extractEval.properties);
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
-				ExtractiveEvaluation.run(extractEval.input, extractEval.gold, extractEval.output, extractEval.tmp, resources);
+				ExtractiveEvaluation.run(extractEval.project, resources);
 				resources.serializeCache();
 				break;
 			}

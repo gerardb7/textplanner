@@ -890,6 +890,10 @@ public class EmpiricalStudy
 									.mapToObj(tokens::get)
 									.map(CoreLabel::word)
 									.collect(Collectors.joining(" "));
+							final List<String> span_tokens = IntStream.range(span.getLeft(), span.getRight())
+									.mapToObj(tokens::get)
+									.map(CoreLabel::word)
+									.collect(Collectors.toList());
 							final String lemma = IntStream.range(span.getLeft(), span.getRight())
 									.mapToObj(tokens::get)
 									.map(CoreLabel::lemma)
@@ -902,7 +906,7 @@ public class EmpiricalStudy
 									span_text,
 									tokens.get(span.getRight() - 1).sentIndex() + "-" + span,
 									span,
-									span_text,
+									span_tokens,
 									lemma,
 									pos, // in case of doubt, assume it's a noun phrase!
 									ne != Candidate.Type.Other,
