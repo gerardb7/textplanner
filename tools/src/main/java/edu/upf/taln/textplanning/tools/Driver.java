@@ -22,7 +22,7 @@ import java.util.Date;
 
 public class Driver
 {
-	private final static ULocale language = ULocale.ENGLISH;
+	private final static ULocale language = new ULocale("es");
 	private static final String semeval_command = "semeval";
 	public static final String disambiguation_eval_command = "wsdeval";
 	private static final String rank_eval_command = "rankeval";
@@ -94,6 +94,9 @@ public class Driver
 	@Parameters(commandDescription = "Collect meanings info from a dictionary and stores them into a binary file")
 	private static class CollectMeaningsCommand extends BaseCommand
 	{
+		@Parameter(names = {"-l", "-language"}, description = "ISO 639-1 code of the language to be used to collect meanings", arity = 1, required = true,
+			converter = CMLCheckers.ULocaleConverter.class, validateWith = CMLCheckers.ULocaleValidator.class)
+		private ULocale language;
 	}
 
 	@SuppressWarnings("unused")
@@ -170,16 +173,16 @@ public class Driver
 			case extract_eval_command:
 			{
 				PlanningProperties properties = new PlanningProperties(extractEval.properties);
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
+				InitialResourcesFactory resources = null; //new InitialResourcesFactory(language, properties);
 				ExtractiveEvaluation.run(extractEval.project, resources);
-				resources.serializeCache();
+//				resources.serializeCache();
 				break;
 			}
 			case collect_meanings_vectors:
 			{
 				PlanningProperties properties = new PlanningProperties(meanings.properties);
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
-				CandidatesCollector.collect(resources.getDictionary(), language, resources.getCache(), properties.getDictionaryCache());
+				InitialResourcesFactory resources = new InitialResourcesFactory(meanings.language, properties);
+				CandidatesCollector.collect(resources.getDictionary(), meanings.language, resources.getCache(), properties.getDictionaryCache());
 				resources.serializeCache();
 				break;
 			}

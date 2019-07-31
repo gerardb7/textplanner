@@ -112,7 +112,7 @@ public class CandidatesCollector
 	// Collects all meanings and forms from a dictionary. May take a very long time!
 	public static void collect(MeaningDictionary dictionary, ULocale language, CompactDictionary cache, Path cache_file) throws IOException
 	{
-		log.info("Collecting all meanings with " + Runtime.getRuntime().availableProcessors() + " cores available");
+		log.info("Collecting all meanings for language " + language);
 		final Stopwatch timer = Stopwatch.createStarted();
 		AtomicLong num_meanings = new AtomicLong(0);
 		AtomicLong num_forms = new AtomicLong(0);

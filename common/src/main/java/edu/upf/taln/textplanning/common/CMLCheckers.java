@@ -3,6 +3,7 @@ package edu.upf.taln.textplanning.common;
 import com.beust.jcommander.IParameterValidator;
 import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.ParameterException;
+import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
@@ -10,6 +11,7 @@ import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Locale;
 
 public class CMLCheckers
 {
@@ -32,6 +34,12 @@ public class CMLCheckers
 	{
 		@Override
 		public Double convert(String value) { return Double.parseDouble(value); }
+	}
+
+	public static class ULocaleConverter implements IStringConverter<ULocale>
+	{
+		@Override
+		public ULocale convert(String value) { return new ULocale(value); }
 	}
 
 	public static class ValidPathToFile implements IParameterValidator
@@ -157,6 +165,25 @@ public class CMLCheckers
 			double n = Double.parseDouble(value);
 			if (n < 0.0 || n > 1.0)
 				throw new ParameterException("Value must be in the range [0.0, 1.0]: " + value);
+		}
+	}
+
+	public static class ULocaleValidator implements IParameterValidator
+	{
+		@Override
+		public void validate(String name, String value) throws ParameterException
+		{
+			try
+			{
+				Locale l = new Locale(value);
+				ULocale u = ULocale.forLocale(l);
+				if (u == null)
+					throw new NullPointerException();
+			}
+			catch (Exception e)
+			{
+				throw new ParameterException("Unrecognized language code " + value);
+			}
 		}
 	}
 

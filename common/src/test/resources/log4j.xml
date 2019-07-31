@@ -18,5 +18,9 @@
             <AppenderRef ref="debug_file"/>
             <AppenderRef ref="console"/>
         </logger>
+        <logger name="com.rxnlp.tools.rouge">
+            <AppenderRef ref="debug_file"/>
+            <AppenderRef ref="console"/>
+        </logger>
     </Loggers>
 </Configuration>

@@ -44,21 +44,22 @@ public class ExtractiveEvaluation
 
 	public static void run(Path project_folder, InitialResourcesFactory resources_factory)
 	{
-		Stopwatch gtimer = Stopwatch.createStarted();
-		final Options options = new Options();
-		options.damping_variables = 0.4; // controls bias towards meanings rank when ranking variables
-		log.info(options + "\n");
-
-		// Exclude Tag from mention collection
-		final Set<POS.Tag> excluded_mention_POS = Set.of(POS.Tag.X);
+//		Stopwatch gtimer = Stopwatch.createStarted();
+//		final Options options = new Options();
+//		options.damping_variables = 0.4; // controls bias towards meanings rank when ranking variables
+//		log.info(options + "\n");
+//
+//		// Exclude Tag from mention collection
+//		final Set<POS.Tag> excluded_mention_POS = Set.of(POS.Tag.X);
 
 		// load input corpus and gold
-		Path input = project_folder.resolve("input.xml");
-		if (!input.toFile().exists())
-			input = project_folder.resolve("/texts");
-		Path reference = project_folder.resolve("/reference");
-		Path system = project_folder.resolve("/system");
-		Path tmp = project_folder.resolve("/tmp");
+//		Path input = project_folder.resolve("input.xml");
+//		if (!input.toFile().exists())
+//			input = project_folder.resolve("/texts");
+//		Path reference = project_folder.resolve("/reference");
+//		Path system = project_folder.resolve("/system");
+//		Path tmp = project_folder.resolve("/tmp");
+		Path results_file = project_folder.resolve("results.csv");
 
 //		final Corpus corpus;
 //		if (Files.isRegularFile(input))
@@ -166,7 +167,7 @@ public class ExtractiveEvaluation
 //
 //		log.info("Corpus finished in " + gtimer.stop());
 
-		ROUGECalculator rouge = new ROUGECalculator();
+		ROUGECalculator rouge = new ROUGECalculator(results_file);
 		rouge.run(project_folder);
 	}
 
