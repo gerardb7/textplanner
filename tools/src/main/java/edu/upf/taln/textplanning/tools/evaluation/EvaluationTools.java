@@ -127,7 +127,6 @@ public class EvaluationTools
 			final ULocale language = resources.getLanguage();
 			final List<Mention> mentions = collectMentions(text, tagset, max_span_size, ignored_POS_Tags, language);
 			final Map<Mention, List<Candidate>> candidates = CandidatesCollector.collect(resources.getDictionary(), language, mentions);
-			resources.serializeCache();
 
 			// assign mentions and candidates to sentences in corpus
 			text.sentences.forEach(sentence ->

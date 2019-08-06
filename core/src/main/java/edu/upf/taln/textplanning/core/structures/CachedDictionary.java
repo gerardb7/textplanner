@@ -15,17 +15,20 @@ public class CachedDictionary implements MeaningDictionary
 {
 	private final MeaningDictionary base;
 	private final CompactDictionary cache;
+	private final boolean update_cache;
 
-	public CachedDictionary(MeaningDictionary base, CompactDictionary cache)
+	public CachedDictionary(MeaningDictionary base, CompactDictionary cache, boolean update_cache)
 	{
 		this.base = base;
 		this.cache = cache;
+		this.update_cache = update_cache;
 	}
 
 	public CachedDictionary(CompactDictionary cache)
 	{
 		this.base = null;
 		this.cache = cache;
+		this.update_cache = false; // can't update cache if no base dictionary
 	}
 
 	@Override
@@ -69,7 +72,8 @@ public class CachedDictionary implements MeaningDictionary
 		else if (base != null)
 		{
 			final List<String> meanings = base.getMeanings(word, pos, language);
-			cache.addForm(word, tag, meanings);
+			if (update_cache)
+				cache.addForm(word, POS.toTag.get(pos), meanings);
 			return meanings;
 		}
 		else
@@ -101,7 +105,8 @@ public class CachedDictionary implements MeaningDictionary
 		{
 			final Optional<String> label = base.getLabel(id, language);
 			final List<String> glosses = base.getGlosses(id, language);
-			cache.addMeaning(id, label.orElse(""), glosses);
+			if (update_cache)
+				cache.addMeaning(id, label.orElse(""), glosses);
 			return label;
 		}
 		else
@@ -133,7 +138,8 @@ public class CachedDictionary implements MeaningDictionary
 		{
 			final Optional<String> label = base.getLabel(id, language);
 			final List<String> glosses = base.getGlosses(id, language);
-			cache.addMeaning(id, label.orElse(""), glosses);
+			if (update_cache)
+				cache.addMeaning(id, label.orElse(""), glosses);
 			return glosses;
 		}
 		else

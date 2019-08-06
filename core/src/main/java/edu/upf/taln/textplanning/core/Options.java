@@ -6,7 +6,6 @@ import edu.upf.taln.textplanning.core.utils.POS;
 
 import java.math.RoundingMode;
 import java.text.NumberFormat;
-import java.util.HashSet;
 import java.util.Set;
 
 public class Options
@@ -19,8 +18,8 @@ public class Options
 	public double sim_threshold = 0.8; // Pairs of meanings with sim below this value have their score set to 0. Values in range [0..1]. 0 -> denser ranking matrix. 1 -> no ranking
 	public double damping_meanings = 0.3; // controls balance between bias and similarity. Values in range (0..1]. ~0 -> no bias. 1 -> only bias
 	public double stopping_threshold = 0.0001; // ranking stops when rank udpates fall below this value. Values in range [0..1]. 0 -> loooong time to converge. 1 -> no ranking.
-	public double disambiguation_lambda = 0.2; // penalizes shorter mentions. Value in range [0..1]. 0 -> always choose longest span. 0.5 strictly prefer span with highest weight. 1 -> always choose shortest span.
-	public double damping_variables = 0.9; // controls bias towards meanings rank when ranking variables. Values in range (0..1]. ~0 -> no bias. 1 -> only bias
+	public double disambiguation_lambda = 0.485; // penalizes shorter mentions. Value in range [0..1]. 0 -> always choose longest span. 0.5 strictly prefer span with highest weight. 1 -> always choose shortest span.
+	public double damping_variables = 0.4; // controls bias towards meanings rank when ranking variables. Values in range (0..1]. ~0 -> no bias. 1 -> only bias
 	public int num_subgraphs_extract = 100; // Number of sampled subgraphs during extraction
 	public double extraction_lambda = 0.8; // Controls size of extracted graphs by balancing value and cost. Values in range [0..1]. higher value -> smaller graphs
 	public Policy.Type start_policy = Policy.Type.Softmax; // policy to select a start node from which sample a subgraph

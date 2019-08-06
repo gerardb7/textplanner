@@ -96,10 +96,11 @@ public class Disambiguation
 		BiPredicate<Mention, Mention> weights_more = (m1, m2) -> {
 			if (m1.numTokens() == m2.numTokens())
 				return mentions2weights.get(m1) > mentions2weights.get(m2);
-			else if (m1.numTokens() > m2.numTokens())
-				return (1.0 - lambda) * mentions2weights.get(m1) > lambda * mentions2weights.get(m2);
-			else //if (m1.numTokens() < m2.numTokens())
-				return (1.0 - lambda) * mentions2weights.get(m2) > lambda * mentions2weights.get(m1);
+			else
+				if (m1.numTokens() > m2.numTokens())
+					return (1.0 - lambda) * mentions2weights.get(m1) >= lambda * mentions2weights.get(m2);
+				else //if (m1.numTokens() < m2.numTokens())
+					return lambda * mentions2weights.get(m1) > (1.0 - lambda) * mentions2weights.get(m2);
 		};
 
 		final Map<Mention, List<Mention>> top_mentions = mentions.stream()

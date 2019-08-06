@@ -205,10 +205,10 @@ public class BabelNetDictionary implements MeaningDictionary
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
 				return Optional.empty();
-			final List<BabelSense> senses = synset.getSenses(Language.fromISO(language.toLanguageTag()));
-			if (senses.isEmpty())
+			final BabelSense sense = synset.getMainSense(Language.fromISO(language.toLanguageTag()));
+			if (sense == null)
 				return Optional.empty();
-			return Optional.of(senses.iterator().next().toString());
+			return Optional.of(sense.getSimpleLemma());
 		}
 		catch (Exception e)
 		{

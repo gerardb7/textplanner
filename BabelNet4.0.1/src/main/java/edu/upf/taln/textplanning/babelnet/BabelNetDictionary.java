@@ -218,10 +218,8 @@ public class BabelNetDictionary implements MeaningDictionary
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
 				return Optional.empty();
-			final List<BabelSense> senses = synset.getSenses(Language.fromISO(language.toLanguageTag()));
-			if (senses.isEmpty())
-				return Optional.empty();
-			return Optional.of(senses.iterator().next().toString());
+			return synset.getMainSense(Language.fromISO(language.toLanguageTag()))
+					.map(BabelSense::getSimpleLemma);
 		}
 		catch (Exception e)
 		{

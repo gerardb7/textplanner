@@ -31,6 +31,7 @@ public class InitialResourcesFactory
 	private final ULocale language;
 	private final PlanningProperties properties;
 	private final CompactDictionary cache;
+	private final MeaningDictionary base;
 	private final MeaningDictionary dictionary;
 	private final BiasFunction.Type bias_function_type;
 	private final Set<String> bias_meanings;
@@ -62,14 +63,16 @@ public class InitialResourcesFactory
 		if (properties.getDictionary() != null)
 		{
 			MeaningDictionary babelnet = new BabelNetDictionary(properties.getDictionary());
+			base = babelnet;
 
 			if (cache != null)
-				dictionary =  new CachedDictionary(babelnet, cache);
+				dictionary =  new CachedDictionary(babelnet, cache, properties.getUpdateCache());
 			else
 				dictionary = babelnet;
 		}
 		else
 		{
+			base = null;
 			if (cache != null)
 				dictionary = new CachedDictionary(cache);
 			else
@@ -147,6 +150,8 @@ public class InitialResourcesFactory
 	public ULocale getLanguage() { return language; }
 
 	public MeaningDictionary getDictionary() { return dictionary; }
+
+	public MeaningDictionary getBase() { return base; }
 
 	public CompactDictionary getCache() { return cache; }
 

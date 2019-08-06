@@ -13,6 +13,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.*;
 import javax.xml.transform.stream.StreamSource;
+import java.io.Serializable;
 import java.io.StringReader;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -22,25 +23,26 @@ import java.util.Map;
 
 import static java.util.stream.Collectors.toMap;
 
-public class EvaluationCorpus
+public class EvaluationCorpus implements Serializable
 {
+	private final static long serialVersionUID = 1L;
 	private final static Logger log = LogManager.getLogger();
 
 	@XmlRootElement(name = "corpus")
 	@XmlAccessorType(XmlAccessType.FIELD)
-	public static class
-	Corpus
+	public static class Corpus implements Serializable
 	{
 		@XmlAttribute
 		public String lang;
 		@XmlElement(name = "text")
 		public List<Text> texts = new ArrayList<>();
+		public transient DocumentResourcesFactory resouces = null;
 		@XmlTransient
-		public DocumentResourcesFactory resouces = null;
+		private final static long serialVersionUID = 1L;
 	}
 
 	@XmlAccessorType(XmlAccessType.FIELD)
-	public static class Text
+	public static class Text implements Serializable
 	{
 		@XmlAttribute
 		public String id;
@@ -48,16 +50,17 @@ public class EvaluationCorpus
 		public String filename;
 		@XmlElement(name = "sentence")
 		public List<Sentence> sentences = new ArrayList<>();
-		@XmlTransient
-		public DocumentResourcesFactory resources;
+		public transient DocumentResourcesFactory resources;
 		@XmlTransient
 		public SemanticGraph graph = null;
 		@XmlTransient
 		public List<SemanticSubgraph> subgraphs = new ArrayList<>();
+		@XmlTransient
+		private final static long serialVersionUID = 1L;
 	}
 
 	@XmlAccessorType(XmlAccessType.FIELD)
-	public static class Sentence
+	public static class Sentence implements Serializable
 	{
 		@XmlAttribute
 		public String id;
@@ -69,10 +72,12 @@ public class EvaluationCorpus
 		public Map<Mention, List<Candidate>> candidates = new HashMap<>();
 		@XmlTransient
 		public Map<Mention, Candidate> disambiguated = new HashMap<>();
+		@XmlTransient
+		private final static long serialVersionUID = 1L;
 	}
 
 	@XmlAccessorType(XmlAccessType.FIELD)
-	public static class Token
+	public static class Token implements Serializable
 	{
 		@XmlAttribute
 		public String id;
@@ -82,6 +87,8 @@ public class EvaluationCorpus
 		public String pos;
 		@XmlValue
 		public String wf;
+		@XmlTransient
+		private final static long serialVersionUID = 1L;
 	}
 
 	// factory method

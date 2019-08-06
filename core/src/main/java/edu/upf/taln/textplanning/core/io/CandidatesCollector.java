@@ -7,9 +7,7 @@ import edu.upf.taln.textplanning.core.utils.POS;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -110,22 +108,39 @@ public class CandidatesCollector
 	}
 
 	// Collects all meanings and forms from a dictionary. May take a very long time!
-	public static void collect(MeaningDictionary dictionary, ULocale language, CompactDictionary cache, Path cache_file) throws IOException
+	public static void collect(MeaningDictionary dictionary, ULocale language, CompactDictionary cache, Path cache_file) throws IOException, ClassNotFoundException
 	{
 		log.info("Collecting all meanings for language " + language);
 		final Stopwatch timer = Stopwatch.createStarted();
 		AtomicLong num_meanings = new AtomicLong(0);
 		AtomicLong num_forms = new AtomicLong(0);
 
-		final Iterator<MeaningDictionary.Info> it = dictionary.infoIterator(language);
-		while (it.hasNext())
+//		final List<String> lemmas = dictionary.getLemmas("bn:00041113n", language);
+//		lemmas.stream()
+//				.distinct()
+//				.forEach(l -> cache.addForm(l, 'n', dictionary.getMeanings(l, POS.Tag.NOUN, language)));
+//		List<String> meanings = cache.getMeanings("GOP", 'n');
+//		final List<String> meanings2 = dictionary.getMeanings("GOP", POS.Tag.NOUN, language);
+
+		final Iterator<String> iterator = dictionary.iterator();
+		while (iterator.hasNext())
 		{
-			final MeaningDictionary.Info m = it.next();
-			cache.addMeaning(m.id, m.label, m.glosses);
-			m.forms.stream()
-					.filter(l -> !cache.contains(l, POS.toTag.get(m.POS)))
+			final String reference = iterator.next();
+			final Optional<String> label = dictionary.getLabel(reference, language);
+			final List<String> glosses = dictionary.getGlosses(reference, language);
+			cache.addMeaning(reference, label.orElse(""), glosses);
+
+			final char babel_pos = reference.charAt(reference.length() - 1);
+			final POS.Tag pos = POS.get(String.valueOf(babel_pos), POS.Tagset.BabelNet);
+			final List<String> lemmas = dictionary.getLemmas(reference, language);
+			lemmas.stream()
+					.distinct()
+					.filter(l -> !cache.contains(l, babel_pos))
 					.peek(l -> num_forms.incrementAndGet())
-					.forEach(l -> cache.addForm(l, POS.toTag.get(m.POS), dictionary.getMeanings(l, m.POS, language)));
+					.forEach(l -> {
+						final List<String> meanings = dictionary.getMeanings(l, pos, language);
+						cache.addForm(l, babel_pos, meanings);
+					});
 
 			long i = num_meanings.incrementAndGet();
 			if (i % LOGGING_STEP_SIZE == 0)
@@ -139,6 +154,29 @@ public class CandidatesCollector
 		}
 
 		log.info(num_meanings.get() + " meanings and " +  num_forms.get() + " forms collected in " + timer.stop());
+
+//		final Iterator<MeaningDictionary.Info> it = dictionary.infoIterator(language);
+//		while (it.hasNext())
+//		{
+//			final MeaningDictionary.Info m = it.next();
+//			cache.addMeaning(m.id, m.label, m.glosses);
+//			final Character bable_POS = POS.toTag.get(m.POS);
+//			m.forms.stream()
+//					.distinct()
+//					.filter(l -> !cache.contains(l, bable_POS))
+//					.peek(l -> num_forms.incrementAndGet())
+//					.forEach(l -> cache.addForm(l, bable_POS, dictionary.getMeanings(l, m.POS, language)));
+//
+//			long i = num_meanings.incrementAndGet();
+//			if (i % LOGGING_STEP_SIZE == 0)
+//			{
+//				log.info("\t" + num_meanings.get() + " meanings and " +  num_forms.get() + " forms collected in " + timer);
+//				FileOutputStream fos = new FileOutputStream(cache_file.toString());
+//				ObjectOutputStream oos = new ObjectOutputStream(fos);
+//				oos.writeObject(cache);
+//				fos.close();
+//			}
+//		}
 	}
 
 	private static List<String> getReferences(MeaningDictionary dictionary, ULocale language, Mention mention)

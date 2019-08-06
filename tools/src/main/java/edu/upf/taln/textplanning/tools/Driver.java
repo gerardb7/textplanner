@@ -36,6 +36,8 @@ public class Driver
 		@Parameter(names = {"-p", "-properties"}, description = "Path to properties file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		protected Path properties;
+		@Parameter(names = {"-c", "-cache"}, description = "If true, a dictionary cache file is created", arity = 1)
+		protected boolean cache = false;
 	}
 
 	@SuppressWarnings("unused")
@@ -111,7 +113,7 @@ public class Driver
 		private Path output;
 		@Parameter(names = {"-go", "-glosses_only"}, description = "If true, only glosses are used to generate context vectors", arity = 1, required = true)
 		private boolean glosses_only = true;
-		@Parameter(names = {"-c", "-chunk_size"}, description = "Chunk size used when computing vectors", arity = 1, required = true,
+		@Parameter(names = {"-cs", "-chunk_size"}, description = "Chunk size used when computing vectors", arity = 1, required = true,
 				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.IntegerGreaterThanZero.class)
 		private int chunk_size = 0;
 	}
@@ -150,6 +152,8 @@ public class Driver
 					eval.run_batch();
 				else
 					eval.run();
+				if (properties.getUpdateCache())
+					resources.serializeCache();
 				break;
 			}
 			case disambiguation_eval_command:
@@ -161,6 +165,8 @@ public class Driver
 					eval.run_batch();
 				else
 					eval.run();
+				if (properties.getUpdateCache())
+					resources.serializeCache();
 				break;
 			}
 			case rank_eval_command:
@@ -168,22 +174,22 @@ public class Driver
 				PlanningProperties properties = new PlanningProperties(rankEval.properties);
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				RankingEvaluation.run(rankEval.gold_file, rankEval.input_file, resources);
+				if (properties.getUpdateCache())
+					resources.serializeCache();
 				break;
 			}
 			case extract_eval_command:
 			{
-				PlanningProperties properties = new PlanningProperties(extractEval.properties);
-				InitialResourcesFactory resources = null; //new InitialResourcesFactory(language, properties);
-				ExtractiveEvaluation.run(extractEval.project, resources);
-//				resources.serializeCache();
+				ExtractiveEvaluation.run(extractEval.project, extractEval.properties);
 				break;
 			}
 			case collect_meanings_vectors:
 			{
 				PlanningProperties properties = new PlanningProperties(meanings.properties);
 				InitialResourcesFactory resources = new InitialResourcesFactory(meanings.language, properties);
-				CandidatesCollector.collect(resources.getDictionary(), meanings.language, resources.getCache(), properties.getDictionaryCache());
-				resources.serializeCache();
+				CandidatesCollector.collect(resources.getBase(), meanings.language, resources.getCache(), properties.getDictionaryCache());
+				if (properties.getUpdateCache())
+					resources.serializeCache();
 				break;
 			}
 			case create_context_vectors:
@@ -191,6 +197,8 @@ public class Driver
 				PlanningProperties properties = new PlanningProperties(context.properties);
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				ContextVectorsProducer.createVectors(context.meanings, context.chunk_size, context.output, resources, context.glosses_only);
+				if (properties.getUpdateCache())
+					resources.serializeCache();
 				break;
 			}
 			default:

@@ -38,6 +38,7 @@ public final class Meaning implements Serializable
 	}
 
 	public String getReference() { return reference; }
+	public String getLabel() { return label.replace('_', ' '); }
 	public boolean isNE() { return is_NE; }
 	public String getType() { return type; }
 	public void setType(String type) { this.type = type; }
