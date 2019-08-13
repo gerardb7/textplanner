@@ -8,6 +8,7 @@ import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -97,17 +98,21 @@ public class CompactDictionary implements Serializable
 
 	public boolean contains(String form, char pos)
 	{
+		assert StringUtils.isNotBlank(form);
 		final Entry e = new Entry(form, pos);
 		return forms_index.containsKey(e) || forms_hash_index.containsKey(e.hashCode());
 	}
 
 	public boolean contains(String meaning)
 	{
+		assert StringUtils.isNotBlank(meaning);
 		return meanings_index.containsKey(meaning) || meanings_hash_index.containsKey(meaning.hashCode());
 	}
 
 	public void addForm(String form, char pos, List<String> meanings)
 	{
+		assert StringUtils.isNotBlank(form) && meanings != null;
+		meanings.removeIf(String::isBlank);
 		if (meanings.isEmpty())
 			return;
 
@@ -164,12 +169,24 @@ public class CompactDictionary implements Serializable
 			forms_hash_index.put(hash, meanings_pos);
 	}
 
-	public void addMeaning(String meaning, String label, List<String> glosses)
+	public void addMeaning(final String meaning, final String label, List<String> glosses)
 	{
+		assert StringUtils.isNotBlank(meaning) && glosses != null;
+
+		if (glosses.removeIf(String::isBlank))
+		if (StringUtils.isBlank(label) && glosses.isEmpty())
+			return;
+
+		final String label_str;
+		if (StringUtils.isBlank(label))
+			label_str = meaning; // use meaning as label
+		else
+			label_str = label;
+
 		// create byte arrays for label and glosses
 		final List<byte[]> bytes_list = new ArrayList<>(glosses.size() + 1);
 		{
-			final byte[] bytes_string = label.getBytes(Charsets.UTF_8);
+			final byte[] bytes_string = label_str.getBytes(Charsets.UTF_8);
 			final byte[] bytes_count = Shorts.toByteArray((short) bytes_string.length);
 
 			byte[] bytes = ArrayUtils.addAll(bytes_count, bytes_string);
@@ -224,6 +241,7 @@ public class CompactDictionary implements Serializable
 
 	public List<String> getMeanings(String form, char pos)
 	{
+		assert StringUtils.isNotBlank(form);
 		int position = getFormsPosition(new Entry(form, pos)).orElse(-1);
 		if (position == -1)
 			return List.of();
@@ -248,6 +266,7 @@ public class CompactDictionary implements Serializable
 
 	public Optional<String> getLabel(String meaning)
 	{
+		assert StringUtils.isNotBlank(meaning);
 		int position = getMeaningsPosition(meaning).orElse(-1);
 		if (position == -1)
 			return Optional.empty();
@@ -268,6 +287,8 @@ public class CompactDictionary implements Serializable
 
 	public List<String> getGlosses(String meaning)
 	{
+		assert StringUtils.isNotBlank(meaning);
+
 		int position = getMeaningsPosition(meaning).orElse(-1);
 		if (position == -1)
 			return List.of();

@@ -1,7 +1,6 @@
-package edu.upf.taln.textplanning.tools.evaluation.corpus;
+package edu.upf.taln.textplanning.core.corpus;
 
-import edu.upf.taln.textplanning.common.DocumentResourcesFactory;
-import edu.upf.taln.textplanning.common.FileUtils;
+import com.google.common.base.Charsets;
 import edu.upf.taln.textplanning.core.structures.*;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -13,6 +12,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.*;
 import javax.xml.transform.stream.StreamSource;
+import java.io.IOException;
 import java.io.Serializable;
 import java.io.StringReader;
 import java.nio.file.Path;
@@ -23,7 +23,7 @@ import java.util.Map;
 
 import static java.util.stream.Collectors.toMap;
 
-public class EvaluationCorpus implements Serializable
+public class Corpora implements Serializable
 {
 	private final static long serialVersionUID = 1L;
 	private final static Logger log = LogManager.getLogger();
@@ -36,7 +36,6 @@ public class EvaluationCorpus implements Serializable
 		public String lang;
 		@XmlElement(name = "text")
 		public List<Text> texts = new ArrayList<>();
-		public transient DocumentResourcesFactory resouces = null;
 		@XmlTransient
 		private final static long serialVersionUID = 1L;
 	}
@@ -50,7 +49,6 @@ public class EvaluationCorpus implements Serializable
 		public String filename;
 		@XmlElement(name = "sentence")
 		public List<Sentence> sentences = new ArrayList<>();
-		public transient DocumentResourcesFactory resources;
 		@XmlTransient
 		public SemanticGraph graph = null;
 		@XmlTransient
@@ -98,7 +96,7 @@ public class EvaluationCorpus implements Serializable
 
 		try
 		{
-			final String xml_contents = FileUtils.readTextFile(xml_file);
+			final String xml_contents = org.apache.commons.io.FileUtils.readFileToString(xml_file.toFile(), Charsets.UTF_8);
 			JAXBContext jc = JAXBContext.newInstance(Corpus.class);
 			StreamSource xml = new StreamSource(new StringReader(xml_contents));
 			Unmarshaller unmarshaller = jc.createUnmarshaller();
@@ -109,11 +107,15 @@ public class EvaluationCorpus implements Serializable
 		{
 			log.error("Failed to parse xml : " + e);
 		}
+		catch (IOException e)
+		{
+			log.error("Can't read file " + xml_file + ": " + e);
+		}
 
 		return new Corpus();
 	}
 
-	public static void createGraph(EvaluationCorpus.Text text, CorpusAdjacencyFunction adjacency)
+	public static void createGraph(Corpora.Text text, CorpusAdjacencyFunction adjacency)
 	{
 		final Map<Mention, Candidate> mentions2candidates = text.sentences.stream()
 				.flatMap(s -> s.disambiguated.values().stream())

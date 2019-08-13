@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.tools.evaluation.corpus;
+package edu.upf.taln.textplanning.core.corpus;
 
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
@@ -19,7 +19,7 @@ public class CorpusAdjacencyFunction implements BiPredicate<Mention, Mention>
 	private final int context_size;
 	private final boolean additional_links; // if false, only textual adjacency is considered.
 
-	public CorpusAdjacencyFunction(EvaluationCorpus.Text text, int context_size, boolean additional_links)
+	public CorpusAdjacencyFunction(Corpora.Text text, int context_size, boolean additional_links)
 	{
 		// single word mentions are the item to rank
 		word_mentions = text.sentences.stream()

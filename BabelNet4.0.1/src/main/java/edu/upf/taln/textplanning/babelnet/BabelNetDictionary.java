@@ -3,7 +3,6 @@ package edu.upf.taln.textplanning.babelnet;
 import com.babelscape.util.UniversalPOS;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.UnmodifiableIterator;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import edu.upf.taln.textplanning.core.utils.POS;
@@ -19,14 +18,12 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.stream.Collectors.toList;
 
 public class BabelNetDictionary implements MeaningDictionary
 {
 	private final it.uniroma1.lcl.babelnet.BabelNet bn;
-	private static final AtomicLong num_queries = new AtomicLong();
 	private final static Logger log = LogManager.getLogger();
 
 	public BabelNetDictionary(Path config_folder)
@@ -85,42 +82,6 @@ public class BabelNetDictionary implements MeaningDictionary
 	}
 
 	@Override
-	public Iterator<Info> infoIterator(ULocale language)
-	{
-		// filter by lang
-		final Language babel_language = Language.fromISO(language.toLanguageTag());
-		final UnmodifiableIterator<BabelSynset> lang_sysnsets =
-				Iterators.filter(bn.iterator(), s -> s != null && s.getLanguages().contains(babel_language));
-
-		// then transform to info class
-		return	Iterators.transform(lang_sysnsets, s -> {
-			if (s == null)
-				return null;
-
-			final String id = s.getID().getID();
-			String label = s.getMainSense().map(BabelSense::getSimpleLemma).orElse(id);
-			POS.Tag pos = POS.BabelNet.get(String.valueOf(s.getPOS().getTag()));
-			final List<String> glosses = new ArrayList<>();
-			try
-			{
-				s.getGlosses(babel_language).stream()
-						.map(BabelGloss::toString)
-						.forEach(glosses::add);
-			}
-			catch (Exception e)
-			{
-				log.warn("Cannot get glosses for synset " + s.getID() + ": " + e);
-			}
-
-			final List<String> lemmas = s.getSenses(babel_language).stream()
-					.map(BabelSense::getSimpleLemma)
-					.collect(toList());
-
-			return new Info(id, label, pos, glosses, lemmas);
-		});
-	}
-
-	@Override
 	@SuppressWarnings("unused")
 	public List<String> getMeanings(String form, ULocale language)
 	{
@@ -130,7 +91,6 @@ public class BabelNetDictionary implements MeaningDictionary
 		// Get candidate entities using strict matching
 		try
 		{
-			num_queries.getAndIncrement();
 			final Language bnLang = Language.fromISO(language.toLanguageTag());
 			final List<BabelSynset> synsets = bn.getSynsets(form, bnLang);
 
@@ -164,8 +124,6 @@ public class BabelNetDictionary implements MeaningDictionary
 		// Get candidate entities using strict matching
 		try
 		{
-			num_queries.getAndIncrement();
-
 			UniversalPOS bnPOS = UniversalPOS.valueOf(POS.toTag.get(pos));
 			if (bnPOS == null)
 				log.error("Failed to map Tag tag " + pos);
@@ -196,7 +154,6 @@ public class BabelNetDictionary implements MeaningDictionary
 
 		try
 		{
-			num_queries.getAndIncrement();
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			return synset != null;
 		}
@@ -214,7 +171,6 @@ public class BabelNetDictionary implements MeaningDictionary
 
 		try
 		{
-			num_queries.getAndIncrement();
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
 				return Optional.empty();
@@ -237,7 +193,6 @@ public class BabelNetDictionary implements MeaningDictionary
 
 		try
 		{
-			num_queries.getAndIncrement();
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
 				return Optional.empty();
@@ -256,7 +211,6 @@ public class BabelNetDictionary implements MeaningDictionary
 
 		try
 		{
-			num_queries.getAndIncrement();
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
 				return Collections.emptyList();
@@ -276,7 +230,6 @@ public class BabelNetDictionary implements MeaningDictionary
 
 		try
 		{
-			num_queries.getAndIncrement();
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
 				return Collections.emptyList();
@@ -296,7 +249,6 @@ public class BabelNetDictionary implements MeaningDictionary
 
 		try
 		{
-			num_queries.getAndIncrement();
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
 				return Collections.emptyList();
@@ -307,11 +259,5 @@ public class BabelNetDictionary implements MeaningDictionary
 			return Collections.emptyList();
 		}
 
-	}
-
-	@Override
-	public long getNumQueries()
-	{
-		return num_queries.get();
 	}
 }

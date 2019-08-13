@@ -17,14 +17,12 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.stream.Collectors.toList;
 
 public class BabelNetDictionary implements MeaningDictionary
 {
 	private final BabelNet bn;
-	private static final AtomicLong num_queries = new AtomicLong();
 	private final static Logger log = LogManager.getLogger();
 
 	public BabelNetDictionary(Path config_folder)
@@ -81,41 +79,6 @@ public class BabelNetDictionary implements MeaningDictionary
 	}
 
 	@Override
-	public Iterator<Info> infoIterator(ULocale language)
-	{
-		// filter by lang
-		final Language babel_language = Language.fromISO(language.toLanguageTag());
-
-		// then transform to info class
-		return	Iterators.transform(bn.getSynsetIterator(), s -> {
-			if (s == null)
-				return null;
-
-			final String id = s.getId().getID();
-			final BabelSense mainSense = s.getMainSense(babel_language);
-			String label = (mainSense != null) ? mainSense.getSimpleLemma() : id;
-			POS.Tag pos = POS.BabelNet.get(String.valueOf(s.getPOS().getTag()));
-			final List<String> glosses = new ArrayList<>();
-			try
-			{
-				s.getGlosses(babel_language).stream()
-						.map(BabelGloss::toString)
-						.forEach(glosses::add);
-			}
-			catch (Exception e)
-			{
-				log.warn("Cannot get glosses for synset " + s.getId() + ": " + e);
-			}
-
-			final List<String> lemmas = s.getSenses(babel_language).stream()
-					.map(BabelSense::getSimpleLemma)
-					.collect(toList());
-
-			return new Info(id, label, pos, glosses, lemmas);
-		});
-	}
-
-	@Override
 	@SuppressWarnings("unused")
 	public List<String> getMeanings(String form, ULocale language)
 	{
@@ -125,7 +88,6 @@ public class BabelNetDictionary implements MeaningDictionary
 		// Get candidate entities using strict matching
 		try
 		{
-			num_queries.getAndIncrement();
 			final Language bnLang = Language.fromISO(language.toLanguageTag());
 			final List<BabelSynset> synsets = bn.getSynsets(form, bnLang);
 			synsets.sort(new BabelSynsetComparator(form, bnLang));
@@ -151,8 +113,6 @@ public class BabelNetDictionary implements MeaningDictionary
 		// Get candidate entities using strict matching
 		try
 		{
-			num_queries.getAndIncrement();
-
 			BabelPOS bnPOS = BabelPOS.valueOf(POS.toTag.get(pos));
 			if (bnPOS == null)
 				log.error("Failed to map Tag tag " + pos);
@@ -183,7 +143,6 @@ public class BabelNetDictionary implements MeaningDictionary
 
 		try
 		{
-			num_queries.getAndIncrement();
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			return synset != null;
 		}
@@ -201,7 +160,6 @@ public class BabelNetDictionary implements MeaningDictionary
 
 		try
 		{
-			num_queries.getAndIncrement();
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
 				return Optional.empty();
@@ -226,7 +184,6 @@ public class BabelNetDictionary implements MeaningDictionary
 
 		try
 		{
-			num_queries.getAndIncrement();
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
 				return Optional.empty();
@@ -245,7 +202,6 @@ public class BabelNetDictionary implements MeaningDictionary
 
 		try
 		{
-			num_queries.getAndIncrement();
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
 				return Collections.emptyList();
@@ -265,7 +221,6 @@ public class BabelNetDictionary implements MeaningDictionary
 
 		try
 		{
-			num_queries.getAndIncrement();
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
 				return Collections.emptyList();
@@ -285,7 +240,6 @@ public class BabelNetDictionary implements MeaningDictionary
 
 		try
 		{
-			num_queries.getAndIncrement();
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
 				return Collections.emptyList();
@@ -296,11 +250,5 @@ public class BabelNetDictionary implements MeaningDictionary
 			return Collections.emptyList();
 		}
 
-	}
-
-	@Override
-	public long getNumQueries()
-	{
-		return num_queries.get();
 	}
 }

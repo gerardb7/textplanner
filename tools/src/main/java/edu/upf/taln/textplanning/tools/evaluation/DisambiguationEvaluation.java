@@ -1,13 +1,14 @@
 package edu.upf.taln.textplanning.tools.evaluation;
 
+import edu.upf.taln.textplanning.common.DocumentResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
+import edu.upf.taln.textplanning.core.corpus.Corpora;
+import edu.upf.taln.textplanning.core.corpus.Corpora.Corpus;
 import edu.upf.taln.textplanning.core.ranking.Disambiguation;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.utils.POS;
-import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus;
-import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus.Corpus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -26,6 +27,7 @@ public abstract class DisambiguationEvaluation
 	abstract protected void checkCandidates(Corpus corpus);
 	abstract protected Set<String> getGold(Mention m);
 	abstract protected Corpus getCorpus();
+	abstract protected DocumentResourcesFactory getResources(Corpora.Text text);
 	abstract protected Options getOptions();
 	abstract protected void evaluate(List<Candidate> system, String sufix);
 	abstract protected Set<POS.Tag> getEvaluatePOS();
@@ -36,7 +38,7 @@ public abstract class DisambiguationEvaluation
 		final Options options = getOptions();
 		final Corpus corpus = getCorpus();
 		checkCandidates(corpus);
-		corpus.texts.forEach(text -> EvaluationTools.rankMeanings(text, options));
+		corpus.texts.forEach(text -> EvaluationTools.rankMeanings(text, getResources(text), options));
 
 
 		log.info("********************************");
@@ -62,14 +64,14 @@ public abstract class DisambiguationEvaluation
 		}
 		log.info("********************************");
 
-		EvaluationTools.printDisambiguationResults(corpus, this::getGold, evaluateMultiwordsOnly(), getEvaluatePOS());
+		corpus.texts.forEach(text -> EvaluationTools.printDisambiguationResults(text, getResources(text), this::getGold, evaluateMultiwordsOnly(), getEvaluatePOS()));
 	}
 
 	public void run_batch()
 	{
 		Options base_options = getOptions();
 		final Corpus corpus = getCorpus();
-		corpus.texts.forEach(text -> EvaluationTools.rankMeanings(text, getOptions()));
+		corpus.texts.forEach(text -> EvaluationTools.rankMeanings(text, getResources(text), getOptions()));
 
 		log.info("Ranking meanings (full)");
 		final int num_values = 11; final double min_value = 0.0; final double max_value = 1.0;
@@ -87,9 +89,10 @@ public abstract class DisambiguationEvaluation
 
 		for (Options options : batch_options)
 		{
-			EvaluationCorpus.reset(corpus);
+			Corpora.reset(corpus);
 			Disambiguation disambiguation = new Disambiguation(options.disambiguation_lambda);
-			EvaluationTools.rankMeanings(corpus, options);
+			corpus.texts.forEach(text -> EvaluationTools.rankMeanings(corpus, getResources(text), options));
+
 			log.info("********************************");
 			{
 				final List<Candidate> ranked_candidates = chooseTopRankOrFirst(corpus, disambiguation);
@@ -152,13 +155,13 @@ public abstract class DisambiguationEvaluation
 	}
 
 	// Uses default multiword selection strategy and bias function
-	protected static List<Candidate> chooseTopContext(Corpus corpus, double disambiguation_lambda)
+	protected List<Candidate> chooseTopContext(Corpus corpus, double disambiguation_lambda)
 	{
 		Disambiguation disambiguation = new Disambiguation(disambiguation_lambda);
 		return corpus.texts.stream()
 				.map(text ->
 				{
-					final BiasFunction bias = corpus.resouces != null ? corpus.resouces.getBiasFunction() : text.resources.getBiasFunction();
+					final BiasFunction bias = getResources(text).getBiasFunction();
 					final List<Candidate> candidates = text.sentences.stream()
 							.flatMap(sentence -> sentence.candidates.values().stream()
 									.flatMap(Collection::stream))
@@ -174,12 +177,12 @@ public abstract class DisambiguationEvaluation
 	}
 
 	// Default multiword selection strategy + bias function iff above threshold, otherwise first sense
-	protected static List<Candidate> chooseTopContextOrFirst(Corpus corpus, Disambiguation disambiguation, double threshold)
+	protected List<Candidate> chooseTopContextOrFirst(Corpus corpus, Disambiguation disambiguation, double threshold)
 	{
 		return corpus.texts.stream()
 				.map(text ->
 				{
-					final BiasFunction bias = corpus.resouces != null ? corpus.resouces.getBiasFunction() : text.resources.getBiasFunction();
+					final BiasFunction bias = getResources(text).getBiasFunction();
 					final List<Candidate> candidates = text.sentences.stream()
 							.flatMap(sentence -> sentence.candidates.values().stream()
 									.flatMap(Collection::stream))

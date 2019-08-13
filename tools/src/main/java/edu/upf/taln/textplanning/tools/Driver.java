@@ -188,15 +188,14 @@ public class Driver
 				PlanningProperties properties = new PlanningProperties(meanings.properties);
 				InitialResourcesFactory resources = new InitialResourcesFactory(meanings.language, properties);
 				CandidatesCollector.collect(resources.getBase(), meanings.language, resources.getCache(), properties.getDictionaryCache());
-				if (properties.getUpdateCache())
-					resources.serializeCache();
+				resources.serializeCache();
 				break;
 			}
 			case create_context_vectors:
 			{
 				PlanningProperties properties = new PlanningProperties(context.properties);
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
-				ContextVectorsProducer.createVectors(context.meanings, context.chunk_size, context.output, resources, context.glosses_only);
+				//ContextVectorsProducer.createVectors(context.meanings, context.chunk_size, context.output, resources, context.glosses_only);
 				if (properties.getUpdateCache())
 					resources.serializeCache();
 				break;

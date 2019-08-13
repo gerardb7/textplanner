@@ -2,6 +2,7 @@ package edu.upf.taln.textplanning.core.structures;
 
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.utils.POS;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -37,14 +38,6 @@ public class CachedDictionary implements MeaningDictionary
 		if (base == null)
 			throw new RuntimeException("Unsupported operation");
 		return base.iterator();
-	}
-
-	@Override
-	public Iterator<Info> infoIterator(ULocale language)
-	{
-		if (base == null)
-			throw new RuntimeException("Unsupported operation");
-		return base.infoIterator(language);
 	}
 
 	@Override
@@ -106,7 +99,23 @@ public class CachedDictionary implements MeaningDictionary
 			final Optional<String> label = base.getLabel(id, language);
 			final List<String> glosses = base.getGlosses(id, language);
 			if (update_cache)
-				cache.addMeaning(id, label.orElse(""), glosses);
+			{
+				// determine label value
+				final String label_str;
+				if (label.isPresent() && StringUtils.isNotBlank(label.get()))
+					label_str = label.get();
+				else
+				{
+					final List<String> lemmas = base.getLemmas(id, language);
+					// determine label value
+					if (!lemmas.isEmpty())
+						label_str = lemmas.get(0);
+					else
+						label_str = null;
+				}
+
+				cache.addMeaning(id, label_str, glosses);
+			}
 			return label;
 		}
 		else
@@ -152,11 +161,5 @@ public class CachedDictionary implements MeaningDictionary
 		if (base == null)
 			throw new RuntimeException("Unsupported operation");
 		return base.getLemmas(id, language);
-	}
-
-	@Override
-	public long getNumQueries()
-	{
-		return 0;
 	}
 }

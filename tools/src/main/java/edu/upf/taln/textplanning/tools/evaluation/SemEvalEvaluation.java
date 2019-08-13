@@ -1,15 +1,16 @@
 package edu.upf.taln.textplanning.tools.evaluation;
 
 import com.ibm.icu.util.ULocale;
+import edu.upf.taln.textplanning.common.DocumentResourcesFactory;
 import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.utils.POS;
-import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus;
-import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus.Corpus;
-import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus.Text;
+import edu.upf.taln.textplanning.core.corpus.Corpora;
+import edu.upf.taln.textplanning.core.corpus.Corpora.Corpus;
+import edu.upf.taln.textplanning.core.corpus.Corpora.Text;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,6 +27,7 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 	private final Path xml_file;
 	private final Path output_path;
 	private final Corpus corpus;
+	private final DocumentResourcesFactory resources;
 	private final Options options = new Options();
 	private final Map<String, String> gold;
 	private final Set<POS.Tag> eval_POS;
@@ -35,7 +37,7 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 	private static final ULocale language = ULocale.ENGLISH;
 	private final static Logger log = LogManager.getLogger();
 
-	public SemEvalEvaluation(   Path gold_file, Path xml_file, Path output_path, InitialResourcesFactory resources_factory)
+	public SemEvalEvaluation(   Path gold_file, Path xml_file, Path output_path, InitialResourcesFactory initial_resources)
 	{
 		this.options.min_context_freq = 3; // Minimum frequency of document tokens used to calculate context vectors
 		this.options.min_bias_threshold = 0.8; // minimum bias value below which candidate meanings are ignored
@@ -50,7 +52,7 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 		// Evaluate these Tag tags only
 		this.eval_POS = Set.of(POS.Tag.NOUN, POS.Tag.ADJ, POS.Tag.VERB, POS.Tag.ADV);
 
-		this.corpus = EvaluationCorpus.createFromXML(xml_file);
+		this.corpus = Corpora.createFromXML(xml_file);
 		this.gold_file = gold_file;
 		this.xml_file = xml_file;
 		this.output_path = output_path;
@@ -62,7 +64,7 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 				.collect(toMap(a -> a[0].equals(a[1]) ? a[0] : (a[0] + "-" + a[1]), a -> a[2]));
 		log.info(gold.keySet().size() + " lines read from gold");
 
-		EvaluationTools.createResources(corpus, tagset, resources_factory, max_span_size, rank_together, excluded_mention_POS, options);
+		resources = EvaluationTools.createJointResources(corpus, tagset, initial_resources, max_span_size, excluded_mention_POS, options);
 	}
 
 	@Override
@@ -78,6 +80,12 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 	protected Corpus getCorpus()
 	{
 		return corpus;
+	}
+
+	@Override
+	protected DocumentResourcesFactory getResources(Corpora.Text text)
+	{
+		return resources;
 	}
 
 	@Override
@@ -136,11 +144,11 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 					final Text document = corpus.texts.stream()
 							.filter(d -> sourceId.startsWith(d.id))
 							.findFirst().orElseThrow(() -> new RuntimeException());
-					final EvaluationCorpus.Sentence sentence = document.sentences.stream()
+					final Corpora.Sentence sentence = document.sentences.stream()
 							.filter(s -> sourceId.equals(s.id))
 							.findFirst().orElseThrow(() -> new RuntimeException());
-					final EvaluationCorpus.Token first_token = sentence.tokens.get(mention.getSpan().getLeft());
-					final EvaluationCorpus.Token last_token = sentence.tokens.get(mention.getSpan().getRight() - 1);
+					final Corpora.Token first_token = sentence.tokens.get(mention.getSpan().getLeft());
+					final Corpora.Token last_token = sentence.tokens.get(mention.getSpan().getRight() - 1);
 
 					return first_token.id + "\t" + last_token.id + "\t" + c.getMeaning().getReference();
 				})

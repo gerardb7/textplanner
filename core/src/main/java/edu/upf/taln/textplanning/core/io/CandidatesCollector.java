@@ -4,6 +4,7 @@ import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.structures.*;
 import edu.upf.taln.textplanning.core.utils.POS;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -128,13 +129,24 @@ public class CandidatesCollector
 			final String reference = iterator.next();
 			final Optional<String> label = dictionary.getLabel(reference, language);
 			final List<String> glosses = dictionary.getGlosses(reference, language);
-			cache.addMeaning(reference, label.orElse(""), glosses);
-
 			final char babel_pos = reference.charAt(reference.length() - 1);
 			final POS.Tag pos = POS.get(String.valueOf(babel_pos), POS.Tagset.BabelNet);
 			final List<String> lemmas = dictionary.getLemmas(reference, language);
+
+			// determine label value
+			final String label_str;
+			if (label.isPresent() && StringUtils.isNotBlank(label.get()))
+				label_str = label.get();
+			else if (!lemmas.isEmpty())
+				label_str = lemmas.get(0);
+			else
+				label_str = null;
+
+			cache.addMeaning(reference, label_str, glosses);
+
 			lemmas.stream()
 					.distinct()
+					.filter(StringUtils::isNotBlank)
 					.filter(l -> !cache.contains(l, babel_pos))
 					.peek(l -> num_forms.incrementAndGet())
 					.forEach(l -> {
@@ -154,29 +166,6 @@ public class CandidatesCollector
 		}
 
 		log.info(num_meanings.get() + " meanings and " +  num_forms.get() + " forms collected in " + timer.stop());
-
-//		final Iterator<MeaningDictionary.Info> it = dictionary.infoIterator(language);
-//		while (it.hasNext())
-//		{
-//			final MeaningDictionary.Info m = it.next();
-//			cache.addMeaning(m.id, m.label, m.glosses);
-//			final Character bable_POS = POS.toTag.get(m.POS);
-//			m.forms.stream()
-//					.distinct()
-//					.filter(l -> !cache.contains(l, bable_POS))
-//					.peek(l -> num_forms.incrementAndGet())
-//					.forEach(l -> cache.addForm(l, bable_POS, dictionary.getMeanings(l, m.POS, language)));
-//
-//			long i = num_meanings.incrementAndGet();
-//			if (i % LOGGING_STEP_SIZE == 0)
-//			{
-//				log.info("\t" + num_meanings.get() + " meanings and " +  num_forms.get() + " forms collected in " + timer);
-//				FileOutputStream fos = new FileOutputStream(cache_file.toString());
-//				ObjectOutputStream oos = new ObjectOutputStream(fos);
-//				oos.writeObject(cache);
-//				fos.close();
-//			}
-//		}
 	}
 
 	private static List<String> getReferences(MeaningDictionary dictionary, ULocale language, Mention mention)

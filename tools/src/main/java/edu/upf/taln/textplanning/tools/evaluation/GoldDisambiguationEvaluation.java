@@ -1,5 +1,6 @@
 package edu.upf.taln.textplanning.tools.evaluation;
 
+import edu.upf.taln.textplanning.common.DocumentResourcesFactory;
 import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
@@ -8,8 +9,8 @@ import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.core.utils.POS;
 import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.AlternativeMeanings;
-import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus;
-import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus.Corpus;
+import edu.upf.taln.textplanning.core.corpus.Corpora;
+import edu.upf.taln.textplanning.core.corpus.Corpora.Corpus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -24,6 +25,7 @@ import static java.util.stream.Collectors.toMap;
 public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 {
 	private final Corpus corpus;
+	private final Map<Corpora.Text, DocumentResourcesFactory> texts2resources;
 	private final Options options = new Options();
 	final Map<String, AlternativeMeanings> gold;
 	private final Set<POS.Tag> eval_POS;
@@ -46,8 +48,8 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 		// Evaluate these Tag tags only
 		this.eval_POS = Set.of(POS.Tag.NOUN, POS.Tag.ADJ, POS.Tag.VERB, POS.Tag.ADV);
 
-		this.corpus = EvaluationCorpus.createFromXML(xml_file);
-		EvaluationTools.createResources(corpus, tagset, resources_factory, max_span_size, false, excluded_mention_POS, options);
+		this.corpus = Corpora.createFromXML(xml_file);
+		texts2resources = EvaluationTools.createResources(corpus, tagset, resources_factory, max_span_size, excluded_mention_POS, options);
 		this.gold = parseGoldFile(gold_file);
 
 		// Check gold anns
@@ -109,6 +111,12 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 	protected Corpus getCorpus()
 	{
 		return corpus;
+	}
+
+	@Override
+	protected DocumentResourcesFactory getResources(Corpora.Text text)
+	{
+		return texts2resources.get(text);
 	}
 
 	@Override

@@ -1,5 +1,6 @@
 package edu.upf.taln.textplanning.tools.evaluation;
 
+import edu.upf.taln.textplanning.common.DocumentResourcesFactory;
 import edu.upf.taln.textplanning.common.FileUtils;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
@@ -9,8 +10,8 @@ import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.core.utils.POS;
 import edu.upf.taln.textplanning.tools.evaluation.EvaluationTools.AlternativeMeanings;
-import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus;
-import edu.upf.taln.textplanning.tools.evaluation.corpus.EvaluationCorpus.Corpus;
+import edu.upf.taln.textplanning.core.corpus.Corpora;
+import edu.upf.taln.textplanning.core.corpus.Corpora.Corpus;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,7 +30,6 @@ public class RankingEvaluation
 	public RankingEvaluation() {}
 
 	private static final int max_span_size = 3;
-	private static final boolean rank_together = false;
 	private static final POS.Tagset tagset = POS.Tagset.Simple;
 	private final static Logger log = LogManager.getLogger();
 
@@ -51,10 +51,10 @@ public class RankingEvaluation
 		Set<POS.Tag> evaluate_POS = Set.of(POS.Tag.NOUN, POS.Tag.ADJ, POS.Tag.VERB, POS.Tag.ADV);
 
 		final Map<String, Set<AlternativeMeanings>> gold = parseGoldFile(gold_file);
-		final Corpus corpus = EvaluationCorpus.createFromXML(xml_file);
-		EvaluationTools.createResources(corpus, tagset, resources_factory, max_span_size, rank_together, excluded_mention_POS, options);
+		final Corpus corpus = Corpora.createFromXML(xml_file);
+		final Map<Corpora.Text, DocumentResourcesFactory> resources = EvaluationTools.createResources(corpus, tagset, resources_factory, max_span_size, excluded_mention_POS, options);
 
-		corpus.texts.forEach(text -> EvaluationTools.rankMeanings(text, options));
+		corpus.texts.forEach(text -> EvaluationTools.rankMeanings(text, resources.get(text), options));
 		corpus.texts.forEach(text -> EvaluationTools.disambiguate(text, options));
 
 		log.info("***\n" + options + "\n***");
@@ -101,7 +101,7 @@ public class RankingEvaluation
 			});
 		}
 		{
-			final Map<String, List<Meaning>> system_meanings = contextRank(corpus);
+			final Map<String, List<Meaning>> system_meanings = contextRank(corpus, resources);
 			final Map<String, Pair<Double, Double>> avg_precisions = evaluate(system_meanings, gold, evaluate_POS);
 			final double map = avg_precisions.values().stream().mapToDouble(Pair::getLeft).average().orElse(Double.NaN);
 			final double limited_map = avg_precisions.values().stream().mapToDouble(Pair::getRight).average().orElse(Double.NaN);
@@ -126,7 +126,7 @@ public class RankingEvaluation
 		}
 		log.info("********************************\n");
 
-		EvaluationTools.printMeaningRankings(corpus, gold, false, evaluate_POS);
+		corpus.texts.forEach(text -> EvaluationTools.printMeaningRankings(text, resources.get(text), gold, false, evaluate_POS));
 	}
 
 	private static Map<String, Set<AlternativeMeanings>> parseGoldFile(Path gold_file)
@@ -177,7 +177,7 @@ public class RankingEvaluation
 				}));
 	}
 
-	private static Map<String, List<Meaning>> contextRank(Corpus corpus)
+	private static Map<String, List<Meaning>> contextRank(Corpus corpus, Map<Corpora.Text, DocumentResourcesFactory> resources)
 	{
 		return corpus.texts.stream()
 				.collect(toMap(text -> text.id, text ->
@@ -187,8 +187,7 @@ public class RankingEvaluation
 							.map(Candidate::getMeaning)
 							.collect(toList());
 
-					final BiasFunction bias = corpus.resouces != null ?
-							corpus.resouces.getBiasFunction() : text.resources.getBiasFunction();
+					final BiasFunction bias = resources.get(text).getBiasFunction();
 					Map<Meaning, Double> weights = meanings.stream()
 							.collect(groupingBy(m -> m, averagingDouble(m -> bias.apply(m.getReference()))));
 
