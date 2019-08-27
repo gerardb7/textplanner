@@ -1,14 +1,13 @@
 package edu.upf.taln.textplanning.core.discourse;
 
-import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.core.similarity.SemanticTreeSimilarity;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.core.structures.SemanticTree;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -19,7 +18,7 @@ import java.util.stream.IntStream;
  */
 public class DiscoursePlanner
 {
-	private class DiscourseGraph extends SimpleWeightedGraph<Integer, DefaultWeightedEdge>
+	private static class DiscourseGraph extends SimpleWeightedGraph<Integer, DefaultWeightedEdge>
 	{
 		DiscourseGraph() { super(DefaultWeightedEdge.class); }
 	}
@@ -39,7 +38,8 @@ public class DiscoursePlanner
 	 */
 	public List<SemanticSubgraph> structureSubgraphs(Collection<SemanticSubgraph> graphs)
 	{
-		Stopwatch timer = Stopwatch.createStarted();
+		if (graphs.isEmpty())
+			return new ArrayList<>();
 
 		// Convert graphs to lists
 		SemanticTree[] trees = graphs.stream()
@@ -89,7 +89,7 @@ public class DiscoursePlanner
 		List<Integer> visitedNodes = new ArrayList<>();
 		int currentNode = 0; // start with highest ranked node
 		visitedNodes.add(0);
-		boolean continueExploring = true;
+		boolean continueExploring = !g.vertexSet().isEmpty(); // if empty, don't bother
 
 		while (continueExploring)
 		{

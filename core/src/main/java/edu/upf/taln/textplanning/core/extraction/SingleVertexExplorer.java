@@ -21,7 +21,7 @@ public class SingleVertexExplorer extends Explorer
 		}
 	}
 
-	public SingleVertexExplorer(boolean start_from_verbs, ExpansionPolicy policy)
+	public SingleVertexExplorer(boolean start_from_verbs, ExpansionConstraints policy)
 	{
 		super(new NoSemantics(), start_from_verbs, policy);
 	}

@@ -8,6 +8,7 @@ import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
+import edu.upf.taln.textplanning.core.corpus.*;
 import edu.upf.taln.textplanning.core.io.CandidatesCollector;
 import edu.upf.taln.textplanning.core.ranking.Disambiguation;
 import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
@@ -18,9 +19,6 @@ import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.core.utils.POS;
-import edu.upf.taln.textplanning.core.corpus.CorpusAdjacencyFunction;
-import edu.upf.taln.textplanning.core.corpus.CorpusContextFunction;
-import edu.upf.taln.textplanning.core.corpus.Corpora;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -34,6 +32,7 @@ import java.util.stream.IntStream;
 
 import static java.lang.Math.min;
 import static java.util.Comparator.comparingDouble;
+import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
 
 public class EvaluationTools
@@ -60,7 +59,6 @@ public class EvaluationTools
 		}
 	}
 
-	private static final int context_size = 1;
 	private static final String corpus_filename = "corpus.xml";
 	private final static Logger log = LogManager.getLogger();
 
@@ -120,7 +118,7 @@ public class EvaluationTools
 				.collect(toList());
 		final List<Candidate> candidates_list = corpus.texts.stream()
 				.flatMap(t -> t.sentences.stream())
-				.flatMap(s -> s.candidates.values().stream())
+				.flatMap(s -> s.candidate_meanings.values().stream())
 				.flatMap(List::stream)
 				.collect(toList());
 
@@ -141,22 +139,25 @@ public class EvaluationTools
 		try
 		{
 			final ULocale language = initial_resources.getLanguage();
-			final List<Mention> mentions = collectMentions(text, tagset, max_span_size, ignored_POS_Tags, language);
+			final List<Mention> mentions = collectMentions(text, tagset, max_span_size, ignored_POS_Tags, language); // single content words and multiwords
 			final Map<Mention, List<Candidate>> candidates = CandidatesCollector.collect(initial_resources.getDictionary(), language, mentions);
 
 			// assign mentions and candidates to sentences in corpus
 			text.sentences.forEach(sentence ->
 			{
+				sentence.ranked_words = mentions.stream()
+						.filter(m -> m.getContextId().equals(sentence.id))
+						.filter(not(Mention::isMultiWord))
+						.sorted(Comparator.comparingInt(m -> m.getSpan().getLeft()))
+						.collect(toList());
+
 				candidates.keySet().stream()
 						.filter(m -> m.getContextId().equals(sentence.id))
-						.sorted(Comparator.comparingInt(m -> m.getSpan().getLeft()))
-						.forEach(m -> sentence.mentions.add(m));
-
-				sentence.mentions.forEach(m -> sentence.candidates.put(m, candidates.get(m)));
+						.forEach(m -> sentence.candidate_meanings.put(m, candidates.get(m)));
 			});
 
 			final List<Candidate> text_candidates = text.sentences.stream()
-					.flatMap(s -> s.candidates.values().stream().flatMap(List::stream))
+					.flatMap(s -> s.candidate_meanings.values().stream().flatMap(List::stream))
 					.collect(toList());
 
 			DocumentResourcesFactory resources = null;
@@ -201,13 +202,13 @@ public class EvaluationTools
 		final BiPredicate<String, String> similarity_filter = resources.getMeaningPairsSimilarityFilter();
 
 		final List<Candidate> candidates = sentences.stream()
-				.flatMap(s -> s.candidates.values().stream()
+				.flatMap(s -> s.candidate_meanings.values().stream()
 						.flatMap(Collection::stream))
 				.collect(toList());
 
 		// Log stats
 		final int num_mentions = sentences.stream()
-				.map(s -> s.candidates)
+				.map(s -> s.candidate_meanings)
 				.mapToInt(m -> m.keySet().size())
 				.sum();
 		final long num_filtered_candidates = candidates.stream()
@@ -235,7 +236,7 @@ public class EvaluationTools
 	public static void disambiguate(Corpora.Text text, Options options)
 	{
 		final List<Candidate> candidates = text.sentences.stream()
-				.flatMap(sentence -> sentence.candidates.values().stream()
+				.flatMap(sentence -> sentence.candidate_meanings.values().stream()
 						.flatMap(Collection::stream))
 				.collect(toList());
 
@@ -245,40 +246,42 @@ public class EvaluationTools
 				.filter(s -> s.id.equals(m.getContextId()))
 				.findFirst()
 				.orElseThrow()
-				.disambiguated.put(m, c));
+				.disambiguated_meanings.put(m, c));
 	}
 
-	public static void rankMentions(Corpora.Corpus corpus, Options options)
+	public static void rankMentions(Corpora.Corpus corpus, boolean use_dependencies, int context_size, Options options)
 	{
-		corpus.texts.forEach(text -> EvaluationTools.rankMentions(text, options));
+		corpus.texts.forEach(text -> EvaluationTools.rankMentions(text, use_dependencies, context_size, options));
 	}
 
-	public static void rankMentions(Corpora.Text text, Options options)
+	public static void rankMentions(Corpora.Text text, boolean use_dependencies, int context_size, Options options)
 	{
-		CorpusAdjacencyFunction adjacency = new CorpusAdjacencyFunction(text, context_size, true);
+		final AdjacencyFunction adjacency = use_dependencies ? new DependencyBasedAdjacencyFunction(text)
+				: new TextualOrderAdjacencyFunction(text, context_size);
 		final List<Mention> word_mentions = adjacency.getSortedWordMentions();
-		final Map<Mention, Candidate> word_meanings = adjacency.getWordMeanings();
+		final SameMeaningPredicate same_meaning = new SameMeaningPredicate(text);
+		final Map<Mention, Candidate> word_meanings = same_meaning.getWordMeanings();
 
 		final Map<Mention, Optional<Double>> words2weights = word_mentions.stream()
 				.collect(toMap(m -> m, m -> word_meanings.containsKey(m) ? word_meanings.get(m).getWeight() : Optional.empty()));
 
-		TextPlanner.rankMentions(words2weights, adjacency, options);
+		TextPlanner.rankMentions(words2weights, (m1, m2) -> adjacency.test(m1, m2) || adjacency.test(m2, m1), same_meaning, options);
 	}
 
-	public static void plan(Corpora.Corpus corpus, DocumentResourcesFactory resources, Options options)
+	public static void plan(Corpora.Corpus corpus, DocumentResourcesFactory resources, boolean use_dependencies, int context_size, Options options)
 	{
-		corpus.texts.forEach(text -> EvaluationTools.plan(text, resources, options));
+		corpus.texts.forEach(text -> EvaluationTools.plan(text, resources, use_dependencies, context_size, options));
 	}
 
-	public static void plan(Corpora.Text text, DocumentResourcesFactory resources, Options options)
+	public static void plan(Corpora.Text text, DocumentResourcesFactory resources, boolean use_dependencies, int context_size, Options options)
 	{
-		final SimilarityFunction sim = resources.getSimilarityFunction();
-		final CorpusAdjacencyFunction adjacency = new CorpusAdjacencyFunction(text, context_size, false);
-
+		final AdjacencyFunction adjacency = use_dependencies ? new DependencyBasedAdjacencyFunction(text)
+				: new TextualOrderAdjacencyFunction(text, context_size);
 		Corpora.createGraph(text, adjacency);
-		final List<SemanticSubgraph> subgraphs = new ArrayList<>(TextPlanner.extractSubgraphs(text.graph, options));
+		final List<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(text.graph, options);
 
-		final Collection<SemanticSubgraph> selected_subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, sim, options);
+		final SimilarityFunction sim = resources.getSimilarityFunction();
+		final List<SemanticSubgraph> selected_subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, sim, options);
 		text.subgraphs.addAll(TextPlanner.sortSubgraphs(selected_subgraphs, sim, options));
 	}
 
@@ -341,9 +344,7 @@ public class EvaluationTools
 	                                        Set<POS.Tag> eval_POS)
 	{
 		IntStream.range(0, corpus.texts.size()).forEach(i ->
-		{
-			printMeaningRankings(corpus.texts.get(i), resources, gold, multiwords_only, eval_POS);
-		});
+				printMeaningRankings(corpus.texts.get(i), resources, gold, multiwords_only, eval_POS));
 	}
 
 	public static void printMeaningRankings(Corpora.Text text, DocumentResourcesFactory resources,
@@ -357,7 +358,7 @@ public class EvaluationTools
 
 
 			final int max_length = text.sentences.stream()
-					.flatMap(s -> s.disambiguated.values().stream())
+					.flatMap(s -> s.disambiguated_meanings.values().stream())
 					.map(Candidate::getMeaning)
 					.map(Meaning::toString)
 					.mapToInt(String::length)
@@ -366,7 +367,7 @@ public class EvaluationTools
 			final Function<String, Double> weighter = resources.getBiasFunction();
 
 			final Map<Meaning, Double> weights = text.sentences.stream()
-					.flatMap(s -> s.disambiguated.values().stream())
+					.flatMap(s -> s.disambiguated_meanings.values().stream())
 					.filter(m -> (multiwords_only && m.getMention().isMultiWord()) || (!multiwords_only && eval_POS.contains(m.getMention().getPOS())))
 					.collect(groupingBy(Candidate::getMeaning, averagingDouble(c -> c.getWeight().orElse(0.0))));
 
@@ -390,9 +391,7 @@ public class EvaluationTools
 	                                              boolean multiwords_only, Set<POS.Tag> eval_POS)
 	{
 		IntStream.range(0, corpus.texts.size()).forEach(i ->
-		{
-			printDisambiguationResults(corpus.texts.get(i), resources, gold, multiwords_only, eval_POS);
-		});
+				printDisambiguationResults(corpus.texts.get(i), resources, gold, multiwords_only, eval_POS));
 	}
 
 	public static void printDisambiguationResults(Corpora.Text text, DocumentResourcesFactory resources,
@@ -402,7 +401,7 @@ public class EvaluationTools
 		log.info("TEXT " + text.id);
 
 		final int max_length = text.sentences.stream()
-				.flatMap(s -> s.candidates.values().stream())
+				.flatMap(s -> s.candidate_meanings.values().stream())
 				.flatMap(Collection::stream)
 				.map(Candidate::getMeaning)
 				.map(Meaning::toString)
@@ -412,7 +411,7 @@ public class EvaluationTools
 		final Function<String, Double> bias = resources.getBiasFunction();
 
 		text.sentences.forEach(s ->
-				s.candidates.forEach((mention, candidates) ->
+				s.candidate_meanings.forEach((mention, candidates) ->
 				{
 					if (candidates.isEmpty())
 						return;
@@ -460,7 +459,7 @@ public class EvaluationTools
 	{
 		final String str = corpus.texts.stream()
 				.map(text -> text.sentences.stream()
-						.map(sentence -> sentence.disambiguated.keySet().stream()
+						.map(sentence -> sentence.disambiguated_meanings.keySet().stream()
 								.sorted(Comparator.comparing(Mention::getId))
 								.map(mention ->
 								{
@@ -473,7 +472,7 @@ public class EvaluationTools
 									else
 										id = id + "\t" + id;
 									return id + "\t" +
-											sentence.disambiguated.get(mention).getMeaning().getReference() + "\t\"" +
+											sentence.disambiguated_meanings.get(mention).getMeaning().getReference() + "\t\"" +
 											mention.getSurfaceForm() + "\"";
 								})
 								.collect(joining("\n")))

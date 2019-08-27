@@ -50,6 +50,14 @@ public class SemanticSubgraph extends AsSubgraph<String, Role>
 				.average().orElse(0.0);
 	}
 
+	public boolean contains(SemanticSubgraph other)
+	{
+		if (this.base != other.base)
+			return false;
+
+		return this.vertexSet.containsAll(other.vertexSet());
+	}
+
 	@Override
 	public boolean equals(Object o)
 	{

@@ -7,11 +7,14 @@ import edu.upf.taln.textplanning.common.*;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.corpus.Corpora;
 import edu.upf.taln.textplanning.core.corpus.Corpora.Corpus;
-import edu.upf.taln.textplanning.core.structures.Candidate;
+import edu.upf.taln.textplanning.core.corpus.Corpora.Token;
+import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
+import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.summarization.Summarizer;
 import edu.upf.taln.textplanning.core.summarization.Summarizer.*;
 import edu.upf.taln.textplanning.core.utils.POS;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -20,24 +23,28 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 import static edu.upf.taln.textplanning.common.FileUtils.getFilesInFolder;
 import static edu.upf.taln.textplanning.core.summarization.Summarizer.*;
+import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
 
 public class ExtractiveEvaluation
 {
 	private static final int max_span_size = 3;
+	private static final int context_size = 1;
+	private static final double default_weight = 0.1;
+	private static final boolean use_dependencies = true;
 	private static final ULocale language = ULocale.ENGLISH;
 	private static final POS.Tagset tagset = POS.Tagset.Simple;
 	private static final String summary_extension = ".summ";
-
-//	private static final Set<String> excludedPOS = Set.of("CC","DT","EX","IN","LS","MD","PDT","Tag","PRP","PRP$","RB","RBR","RBS","RP","TO","UH","WDT","WP","WP$","WRB");
 	private final static Logger log = LogManager.getLogger();
 
 	public static void run(Path project_folder, Path properties_file) throws Exception
 	{
 		Stopwatch gtimer = Stopwatch.createStarted();
+		log.info("Summarization options: max_span_size = " + max_span_size + " context_size = " + context_size + " default_weight = " + default_weight + " use_dependencies = " + use_dependencies);
 
 		// Exclude Tag from mention collection
 		final Set<POS.Tag> excluded_mention_POS = Set.of(POS.Tag.X);
@@ -107,10 +114,9 @@ public class ExtractiveEvaluation
 					assert resources != null;
 					EvaluationTools.rankMeanings(text, resources, options);
 					EvaluationTools.disambiguate(text, options);
-					EvaluationTools.rankMentions(text, options);
-					EvaluationTools.plan(text, resources, options);
+					EvaluationTools.rankMentions(text, use_dependencies, context_size, options);
+					EvaluationTools.plan(text, resources, use_dependencies, context_size, options);
 					log.info("Text processed in " + timer.toString());
-
 				});
 				log.info("Corpus processed in " + process_timer.stop());
 				Serializer.serialize(corpus, corpus_file);
@@ -132,7 +138,11 @@ public class ExtractiveEvaluation
 				if (gold_tokens != null)
 				{
 					final int num_sentences = gold_tokens.size(); // to make summaries match num of sentences of gold summary
-					final int num_words = gold_tokens.stream() // to make summaries match num of content words of gold summary
+					final int num_content_words = (int) gold_tokens.stream() // to make extractive summaries match num of tokens of gold summary
+							.flatMap(l -> l.stream()
+									.filter(t -> FunctionWordsFilter.test(t, language)))
+							.count();
+					final int num_tokens = gold_tokens.stream() // to make extractive summaries match num of tokens of gold summary
 							.mapToInt(List::size)
 							.sum();
 
@@ -141,19 +151,41 @@ public class ExtractiveEvaluation
 							.map(s -> String.join(" ", s))
 							.collect(joining("\n\t"));
 					log.info("\nGold summary:\n\t" + gold_summary + "\n");
-					log.info("\t" + num_sentences + " sentences, " + num_words + " words, " + gold_summary.length() + " characters.\n");
+					log.info("\t" + num_sentences + " sentences, " + num_tokens + " words, " + gold_summary.length() + " characters.\n");
 
-					Summarizer.printDebugInfo(text, num_words);
+					// Collect all required weights
+					final List<Token> tokens = text.sentences.stream()
+							.flatMap(s -> s.tokens.stream())
+							.collect(toList());
+					final Map<Token, Optional<Double>> tokens2MeaningWeights = text.sentences.stream()
+							.flatMap(s -> s.disambiguated_meanings.values().stream())
+							.flatMap(candidate ->
+									IntStream.range(candidate.getMention().getSpan().getLeft(), candidate.getMention().getSpan().getRight())
+											.mapToObj(tokens::get)
+											.map(t -> Pair.of(t, candidate.getWeight())))
+							.collect(toMap(Pair::getLeft, Pair::getRight, (o1, o2) -> o1.flatMap(w1 -> o2.map(w2 -> Math.max(w1, w2))))); // if token part of two mentions, choose max weight
+					tokens.stream()
+							.filter(not(tokens2MeaningWeights::containsKey))
+							.forEach(t -> tokens2MeaningWeights.put(t, Optional.empty()));
+					final Map<Token, Optional<Double>> tokens2MentionWeights = text.sentences.stream()
+							.flatMap(s -> s.ranked_words.stream())
+							.collect(toMap(m -> tokens.get(m.getSpan().getLeft()), Mention::getWeight));
+					tokens.stream()
+							.filter(not(tokens2MentionWeights::containsKey))
+							.forEach(t -> tokens2MentionWeights.put(t, Optional.empty()));
+
+					Summarizer.printDebugInfo(text, num_tokens, tokens2MeaningWeights::get, tokens2MentionWeights::get, default_weight);
+
 					{
 						log.info("\nLeading sentences summary");
-						final String summary = getExtractiveSummary(text, ItemType.Sentence, num_sentences, WeightCriterion.Leading, null);
+						final String summary = getExtractiveSummary(text, ItemType.Sentence, num_sentences, WeightCriterion.Leading, null, default_weight);
 						log.info(summary + "\n");
 						final Path summary_path = system.resolve(basename + "_leadSentences" + summary_extension);
 						FileUtils.writeTextToFile(summary_path, summary);
 					}
 					{
 						log.info("Leading words summary");
-						final String summary = getExtractiveSummary(text, ItemType.Word, num_words,  WeightCriterion.Leading, null);
+						final String summary = getExtractiveSummary(text, ItemType.Word, num_tokens,  WeightCriterion.Leading, null, default_weight);
 						log.info(summary + "\n");
 						final Path summary_path = system.resolve(basename + "_leadWords" + summary_extension);
 						FileUtils.writeTextToFile(summary_path, summary);
@@ -161,7 +193,7 @@ public class ExtractiveEvaluation
 
 					{
 						log.info("BOM summary");
-						final String summary = getBoMSummary(text, num_words);
+						final String summary = getBoMSummary(text, num_content_words);
 						log.info("\n\t" + summary + "\n");
 						final Path summary_path = system.resolve(basename + "_bom" + summary_extension);
 						FileUtils.writeTextToFile(summary_path, summary);
@@ -169,7 +201,7 @@ public class ExtractiveEvaluation
 
 					{
 						log.info("BOW summary");
-						final String summary = getBoWSummary(text, num_words);
+						final String summary = getBoWSummary(text, num_content_words);
 						log.info("\n\t" + summary + "\n");
 						final Path summary_path = system.resolve(basename + "_bow" + summary_extension);
 						FileUtils.writeTextToFile(summary_path, summary);
@@ -177,39 +209,48 @@ public class ExtractiveEvaluation
 
 					{
 						log.info("Meaning, sentence-based summary");
-						final String summary = getExtractiveSummary(text, ItemType.Sentence, num_sentences, WeightCriterion.Average, Candidate::getWeight);
+						final String summary = getExtractiveSummary(text, ItemType.Sentence, num_sentences, WeightCriterion.Average, tokens2MeaningWeights::get, default_weight);
 						log.info(summary + "\n");
 						final Path summary_path = system.resolve(basename + "_meaningSentences" + summary_extension);
 						FileUtils.writeTextToFile(summary_path, summary);
 					}
 					{
 						log.info("Meaning, word-based summary");
-						final String summary = getExtractiveSummary(text, ItemType.Word, num_words, WeightCriterion.Average, Candidate::getWeight);
+						final String summary = getExtractiveSummary(text, ItemType.Word, num_tokens, WeightCriterion.Average, tokens2MeaningWeights::get, default_weight);
 						log.info(summary + "\n");
 						final Path summary_path = system.resolve(basename + "_meaningWords" + summary_extension);
 						FileUtils.writeTextToFile(summary_path, summary);
 					}
 					{
 						log.info("Mention, sentence-based summary");
-						final String summary = getExtractiveSummary(text, ItemType.Sentence, num_sentences, WeightCriterion.Average, c -> c.getMention().getWeight());
+						final String summary = getExtractiveSummary(text, ItemType.Sentence, num_sentences, WeightCriterion.Average, tokens2MentionWeights::get, default_weight);
 						log.info(summary + "\n");
 						final Path summary_path = system.resolve(basename + "_mentionSentences" + summary_extension);
 						FileUtils.writeTextToFile(summary_path, summary);
 					}
 					{
 						log.info("Mention, word-based summary");
-						final String summary = getExtractiveSummary(text, ItemType.Word, num_words, WeightCriterion.Maximum, c -> c.getMention().getWeight());
+						final String summary = getExtractiveSummary(text, ItemType.Word, num_tokens, WeightCriterion.Average, tokens2MentionWeights::get, default_weight);
 						log.info(summary + "\n");
 						final Path summary_path = system.resolve(basename + "_mentionWords" + summary_extension);
 						FileUtils.writeTextToFile(summary_path, summary);
 					}
 					{
+						log.info("Extractive plan-based summary");
+						final String summary = getExtractivePlanSummary(text, num_tokens);
+						log.info(summary + "\n");
+						final Path summary_path = system.resolve(basename + "_planExtractive" + summary_extension);
+						FileUtils.writeTextToFile(summary_path, summary);
+					}
+
+					{
 						log.info("Plan-based summary");
-						final String summary = getExtractivePlanSummary(text, num_words);
+						final String summary = getPlanSummary(text, num_tokens);
 						log.info(summary + "\n");
 						final Path summary_path = system.resolve(basename + "_plan" + summary_extension);
 						FileUtils.writeTextToFile(summary_path, summary);
 					}
+
 				}
 			});
 		}

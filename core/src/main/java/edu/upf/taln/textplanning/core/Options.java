@@ -1,5 +1,6 @@
 package edu.upf.taln.textplanning.core;
 
+import edu.upf.taln.textplanning.core.extraction.Explorer;
 import edu.upf.taln.textplanning.core.extraction.Policy;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.core.utils.POS;
@@ -21,18 +22,20 @@ public class Options
 	public double disambiguation_lambda = 0.485; // penalizes shorter mentions. Value in range [0..1]. 0 -> always choose longest span. 0.5 strictly prefer span with highest weight. 1 -> always choose shortest span.
 	public double damping_variables = 0.4; // controls bias towards meanings rank when ranking variables. Values in range (0..1]. ~0 -> no bias. 1 -> only bias
 	public int num_subgraphs_extract = 100; // Number of sampled subgraphs during extraction
-	public double extraction_lambda = 0.8; // Controls size of extracted graphs by balancing value and cost. Values in range [0..1]. higher value -> smaller graphs
-	public Policy.Type start_policy = Policy.Type.Softmax; // policy to select a start node from which sample a subgraph
+	public double extraction_lambda = 3.0; // Controls size of extracted graphs by balancing value and cost. Values in range [0..1]. higher value -> larger graphs
+	public Policy.Type start_policy = Policy.Type.ArgMax; // policy to select a start node from which sample a subgraph
 	public Policy.Type expand_policy = Policy.Type.ArgMax; // policy to select additional nodes to add to a subgraph
+	public boolean start_from_verbs = true; // start extraction from verbs only?
+	public Explorer.ExpansionConstraints expansion_constraints = Explorer.ExpansionConstraints.Same_source; // what nodes can be added to a subgraph. Same_source -> means same sentence, for extractive summ, Non_core_only -> add non-core dependents, requires syntactic or semantic analysis.
 	public double softmax_temperature = 0.5; // Controls randomness of softmax policy. Values in range [0..1]. 1 is default softamx. 0 is argmax.
-	public int num_subgraphs = 10; // Number of subgraphs to include in the plan after redundancy removal
-	public double tree_edit_lambda = 0.0; // Controls impact of roles in similarity between semantic trees. Values in range [0..1]. 0 ignores roles.
+	public double redundancy_threshold = 0.95; // Maximum similarity value for pairs of subgraphs above which one of the two will be discarded as redundant
+	public double tree_edit_lambda = 0.0; // Controls impact of roles in similarity between semantic trees. Values in range [0..1]. 0 ignores roles, e.g. used in extractive summarization.
 
 	public Options() {}
 
 	public Options(Options o)
 	{
-		this.ranking_POS_Tags.addAll(o.ranking_POS_Tags);
+		this.ranking_POS_Tags = Set.copyOf(o.ranking_POS_Tags);
 		this.min_context_freq = o.min_context_freq;
 		this.window_size = o.window_size;
 		this.min_bias_threshold = o.min_bias_threshold;
@@ -46,8 +49,10 @@ public class Options
 		this.extraction_lambda = o.extraction_lambda;
 		this.start_policy = o.start_policy;
 		this.expand_policy = o.expand_policy;
+		this.start_from_verbs = o.start_from_verbs;
+		this.expansion_constraints = o.expansion_constraints;
 		this.softmax_temperature = o.softmax_temperature;
-		this.num_subgraphs = o.num_subgraphs;
+		this.redundancy_threshold = o.redundancy_threshold;
 		this.tree_edit_lambda = o.tree_edit_lambda;
 	}
 
@@ -73,8 +78,10 @@ public class Options
 				"\n\textraction_lambda = " + f.format(extraction_lambda) +
 				"\n\tstart_policy = " + start_policy +
 				"\n\texpand_policy = " + expand_policy +
+				"\n\tstart_from_verbs = " + start_from_verbs +
+				"\n\texpansion_constraints = " + expansion_constraints +
 				"\n\tsoftmax_temperature = " + f.format(softmax_temperature) +
-				"\n\tnum_subgraphs = " + num_subgraphs +
+				"\n\tredundancy_threshold = " + f.format(redundancy_threshold) +
 				"\n\tredundancy lambda = " + f.format(tree_edit_lambda);
 	}
 
@@ -93,8 +100,10 @@ public class Options
 				".el" + DebugUtils.printDouble(extraction_lambda) +
 				".sp" + start_policy +
 				".ep" + expand_policy +
+				".sv" + start_from_verbs +
+				".ec" + expansion_constraints +
 				".st" + DebugUtils.printDouble(softmax_temperature) +
-				".ns" + num_subgraphs +
+				".rt" + DebugUtils.printDouble(redundancy_threshold) +
 				".rl" + DebugUtils.printDouble(tree_edit_lambda);
 	}
 }

@@ -33,6 +33,11 @@ public class DebugUtils
 			if (!reported.getAndSet(true))
 				log.info("Number of threads: " + Thread.activeCount());
 		}
+
+		public void reset()
+		{
+			reported.set(false);
+		}
 	}
 
 	private final static NumberFormat format = NumberFormat.getInstance();
@@ -116,9 +121,8 @@ public class DebugUtils
 
 	public static String printSubgraphs(List<SemanticSubgraph> subgraphs)
 	{
-		AtomicInteger i = new AtomicInteger(1);
+		AtomicInteger i = new AtomicInteger(0);
 		return subgraphs.stream()
-				.sorted(Comparator.comparingDouble(SemanticSubgraph::getAverageWeight).reversed())
 				.map(SemanticTree::new)
 				.map(t -> printTree(i.getAndIncrement(), t))
 				.collect(Collectors.joining("\n"));
@@ -135,7 +139,7 @@ public class DebugUtils
 				.summaryStatistics().toString();
 
 		return "Subgraph " + i + " value=" + format.format(s.getValue()) + " " + stats + "\n\t" +
-				"root node " + s.getRoot() + "\n\t" + s + "\n" +	printVertex(t, "root", t.getRoot(), 1);
+				"root node " + s.getRoot() + "\n" +	printVertex(t, "root", t.getRoot(), 1);
 	}
 
 	private static String printVertex(SemanticTree t, String role, String v, int depth)
@@ -153,9 +157,9 @@ public class DebugUtils
 
 	public static String createLabelForVariable(String v, Meaning m, Collection<Mention> mentions)
 	{
-		final String meaning = m != null ? m.toString() : "";
+		final String meaning = m != null ? m.getReference() : "";
 		final String surface_forms = mentions.stream()
-				.map(mention -> mention.getId() + "-" + mention.getSurfaceForm())
+				.map(Mention::getSurfaceForm)
 				.distinct()
 				.map(f -> "\"" + f + "\"")
 				.collect(Collectors.joining(", "));

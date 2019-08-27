@@ -84,7 +84,6 @@ public class DSyntSemanticGraphFactory implements SemanticGraphFactory<JCas>
 		graph.addMention(id, mention);
 		meaning.ifPresent(p -> graph.setMeaning(id, p.getLeft()));
 		meaning.ifPresent(p -> graph.setWeight(id, p.getRight()));
-		graph.addSource(id, createId(sentence));
 		// TODO decide if type needs setting
 
 		return id;

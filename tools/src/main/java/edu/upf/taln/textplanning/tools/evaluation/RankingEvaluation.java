@@ -152,7 +152,7 @@ public class RankingEvaluation
 				.collect(toMap(text -> text.id, text ->
 				{
 					final List<Meaning> meanings = text.sentences.stream()
-							.flatMap(sentence -> sentence.candidates.values().stream().flatMap(List::stream)
+							.flatMap(sentence -> sentence.candidate_meanings.values().stream().flatMap(List::stream)
 								.map(Candidate::getMeaning))
 							.collect(toList());
 					Collections.shuffle(meanings, random);
@@ -167,7 +167,7 @@ public class RankingEvaluation
 				.collect(toMap(text -> text.id, text ->
 				{
 					final List<Candidate> candidates = text.sentences.stream()
-							.flatMap(sentence -> sentence.candidates.values().stream().flatMap(List::stream))
+							.flatMap(sentence -> sentence.candidate_meanings.values().stream().flatMap(List::stream))
 							.collect(toList());
 					Function<Candidate, Long> frequency = c -> candidates.stream().filter(c2 -> c2 == c).count();
 					return candidates.stream()
@@ -183,7 +183,7 @@ public class RankingEvaluation
 				.collect(toMap(text -> text.id, text ->
 				{
 					final List<Meaning> meanings = text.sentences.stream()
-							.flatMap(sentence -> sentence.candidates.values().stream().flatMap(List::stream))
+							.flatMap(sentence -> sentence.candidate_meanings.values().stream().flatMap(List::stream))
 							.map(Candidate::getMeaning)
 							.collect(toList());
 
@@ -205,7 +205,7 @@ public class RankingEvaluation
 				.collect(toMap(text -> text.id, text ->
 				{
 					Map<Meaning, Double> weights = text.sentences.stream()
-							.flatMap(sentence -> sentence.candidates.values().stream().flatMap(List::stream))
+							.flatMap(sentence -> sentence.candidate_meanings.values().stream().flatMap(List::stream))
 							.collect(groupingBy(Candidate::getMeaning, averagingDouble(c -> c.getWeight().orElse(0.0))));
 					final List<Meaning> file_meanings = new ArrayList<>(weights.keySet());
 					return file_meanings.stream()

@@ -9,12 +9,13 @@ import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.BinaryOperator;
 
+import static java.util.stream.Collectors.toSet;
+
 public class SemanticGraph extends SimpleDirectedGraph<String, Role> implements Serializable
 {
 	private final Map<String, Meaning> meanings = new HashMap<>(); // from vertices to meanings
 	private final Map<String, Double> weights = new HashMap<>(); // from vertices to weights
 	private final Multimap<String, Mention> mentions = HashMultimap.create(); // from vertices to mentions
-	private final Multimap<String, String> sources = HashMultimap.create(); // from vertices to sources, e.g. sentences
 	private final Multimap<String, String> types = HashMultimap.create(); // from vertices to types, eg. amr concepts
 	private final static long serialVersionUID = 1L;
 
@@ -27,33 +28,28 @@ public class SemanticGraph extends SimpleDirectedGraph<String, Role> implements 
 	/**
 	 *  Build a graph G=(V,E) where V=set of vertices, and E is determined by an adjacency_function and a
 	 * 	labelling_function.
-	 * 	Each instance is associated with:
-	 * 	    - The weighted meaning it instantiates,
-	 * 	    - One or more mentions (text annotations)
-	 * 	    - A weight indicating the importance or relevance of each instance
+	 * 	Each vertex is associated with:
+	 * 	    - An optional meaning,
+	 * 	    - An optional weight
+	 * 	    - One or more mentions
 	 */
-	public SemanticGraph(Map<String, Meaning> meanings,
+	public SemanticGraph(Set<String> vertices,
+						 Map<String, Meaning> meanings,
 	                     Map<String, Double> weights,
 	                     Map<String, List<Mention>> mentions,
-	                     Map<String, List<String>> sources,
 	                     BiPredicate<String, String> adjacency_function,
 	                     BinaryOperator<String> labelling_function)
 	{
 		super(Role.class);
-
-		// all vertices have a meaning, a list of mentions and a list of sources
-		assert meanings.keySet().equals(mentions.keySet());
-		assert sources.keySet().equals(mentions.keySet());
+		assert vertices.containsAll(meanings.keySet()) && vertices.containsAll(weights.keySet()) && vertices.containsAll(mentions.keySet());
 
 		this.meanings.putAll(meanings);
 		this.weights.putAll(weights);
 		mentions.forEach((key, value) -> value.forEach(m -> this.mentions.put(key, m)));
-		sources.forEach((v, l) -> l.forEach(s -> this.sources.put(v, s)));
 
-
-		meanings.keySet().forEach(this::addVertex);
-		meanings.keySet().forEach(v1 ->
-				meanings.keySet().stream()
+		vertices.forEach(this::addVertex);
+		vertices.forEach(v1 ->
+				vertices.stream()
 						.filter(v2 -> adjacency_function.test(v1, v2))
 						.forEach(v2 -> addNewEdge(v1, v2, labelling_function.apply(v1, v2))));
 	}
@@ -85,12 +81,6 @@ public class SemanticGraph extends SimpleDirectedGraph<String, Role> implements 
 				.forEach(m -> mentions.putAll(v, m));
 		C.forEach(mentions::removeAll);
 
-		// Reassign sources of C to v
-		C.stream()
-				.map(sources::get)
-				.forEach(s -> sources.putAll(v, s));
-		C.forEach(sources::removeAll);
-
 		// Reassign types of C to v
 		C.stream()
 				.map(types::get)
@@ -113,8 +103,7 @@ public class SemanticGraph extends SimpleDirectedGraph<String, Role> implements 
 	public void setMeaning(String v, Meaning m) { meanings.put(v, m); }
 	public Set<Mention> getMentions(String v) { return Set.copyOf(mentions.get(v)); }
 	public void addMention(String v, Mention m) { mentions.put(v, m); }
-	public Set<String> getSources(String v) { return Set.copyOf(sources.get(v)); }
-	public void addSource(String v, String s) { sources.put(v, s); }
+	public Set<String> getContexts(String v) { return getMentions(v).stream().map(Mention::getContextId).collect(toSet()); }
 	public Set<String> getTypes(String v) { return Set.copyOf(types.get(v)); }
 	public void addType(String v, String t) { types.put(v, t); }
 }

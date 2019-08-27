@@ -12,6 +12,5 @@ public class ArgMaxPolicy implements Policy
 				.boxed()
 				.max(Comparator.comparing(i -> weights[i]))
 				.orElse(-1);
-
 	}
 }

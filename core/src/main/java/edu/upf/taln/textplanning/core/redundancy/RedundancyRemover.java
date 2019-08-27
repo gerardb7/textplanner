@@ -7,12 +7,13 @@ import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.stream.IntStream;
 
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 
 public class RedundancyRemover
 {
@@ -27,14 +28,16 @@ public class RedundancyRemover
 	}
 
 	private final SemanticTreeSimilarity sim;
+	private final double threshold;
 	private final static Logger log = LogManager.getLogger();
 
-	public RedundancyRemover(SemanticTreeSimilarity sim)
+	public RedundancyRemover(SemanticTreeSimilarity sim, double threshold)
 	{
 		this.sim = sim;
+		this.threshold = threshold;
 	}
 
-	public Collection<SemanticSubgraph> filter(Collection<SemanticSubgraph> G, int num_graphs)
+	public List<SemanticSubgraph> filter(List<SemanticSubgraph> G)
 	{
 		// Convert graphs to lists
 		List<SemanticTree> trees = G.stream()
@@ -54,17 +57,17 @@ public class RedundancyRemover
 						}))
 				.flatMap(s -> s)
 				.sorted(Comparator.comparingDouble(SimilarityPair::getW))
+				.filter(p -> p.getW() >= threshold)
 				.collect(toList());
 
 		// Prune G by choosing pair of most similar graphs and keeping the one with highest average weight
 		log.info("Pruning trees");
-		while (trees.size() - pruned.size() > num_graphs)
+		while (!sim_pairs.isEmpty())
 		{
 			sim_pairs.stream()
 					.max(Comparator.comparingDouble(SimilarityPair::getW))
 					.map(p ->
 					{
-
 						SemanticTree t1 = trees.get(p.t1);
 						SemanticTree t2 = trees.get(p.t2);
 
@@ -86,12 +89,11 @@ public class RedundancyRemover
 		}
 
 		final List<SemanticTree> selected_trees = trees.stream().filter(not(pruned::contains)).collect(toList());
-		Set<SemanticSubgraph> selected = selected_trees.stream()
+		List<SemanticSubgraph> selected = selected_trees.stream()
 				.map(SemanticTree::asGraph)
-				.collect(toSet());
+				.collect(toList());
 
-		log.info("Selected " + selected_trees.size() + " subgraphs out of " + G.size());
-		log.debug("Selected subgraphs:\n" + DebugUtils.printSubgraphs(new ArrayList<>(selected)));
+		log.info("Pruned " + pruned.size() + " subgraphs out of " + G.size());
 		return selected;
 	}
 }

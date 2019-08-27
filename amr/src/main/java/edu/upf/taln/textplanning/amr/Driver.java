@@ -238,7 +238,7 @@ public class Driver
 	}
 
 	private void summarize(Path amr_bank, InitialResourcesFactory resources,
-	                       boolean no_stanford, int num_subgraphs_extract, int num_subgraphs,
+	                       boolean no_stanford, int num_subgraphs_extract,
 	                       Path generation_resources, int max_words) throws Exception
 	{
 		log.info("*****Running from " + amr_bank + "*****");
@@ -248,7 +248,6 @@ public class Driver
 		log.info("*****Setting up planner*****");
 		Options options = new Options();
 		options.num_subgraphs_extract = num_subgraphs_extract;
-		options.num_subgraphs = num_subgraphs;
 		log.info("Options: " + options);
 
 //		CompactFrequencies corpus = (CompactFrequencies)Serializer.deserialize(freqs);
@@ -345,7 +344,7 @@ public class Driver
 			Serializer.serialize(graph, output_path);
 
 			// 5- Extract subgraphs
-			Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(graph, new AMRSemantics(), options);
+			List<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(graph, new AMRSemantics(), options);
 			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
 					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), subgraphs_suffix);
 			Serializer.serialize(subgraphs, output_path);
@@ -546,9 +545,6 @@ public class Driver
 		@Parameter(names = {"-ne", "-number_extract"}, description = "Number of subgraphs to extract", arity = 1, required = true,
 				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.IntegerGreaterThanZero.class)
 		private int num_extract;
-		@Parameter(names = {"-n", "-number_subgraphs"}, description = "Number of subgraphs in plan", arity = 1, required = true,
-				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.IntegerGreaterThanZero.class)
-		private int num_subgraphs;
 		@Parameter(names = {"-w", "-max_words"}, description = "Maximum number of words in summary", arity = 1, required = true,
 				converter = CMLCheckers.IntegerConverter.class, validateWith = CMLCheckers.IntegerGreaterThanZero.class)
 		private int max_words;
@@ -666,7 +662,7 @@ public class Driver
 		{
 			InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 			driver.summarize(summarize.input, resources, summarize.no_stanford,summarize.num_extract,
-					summarize.num_subgraphs, summarize.generation_resources, summarize.max_words);
+					summarize.generation_resources, summarize.max_words);
 		}
 		else if (jc.getParsedCommand().equals(process_command))
 		{

@@ -8,29 +8,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiPredicate;
 
-import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
-public class CorpusAdjacencyFunction implements BiPredicate<Mention, Mention>
+public class SameMeaningPredicate implements BiPredicate<Mention, Mention>
 {
-	private final List<Mention> word_mentions;
-	private final Map<Mention, Candidate> word_meanings;
-	private final int context_size;
-	private final boolean additional_links; // if false, only textual adjacency is considered.
+	protected final List<Mention> word_mentions;
+	protected final Map<Mention, Candidate> word_meanings;
 
-	public CorpusAdjacencyFunction(Corpora.Text text, int context_size, boolean additional_links)
+	public SameMeaningPredicate(Corpora.Text text)
 	{
-		// single word mentions are the item to rank
+		// The items to rank are single content word mentions
 		word_mentions = text.sentences.stream()
-				.flatMap(s -> s.mentions.stream()
-						.filter(not(Mention::isMultiWord))
+				.flatMap(s -> s.ranked_words.stream()
 						.sorted(Comparator.comparingInt(m -> m.getSpan().getLeft())))
 				.collect(toList());
 
 		// determine their meanings...
 		final Map<Mention, Candidate> all_meanings = text.sentences.stream()
-				.flatMap(s -> s.disambiguated.values().stream())
+				.flatMap(s -> s.disambiguated_meanings.values().stream())
 				.collect(toMap(Candidate::getMention, c -> c));
 
 		// ... single-word meanings
@@ -60,40 +56,15 @@ public class CorpusAdjacencyFunction implements BiPredicate<Mention, Mention>
 							word_meanings.put(w, c);
 					}
 				}));
-
-		this.context_size = context_size;
-		this.additional_links = additional_links;
 	}
 
 	@Override
 	public boolean test(Mention m1, Mention m2)
 	{
-		if (m1.equals(m2))
-			return false;
-
-		// Adjacent words? <- rewards words adjacent to highly ranked words. Side effect ->  penalizes words at the start and end of a sentence!
-		if (m1.getContextId().equals(m2.getContextId()) &&
-				(Math.abs(word_mentions.indexOf(m1) - word_mentions.indexOf(m2)) <= context_size))
-			return true;
-
-		// If no additional connections are considered, stop here.
-		if (!additional_links)
-			return false;
-
-		// Same lemma? <- this rewards frequent lemmas
-//		if (m1.getLemma().equals(m2.getLemma()))
-//			return true;
-
-		// Same meaning? <- this rewards frequent meanings
 		if (!word_meanings.containsKey(m1) || !word_meanings.containsKey(m2))
 			return false;
 
 		return word_meanings.get(m1).getMeaning().equals(word_meanings.get(m2).getMeaning());
-	}
-
-	public List<Mention> getSortedWordMentions()
-	{
-		return word_mentions;
 	}
 
 	public Map<Mention, Candidate> getWordMeanings()

@@ -64,12 +64,14 @@ public class Corpora implements Serializable
 		public String id;
 		@XmlElement(name = "wf")
 		public List<Token> tokens = new ArrayList<>();
+		@XmlElement(name = "dependency")
+		public List<Dependency> dependencies = new ArrayList<>();
 		@XmlTransient
-		public List<Mention> mentions = new ArrayList<>();
+		public List<Mention> ranked_words = new ArrayList<>(); // single words, excluding function words
 		@XmlTransient
-		public Map<Mention, List<Candidate>> candidates = new HashMap<>();
+		public Map<Mention, List<Candidate>> candidate_meanings = new HashMap<>(); // single and multiwords and their candidate meanings
 		@XmlTransient
-		public Map<Mention, Candidate> disambiguated = new HashMap<>();
+		public Map<Mention, Candidate> disambiguated_meanings = new HashMap<>(); // single and multiwords and their disambiguated meanings
 		@XmlTransient
 		private final static long serialVersionUID = 1L;
 	}
@@ -85,6 +87,19 @@ public class Corpora implements Serializable
 		public String pos;
 		@XmlValue
 		public String wf;
+		@XmlTransient
+		private final static long serialVersionUID = 1L;
+	}
+
+	@XmlAccessorType(XmlAccessType.FIELD)
+	public static class Dependency implements Serializable
+	{
+		@XmlAttribute
+		public String governor;
+		@XmlAttribute
+		public String relation;
+		@XmlAttribute
+		public String dependent;
 		@XmlTransient
 		private final static long serialVersionUID = 1L;
 	}
@@ -115,26 +130,24 @@ public class Corpora implements Serializable
 		return new Corpus();
 	}
 
-	public static void createGraph(Corpora.Text text, CorpusAdjacencyFunction adjacency)
+	public static void createGraph(Corpora.Text text, AdjacencyFunction adjacency)
 	{
-		final Map<Mention, Candidate> mentions2candidates = text.sentences.stream()
-				.flatMap(s -> s.disambiguated.values().stream())
-				.collect(toMap(Candidate::getMention, c -> c));
+		final List<Mention> mentions = adjacency.getSortedWordMentions();
+		final Map<String, List<Mention>> nodes2mentions = mentions.stream()
+				.collect(toMap(Mention::getId, List::of));
 
-		final Map<String, Meaning> meanings = mentions2candidates.keySet().stream()
-				.collect(toMap(Mention::getId, m -> mentions2candidates.get(m).getMeaning()));
-		final Map<String, Double> weights = mentions2candidates.keySet().stream()
+		final SameMeaningPredicate same_meaning = new SameMeaningPredicate(text);
+		final Map<Mention, Candidate> mentions2candidates = same_meaning.getWordMeanings();
+		final Map<String, Meaning> nodes2meanings = mentions2candidates.entrySet().stream()
+				.collect(toMap(e -> e.getKey().getId(), e -> e.getValue().getMeaning()));
+		final Map<String, Double> nodes2weights = mentions2candidates.keySet().stream()
 				.map(m -> Pair.of(m.getId(), m.getWeight()))
 				.filter(p -> p.getRight().isPresent())
 				.collect(toMap(Pair::getLeft, p -> p.getRight().get()));
-		final Map<String, List<Mention>> mentions = mentions2candidates.keySet().stream()
-				.collect(toMap(Mention::getId, List::of));
-		final Map<String, List<String>> sources = mentions2candidates.keySet().stream()
-				.collect(toMap(Mention::getId, m -> List.of(m.getContextId())));
 
-		text.graph = new SemanticGraph(meanings, weights, mentions, sources,
-				(id1, id2) -> adjacency.test(mentions.get(id1).get(0), mentions.get(id2).get(0)),
-				(id1, id2) -> "edge");
+		text.graph = new SemanticGraph(nodes2mentions.keySet(), nodes2meanings, nodes2weights, nodes2mentions,
+				(id1, id2) -> adjacency.test(nodes2mentions.get(id1).get(0), nodes2mentions.get(id2).get(0)),
+				(id1, id2) -> adjacency.getLabel(nodes2mentions.get(id1).get(0), nodes2mentions.get(id2).get(0)));
 	}
 
 	public static void reset(Corpus corpus)
@@ -142,8 +155,8 @@ public class Corpora implements Serializable
 		corpus.texts.forEach(t ->
 				t.sentences.forEach(s ->
 				{
-					s.disambiguated.clear();
-					s.candidates.values().forEach(m ->
+					s.disambiguated_meanings.clear();
+					s.candidate_meanings.values().forEach(m ->
 							m.forEach(c -> c.setWeight(0.0)));
 				}));
 	}

@@ -86,7 +86,7 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 		log.info("Checking candidate mentions against gold");
 		corpus.texts.stream()
 				.flatMap(text -> text.sentences.stream()
-						.flatMap(sentence -> sentence.candidates.values().stream()
+						.flatMap(sentence -> sentence.candidate_meanings.values().stream()
 								.flatMap(List::stream)))
 				.map(Candidate::getMention)
 				.distinct()

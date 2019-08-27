@@ -129,10 +129,8 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 		{
 			String v1 = g.getEdgeSource(e);
 			merged.addVertex(v1);
-			merged.addSource(v1, g.getContextId());
 			String v2 = g.getEdgeTarget(e);
 			merged.addVertex(v2);
-			merged.addSource(v2, g.getContextId());
 			merged.addNewEdge(v1, v2, e.getLabel());
 
 			graphs.getMentions(v1).forEach(m -> merged.addMention(v1, m));

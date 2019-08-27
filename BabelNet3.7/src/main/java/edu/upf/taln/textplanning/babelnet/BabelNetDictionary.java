@@ -8,8 +8,12 @@ import edu.upf.taln.textplanning.core.utils.POS;
 import it.uniroma1.lcl.babelnet.*;
 import it.uniroma1.lcl.babelnet.data.BabelGloss;
 import it.uniroma1.lcl.babelnet.data.BabelPOS;
+import it.uniroma1.lcl.babelnet.iterators.BabelLexiconIterator;
+import it.uniroma1.lcl.babelnet.iterators.BabelSynsetIterator;
 import it.uniroma1.lcl.jlt.Configuration;
+import it.uniroma1.lcl.jlt.ling.Word;
 import it.uniroma1.lcl.jlt.util.Language;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -24,15 +28,11 @@ public class BabelNetDictionary implements MeaningDictionary
 {
 	private final BabelNet bn;
 	private final static Logger log = LogManager.getLogger();
+	public static final int LOGGING_STEP_SIZE = 100000;
 
 	public BabelNetDictionary(Path config_folder)
 	{
-		this(config_folder, false);
-	}
-
-	public BabelNetDictionary(Path config_folder, boolean no_babelnet)
-	{
-		bn = no_babelnet ? null : getBabelNetInstance(config_folder);
+		bn = getBabelNetInstance(config_folder);
 	}
 
 	private static BabelNet getBabelNetInstance(Path config_folder)
@@ -45,7 +45,7 @@ public class BabelNetDictionary implements MeaningDictionary
 			public void write(int b) {}
 		})); // shut up, BabelNet
 
-		BabelNet instance = null;
+		BabelNet instance;
 		try
 		{
 			Path jlt_path = config_folder.resolve("jlt.properties");
@@ -62,6 +62,8 @@ public class BabelNetDictionary implements MeaningDictionary
 		{
 			System.setErr(oldOut);
 			log.error("BabelNet set up failed: " + e);
+			e.printStackTrace();
+			throw new RuntimeException(e);
 		}
 		finally
 		{
@@ -73,18 +75,46 @@ public class BabelNetDictionary implements MeaningDictionary
 	}
 
 	@Override
-	public Iterator<String> iterator()
+	public Iterator<String> meaning_iterator()
 	{
 		return Iterators.transform(bn.getSynsetIterator(), s -> Objects.requireNonNull(s).getId().getID());
+	}
+
+	@Override
+	public Set<String> getMeanings(ULocale language)
+	{
+		try
+		{
+			final Language bnLang = Language.fromISO(language.toLanguageTag());
+			int counter = 0;
+			final Stopwatch timer = Stopwatch.createStarted();
+
+			Set<String> synsets = new HashSet<>();
+			final BabelSynsetIterator it = bn.getSynsetIterator();
+			while (it.hasNext())
+			{
+				final BabelSynset synset = it.next();
+				if (synset.getSenses().stream().distinct().map(BabelSense::getLanguage).anyMatch(l -> l.equals(bnLang)))
+				{
+					synsets.add(synset.getId().getID());
+					if (++counter % LOGGING_STEP_SIZE == 0)
+						log.info("\t" + counter + " synsets iterated in " + timer);
+				}
+			}
+
+			return synsets;
+		}
+		catch (Exception e)
+		{
+			log.warn("BabelNet error: " + e);
+			return Collections.emptySet();
+		}
 	}
 
 	@Override
 	@SuppressWarnings("unused")
 	public List<String> getMeanings(String form, ULocale language)
 	{
-		if (bn == null)
-			return Collections.emptyList();
-
 		// Get candidate entities using strict matching
 		try
 		{
@@ -99,7 +129,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		}
 		catch (Exception e)
 		{
-			log.error("Error while getting synsets for " + form + ": " + e);
+			log.warn("BabelNet error: " + e);
 			return Collections.emptyList();
 		}
 	}
@@ -107,9 +137,6 @@ public class BabelNetDictionary implements MeaningDictionary
 	@Override
 	public List<String> getMeanings(String form, POS.Tag pos, ULocale language)
 	{
-		if (bn == null)
-			return Collections.emptyList();
-
 		// Get candidate entities using strict matching
 		try
 		{
@@ -126,11 +153,10 @@ public class BabelNetDictionary implements MeaningDictionary
 					.map(BabelSynset::getId)
 					.map(BabelSynsetID::getID)
 					.collect(toList());
-
 		}
 		catch (Exception e)
 		{
-			log.error("Error while getting synsets for " + form + ": " + e);
+			log.warn("BabelNet error: " + e);
 			return Collections.emptyList();
 		}
 	}
@@ -138,9 +164,6 @@ public class BabelNetDictionary implements MeaningDictionary
 	@Override
 	public boolean contains(String id)
 	{
-		if (bn == null)
-			return false;
-
 		try
 		{
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
@@ -148,6 +171,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		}
 		catch (Exception e)
 		{
+			log.warn("BabelNet error: " + e);
 			return false;
 		}
 	}
@@ -155,9 +179,6 @@ public class BabelNetDictionary implements MeaningDictionary
 	@Override
 	public Optional<String> getLabel(String id, ULocale language)
 	{
-		if (bn == null)
-			return Optional.empty();
-
 		try
 		{
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
@@ -170,8 +191,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		}
 		catch (Exception e)
 		{
-			log.info("Cannot get label for synset " + id + ": " + e);
-			e.printStackTrace();
+			log.warn("BabelNet error: " + e);
 			return Optional.empty();
 		}
 	}
@@ -179,9 +199,6 @@ public class BabelNetDictionary implements MeaningDictionary
 	@Override
 	public Optional<Boolean> isNE(String id)
 	{
-		if (bn == null)
-			return Optional.empty();
-
 		try
 		{
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
@@ -191,15 +208,13 @@ public class BabelNetDictionary implements MeaningDictionary
 		}
 		catch (Exception e)
 		{
+			log.warn("BabelNet error: " + e);
 			return Optional.empty();
 		}
 	}
 
 	public List<String> getdbPediaURIs(String id)
 	{
-		if (bn == null)
-			return Collections.emptyList();
-
 		try
 		{
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
@@ -209,6 +224,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		}
 		catch (Exception e)
 		{
+			log.warn("BabelNet error: " + e);
 			return Collections.emptyList();
 		}
 	}
@@ -216,39 +232,99 @@ public class BabelNetDictionary implements MeaningDictionary
 	@Override
 	public List<String> getGlosses(String id, ULocale language)
 	{
-		if (bn == null)
-			return Collections.emptyList();
-
 		try
 		{
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
 				return Collections.emptyList();
-			return synset.getGlosses(Language.fromISO(language.toLanguageTag())).stream().map(BabelGloss::getGloss).collect(toList());
+			return synset.getGlosses(Language.fromISO(language.toLanguageTag())).stream()
+					.map(BabelGloss::getGloss)
+					.collect(toList());
 		}
 		catch (Exception e)
 		{
+			log.warn("BabelNet error: " + e);
 			return Collections.emptyList();
 		}
 	}
 
 	@Override
-	public List<String> getLemmas(String id, ULocale language)
+	public Iterator<Pair<String, POS.Tag>> lexicon_iterator()
 	{
-		if (bn == null)
-			return Collections.emptyList();
+		return Iterators.transform(bn.getLexiconIterator(), w -> {
+			Objects.requireNonNull(w);
+			return Pair.of(w.getWord(), POS.BabelNet.get(w.getPOS().getTag()));
+		});
+	}
 
+	@Override
+	public Set<Pair<String, POS.Tag>> getLexicalizations(ULocale language)
+	{
+		try
+		{
+			final Language bnLang = Language.fromISO(language.toLanguageTag());
+			int counter = 0;
+			final Stopwatch timer = Stopwatch.createStarted();
+
+			Set<Pair<String, POS.Tag>> lexicalizations = new HashSet<>();
+			final BabelLexiconIterator it = bn.getLexiconIterator();
+			while (it.hasNext())
+			{
+				final Word item = it.next();
+				if (item.getLanguage().equals(bnLang))
+				{
+					if (++counter % LOGGING_STEP_SIZE == 0)
+						log.info("\t" + counter + " senses iterated in " + timer);
+
+					final Pair<String, POS.Tag> word_tag = Pair.of(item.getWord(), POS.BabelNet.get(item.getPOS().getTag()));
+					lexicalizations.add(word_tag); // senses of different synsets may have the same word form and POS tag
+				}
+			}
+
+			return lexicalizations;
+		}
+		catch (Exception e)
+		{
+			log.warn("BabelNet error: " + e);
+			return Collections.emptySet();
+		}
+	}
+
+	@Override
+	public List<Pair<String, POS.Tag>> getLexicalizations(String id)
+	{
 		try
 		{
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
 				return Collections.emptyList();
-			return synset.getSenses(Language.fromISO(language.toLanguageTag())).stream().map(BabelSense::getSimpleLemma).collect(toList());
+			return synset.getSenses().stream()
+					.map(sense -> Pair.of(sense.getSimpleLemma(), POS.BabelNet.get(sense.getPOS().getTag())))
+					.collect(toList());
 		}
 		catch (Exception e)
 		{
+			log.warn("BabelNet error: " + e);
 			return Collections.emptyList();
 		}
+	}
 
+	@Override
+	public List<Pair<String, POS.Tag>> getLexicalizations(String id, ULocale language)
+	{
+		try
+		{
+			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
+			if (synset == null)
+				return Collections.emptyList();
+			return synset.getSenses(Language.fromISO(language.toLanguageTag())).stream()
+					.map(sense -> Pair.of(sense.getSimpleLemma(), POS.BabelNet.get(sense.getPOS().getTag())))
+					.collect(toList());
+		}
+		catch (Exception e)
+		{
+			log.warn("BabelNet error: " + e);
+			return Collections.emptyList();
+		}
 	}
 }

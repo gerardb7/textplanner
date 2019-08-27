@@ -247,21 +247,21 @@ public class POS
 			entry("$(", Tag.X)            // other sentence internal punctuation
 	);
 
-	public static Map<String, Tag> BabelNet = Map.ofEntries(
-			entry("r", Tag.ADV),
-			entry("a", Tag.ADJ),
-			entry("p", Tag.ADP),
-			entry("c", Tag.CCONJ), // could also be Tag.SCONJ
-			entry("d", Tag.DET),
-			entry("i", Tag.INTJ),
-			entry("u", Tag.NUM),
-			entry("n", Tag.NOUN),
-			entry("o", Tag.PRON),
-			entry("l", Tag.PART),
-			entry("t", Tag.PUNCT),
-			entry("s", Tag.SYM),
-			entry("v", Tag.VERB),
-			entry("x", Tag.X));
+	public static Map<Character, Tag> BabelNet = Map.ofEntries(
+			entry('r', Tag.ADV),
+			entry('a', Tag.ADJ),
+			entry('p', Tag.ADP),
+			entry('c', Tag.CCONJ), // could also be Tag.SCONJ
+			entry('d', Tag.DET),
+			entry('i', Tag.INTJ),
+			entry('u', Tag.NUM),
+			entry('n', Tag.NOUN),
+			entry('o', Tag.PRON),
+			entry('l', Tag.PART),
+			entry('t', Tag.PUNCT),
+			entry('s', Tag.SYM),
+			entry('v', Tag.VERB),
+			entry('x', Tag.X));
 
 	public static Map<String, Tag> Simple = Map.ofEntries(
 			entry("N", Tag.NOUN),

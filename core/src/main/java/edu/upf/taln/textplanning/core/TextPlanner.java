@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.core;
 
 import com.google.common.base.Stopwatch;
+import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.discourse.DiscoursePlanner;
 import edu.upf.taln.textplanning.core.extraction.*;
 import edu.upf.taln.textplanning.core.io.GraphSemantics;
@@ -11,7 +12,6 @@ import edu.upf.taln.textplanning.core.similarity.SemanticTreeSimilarity;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.structures.*;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
-import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -47,7 +47,7 @@ public final class TextPlanner
 			Stopwatch timer = Stopwatch.createStarted();
 
 			// 1- Extract subgraphs from graph
-			Collection<SemanticSubgraph> subgraphs = extractSubgraphs(graph, semantics, o);
+			List<SemanticSubgraph> subgraphs = extractSubgraphs(graph, semantics, o);
 
 			// 2- Remove redundant subgraphs
 			subgraphs = removeRedundantSubgraphs(subgraphs, similarity, o);
@@ -126,8 +126,9 @@ public final class TextPlanner
 	/**
 	 * 	Ranks mentions according to their initial bias and an adjacency function
 	 */
-	public static void rankMentions(Map<Mention, Optional<Double>> mentions, BiPredicate<Mention, Mention> adjacency_function,
-	                                Options o)
+	public static void rankMentions(Map<Mention, Optional<Double>> mentions,
+	                                BiPredicate<Mention, Mention> are_connected,
+	                                BiPredicate<Mention, Mention> same_meaning, Options o)
 	{
 		log.info("*Ranking mentions*");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -154,7 +155,8 @@ public final class TextPlanner
 				{
 					final Mention m1 = variables2mentions.get(v1);
 					final Mention m2 = variables2mentions.get(v2);
-					return OptionalDouble.of(adjacency_function.test(m1, m2) || adjacency_function.test(m2, m1) ? 1.0 : 0.0);
+					// establish links between pairs with a connection or sharing same meaning
+					return OptionalDouble.of(are_connected.test(m1, m2) || same_meaning.test(m1, m2) ? 1.0 : 0.0);
 				};
 
 		final double[] ranking = Ranker.rank(variables, variables2bias::get, edge_weights, true,
@@ -181,16 +183,16 @@ public final class TextPlanner
 	/**
 	 * 	Extract subgraphs from a semantic graph
 	 */
-	public static Collection<SemanticSubgraph> extractSubgraphs(SemanticGraph graph, GraphSemantics semantics, Options o)
+	public static List<SemanticSubgraph> extractSubgraphs(SemanticGraph graph, GraphSemantics semantics, Options o)
 	{
 		log.info("*Extracting subgraphs*");
 		Stopwatch timer = Stopwatch.createStarted();
 
-		Explorer explorer = new RequirementsExplorer(semantics, false, Explorer.ExpansionPolicy.Non_core_only);
+		Explorer explorer = new RequirementsExplorer(semantics, false, Explorer.ExpansionConstraints.Non_core_only);
 		Policy start_policy = o.start_policy == Policy.Type.ArgMax ? new ArgMaxPolicy() : new SoftMaxPolicy(o.softmax_temperature);
 		Policy expand_policy = o.start_policy == Policy.Type.ArgMax ? new ArgMaxPolicy() : new SoftMaxPolicy(o.softmax_temperature);
 		SubgraphExtraction extractor = new SubgraphExtraction(explorer, start_policy, expand_policy, Math.min(o.num_subgraphs_extract, o.extraction_lambda));
-		Collection<SemanticSubgraph> subgraphs = extractor.multipleExtraction(graph, o.num_subgraphs_extract);
+		List<SemanticSubgraph> subgraphs = extractor.multipleExtraction(graph, o.num_subgraphs_extract);
 		log.info("Extraction done in " + timer.stop() + "\n");
 
 		return subgraphs;
@@ -199,16 +201,16 @@ public final class TextPlanner
 	/**
 	 * 	Extract subgraphs from a semantic graph
 	 */
-	public static Collection<SemanticSubgraph> extractSubgraphs(SemanticGraph graph, Options o)
+	public static List<SemanticSubgraph> extractSubgraphs(SemanticGraph graph, Options o)
 	{
 		log.info("*Extracting subgraphs*");
 		Stopwatch timer = Stopwatch.createStarted();
 
-		Explorer explorer = new SingleVertexExplorer(false, Explorer.ExpansionPolicy.All);
+		Explorer explorer = new SingleVertexExplorer(o.start_from_verbs, o.expansion_constraints);
 		Policy start_policy = o.start_policy == Policy.Type.ArgMax ? new ArgMaxPolicy() : new SoftMaxPolicy(o.softmax_temperature);
 		Policy expand_policy = o.start_policy == Policy.Type.ArgMax ? new ArgMaxPolicy() : new SoftMaxPolicy(o.softmax_temperature);
 		SubgraphExtraction extractor = new SubgraphExtraction(explorer, start_policy, expand_policy, o.extraction_lambda);
-		Collection<SemanticSubgraph> subgraphs = extractor.multipleExtraction(graph, o.num_subgraphs_extract);
+		List<SemanticSubgraph> subgraphs = extractor.multipleExtraction(graph, o.num_subgraphs_extract);
 		log.info("Extraction done in " + timer.stop() + "\n");
 
 		return subgraphs;
@@ -217,15 +219,15 @@ public final class TextPlanner
 	/**
 	 * 	Remove redundant subgraphs
 	 */
-	public static Collection<SemanticSubgraph> removeRedundantSubgraphs(Collection<SemanticSubgraph> subgraphs,
+	public static List<SemanticSubgraph> removeRedundantSubgraphs(List<SemanticSubgraph> subgraphs,
 	                                                                    BiFunction<String, String, OptionalDouble> similarity,
 	                                                                    Options o)
 	{
 		log.info("*Removing redundant subgraphs*");
 		Stopwatch timer = Stopwatch.createStarted();
 		SemanticTreeSimilarity tsim = new SemanticTreeSimilarity(similarity, o.tree_edit_lambda);
-		RedundancyRemover remover = new RedundancyRemover(tsim);
-		Collection<SemanticSubgraph> out_subgraphs = remover.filter(subgraphs, o.num_subgraphs);
+		RedundancyRemover remover = new RedundancyRemover(tsim, o.redundancy_threshold);
+		List<SemanticSubgraph> out_subgraphs = remover.filter(subgraphs);
 		log.info("Redundancy removal done in " + timer.stop() + "\n");
 
 		return out_subgraphs;

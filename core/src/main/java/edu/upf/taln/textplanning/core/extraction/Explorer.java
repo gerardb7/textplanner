@@ -6,10 +6,7 @@ import edu.upf.taln.textplanning.core.structures.Role;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -30,34 +27,32 @@ public abstract class Explorer
 		}
 	}
 
-	public enum ExpansionPolicy
+	public enum ExpansionConstraints
 	{Same_source, Non_core_only, All}
 
 	protected final GraphSemantics semantics;
 	protected final boolean start_from_verbs;
-	protected final ExpansionPolicy policy;
+	protected final ExpansionConstraints constraints;
 
-	public Explorer(GraphSemantics semantics, boolean start_from_verbs, ExpansionPolicy policy)
+	public Explorer(GraphSemantics semantics, boolean start_from_verbs, ExpansionConstraints constraints)
 	{
 		this.semantics = semantics;
 		this.start_from_verbs = start_from_verbs;
-		this.policy = policy;
+		this.constraints = constraints;
 	}
 
 	public List<SemanticSubgraph> getStartStates(SemanticGraph g)
 	{
 		final Set<String> start_vertices = new HashSet<>();
 		if (start_from_verbs)
-		{
 			start_vertices.addAll(getVerbalVertices(g));
-		}
 
 		// if no start vertices, consider the whole set
 		if (start_vertices.isEmpty())
 			start_vertices.addAll(g.vertexSet());
 
 		return start_vertices.stream()
-				.flatMap(v -> g.getSources(v).stream()
+				.flatMap(v -> g.getContexts(v).stream()
 						.map(source -> new SemanticSubgraph(g, v, Set.of(v), Set.of(), 0)))
 				.distinct()
 				.collect(Collectors.toList());
@@ -68,7 +63,7 @@ public abstract class Explorer
 		return t -> seen.add(keyExtractor.apply(t));
 	}
 
-	public List<SemanticSubgraph> getNextStates(SemanticSubgraph s, SemanticGraph g)
+	public List<SemanticSubgraph> getNextStates(SemanticSubgraph s)
 	{
 		return s.vertexSet().stream()
 				.map(v -> getNeighbours(v, s))
@@ -103,11 +98,11 @@ public abstract class Explorer
 	protected boolean isAllowed(Neighbour n, SemanticSubgraph s)
 	{
 		final SemanticGraph g = s.getBase();
-		final Collection<String> root_sources = g.getSources(s.getRoot());
-		final Set<String> n_sources = g.getSources(n.node);
+		final Collection<String> root_sources = g.getContexts(s.getRoot());
+		final Set<String> n_sources = g.getContexts(n.node);
 		final boolean same_source = n_sources.stream().anyMatch(root_sources::contains);
 
-		switch (policy)
+		switch (constraints)
 		{
 			case Same_source:
 				return same_source;

@@ -17,10 +17,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.OptionalInt;
+import java.util.*;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
@@ -29,25 +26,20 @@ import static java.util.stream.Collectors.toList;
  *  Stores dictionary entries in a space-efficient manner. Used a ByteBuffer and Trove collections.
  *
  * Inspired by code in http://java-performance.info/use-case-optimizing-memory-footprint-of-read-only-csv-file-trove-unsafe-bytebuffer-data-compression/
+ * and https://stackoverflow.com/questions/3982704/how-to-serialize-bytebuffer for the serialization bits
  */
 public class CompactDictionary implements Serializable
 {
-	private static class Entry
+	private static class Entry implements Serializable
 	{
-		final String form;
-		final char pos;
-		final List<String> meanings;
+		final byte[] form;
+		final int pos;
+		private final static long serialVersionUID = 1L;
 
 		public Entry(String form, char pos)
 		{
-			this(form, pos, null);
-		}
-
-		public Entry(String form, char pos, List<String> meanings)
-		{
-			this.form = form.replace(' ', '_');
-			this.pos = pos;
-			this.meanings = meanings;
+			this.form = form.replace(' ', '_').toLowerCase().getBytes(Charsets.UTF_8);
+			this.pos = Character.getNumericValue(pos);
 		}
 
 		@Override
@@ -56,17 +48,17 @@ public class CompactDictionary implements Serializable
 			if (this == o) return true;
 			if (o == null || getClass() != o.getClass()) return false;
 
-			Entry that = (Entry) o;
+			Entry entry = (Entry) o;
 
-			if (!form.equals(that.form)) return false;
-			return pos == that.pos;
+			if (pos != entry.pos) return false;
+			return Arrays.equals(form, entry.form);
 		}
 
 		@Override
 		public int hashCode()
 		{
-			int result = form.hashCode();
-			result = 31 * result + Character.valueOf(pos).hashCode();
+			int result = Arrays.hashCode(form);
+			result = 31 * result + pos;
 			return result;
 		}
 	}
@@ -75,7 +67,7 @@ public class CompactDictionary implements Serializable
 	private TObjectIntMap<Entry> forms_index = new TObjectIntHashMap<>( 1000 );
 	private TIntIntMap forms_hash_index = new TIntIntHashMap( 1000, 0.75f, -1, -1);
 	transient private ByteBuffer meanings_data = ByteBuffer.allocate(BUFFER_SIZE_STEP);
-	private TObjectIntMap<String> meanings_index = new TObjectIntHashMap<>( 1000 );
+	private TObjectIntMap<byte[]> meanings_index = new TObjectIntHashMap<>( 1000 );
 	private TIntIntMap meanings_hash_index = new TIntIntHashMap( 1000, 0.75f, -1, -1);
 	transient private ByteBuffer glosses_data = ByteBuffer.allocate(BUFFER_SIZE_STEP);
 	private final ULocale language;
@@ -114,17 +106,18 @@ public class CompactDictionary implements Serializable
 		assert StringUtils.isNotBlank(form) && meanings != null;
 		meanings.removeIf(String::isBlank);
 		if (meanings.isEmpty())
+		{
+			log.info("Ignoring form " + form + " (" + pos + ") with no meanings");
 			return;
-
-		Entry entry = new Entry(form, pos, meanings);
-		if (forms_index.containsKey(entry) || forms_hash_index.containsKey(entry.hashCode()))
+		}
+		if (contains(form, pos))
 			return;
 
 		// create byte arrays for meanings
-		final List<byte[]> bytes_list = new ArrayList<>(entry.meanings.size());
-		entry.meanings.forEach(m ->
+		final List<byte[]> bytes_list = new ArrayList<>(meanings.size());
+		meanings.forEach(m ->
 		{
-			final byte[] bytes_string = m.getBytes(Charsets.UTF_8);
+			final byte[] bytes_string = m.getBytes(Charsets.US_ASCII);
 			final byte[] bytes_count = Shorts.toByteArray((short) bytes_string.length);
 
 			byte[] bytes = ArrayUtils.addAll(bytes_count, bytes_string);
@@ -148,7 +141,7 @@ public class CompactDictionary implements Serializable
 		final int position = meanings_data.position();
 
 		// add an integer indicating number of meanings
-		meanings_data.putShort((short) entry.meanings.size()); // a short with max value 32767 should suffice
+		meanings_data.putShort((short) meanings.size()); // a short with max value 32767 should suffice
 
 		// store the bytes for each meaning
 		for (final byte[] bytes : bytes_list)
@@ -156,6 +149,7 @@ public class CompactDictionary implements Serializable
 			meanings_data.put(bytes);
 		}
 
+		Entry entry = new Entry(form, pos);
 		updateIndexes(entry, position);
 		++num_added_forms;
 	}
@@ -171,22 +165,21 @@ public class CompactDictionary implements Serializable
 
 	public void addMeaning(final String meaning, final String label, List<String> glosses)
 	{
-		assert StringUtils.isNotBlank(meaning) && glosses != null;
+		assert StringUtils.isNotBlank(meaning) && StringUtils.isNotBlank(label) && glosses != null;
 
 		if (glosses.removeIf(String::isBlank))
 		if (StringUtils.isBlank(label) && glosses.isEmpty())
+		{
+			log.warn("Ignoring meaning " + meaning + " with no label nor glosses");
 			return;
-
-		final String label_str;
-		if (StringUtils.isBlank(label))
-			label_str = meaning; // use meaning as label
-		else
-			label_str = label;
+		}
+		if (contains(meaning))
+			return;
 
 		// create byte arrays for label and glosses
 		final List<byte[]> bytes_list = new ArrayList<>(glosses.size() + 1);
 		{
-			final byte[] bytes_string = label_str.getBytes(Charsets.UTF_8);
+			final byte[] bytes_string = label.getBytes(Charsets.UTF_8);
 			final byte[] bytes_count = Shorts.toByteArray((short) bytes_string.length);
 
 			byte[] bytes = ArrayUtils.addAll(bytes_count, bytes_string);
@@ -234,7 +227,7 @@ public class CompactDictionary implements Serializable
 	{
 		final int hash = meaning.hashCode();
 		if (meanings_hash_index.containsKey(hash))
-			meanings_index.put(meaning, glosses_pos);
+			meanings_index.put(meaning.getBytes(Charsets.US_ASCII), glosses_pos);
 		else
 			meanings_hash_index.put(hash, glosses_pos);
 	}
@@ -249,14 +242,14 @@ public class CompactDictionary implements Serializable
 		final int old_pos = meanings_data.position();
 		meanings_data.position(position);
 
-		final int num_meanings = meanings_data.getShort();
+		final int num_meanings = Short.valueOf(meanings_data.getShort()).intValue();
 		final List<String> meanings = IntStream.range(0, num_meanings)
 				.mapToObj(i ->
 				{
 					final int num_bytes = meanings_data.getShort();
 					byte[] bytes = new byte[num_bytes];
 					meanings_data.get(bytes);
-					return new String(bytes);
+					return new String(bytes, Charsets.US_ASCII);
 				})
 				.collect(toList());
 
@@ -282,7 +275,7 @@ public class CompactDictionary implements Serializable
 		glosses_data.get(bytes);
 
 		glosses_data.position(old_pos);
-		return Optional.of(new String(bytes));
+		return Optional.of(new String(bytes, Charsets.UTF_8));
 	}
 
 	public List<String> getGlosses(String meaning)
@@ -310,7 +303,7 @@ public class CompactDictionary implements Serializable
 					final int num_bytes = glosses_data.getShort();
 					byte[] bytes = new byte[num_bytes];
 					glosses_data.get(bytes);
-					return new String(bytes);
+					return new String(bytes, Charsets.UTF_8);
 				})
 				.collect(toList());
 
@@ -335,7 +328,7 @@ public class CompactDictionary implements Serializable
 	private OptionalInt getMeaningsPosition(String meaning)
 	{
 		// First check if the entry 'as is' is indexed
-		if (meanings_index.containsKey(meaning))
+		if (meanings_index.containsKey(meaning.getBytes(Charsets.US_ASCII)))
 			return OptionalInt.of(meanings_index.get(meaning));
 
 		// then check if it's indexed via its hash code

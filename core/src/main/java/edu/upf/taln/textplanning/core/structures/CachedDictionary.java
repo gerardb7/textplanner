@@ -3,11 +3,9 @@ package edu.upf.taln.textplanning.core.structures;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.utils.POS;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Wrapper around a base dictionary, stores results of calls to base methods into a space-efficient cache
@@ -33,11 +31,19 @@ public class CachedDictionary implements MeaningDictionary
 	}
 
 	@Override
-	public Iterator<String> iterator()
+	public Iterator<String> meaning_iterator()
 	{
 		if (base == null)
 			throw new RuntimeException("Unsupported operation");
-		return base.iterator();
+		return base.meaning_iterator();
+	}
+
+	@Override
+	public Set<String> getMeanings(ULocale language)
+	{
+		if (base == null)
+			throw new RuntimeException("Unsupported operation");
+		return base.getMeanings(language);
 	}
 
 	@Override
@@ -65,7 +71,7 @@ public class CachedDictionary implements MeaningDictionary
 		else if (base != null)
 		{
 			final List<String> meanings = base.getMeanings(word, pos, language);
-			if (update_cache)
+			if (update_cache && !meanings.isEmpty())
 				cache.addForm(word, POS.toTag.get(pos), meanings);
 			return meanings;
 		}
@@ -106,10 +112,10 @@ public class CachedDictionary implements MeaningDictionary
 					label_str = label.get();
 				else
 				{
-					final List<String> lemmas = base.getLemmas(id, language);
+					final List<Pair<String, POS.Tag>> lemmas = base.getLexicalizations(id, language);
 					// determine label value
 					if (!lemmas.isEmpty())
-						label_str = lemmas.get(0);
+						label_str = lemmas.get(0).getLeft();
 					else
 						label_str = null;
 				}
@@ -156,10 +162,36 @@ public class CachedDictionary implements MeaningDictionary
 	}
 
 	@Override
-	public List<String> getLemmas(String id, ULocale language)
+	public Iterator<Pair<String, POS.Tag>> lexicon_iterator()
 	{
 		if (base == null)
 			throw new RuntimeException("Unsupported operation");
-		return base.getLemmas(id, language);
+		return base.lexicon_iterator();
 	}
+
+	@Override
+	public Set<Pair<String, POS.Tag>> getLexicalizations(ULocale language)
+	{
+		if (base == null)
+			throw new RuntimeException("Unsupported operation");
+		return base.getLexicalizations(language);
+	}
+
+	@Override
+	public List<Pair<String, POS.Tag>> getLexicalizations(String id)
+	{
+		if (base == null)
+			throw new RuntimeException("Unsupported operation");
+		return base.getLexicalizations(id);
+	}
+
+	@Override
+	public List<Pair<String, POS.Tag>> getLexicalizations(String id, ULocale language)
+	{
+		if (base == null)
+			throw new RuntimeException("Unsupported operation");
+		return base.getLexicalizations(id, language);
+	}
+
+
 }

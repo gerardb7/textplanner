@@ -9,10 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.alg.CycleDetector;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -25,6 +22,7 @@ public class SubgraphExtraction
 	private final Policy expand_policy;
 	private final double lambda;
 	private final static int max_num_extractions = 1000;
+	private final List<SemanticSubgraph> visited_starts = new ArrayList<>();
 	private final static Logger log = LogManager.getLogger();
 
 	public SubgraphExtraction(Explorer explorer, Policy start_policy, Policy expand_policy, double lambda)
@@ -49,20 +47,27 @@ public class SubgraphExtraction
 		while (subgraphs.size() < num_subgraphs && num_extractions++ < max_num_extractions)
 		{
 			SemanticSubgraph s = extract(g, avg_rank);
-			if (isValid(s) && !isRedundant(s, subgraphs))
+			if (isValid(s))
 				subgraphs.add(s);
+			removeRedundant(subgraphs);
 		}
 
-		log.info(subgraphs.size() + " subgraphs extracted after " + num_extractions + " iterations ");
+		final List<SemanticSubgraph> sorted_subgraphs = subgraphs.stream()
+				.sorted(Comparator.comparingDouble(SemanticSubgraph::getAverageWeight).reversed())
+				.collect(Collectors.toList());
+		log.info(sorted_subgraphs.size() + " subgraphs extracted after " + num_extractions + " iterations ");
 		log.info("Subgraph extraction took " + timer.stop());
-		log.debug(DebugUtils.printSubgraphs(subgraphs));
+		log.debug(DebugUtils.printSubgraphs(sorted_subgraphs));
 
-		return subgraphs;
+		return sorted_subgraphs;
 	}
 
 	// valid subgraphs must be connected and simple
 	private boolean isValid(SemanticSubgraph s)
 	{
+		if (s == null)
+			return false;
+
 		final boolean is_empty = s.vertexSet().isEmpty();
 		final boolean is_connected = new ConnectivityInspector<>(s).isGraphConnected();
 		final boolean has_cycles = new CycleDetector<>(s).detectCycles();
@@ -70,10 +75,12 @@ public class SubgraphExtraction
 		return !is_empty && is_connected && !has_cycles;
 	}
 
-	private boolean isRedundant(SemanticSubgraph s, List<SemanticSubgraph> subgraphs)
+	// a subgraph is redundant if it's vertex set is a subset of any other extracted graph
+	private void removeRedundant(List<SemanticSubgraph> subgraphs)
 	{
-		return subgraphs.stream()
-				.anyMatch(s2 -> s.vertexSet().equals(s2.vertexSet())); // see implementation of equals in SemanticSubgraph and jGraphT AbstractGraph
+		subgraphs.removeIf(s1 -> subgraphs.stream()
+					.filter(s2 -> s1 != s2)
+					.anyMatch(s2 -> s2.contains(s1)));
 	}
 
 	private SemanticSubgraph extract(SemanticGraph g, double cost)
@@ -86,6 +93,8 @@ public class SubgraphExtraction
 		SemanticSubgraph current_state;
 		{
 			final List<SemanticSubgraph> candidates = explorer.getStartStates(g);
+			if (start_policy instanceof ArgMaxPolicy)
+				candidates.removeIf(visited_starts::contains); // remove seen starts
 			if (candidates.isEmpty())
 				return null;
 
@@ -94,13 +103,14 @@ public class SubgraphExtraction
 					.toArray();
 			int i = start_policy.select(candidate_weights);
 			current_state = candidates.get(i);
+			visited_starts.add(current_state);
 		}
 		double q = 0.0, q_old;
 
 		do
 		{
 			// candidate sets extending (and therefore including) current_state
-			List<SemanticSubgraph> candidate_states = explorer.getNextStates(current_state, g);
+			List<SemanticSubgraph> candidate_states = explorer.getNextStates(current_state);
 			if (candidate_states.isEmpty())
 				break;
 

@@ -119,7 +119,7 @@ public abstract class DisambiguationEvaluation
 
 		final List<Candidate> candidates = corpus.texts.stream()
 				.flatMap(text -> text.sentences.stream()
-						.flatMap(sentence -> sentence.candidates.values().stream()
+						.flatMap(sentence -> sentence.candidate_meanings.values().stream()
 								.flatMap(Collection::stream)))
 				.collect(toList());
 
@@ -143,7 +143,7 @@ public abstract class DisambiguationEvaluation
 				.map(text ->
 				{
 					final List<Candidate> candidates = text.sentences.stream()
-							.flatMap(sentence -> sentence.candidates.values().stream()
+							.flatMap(sentence -> sentence.candidate_meanings.values().stream()
 									.flatMap(Collection::stream))
 							.collect(toList());
 					final Map<Mention, Candidate> disambiguated = disambiguation.disambiguate(candidates, mention_selector, candidate_selector);
@@ -163,7 +163,7 @@ public abstract class DisambiguationEvaluation
 				{
 					final BiasFunction bias = getResources(text).getBiasFunction();
 					final List<Candidate> candidates = text.sentences.stream()
-							.flatMap(sentence -> sentence.candidates.values().stream()
+							.flatMap(sentence -> sentence.candidate_meanings.values().stream()
 									.flatMap(Collection::stream))
 							.collect(toList());
 
@@ -184,7 +184,7 @@ public abstract class DisambiguationEvaluation
 				{
 					final BiasFunction bias = getResources(text).getBiasFunction();
 					final List<Candidate> candidates = text.sentences.stream()
-							.flatMap(sentence -> sentence.candidates.values().stream()
+							.flatMap(sentence -> sentence.candidate_meanings.values().stream()
 									.flatMap(Collection::stream))
 							.collect(toList());
 
@@ -207,7 +207,7 @@ public abstract class DisambiguationEvaluation
 				.map(text ->
 				{
 					final List<Candidate> candidates = text.sentences.stream()
-							.flatMap(sentence -> sentence.candidates.values().stream()
+							.flatMap(sentence -> sentence.candidate_meanings.values().stream()
 									.flatMap(Collection::stream))
 							.collect(toList());
 
@@ -229,7 +229,7 @@ public abstract class DisambiguationEvaluation
 				.map(text ->
 				{
 					final List<Candidate> candidates = text.sentences.stream()
-							.flatMap(sentence -> sentence.candidates.values().stream()
+							.flatMap(sentence -> sentence.candidate_meanings.values().stream()
 									.flatMap(Collection::stream))
 							.collect(toList());
 

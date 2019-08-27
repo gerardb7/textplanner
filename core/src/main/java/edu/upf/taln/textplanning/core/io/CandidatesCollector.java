@@ -3,16 +3,22 @@ package edu.upf.taln.textplanning.core.io;
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.structures.*;
+import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.core.utils.POS;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.*;
+import java.io.FileOutputStream;
+import java.io.ObjectOutputStream;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
+import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.*;
 
@@ -21,7 +27,8 @@ import static java.util.stream.Collectors.*;
  */
 public class CandidatesCollector
 {
-	public static final int LOGGING_STEP_SIZE = 10000;
+	public static final int LOGGING_STEP_SIZE = 100000;
+	public static final int CHUNK_SIZE = 1000000;
 	private final static Logger log = LogManager.getLogger();
 
 	private final static BiPredicate<Mention, Mention> preceds =
@@ -37,6 +44,7 @@ public class CandidatesCollector
 					.collect(toMap(m -> m, m -> m.getTokens().stream().map(String::toLowerCase).map(String::trim).collect(toList())));
 		}
 
+		// Does mention1 contain mention2?
 		@Override
 		public boolean test(Mention mention1, Mention mention2)
 		{
@@ -44,7 +52,6 @@ public class CandidatesCollector
 					Collections.indexOfSubList(mentions2tokens.get(mention1), mentions2tokens.get(mention2)) != -1;
 		}
 	}
-
 
 	/**
 	 * Assigns candidate entities to mentions.
@@ -88,7 +95,8 @@ public class CandidatesCollector
 										.filter(c -> !meanings1.contains(c.getMeaning()))
 										.map(c -> new Candidate(m1, c.getMeaning()))
 										.collect(toList());
-								log.debug("\t" + new_list.size() + " candidates of mention " + m2 + " added to " + m1);
+								if (!new_list.isEmpty())
+									log.debug("\t" + new_list.size() + " candidates of mention " + m2 + " added to " + m1);
 								new_list.addAll(candidates1);
 								candidates.put(m1, new_list);
 							}
@@ -109,63 +117,182 @@ public class CandidatesCollector
 	}
 
 	// Collects all meanings and forms from a dictionary. May take a very long time!
-	public static void collect(MeaningDictionary dictionary, ULocale language, CompactDictionary cache, Path cache_file) throws IOException, ClassNotFoundException
+	public static void collect(MeaningDictionary dictionary, ULocale language, CompactDictionary cache, Path cache_file)
 	{
-		log.info("Collecting all meanings for language " + language);
 		final Stopwatch timer = Stopwatch.createStarted();
-		AtomicLong num_meanings = new AtomicLong(0);
-		AtomicLong num_forms = new AtomicLong(0);
+		collectMeanings(dictionary, language, cache, cache_file);
+		collectLexicalizations(dictionary, language, cache, cache_file);
+		log.info("ALL DONE in " + timer.stop());
+	}
 
-//		final List<String> lemmas = dictionary.getLemmas("bn:00041113n", language);
-//		lemmas.stream()
-//				.distinct()
-//				.forEach(l -> cache.addForm(l, 'n', dictionary.getMeanings(l, POS.Tag.NOUN, language)));
-//		List<String> meanings = cache.getMeanings("GOP", 'n');
-//		final List<String> meanings2 = dictionary.getMeanings("GOP", POS.Tag.NOUN, language);
+	private static void collectMeanings(MeaningDictionary dictionary, ULocale language, CompactDictionary cache, Path cache_file)
+	{
+		final Stopwatch timer = Stopwatch.createStarted();
+		int iterate_counter = 0;
+		final AtomicInteger query_counter = new AtomicInteger(0);
+		final AtomicInteger check_counter = new AtomicInteger(0);
+		final DebugUtils.ThreadReporter reporter = new DebugUtils.ThreadReporter(log);
+		final Iterator<String> meaning_it = dictionary.meaning_iterator();
 
-		final Iterator<String> iterator = dictionary.iterator();
-		while (iterator.hasNext())
+		while (meaning_it.hasNext())
 		{
-			final String reference = iterator.next();
-			final Optional<String> label = dictionary.getLabel(reference, language);
-			final List<String> glosses = dictionary.getGlosses(reference, language);
-			final char babel_pos = reference.charAt(reference.length() - 1);
-			final POS.Tag pos = POS.get(String.valueOf(babel_pos), POS.Tagset.BabelNet);
-			final List<String> lemmas = dictionary.getLemmas(reference, language);
-
-			// determine label value
-			final String label_str;
-			if (label.isPresent() && StringUtils.isNotBlank(label.get()))
-				label_str = label.get();
-			else if (!lemmas.isEmpty())
-				label_str = lemmas.get(0);
-			else
-				label_str = null;
-
-			cache.addMeaning(reference, label_str, glosses);
-
-			lemmas.stream()
-					.distinct()
-					.filter(StringUtils::isNotBlank)
-					.filter(l -> !cache.contains(l, babel_pos))
-					.peek(l -> num_forms.incrementAndGet())
-					.forEach(l -> {
-						final List<String> meanings = dictionary.getMeanings(l, pos, language);
-						cache.addForm(l, babel_pos, meanings);
-					});
-
-			long i = num_meanings.incrementAndGet();
-			if (i % LOGGING_STEP_SIZE == 0)
+			// 1- collect meanings
+			log.info("\nCollecting meaning ids for language " + language);
+			final List<String> meanings = new ArrayList<>();
+			for (int i = 0; i < CHUNK_SIZE && meaning_it.hasNext(); ++i)
 			{
-				log.info("\t" + num_meanings.get() + " meanings and " +  num_forms.get() + " forms collected in " + timer);
-				FileOutputStream fos = new FileOutputStream(cache_file.toString());
-				ObjectOutputStream oos = new ObjectOutputStream(fos);
-				oos.writeObject(cache);
-				fos.close();
+				if (i > 0 && i % LOGGING_STEP_SIZE == 0)
+					log.info("\t" + (iterate_counter + i) + " meanings iterated in " + timer);
+				meanings.add(meaning_it.next());
 			}
-		}
+			iterate_counter += meanings.size();
+			log.info(iterate_counter + " meanings collected from dictionary");
 
-		log.info(num_meanings.get() + " meanings and " +  num_forms.get() + " forms collected in " + timer.stop());
+			// 2- query meanings info
+			log.info("Querying meanings info from dictionary");
+			final List<Triple<String, String, List<String>>> meanings_info = meanings.parallelStream()
+					.peek(meaning -> reporter.report())
+					.map(meaning ->
+					{
+						final Optional<String> label = dictionary.getLabel(meaning, language);
+						final List<String> glosses = dictionary.getGlosses(meaning, language);
+						final List<Pair<String, POS.Tag>> lexicalizations = dictionary.getLexicalizations(meaning, language);
+
+						// determine label value
+						final String label_str;
+						if (label.isPresent() && StringUtils.isNotBlank(label.get()))
+							label_str = label.get();
+						else if (!lexicalizations.isEmpty())
+							label_str = lexicalizations.get(0).getLeft();
+						else
+						{
+							// last ditch attempt
+							final List<Pair<String, POS.Tag>> all_lexicalizations = dictionary.getLexicalizations(meaning);
+							if (!all_lexicalizations.isEmpty())
+								label_str = all_lexicalizations.get(0).getLeft();
+							else
+								label_str = meaning; // if there are absolutely no labels, then use the meaning ref...
+						}
+
+						long i = query_counter.getAndIncrement();
+						if (i > 0 && i % LOGGING_STEP_SIZE == 0)
+							log.info("\t" + i + " meanings queried in " + timer);
+
+						return Triple.of(meaning, label_str, glosses);
+					})
+					.collect(toList());
+			log.info(query_counter.get() + " meanings queried in " + timer);
+
+			// 3 - add meanings to cache
+			log.info("Adding meanings info to cache");
+			meanings_info.forEach(info ->
+					cache.addMeaning(info.getLeft(), info.getMiddle(), info.getRight()) // does nothing if meaning already in cache
+			);
+
+			// 4 - serialize cache to file
+			serialize(cache, cache_file);
+
+			// 5- run integrity tests
+			log.info("Checking meanings");
+			meanings_info.forEach(info ->
+			{
+				final String meaning = info.getLeft();
+				final String dict_label = info.getMiddle();
+				final List<String> dict_glosses = info.getRight();
+				long i = check_counter.getAndIncrement();
+
+				final String cache_label = cache.getLabel(meaning).orElse("");
+				if (!dict_label.equals(cache_label))
+					log.error("Labels do not match for meaning " + i + " " + meaning + ": dictionary label is \"" + dict_label + "\" and cache label is \"" + cache_label + "\"");
+
+				final List<String> cache_glosses = cache.getGlosses(meaning);
+				if (!dict_glosses.equals(cache_glosses))
+					log.error("Glosses do not match for meaning " + i + " " + meaning + ": dictionary glosses are \n\t" + dict_glosses + "\ncache label are \n\t" + cache_glosses);
+
+				if (i > 0 && i % LOGGING_STEP_SIZE == 0)
+					log.info("\t" + i + " meanings checked in " + timer);
+			});
+			log.info(check_counter.get() + " meanings checked in " + timer);
+		}
+		log.info("\n***All meanings collected in " + timer.stop() + "***\n");
+	}
+
+	private static void collectLexicalizations(MeaningDictionary dictionary, ULocale language, CompactDictionary cache, Path cache_file)
+	{
+		final Stopwatch timer = Stopwatch.createStarted();
+		int iterate_counter = 0;
+		final AtomicInteger query_counter = new AtomicInteger(0);
+		final AtomicInteger check_counter = new AtomicInteger(0);
+		final DebugUtils.ThreadReporter reporter = new DebugUtils.ThreadReporter(log);
+		final Iterator<Pair<String, POS.Tag>> lexicon_it = dictionary.lexicon_iterator();
+
+		while (lexicon_it.hasNext())
+		{
+			// 1- collect lexicalizations
+			log.info("\nCollecting lexicalizations for language " + language);
+			final List<Pair<String, POS.Tag>> lexicalizations = new ArrayList<>();
+			for (int i = 0; i < CHUNK_SIZE && lexicon_it.hasNext(); ++i)
+			{
+				if (i > 0 && i % LOGGING_STEP_SIZE == 0)
+					log.info("\t" + (iterate_counter + i) + " lexicalizations iterated in " + timer);
+				lexicalizations.add(lexicon_it.next());
+			}
+			iterate_counter += lexicalizations.size();
+			log.info(iterate_counter + " lexicalizations collected from dictionary");
+
+			// 2 - query lexicalization meanings
+			log.info("Querying lexicalization meanings from dictionary");
+			reporter.reset();
+			final List<Triple<String, Character, List<String>>> lexicalizations_info = lexicalizations.parallelStream()
+					.peek(meaning -> reporter.report())
+					.filter(p -> StringUtils.isNotBlank(p.getLeft()))
+					.map(p ->
+					{
+						final String word = p.getLeft();
+						final Character pos_tag = POS.toTag.get(p.getRight());
+						final List<String> dict_meanings = dictionary.getMeanings(word, p.getRight(), language);
+
+						long i = query_counter.getAndIncrement();
+						if ( i > 0 && i % LOGGING_STEP_SIZE == 0)
+							log.info("\t" + i + " lexicalizations queried in " + timer);
+
+						return Triple.of(word, pos_tag, dict_meanings);
+					})
+					.collect(toList());
+			log.info(query_counter.get() + " lexicalizations queried in " + timer);
+
+			// 3 - add lexicalizations to cache
+			log.info("Adding meanings info to cache");
+			lexicalizations_info.forEach(info ->
+			{
+				final String word = info.getLeft();
+				final Character pos_tag = info.getMiddle();
+				final List<String> l_meanings = info.getRight();
+				cache.addForm(word, pos_tag, l_meanings); // does nothing if word-tag pair already in cache
+			});
+
+			// 4 - serialize cache to file
+			serialize(cache, cache_file);
+
+			// 5- run integrity tests
+			log.info("Checking lexicalizations");
+			lexicalizations_info.forEach(info ->
+			{
+				final String word = info.getLeft();
+				final Character pos_tag = info.getMiddle();
+				final List<String> dict_meanings = info.getRight();
+				long i = check_counter.getAndIncrement();
+
+				final List<String> cache_meanings = cache.getMeanings(word, pos_tag);
+				if (!dict_meanings.equals(cache_meanings))
+					log.error("Meanings do not match for lexicalization " + i + " word " + word + " and POS " + pos_tag + ": \n\tdictionary meanings are " + dict_meanings + "\n\tcache meanings are " + cache_meanings);
+
+				if (i > 0 && i % LOGGING_STEP_SIZE == 0)
+					log.info("\t" + i + " lexicalizations checked in " + timer);
+			});
+			log.info(check_counter.get() + " lexicalizations checked in " + timer);
+		}
+		log.info("All lexicalizations collected in " + timer.stop() + "\n");
 	}
 
 	private static List<String> getReferences(MeaningDictionary dictionary, ULocale language, Mention mention)
@@ -186,5 +313,20 @@ public class CandidatesCollector
 		}
 
 		return references;
+	}
+
+	private synchronized static void serialize(CompactDictionary cache, Path cache_file)
+	{
+		try
+		{
+			FileOutputStream fos = new FileOutputStream(cache_file.toString());
+			ObjectOutputStream oos = new ObjectOutputStream(fos);
+			oos.writeObject(cache);
+			fos.close();
+		}
+		catch (Exception e)
+		{
+			throw new RuntimeException(e);
+		}
 	}
 }

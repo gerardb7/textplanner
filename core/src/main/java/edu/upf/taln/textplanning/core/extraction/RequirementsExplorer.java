@@ -12,7 +12,7 @@ import static java.util.stream.Collectors.toSet;
 
 public class RequirementsExplorer extends Explorer
 {
-	public RequirementsExplorer(GraphSemantics semantics, boolean start_from_verbs, ExpansionPolicy policy)
+	public RequirementsExplorer(GraphSemantics semantics, boolean start_from_verbs, ExpansionConstraints policy)
 	{
 		super(semantics, start_from_verbs, policy);
 	}
