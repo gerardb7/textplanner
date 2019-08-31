@@ -1,6 +1,6 @@
 package edu.upf.taln.textplanning.core.extraction;
 
-import edu.upf.taln.textplanning.core.io.GraphSemantics;
+import edu.upf.taln.textplanning.core.structures.GraphSemantics;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.Role;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;

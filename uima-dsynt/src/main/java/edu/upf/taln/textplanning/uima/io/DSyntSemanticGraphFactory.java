@@ -6,7 +6,7 @@ import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Token;
 import de.tudarmstadt.ukp.dkpro.wsd.type.WSDResult;
 import edu.upf.taln.parser.deep_parser.types.DeepDependency;
 import edu.upf.taln.parser.deep_parser.types.DeepToken;
-import edu.upf.taln.textplanning.core.io.SemanticGraphFactory;
+import edu.upf.taln.textplanning.core.structures.SemanticGraphFactory;
 import edu.upf.taln.textplanning.core.structures.Meaning;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.Role;

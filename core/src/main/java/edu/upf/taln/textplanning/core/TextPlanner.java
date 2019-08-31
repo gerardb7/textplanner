@@ -4,7 +4,7 @@ import com.google.common.base.Stopwatch;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.discourse.DiscoursePlanner;
 import edu.upf.taln.textplanning.core.extraction.*;
-import edu.upf.taln.textplanning.core.io.GraphSemantics;
+import edu.upf.taln.textplanning.core.structures.GraphSemantics;
 import edu.upf.taln.textplanning.core.ranking.MatrixFactory;
 import edu.upf.taln.textplanning.core.ranking.Ranker;
 import edu.upf.taln.textplanning.core.redundancy.RedundancyRemover;

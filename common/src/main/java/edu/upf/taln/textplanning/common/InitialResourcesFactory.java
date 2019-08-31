@@ -4,17 +4,16 @@ import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.babelnet.BabelNetDictionary;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
+import edu.upf.taln.textplanning.core.dictionaries.CachedDictionary;
+import edu.upf.taln.textplanning.core.dictionaries.CompactDictionary;
+import edu.upf.taln.textplanning.core.dictionaries.MeaningDictionary;
 import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.*;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
-import edu.upf.taln.textplanning.core.structures.CachedDictionary;
-import edu.upf.taln.textplanning.core.structures.CompactDictionary;
-import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -30,9 +29,9 @@ public class InitialResourcesFactory
 {
 	private final ULocale language;
 	private final PlanningProperties properties;
-	private final CompactDictionary cache;
+	private CompactDictionary cache;
 	private final MeaningDictionary base;
-	private final MeaningDictionary dictionary;
+	private MeaningDictionary dictionary;
 	private final BiasFunction.Type bias_function_type;
 	private final Set<String> bias_meanings;
 	private final SentenceVectors sentence_vectors;
@@ -50,33 +49,31 @@ public class InitialResourcesFactory
 		this.language = language;
 		this.properties = properties;
 
-		if (properties.getDictionaryCache() != null && !properties.getDictionaryCache().toString().isEmpty())
+		if (properties.getCachePath() != null && Files.exists(properties.getCachePath()) &&
+			properties.getDictionaryPath() == null)
 		{
-			if (Files.exists(properties.getDictionaryCache()))
-				cache = (CompactDictionary) Serializer.deserialize(properties.getDictionaryCache());
-			else
-				cache = new CompactDictionary(language);
+			base = null;
+			cache = (CompactDictionary) Serializer.deserialize(properties.getCachePath());
+			dictionary = new CachedDictionary(cache);
 		}
-		else
-			cache = null;
-
-		if (properties.getDictionary() != null)
+		else if (properties.getCachePath() != null && Files.exists(properties.getCachePath()) &&
+				properties.getDictionaryPath() != null && Files.exists(properties.getDictionaryPath()))
 		{
-			MeaningDictionary babelnet = new BabelNetDictionary(properties.getDictionary());
-			base = babelnet;
-
-			if (cache != null)
-				dictionary =  new CachedDictionary(babelnet, cache, properties.getUpdateCache());
-			else
-				dictionary = babelnet;
+			base = new BabelNetDictionary(properties.getDictionaryPath());
+			cache = (CompactDictionary) Serializer.deserialize(properties.getCachePath());
+			dictionary =  new CachedDictionary(base, cache);
+		}
+		else if (properties.getDictionaryPath() != null && Files.exists(properties.getDictionaryPath()))
+		{
+			base = new BabelNetDictionary(properties.getDictionaryPath());
+			cache = null;
+			dictionary = base;
 		}
 		else
 		{
 			base = null;
-			if (cache != null)
-				dictionary = new CachedDictionary(cache);
-			else
-				dictionary = null;
+			cache = null;
+			dictionary = null;
 		}
 
 		// Bias params
@@ -153,7 +150,21 @@ public class InitialResourcesFactory
 
 	public MeaningDictionary getBase() { return base; }
 
-	public CompactDictionary getCache() { return cache; }
+	public CompactDictionary getCache()
+	{
+		return cache;
+	}
+
+	public PlanningProperties getProperties()
+	{
+		return properties;
+	}
+
+	public void setCache(CompactDictionary cache)
+	{
+		this.cache = cache;
+		this.dictionary = base == null ? new CachedDictionary(cache) : new CachedDictionary(base, cache);
+	}
 
 	public BiasFunction.Type getBiasFunctionType()
 	{
@@ -224,17 +235,6 @@ public class InitialResourcesFactory
 			case Random:
 			default:
 				return new RandomVectors();
-		}
-	}
-
-	public void serializeCache() throws IOException
-	{
-		if (cache != null && properties.getDictionaryCache() != null)
-		{
-			if (cache.num_added_forms == 0 && cache.num_added_meanings == 0)
-				log.info("No forms nor meanings added to the dictionary, skipping serialization");
-			else
-				Serializer.serialize(cache, properties.getDictionaryCache());
 		}
 	}
 }

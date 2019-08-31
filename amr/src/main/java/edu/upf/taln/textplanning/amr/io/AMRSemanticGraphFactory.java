@@ -7,7 +7,7 @@ import edu.upf.taln.textplanning.amr.structures.AMRGraph;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.amr.structures.CoreferenceChain;
 import edu.upf.taln.textplanning.core.Options;
-import edu.upf.taln.textplanning.core.io.SemanticGraphFactory;
+import edu.upf.taln.textplanning.core.structures.SemanticGraphFactory;
 import edu.upf.taln.textplanning.core.ranking.Disambiguation;
 import edu.upf.taln.textplanning.core.structures.*;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;

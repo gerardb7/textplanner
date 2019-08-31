@@ -5,7 +5,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
-import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
+import edu.upf.taln.textplanning.core.dictionaries.MeaningDictionary;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

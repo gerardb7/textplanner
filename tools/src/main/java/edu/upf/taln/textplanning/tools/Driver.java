@@ -4,10 +4,12 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.ibm.icu.util.ULocale;
+import edu.upf.taln.textplanning.babelnet.BabelNetDictionary;
 import edu.upf.taln.textplanning.common.CMLCheckers;
 import edu.upf.taln.textplanning.common.InitialResourcesFactory;
 import edu.upf.taln.textplanning.common.PlanningProperties;
-import edu.upf.taln.textplanning.core.io.CandidatesCollector;
+import edu.upf.taln.textplanning.core.dictionaries.CompactDictionary;
+import edu.upf.taln.textplanning.core.dictionaries.MeaningDictionary;
 import edu.upf.taln.textplanning.tools.evaluation.ExtractiveEvaluation;
 import edu.upf.taln.textplanning.tools.evaluation.GoldDisambiguationEvaluation;
 import edu.upf.taln.textplanning.tools.evaluation.RankingEvaluation;
@@ -36,8 +38,6 @@ public class Driver
 		@Parameter(names = {"-p", "-properties"}, description = "Path to properties file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		protected Path properties;
-		@Parameter(names = {"-c", "-cache"}, description = "If true, a dictionary cache file is created", arity = 1)
-		protected boolean cache = false;
 	}
 
 	@SuppressWarnings("unused")
@@ -152,8 +152,6 @@ public class Driver
 					eval.run_batch();
 				else
 					eval.run();
-				if (properties.getUpdateCache())
-					resources.serializeCache();
 				break;
 			}
 			case disambiguation_eval_command:
@@ -165,8 +163,6 @@ public class Driver
 					eval.run_batch();
 				else
 					eval.run();
-				if (properties.getUpdateCache())
-					resources.serializeCache();
 				break;
 			}
 			case rank_eval_command:
@@ -174,8 +170,6 @@ public class Driver
 				PlanningProperties properties = new PlanningProperties(rankEval.properties);
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				RankingEvaluation.run(rankEval.gold_file, rankEval.input_file, resources);
-				if (properties.getUpdateCache())
-					resources.serializeCache();
 				break;
 			}
 			case extract_eval_command:
@@ -186,9 +180,9 @@ public class Driver
 			case collect_meanings_vectors:
 			{
 				PlanningProperties properties = new PlanningProperties(meanings.properties);
-				InitialResourcesFactory resources = new InitialResourcesFactory(meanings.language, properties);
-				CandidatesCollector.collect(resources.getBase(), meanings.language, resources.getCache(), properties.getDictionaryCache());
-				resources.serializeCache();
+				//InitialResourcesFactory resources = new InitialResourcesFactory(meanings.language, properties);
+				MeaningDictionary base = new BabelNetDictionary(properties.getDictionaryPath());
+				CompactDictionary cache = new CompactDictionary(language, base, properties.getCachePath());
 				break;
 			}
 			case create_context_vectors:
@@ -196,8 +190,6 @@ public class Driver
 				PlanningProperties properties = new PlanningProperties(context.properties);
 				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
 				//ContextVectorsProducer.createVectors(context.meanings, context.chunk_size, context.output, resources, context.glosses_only);
-				if (properties.getUpdateCache())
-					resources.serializeCache();
 				break;
 			}
 			default:

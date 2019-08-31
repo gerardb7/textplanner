@@ -16,9 +16,8 @@ import java.util.Properties;
 
 public class PlanningProperties
 {
-	private Path dictionary;
-	private Path dictionaryCache;
-	private boolean updateCache;
+	private Path dictionaryPath;
+	private Path cachePath;
 	private VectorType senseVectorsType;
 	private Path senseVectorsPath;
 	private VectorType wordVectorsType;
@@ -44,9 +43,8 @@ public class PlanningProperties
 		}
 
 		//get the property value and print it out
-		dictionary = checkValidFolder(prop.getProperty("tp.dictionary.folder"));
-		dictionaryCache = Paths.get(prop.getProperty("tp.dictionary.cache"));
-		updateCache = Boolean.parseBoolean(prop.getProperty("tp.dictionary.cache.update"));
+		dictionaryPath = checkValidFolder(prop.getProperty("tp.dictionary.folder"));
+		cachePath = Paths.get(prop.getProperty("tp.dictionary.cache"));
 		senseVectorsType = Enums.getIfPresent(VectorType.class, prop.getProperty("tp.vectors.sense.type")).orNull();
 		senseVectorsPath = checkValidPath(prop.getProperty("tp.vectors.sense.path"));
 		wordVectorsType = Enums.getIfPresent(VectorType.class, prop.getProperty("tp.vectors.word.type")).orNull();
@@ -58,17 +56,15 @@ public class PlanningProperties
 		meaningsPath = checkValidFile(prop.getProperty("tp.bias.meanings"));
 	}
 
-	public Path getDictionary()
+	public Path getDictionaryPath()
 	{
-		return dictionary;
+		return dictionaryPath;
 	}
 
-	public Path getDictionaryCache()
+	public Path getCachePath()
 	{
-		return dictionaryCache;
+		return cachePath;
 	}
-
-	public boolean getUpdateCache() { return updateCache; }
 
 	public VectorType getSenseVectorsType()
 	{

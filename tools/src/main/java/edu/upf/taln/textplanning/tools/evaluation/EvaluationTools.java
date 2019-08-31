@@ -9,7 +9,8 @@ import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.corpus.*;
-import edu.upf.taln.textplanning.core.io.CandidatesCollector;
+import edu.upf.taln.textplanning.core.dictionaries.CandidatesCollector;
+import edu.upf.taln.textplanning.core.dictionaries.CompactDictionary;
 import edu.upf.taln.textplanning.core.ranking.Disambiguation;
 import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
@@ -82,17 +83,23 @@ public class EvaluationTools
 
 	}
 
-	public static Map<Corpora.Text, DocumentResourcesFactory> createResources(Corpora.Corpus corpus, POS.Tagset tagset, InitialResourcesFactory intitial_resources,
+	public static Map<Corpora.Text, DocumentResourcesFactory> createResources(Corpora.Corpus corpus, POS.Tagset tagset, InitialResourcesFactory initial_resources,
 	                                                                          int max_span_size, Set<POS.Tag> ignored_POS_Tags, Options options)
 	{
 		log.info("Creating resources for corpus");
 		Stopwatch timer = Stopwatch.createStarted();
 
+		// single content words and multiwords
+		final List<List<Mention>> mentions = corpus.texts.stream()
+				.map(text -> collectMentions(text, tagset, max_span_size, ignored_POS_Tags, initial_resources.getLanguage()))
+				.collect(toList());
+		createCache(mentions, initial_resources);
+
 		Map<Corpora.Text, DocumentResourcesFactory> texts2resources = new HashMap<>();
 		for (int i = 0; i < corpus.texts.size(); ++i)
 		{
 			final Corpora.Text text = corpus.texts.get(i);
-			texts2resources.put(text, createResources(text, tagset, intitial_resources, max_span_size, ignored_POS_Tags, true, options));
+			texts2resources.put(text, createResources(text, mentions.get(i), initial_resources, true, options));
 		}
 
 		log.info("Corpus resources created in " + timer.stop() + "\n");
@@ -101,16 +108,22 @@ public class EvaluationTools
 
 
 	public static DocumentResourcesFactory createJointResources(Corpora.Corpus corpus, POS.Tagset tagset,
-	                                                            InitialResourcesFactory intitial_resources, int max_span_size,
+	                                                            InitialResourcesFactory initial_resources, int max_span_size,
 	                                                            Set<POS.Tag> ignored_POS_Tags, Options options)
 	{
 		log.info("Creating resources for corpus");
 		Stopwatch timer = Stopwatch.createStarted();
 
+		// single content words and multiwords
+		final List<List<Mention>> mentions = corpus.texts.stream()
+				.map(text -> collectMentions(text, tagset, max_span_size, ignored_POS_Tags, initial_resources.getLanguage()))
+				.collect(toList());
+		createCache(mentions, initial_resources);
+
 		for (int i = 0; i < corpus.texts.size(); ++i)
 		{
 			final Corpora.Text text = corpus.texts.get(i);
-			createResources(text, tagset, intitial_resources, max_span_size, ignored_POS_Tags, false, options);
+			createResources(text, mentions.get(i), initial_resources, false, options);
 		}
 
 		final List<Corpora.Sentence> sentences = corpus.texts.stream()
@@ -122,16 +135,16 @@ public class EvaluationTools
 				.flatMap(List::stream)
 				.collect(toList());
 
-		CorpusContextFunction context = new CorpusContextFunction(sentences, candidates_list, intitial_resources.getLanguage(), options.min_context_freq, options.window_size);
-		DocumentResourcesFactory resouces = new DocumentResourcesFactory(intitial_resources, options, candidates_list, context);
+		CorpusContextFunction context = new CorpusContextFunction(sentences, candidates_list, initial_resources.getLanguage(), options.min_context_freq, options.window_size);
+		DocumentResourcesFactory resources = new DocumentResourcesFactory(initial_resources, options, candidates_list, context);
+
 		log.info("Corpus resources created in " + timer.stop() + "\n");
 
-		return resouces;
+		return resources;
 	}
 
-	public static DocumentResourcesFactory createResources(Corpora.Text text, POS.Tagset tagset,
-	                                                       InitialResourcesFactory initial_resources, int max_span_size,
-	                                                       Set<POS.Tag> ignored_POS_Tags, boolean create_context, Options options)
+	private static DocumentResourcesFactory createResources(Corpora.Text text, List<Mention> mentions,
+	                                                       InitialResourcesFactory initial_resources, boolean create_context, Options options)
 	{
 		log.info("Creating resources for document " + text.id  + " ( " + text.filename +  ")");
 		Stopwatch timer = Stopwatch.createStarted();
@@ -139,7 +152,6 @@ public class EvaluationTools
 		try
 		{
 			final ULocale language = initial_resources.getLanguage();
-			final List<Mention> mentions = collectMentions(text, tagset, max_span_size, ignored_POS_Tags, language); // single content words and multiwords
 			final Map<Mention, List<Candidate>> candidates = CandidatesCollector.collect(initial_resources.getDictionary(), language, mentions);
 
 			// assign mentions and candidates to sentences in corpus
@@ -154,6 +166,7 @@ public class EvaluationTools
 				candidates.keySet().stream()
 						.filter(m -> m.getContextId().equals(sentence.id))
 						.forEach(m -> sentence.candidate_meanings.put(m, candidates.get(m)));
+
 			});
 
 			final List<Candidate> text_candidates = text.sentences.stream()
@@ -175,6 +188,21 @@ public class EvaluationTools
 			log.error("Cannot load resources for text " + text.id  + " ( " + text.filename +  "): " + e);
 			e.printStackTrace();
 			return null;
+		}
+	}
+
+	private static void createCache(List<List<Mention>> mentions, InitialResourcesFactory initial_resources)
+	{
+		if (initial_resources.getCache() == null && initial_resources.getProperties().getCachePath() != null)
+		{
+			log.info("Creating cache from corpus candidates");
+			final Set<Pair<String, POS.Tag>> forms = mentions.stream()
+					.flatMap(List::stream)
+					.map(m -> Pair.of(m.getSurfaceForm(), m.getPOS()))
+					.collect(toSet());
+			CompactDictionary cache = new CompactDictionary(initial_resources.getLanguage(), forms, initial_resources.getBase());
+			initial_resources.setCache(cache);
+			cache.serialize(initial_resources.getProperties().getCachePath());
 		}
 	}
 

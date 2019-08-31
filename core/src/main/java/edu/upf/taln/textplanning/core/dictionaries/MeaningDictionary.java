@@ -1,8 +1,9 @@
-package edu.upf.taln.textplanning.core.structures;
+package edu.upf.taln.textplanning.core.dictionaries;
 
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.utils.POS;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 
 import java.util.*;
 
@@ -19,7 +20,7 @@ public interface MeaningDictionary
 	Optional<Boolean> isNE(String id);
 	List<String> getGlosses(String id, ULocale language);
 
-	Iterator<Pair<String, POS.Tag>> lexicon_iterator();
+	Iterator<Triple<String, POS.Tag, ULocale>> lexicon_iterator();
 	Set<Pair<String, POS.Tag>> getLexicalizations(ULocale language);
 	// List of lexicalizations sorted according to dictionary criteria
 	List<Pair<String, POS.Tag>> getLexicalizations(String id);

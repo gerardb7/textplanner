@@ -203,7 +203,7 @@ public class Driver
 			}
 			case get_system_UIMA_command:
 			{
-				getSystemMeaningsUIMA(system_uima.texts, system_uima.output, properties.getDictionary(), properties.getIdfPath(), properties.getWordVectorsPath());
+				getSystemMeaningsUIMA(system_uima.texts, system_uima.output, properties.getDictionaryPath(), properties.getIdfPath(), properties.getWordVectorsPath());
 				break;
 			}
 			case get_system_command:

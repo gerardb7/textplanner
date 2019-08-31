@@ -3,7 +3,7 @@ package edu.upf.taln.textplanning.babelnet;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterators;
 import com.ibm.icu.util.ULocale;
-import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
+import edu.upf.taln.textplanning.core.dictionaries.MeaningDictionary;
 import edu.upf.taln.textplanning.core.utils.POS;
 import it.uniroma1.lcl.babelnet.*;
 import it.uniroma1.lcl.babelnet.data.BabelGloss;
@@ -14,6 +14,7 @@ import it.uniroma1.lcl.jlt.Configuration;
 import it.uniroma1.lcl.jlt.ling.Word;
 import it.uniroma1.lcl.jlt.util.Language;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -249,11 +250,11 @@ public class BabelNetDictionary implements MeaningDictionary
 	}
 
 	@Override
-	public Iterator<Pair<String, POS.Tag>> lexicon_iterator()
+	public Iterator<Triple<String, POS.Tag, ULocale>> lexicon_iterator()
 	{
 		return Iterators.transform(bn.getLexiconIterator(), w -> {
 			Objects.requireNonNull(w);
-			return Pair.of(w.getWord(), POS.BabelNet.get(w.getPOS().getTag()));
+			return Triple.of(w.getWord(), POS.BabelNet.get(w.getPOS().getTag()), new ULocale(w.getLanguage().name()));
 		});
 	}
 

@@ -1,4 +1,4 @@
-package edu.upf.taln.textplanning.core.io;
+package edu.upf.taln.textplanning.core.structures;
 
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 

@@ -2,7 +2,7 @@ package edu.upf.taln.textplanning.tools;
 
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.Options;
-import edu.upf.taln.textplanning.core.structures.MeaningDictionary;
+import edu.upf.taln.textplanning.core.dictionaries.MeaningDictionary;
 import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
 import edu.upf.taln.textplanning.core.similarity.VectorsSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
