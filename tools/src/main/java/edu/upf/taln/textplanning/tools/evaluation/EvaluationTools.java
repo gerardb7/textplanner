@@ -89,6 +89,9 @@ public class EvaluationTools
 		log.info("Creating resources for corpus");
 		Stopwatch timer = Stopwatch.createStarted();
 
+		if (initial_resources.getDictionary() == null)
+			throw new RuntimeException("Cannot create resources without a dictionary");
+
 		// single content words and multiwords
 		final List<List<Mention>> mentions = corpus.texts.stream()
 				.map(text -> collectMentions(text, tagset, max_span_size, ignored_POS_Tags, initial_resources.getLanguage()))
@@ -111,8 +114,11 @@ public class EvaluationTools
 	                                                            InitialResourcesFactory initial_resources, int max_span_size,
 	                                                            Set<POS.Tag> ignored_POS_Tags, Options options)
 	{
-		log.info("Creating resources for corpus");
+		log.info("\nCreating resources for corpus");
 		Stopwatch timer = Stopwatch.createStarted();
+
+		if (initial_resources.getDictionary() == null)
+			throw new RuntimeException("Cannot create resources without a dictionary");
 
 		// single content words and multiwords
 		final List<List<Mention>> mentions = corpus.texts.stream()
@@ -146,7 +152,7 @@ public class EvaluationTools
 	private static DocumentResourcesFactory createResources(Corpora.Text text, List<Mention> mentions,
 	                                                       InitialResourcesFactory initial_resources, boolean create_context, Options options)
 	{
-		log.info("Creating resources for document " + text.id  + " ( " + text.filename +  ")");
+		log.info("\nCreating resources for document " + text.id  + " ( " + text.filename +  ")");
 		Stopwatch timer = Stopwatch.createStarted();
 
 		try
@@ -193,16 +199,16 @@ public class EvaluationTools
 
 	private static void createCache(List<List<Mention>> mentions, InitialResourcesFactory initial_resources)
 	{
-		if (initial_resources.getCache() == null && initial_resources.getProperties().getCachePath() != null)
+		if (initial_resources.getCache() == null && initial_resources.isCachePathSet())
 		{
 			log.info("Creating cache from corpus candidates");
 			final Set<Pair<String, POS.Tag>> forms = mentions.stream()
 					.flatMap(List::stream)
 					.map(m -> Pair.of(m.getSurfaceForm(), m.getPOS()))
 					.collect(toSet());
-			CompactDictionary cache = new CompactDictionary(initial_resources.getLanguage(), forms, initial_resources.getBase());
+			CompactDictionary cache = new CompactDictionary(initial_resources.getLanguage(), forms,
+					initial_resources.getBase(), initial_resources.getProperties().getCachePath());
 			initial_resources.setCache(cache);
-			cache.serialize(initial_resources.getProperties().getCachePath());
 		}
 	}
 

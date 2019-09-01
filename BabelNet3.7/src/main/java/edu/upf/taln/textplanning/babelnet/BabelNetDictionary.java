@@ -108,7 +108,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		catch (Exception e)
 		{
 			log.warn("BabelNet error: " + e);
-			return Collections.emptySet();
+			return new HashSet<>();
 		}
 	}
 
@@ -131,7 +131,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		catch (Exception e)
 		{
 			log.warn("BabelNet error: " + e);
-			return Collections.emptyList();
+			return new ArrayList<>();
 		}
 	}
 
@@ -158,7 +158,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		catch (Exception e)
 		{
 			log.warn("BabelNet error: " + e);
-			return Collections.emptyList();
+			return new ArrayList<>();
 		}
 	}
 
@@ -220,13 +220,13 @@ public class BabelNetDictionary implements MeaningDictionary
 		{
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
-				return Collections.emptyList();
+				return new ArrayList<>();
 			return synset.getDBPediaURIs(Language.EN);
 		}
 		catch (Exception e)
 		{
 			log.warn("BabelNet error: " + e);
-			return Collections.emptyList();
+			return new ArrayList<>();
 		}
 	}
 
@@ -237,7 +237,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		{
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
-				return Collections.emptyList();
+				return new ArrayList<>();
 			return synset.getGlosses(Language.fromISO(language.toLanguageTag())).stream()
 					.map(BabelGloss::getGloss)
 					.collect(toList());
@@ -245,7 +245,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		catch (Exception e)
 		{
 			log.warn("BabelNet error: " + e);
-			return Collections.emptyList();
+			return new ArrayList<>();
 		}
 	}
 
@@ -287,7 +287,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		catch (Exception e)
 		{
 			log.warn("BabelNet error: " + e);
-			return Collections.emptySet();
+			return new HashSet<>();
 		}
 	}
 
@@ -298,7 +298,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		{
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
-				return Collections.emptyList();
+				return new ArrayList<>();
 			return synset.getSenses().stream()
 					.map(sense -> Pair.of(sense.getSimpleLemma(), POS.BabelNet.get(sense.getPOS().getTag())))
 					.collect(toList());
@@ -306,7 +306,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		catch (Exception e)
 		{
 			log.warn("BabelNet error: " + e);
-			return Collections.emptyList();
+			return new ArrayList<>();
 		}
 	}
 
@@ -317,7 +317,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		{
 			final BabelSynset synset = bn.getSynset(new BabelSynsetID(id));
 			if (synset == null)
-				return Collections.emptyList();
+				return new ArrayList<>();
 			return synset.getSenses(Language.fromISO(language.toLanguageTag())).stream()
 					.map(sense -> Pair.of(sense.getSimpleLemma(), POS.BabelNet.get(sense.getPOS().getTag())))
 					.collect(toList());
@@ -325,7 +325,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		catch (Exception e)
 		{
 			log.warn("BabelNet error: " + e);
-			return Collections.emptyList();
+			return new ArrayList<>();
 		}
 	}
 }

@@ -132,10 +132,33 @@ public class CandidatesCollector
 	                    BiFunction<String, Character, List<String>> meanings_function,
 	                    Consumer<Path> serializer)
 	{
-		final Stopwatch timer = Stopwatch.createStarted();
 		collectMeanings(dictionary, language, file, meanings_consumer, label_function, glosses_function, serializer);
 		collectLexicalizations(dictionary, language, file, lexicalizations_consumer, meanings_function, serializer);
-		log.info("ALL DONE in " + timer.stop());
+	}
+
+	// Collects all meanings for a given set of lexicalizations from a dictionary.
+	// Then adds lexicalization and meanings info to cache
+	public static  void collect(Set<Pair<String, POS.Tag>> forms, MeaningDictionary dictionary,
+	                            ULocale language, Path file,
+	                            TriConsumer<String, String, List<String>> meanings_consumer,
+	                            TriConsumer<String, Character, List<String>> lexicalizations_consumer,
+	                            Function<String, Optional<String>> label_function,
+	                            Function<String, List<String>> glosses_function,
+	                            BiFunction<String, Character, List<String>> meanings_function,
+	                            Consumer<Path> serializer)
+	{
+		final List<Triple<String, Character, List<String>>> lexicalizations_info =
+				CandidatesCollector.addLexicalizations(forms, dictionary, language, lexicalizations_consumer);
+		CandidatesCollector.checkLexicalizations(lexicalizations_info, meanings_function);
+
+		Set<String> meanings = lexicalizations_info.stream()
+				.map(Triple::getRight)
+				.flatMap(List::stream)
+				.collect(toSet());
+		final List<Triple<String, String, List<String>>> meanings_info =
+				CandidatesCollector.addMeanings(meanings, dictionary, language, meanings_consumer);
+		CandidatesCollector.checkMeanings(meanings_info, label_function, glosses_function);
+		serializer.accept(file);
 	}
 
 	private static void collectMeanings(MeaningDictionary dictionary, ULocale language, Path file,
@@ -165,36 +188,20 @@ public class CandidatesCollector
 			iterate_counter += i;
 			log.info(iterate_counter + " meanings iterated and collected from dictionary");
 
-			// Add meanings
-			final List<Triple<String, String, List<String>>> meanings_info = addMeanings(meanings, dictionary, language, meanings_consumer);
+			// Query meanings in dictionary and add them to cache
+			final List<Triple<String, String, List<String>>> meanings_info =
+					addMeanings(meanings, dictionary, language, meanings_consumer);
+			checkMeanings(meanings_info, label_function, glosses_function);
 			serializer.accept(file);
-
-			// Run integrity tests
-			log.info("Checking meanings");
-			meanings_info.forEach(info ->
-			{
-				final String meaning = info.getLeft();
-				final String dict_label = info.getMiddle();
-				final List<String> dict_glosses = info.getRight();
-
-				final String cache_label = label_function.apply(meaning).orElse("");
-				if (!dict_label.equals(cache_label))
-					log.error("Labels do not match for meaning " + meaning + ": dictionary label is \"" + dict_label + "\" and cache label is \"" + cache_label + "\"");
-
-				final List<String> cache_glosses = glosses_function.apply(meaning);
-				// ignore order when comparing
-				if (!CollectionUtils.isEqualCollection(dict_glosses, cache_glosses))
-					log.error("Glosses mismatch for meaning " + meaning + ": dictionary glosses are \n\t" + dict_glosses + "\ncache label are \n\t" + cache_glosses);
-			});
 
 			log.info("Chunk completed in " + timer.stop());
 		}
 		log.info("\n***All meanings collected in " + gtimer.stop() + "***\n");
 	}
 
-	public static List<Triple<String, String, List<String>>> addMeanings(
-			Collection<String> meanings, MeaningDictionary dictionary, ULocale language,
-			TriConsumer<String, String, List<String>> meanings_consumer)
+	private static List<Triple<String, String, List<String>>> addMeanings( Collection<String> meanings,
+                                    MeaningDictionary dictionary, ULocale language,
+	                                TriConsumer<String, String, List<String>> meanings_consumer)
 	{
 		final DebugUtils.ThreadReporter reporter = new DebugUtils.ThreadReporter(log);
 		final Stopwatch timer = Stopwatch.createStarted();
@@ -239,9 +246,31 @@ public class CandidatesCollector
 		meanings_info.forEach(info ->
 				meanings_consumer.accept(info.getLeft(), info.getMiddle(), info.getRight())
 		);
-		log.info(meanings_info.size() + " meanings added to cache");
+		log.info(meanings_info.size() + " meanings passed to cache");
 
 		return meanings_info;
+	}
+
+	private static void checkMeanings(List<Triple<String, String, List<String>>> meanings_info,
+	                                  Function<String, Optional<String>> label_function,
+	                                  Function<String, List<String>> glosses_function)
+	{
+		log.info("Checking meanings");
+		meanings_info.forEach(info ->
+		{
+			final String meaning = info.getLeft();
+			final String dict_label = info.getMiddle();
+			final List<String> dict_glosses = info.getRight();
+
+			final String cache_label = label_function.apply(meaning).orElse("");
+			if (!dict_label.equals(cache_label))
+				log.error("Labels do not match for meaning " + meaning + ": dictionary label is \"" + dict_label + "\" and cache label is \"" + cache_label + "\"");
+
+			final List<String> cache_glosses = glosses_function.apply(meaning);
+			// ignore order when comparing
+			if (!CollectionUtils.isEqualCollection(dict_glosses, cache_glosses))
+				log.error("Glosses mismatch for meaning " + meaning + ": dictionary glosses are \n\t" + dict_glosses + "\ncache label are \n\t" + cache_glosses);
+		});
 	}
 
 	private static void collectLexicalizations(MeaningDictionary dictionary, ULocale language, Path file,
@@ -273,32 +302,20 @@ public class CandidatesCollector
 			iterate_counter += i;
 			log.info(iterate_counter + " lexicalizations iterated and " + lexicalizations.size() + " collected");
 
-			// Add lexicalizations
-			final List<Triple<String, Character, List<String>>> lexicalizations_info = addLexicalizations(lexicalizations, dictionary, language, lexicalizations_consumer);
+			// Query lexicalizations in dictionary and add to cache
+			final List<Triple<String, Character, List<String>>> lexicalizations_info =
+					addLexicalizations(lexicalizations, dictionary, language, lexicalizations_consumer);
+			checkLexicalizations(lexicalizations_info, meanings_function);
 			serializer.accept(file);
-
-			// Run integrity tests
-			log.info("Checking lexicalizations");
-			lexicalizations_info.forEach(info ->
-			{
-				final String word = info.getLeft();
-				final Character pos_tag = info.getMiddle();
-				final List<String> dict_meanings = info.getRight();
-
-				final List<String> cache_meanings = meanings_function.apply(word, pos_tag);
-				// Due to non-deterministic order in list of meanings returned by the BabelNet API (affecting the last meanings of the list), compare elements in list while ignoring order
-				if (!CollectionUtils.isEqualCollection(dict_meanings, cache_meanings))
-					log.error("\tMeanings mismatch for lexicalization " + word + " and POS " + pos_tag + ": \n\t\tdictionary meanings are " + dict_meanings + "\n\t\tcache meanings are " + cache_meanings);
-			});
 
 			log.info("Chunk completed in " + timer.stop());
 		}
 		log.info("All lexicalizations collected in " + gtimer.stop() + "\n");
 	}
 
-	public static List<Triple<String, Character, List<String>>> addLexicalizations(
-			Collection<Pair<String, POS.Tag>> lexicalizations, MeaningDictionary dictionary, ULocale language,
-	        TriConsumer<String, Character, List<String>> lexicalizations_consumer)
+	private static List<Triple<String, Character, List<String>>> addLexicalizations(Collection<Pair<String, POS.Tag>> lexicalizations,
+	                                      MeaningDictionary dictionary, ULocale language,
+	                                      TriConsumer<String, Character, List<String>> lexicalizations_consumer)
 	{
 		final DebugUtils.ThreadReporter reporter = new DebugUtils.ThreadReporter(log);
 		final Stopwatch timer = Stopwatch.createStarted();
@@ -332,9 +349,26 @@ public class CandidatesCollector
 			final List<String> l_meanings = info.getRight();
 			lexicalizations_consumer.accept(word, pos_tag, l_meanings);
 		});
-		log.info(lexicalizations_info.size() + " lexicalizations added to cache");
+		log.info(lexicalizations_info.size() + " lexicalizations passed to cache");
 
-		return  lexicalizations_info;
+		return lexicalizations_info;
+	}
+
+	private static void checkLexicalizations(List<Triple<String, Character, List<String>>> lexicalizations_info,
+	                                         BiFunction<String, Character, List<String>> meanings_function)
+	{
+		log.info("Checking lexicalizations");
+		lexicalizations_info.forEach(info ->
+		{
+			final String word = info.getLeft();
+			final Character pos_tag = info.getMiddle();
+			final List<String> dict_meanings = info.getRight();
+
+			final List<String> cache_meanings = meanings_function.apply(word, pos_tag);
+			// Due to non-deterministic order in list of meanings returned by the BabelNet API (affecting the last meanings of the list), compare elements in list while ignoring order
+			if (!CollectionUtils.isEqualCollection(dict_meanings, cache_meanings))
+				log.error("\tMeanings mismatch for lexicalization " + word + " and POS " + pos_tag + ": \n\t\tdictionary meanings are " + dict_meanings + "\n\t\tcache meanings are " + cache_meanings);
+		});
 	}
 
 	private static List<String> getReferences(MeaningDictionary dictionary, ULocale language, Mention mention)

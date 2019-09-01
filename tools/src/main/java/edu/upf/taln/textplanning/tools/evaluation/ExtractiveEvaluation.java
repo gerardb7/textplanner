@@ -181,6 +181,7 @@ public class ExtractiveEvaluation
 		}
 		catch (Exception e)
 		{
+			e.printStackTrace();
 			throw new Exception("Failed to process corpus " + e);
 		}
 	}

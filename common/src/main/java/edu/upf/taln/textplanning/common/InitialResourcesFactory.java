@@ -11,6 +11,7 @@ import edu.upf.taln.textplanning.core.similarity.CosineSimilarity;
 import edu.upf.taln.textplanning.core.similarity.vectors.*;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -49,21 +50,20 @@ public class InitialResourcesFactory
 		this.language = language;
 		this.properties = properties;
 
-		if (properties.getCachePath() != null && Files.exists(properties.getCachePath()) &&
-			properties.getDictionaryPath() == null)
+		if (isCachePathSet() && Files.exists(properties.getCachePath()) && !isDictionaryPathSet())
 		{
 			base = null;
 			cache = (CompactDictionary) Serializer.deserialize(properties.getCachePath());
 			dictionary = new CachedDictionary(cache);
 		}
-		else if (properties.getCachePath() != null && Files.exists(properties.getCachePath()) &&
-				properties.getDictionaryPath() != null && Files.exists(properties.getDictionaryPath()))
+		else if (isCachePathSet() && Files.exists(properties.getCachePath()) &&
+				isDictionaryPathSet() && Files.exists(properties.getDictionaryPath()))
 		{
 			base = new BabelNetDictionary(properties.getDictionaryPath());
 			cache = (CompactDictionary) Serializer.deserialize(properties.getCachePath());
 			dictionary =  new CachedDictionary(base, cache);
 		}
-		else if (properties.getDictionaryPath() != null && Files.exists(properties.getDictionaryPath()))
+		else if (isDictionaryPathSet() && Files.exists(properties.getDictionaryPath()))
 		{
 			base = new BabelNetDictionary(properties.getDictionaryPath());
 			cache = null;
@@ -150,10 +150,14 @@ public class InitialResourcesFactory
 
 	public MeaningDictionary getBase() { return base; }
 
+	public boolean isDictionaryPathSet() { return properties.getDictionaryPath() != null && StringUtils.isNotBlank(properties.getDictionaryPath().toString()); }
+
 	public CompactDictionary getCache()
 	{
 		return cache;
 	}
+
+	public boolean isCachePathSet() { return properties.getCachePath() != null && StringUtils.isNotBlank(properties.getCachePath().toString()); }
 
 	public PlanningProperties getProperties()
 	{

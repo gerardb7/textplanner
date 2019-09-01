@@ -39,7 +39,7 @@ public class CachedDictionary implements MeaningDictionary
 	public Set<String> getMeanings(ULocale language)
 	{
 		if (base == null)
-			return Collections.emptySet();
+			return new HashSet<>();
 		return base.getMeanings(language);
 	}
 
@@ -47,7 +47,7 @@ public class CachedDictionary implements MeaningDictionary
 	public List<String> getMeanings(String form, ULocale language)
 	{
 		if (base == null)
-			return Collections.emptyList();
+			return new ArrayList<>();
 		return base.getMeanings(form, language);
 	}
 
@@ -59,7 +59,7 @@ public class CachedDictionary implements MeaningDictionary
 			if (base != null)
 				return base.getMeanings(word, pos, language);
 			else
-				return Collections.emptyList();
+				return new ArrayList<>();
 		}
 
 		final Character tag = POS.toTag.get(pos);
@@ -68,7 +68,7 @@ public class CachedDictionary implements MeaningDictionary
 		else if (base != null)
 			return base.getMeanings(word, pos, language);
 		else
-			return Collections.emptyList();
+			return new ArrayList<>();
 	}
 
 	@Override
@@ -112,7 +112,7 @@ public class CachedDictionary implements MeaningDictionary
 			if (base != null)
 				return base.getGlosses(id, language);
 			else
-				return Collections.emptyList();
+				return new ArrayList<>();
 		}
 
 		if (cache.contains(id))
@@ -120,7 +120,7 @@ public class CachedDictionary implements MeaningDictionary
 		else if (base != null)
 			return base.getGlosses(id, language);
 		else
-			return Collections.emptyList();
+			return new ArrayList<>();
 	}
 
 	@Override
@@ -136,7 +136,7 @@ public class CachedDictionary implements MeaningDictionary
 	public Set<Pair<String, POS.Tag>> getLexicalizations(ULocale language)
 	{
 		if (base == null)
-			return Collections.emptySet();
+			return new HashSet<>();
 		return base.getLexicalizations(language);
 	}
 
@@ -144,7 +144,7 @@ public class CachedDictionary implements MeaningDictionary
 	public List<Pair<String, POS.Tag>> getLexicalizations(String id)
 	{
 		if (base == null)
-			return Collections.emptyList();
+			return new ArrayList<>();
 		return base.getLexicalizations(id);
 	}
 
@@ -152,7 +152,7 @@ public class CachedDictionary implements MeaningDictionary
 	public List<Pair<String, POS.Tag>> getLexicalizations(String id, ULocale language)
 	{
 		if (base == null)
-			return Collections.emptyList();
+			return new ArrayList<>();
 		return base.getLexicalizations(id, language);
 	}
 

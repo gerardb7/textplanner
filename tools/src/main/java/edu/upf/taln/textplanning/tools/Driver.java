@@ -24,7 +24,6 @@ import java.util.Date;
 
 public class Driver
 {
-	private final static ULocale language = new ULocale("es");
 	private static final String semeval_command = "semeval";
 	public static final String disambiguation_eval_command = "wsdeval";
 	private static final String rank_eval_command = "rankeval";
@@ -38,6 +37,9 @@ public class Driver
 		@Parameter(names = {"-p", "-properties"}, description = "Path to properties file", arity = 1, required = true,
 				converter = CMLCheckers.PathConverter.class, validateWith = CMLCheckers.PathToExistingFile.class)
 		protected Path properties;
+		@Parameter(names = {"-l", "-language"}, description = "ISO 639-1 code of the language to be used to collect meanings", arity = 1,
+				converter = CMLCheckers.ULocaleConverter.class, validateWith = CMLCheckers.ULocaleValidator.class)
+		protected ULocale language = new ULocale("en");
 	}
 
 	@SuppressWarnings("unused")
@@ -96,9 +98,6 @@ public class Driver
 	@Parameters(commandDescription = "Collect meanings info from a dictionary and stores them into a binary file")
 	private static class CollectMeaningsCommand extends BaseCommand
 	{
-		@Parameter(names = {"-l", "-language"}, description = "ISO 639-1 code of the language to be used to collect meanings", arity = 1, required = true,
-			converter = CMLCheckers.ULocaleConverter.class, validateWith = CMLCheckers.ULocaleValidator.class)
-		private ULocale language;
 	}
 
 	@SuppressWarnings("unused")
@@ -146,7 +145,7 @@ public class Driver
 			case semeval_command:
 			{
 				PlanningProperties properties = new PlanningProperties(semEval.properties);
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
+				InitialResourcesFactory resources = new InitialResourcesFactory(semEval.language, properties);
 				SemEvalEvaluation eval = new SemEvalEvaluation(semEval.gold_file, semEval.input_file, semEval.output, resources);
 				if (semEval.batch)
 					eval.run_batch();
@@ -157,7 +156,7 @@ public class Driver
 			case disambiguation_eval_command:
 			{
 				PlanningProperties properties = new PlanningProperties(wsdEval.properties);
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
+				InitialResourcesFactory resources = new InitialResourcesFactory(wsdEval.language, properties);
 				GoldDisambiguationEvaluation eval = new GoldDisambiguationEvaluation(wsdEval.gold_file, wsdEval.input_file, resources);
 				if (wsdEval.batch)
 					eval.run_batch();
@@ -168,7 +167,7 @@ public class Driver
 			case rank_eval_command:
 			{
 				PlanningProperties properties = new PlanningProperties(rankEval.properties);
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
+				InitialResourcesFactory resources = new InitialResourcesFactory(rankEval.language, properties);
 				RankingEvaluation.run(rankEval.gold_file, rankEval.input_file, resources);
 				break;
 			}
@@ -182,13 +181,13 @@ public class Driver
 				PlanningProperties properties = new PlanningProperties(meanings.properties);
 				//InitialResourcesFactory resources = new InitialResourcesFactory(meanings.language, properties);
 				MeaningDictionary base = new BabelNetDictionary(properties.getDictionaryPath());
-				CompactDictionary cache = new CompactDictionary(language, base, properties.getCachePath());
+				new CompactDictionary(meanings.language, base, properties.getCachePath());
 				break;
 			}
 			case create_context_vectors:
 			{
-				PlanningProperties properties = new PlanningProperties(context.properties);
-				InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
+				//PlanningProperties properties = new PlanningProperties(context.properties);
+				//InitialResourcesFactory resources = new InitialResourcesFactory(context.language, properties);
 				//ContextVectorsProducer.createVectors(context.meanings, context.chunk_size, context.output, resources, context.glosses_only);
 				break;
 			}
