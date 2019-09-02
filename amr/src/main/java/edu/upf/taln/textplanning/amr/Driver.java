@@ -5,17 +5,23 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
-import edu.upf.taln.textplanning.amr.io.*;
+import edu.upf.taln.textplanning.amr.io.AMRGraphListFactory;
+import edu.upf.taln.textplanning.amr.io.AMRReader;
+import edu.upf.taln.textplanning.amr.io.AMRSemanticGraphFactory;
+import edu.upf.taln.textplanning.amr.io.AMRWriter;
 import edu.upf.taln.textplanning.amr.structures.AMRAlignments;
 import edu.upf.taln.textplanning.amr.structures.AMRGraph;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.amr.utils.EmpiricalStudy;
-import edu.upf.taln.textplanning.common.*;
+import edu.upf.taln.textplanning.babelnet.BabelNetDictionary;
+import edu.upf.taln.textplanning.core.utils.CMLCheckers;
 import edu.upf.taln.textplanning.core.Options;
-import edu.upf.taln.textplanning.core.TextPlanner;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.bias.ContextFunction;
 import edu.upf.taln.textplanning.core.ranking.DifferentMentionsFilter;
+import edu.upf.taln.textplanning.core.resources.DocumentResourcesFactory;
+import edu.upf.taln.textplanning.core.resources.InitialResourcesFactory;
+import edu.upf.taln.textplanning.core.resources.PlanningProperties;
 import edu.upf.taln.textplanning.core.similarity.SimilarityFunction;
 import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors.SentenceVectorType;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
@@ -23,7 +29,9 @@ import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
 import edu.upf.taln.textplanning.core.structures.SemanticGraph;
 import edu.upf.taln.textplanning.core.structures.SemanticSubgraph;
+import edu.upf.taln.textplanning.core.utils.FileUtils;
 import edu.upf.taln.textplanning.core.utils.POS;
+import edu.upf.taln.textplanning.core.utils.Serializer;
 import main.AmrMain;
 import net.sf.extjwnl.JWNLException;
 import org.apache.commons.io.FilenameUtils;
@@ -118,7 +126,7 @@ public class Driver
 		final SimilarityFunction sim = process.getSimilarityFunction();
 		final BiPredicate<String, String> meanings_filter = process.getMeaningPairsSimilarityFilter();
 		final Predicate<Candidate> candidates_filter = process.getCandidatesFilter();
-		TextPlanner.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
+		//Disambiguator.rankMeanings(candidates, candidates_filter, meanings_filter, context_weighter, sim, options);
 
 		Path output = FileUtils.createOutputPath(graphs_file, graphs_file.getParent(),
 				FilenameUtils.getExtension(graphs_file.toFile().getName()), graphs_ranked1_suffix);
@@ -167,7 +175,7 @@ public class Driver
 
 		Options options = new Options();
 		options.num_subgraphs_extract = num_subgraphs;
-		final Collection<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(graph, new AMRSemantics(), options);
+		final Collection<SemanticSubgraph> subgraphs = null; // Planner.extractSubgraphs(graph, new AMRSemantics(), options);
 
 		Path output = FileUtils.createOutputPath(graph_file, graph_file.getParent(),
 				FilenameUtils.getExtension(graph_file.toFile().getName()), subgraphs_suffix);
@@ -344,19 +352,19 @@ public class Driver
 			Serializer.serialize(graph, output_path);
 
 			// 5- Extract subgraphs
-			List<SemanticSubgraph> subgraphs = TextPlanner.extractSubgraphs(graph, new AMRSemantics(), options);
+			List<SemanticSubgraph> subgraphs = null; // Planner.extractSubgraphs(graph, new AMRSemantics(), options);
 			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
 					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), subgraphs_suffix);
 			Serializer.serialize(subgraphs, output_path);
 
 			// 6- Remove redundancy
-			subgraphs = TextPlanner.removeRedundantSubgraphs(subgraphs, similarity, options);
+			subgraphs = null; // Planner.removeRedundantSubgraphs(subgraphs, similarity, options);
 			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
 					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), non_redundant_suffix);
 			Serializer.serialize(subgraphs, output_path);
 
 			// 6- sort subgraphs
-			List<SemanticSubgraph> sorted_subgraphs = TextPlanner.sortSubgraphs(subgraphs, similarity, options);
+			List<SemanticSubgraph> sorted_subgraphs = null; // Planner.sortSubgraphs(subgraphs, similarity, options);
 			output_path = FileUtils.createOutputPath(amr_bank_file, amr_bank_file.getParent().resolve(output_folder),
 					FilenameUtils.getExtension(amr_bank_file.toFile().getName()), sorted_suffix);
 			Serializer.serialize(sorted_subgraphs, output_path);
@@ -629,12 +637,12 @@ public class Driver
 
 		if (jc.getParsedCommand().equals(create_graphs_command))
 		{
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, properties, BabelNetDictionary::new);
 			driver.create_graphs(create_graphs.inputFile, resources, create_graphs.no_stanford);
 		}
 		else if (jc.getParsedCommand().equals(rank_meanings_command))
 		{
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, properties, BabelNetDictionary::new);
 			driver.rank_meanings(rank_meanings.inputFile, resources);
 		}
 		else if (jc.getParsedCommand().equals(create_global_command))
@@ -645,12 +653,12 @@ public class Driver
 			driver.extract_subgraphs(extract_subgraphs.inputFile, extract_subgraphs.num_subgraphs);
 		else if (jc.getParsedCommand().equals(remove_redundancy_command))
 		{
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, properties, BabelNetDictionary::new);
 			driver.remove_redundancy(remove_redundancy.inputFile, remove_redundancy.num_subgraphs, resources);
 		}
 		else if (jc.getParsedCommand().equals(sort_subgraphs_command))
 		{
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, properties, BabelNetDictionary::new);
 			driver.sort_subgraphs(sort_subgraphs.inputFile, resources);
 		}
 		else if (jc.getParsedCommand().equals(write_amr_command))
@@ -660,7 +668,7 @@ public class Driver
 		/* --- */
 		else if (jc.getParsedCommand().equals(summarize_command))
 		{
-			InitialResourcesFactory resources = new InitialResourcesFactory(language, properties);
+			InitialResourcesFactory resources = new InitialResourcesFactory(language, properties, BabelNetDictionary::new);
 			driver.summarize(summarize.input, resources, summarize.no_stanford,summarize.num_extract,
 					summarize.generation_resources, summarize.max_words);
 		}

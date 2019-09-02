@@ -1,8 +1,10 @@
 package edu.upf.taln.textplanning.tools.evaluation;
 
-import edu.upf.taln.textplanning.common.DocumentResourcesFactory;
-import edu.upf.taln.textplanning.common.FileUtils;
-import edu.upf.taln.textplanning.common.InitialResourcesFactory;
+import edu.upf.taln.textplanning.core.Disambiguator;
+import edu.upf.taln.textplanning.core.resources.CorpusResourcesFactory;
+import edu.upf.taln.textplanning.core.resources.DocumentResourcesFactory;
+import edu.upf.taln.textplanning.core.utils.FileUtils;
+import edu.upf.taln.textplanning.core.resources.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.bias.BiasFunction;
 import edu.upf.taln.textplanning.core.structures.Candidate;
@@ -52,10 +54,10 @@ public class RankingEvaluation
 
 		final Map<String, Set<AlternativeMeanings>> gold = parseGoldFile(gold_file);
 		final Corpus corpus = Corpora.createFromXML(xml_file);
-		final Map<Corpora.Text, DocumentResourcesFactory> resources = EvaluationTools.createResources(corpus, tagset, resources_factory, max_span_size, excluded_mention_POS, options);
+		final Map<Corpora.Text, DocumentResourcesFactory> resources = CorpusResourcesFactory.create(corpus, tagset, resources_factory, max_span_size, excluded_mention_POS, options);
 
-		corpus.texts.forEach(text -> EvaluationTools.rankMeanings(text, resources.get(text), options));
-		corpus.texts.forEach(text -> EvaluationTools.disambiguate(text, options));
+		corpus.texts.forEach(text -> Disambiguator.rankMeanings(text, resources.get(text), options));
+		corpus.texts.forEach(text -> Disambiguator.disambiguate(text, options));
 
 		log.info("***\n" + options + "\n***");
 

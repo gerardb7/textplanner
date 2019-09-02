@@ -5,11 +5,10 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.babelnet.BabelNetDictionary;
-import edu.upf.taln.textplanning.common.CMLCheckers;
-import edu.upf.taln.textplanning.common.InitialResourcesFactory;
-import edu.upf.taln.textplanning.common.PlanningProperties;
+import edu.upf.taln.textplanning.core.utils.CMLCheckers;
+import edu.upf.taln.textplanning.core.resources.InitialResourcesFactory;
+import edu.upf.taln.textplanning.core.resources.PlanningProperties;
 import edu.upf.taln.textplanning.core.dictionaries.CompactDictionary;
-import edu.upf.taln.textplanning.core.dictionaries.MeaningDictionary;
 import edu.upf.taln.textplanning.tools.evaluation.ExtractiveEvaluation;
 import edu.upf.taln.textplanning.tools.evaluation.GoldDisambiguationEvaluation;
 import edu.upf.taln.textplanning.tools.evaluation.RankingEvaluation;
@@ -145,7 +144,7 @@ public class Driver
 			case semeval_command:
 			{
 				PlanningProperties properties = new PlanningProperties(semEval.properties);
-				InitialResourcesFactory resources = new InitialResourcesFactory(semEval.language, properties);
+				InitialResourcesFactory resources = new InitialResourcesFactory(semEval.language, properties, BabelNetDictionary::new);
 				SemEvalEvaluation eval = new SemEvalEvaluation(semEval.gold_file, semEval.input_file, semEval.output, resources);
 				if (semEval.batch)
 					eval.run_batch();
@@ -156,7 +155,7 @@ public class Driver
 			case disambiguation_eval_command:
 			{
 				PlanningProperties properties = new PlanningProperties(wsdEval.properties);
-				InitialResourcesFactory resources = new InitialResourcesFactory(wsdEval.language, properties);
+				InitialResourcesFactory resources = new InitialResourcesFactory(wsdEval.language, properties, BabelNetDictionary::new);
 				GoldDisambiguationEvaluation eval = new GoldDisambiguationEvaluation(wsdEval.gold_file, wsdEval.input_file, resources);
 				if (wsdEval.batch)
 					eval.run_batch();
@@ -167,7 +166,7 @@ public class Driver
 			case rank_eval_command:
 			{
 				PlanningProperties properties = new PlanningProperties(rankEval.properties);
-				InitialResourcesFactory resources = new InitialResourcesFactory(rankEval.language, properties);
+				InitialResourcesFactory resources = new InitialResourcesFactory(rankEval.language, properties, BabelNetDictionary::new);
 				RankingEvaluation.run(rankEval.gold_file, rankEval.input_file, resources);
 				break;
 			}
@@ -179,9 +178,11 @@ public class Driver
 			case collect_meanings_vectors:
 			{
 				PlanningProperties properties = new PlanningProperties(meanings.properties);
-				//InitialResourcesFactory resources = new InitialResourcesFactory(meanings.language, properties);
-				MeaningDictionary base = new BabelNetDictionary(properties.getDictionaryPath());
-				new CompactDictionary(meanings.language, base, properties.getCachePath());
+				InitialResourcesFactory resources = new InitialResourcesFactory(meanings.language, properties, BabelNetDictionary::new);
+				if (resources.getCache() == null)
+					new CompactDictionary(meanings.language, resources.getBase(), properties.getCachePath());
+				else
+					resources.getCache().update(resources.getBase(), properties.getCachePath());
 				break;
 			}
 			case create_context_vectors:

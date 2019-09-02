@@ -3,16 +3,24 @@ package edu.upf.taln.textplanning.tools.evaluation;
 import com.google.common.base.Stopwatch;
 import com.ibm.icu.util.ULocale;
 import com.rxnlp.tools.rouge.ROUGECalculator;
-import edu.upf.taln.textplanning.common.*;
+import edu.upf.taln.textplanning.babelnet.BabelNetDictionary;
+import edu.upf.taln.textplanning.core.Disambiguator;
 import edu.upf.taln.textplanning.core.Options;
+import edu.upf.taln.textplanning.core.Planner;
 import edu.upf.taln.textplanning.core.corpus.Corpora;
 import edu.upf.taln.textplanning.core.corpus.Corpora.Corpus;
 import edu.upf.taln.textplanning.core.corpus.Corpora.Token;
 import edu.upf.taln.textplanning.core.ranking.FunctionWordsFilter;
+import edu.upf.taln.textplanning.core.resources.CorpusResourcesFactory;
+import edu.upf.taln.textplanning.core.resources.DocumentResourcesFactory;
+import edu.upf.taln.textplanning.core.resources.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.structures.Mention;
-import edu.upf.taln.textplanning.core.summarization.Summarizer;
-import edu.upf.taln.textplanning.core.summarization.Summarizer.*;
+import edu.upf.taln.textplanning.core.Summarizer;
+import edu.upf.taln.textplanning.core.Summarizer.*;
+import edu.upf.taln.textplanning.core.utils.FileUtils;
 import edu.upf.taln.textplanning.core.utils.POS;
+import edu.upf.taln.textplanning.core.resources.PlanningProperties;
+import edu.upf.taln.textplanning.core.utils.Serializer;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -25,8 +33,8 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
-import static edu.upf.taln.textplanning.common.FileUtils.getFilesInFolder;
-import static edu.upf.taln.textplanning.core.summarization.Summarizer.*;
+import static edu.upf.taln.textplanning.core.utils.FileUtils.getFilesInFolder;
+import static edu.upf.taln.textplanning.core.Summarizer.*;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
 
@@ -151,12 +159,13 @@ public class ExtractiveEvaluation
 			Stopwatch process_timer = Stopwatch.createStarted();
 
 			PlanningProperties properties = new PlanningProperties(properties_file);
-			InitialResourcesFactory initial_resources = new InitialResourcesFactory(language, properties);
+			InitialResourcesFactory initial_resources = new InitialResourcesFactory(language, properties, BabelNetDictionary::new);
 
 			// Exclude Tag from mention collection
 			final Set<POS.Tag> excluded_mention_POS = Set.of(POS.Tag.X);
 
-			final Map<Corpora.Text, DocumentResourcesFactory> all_resources = EvaluationTools.createResources(corpus, tagset, initial_resources, max_span_size, excluded_mention_POS, options);
+			final Map<Corpora.Text, DocumentResourcesFactory> all_resources =
+					CorpusResourcesFactory.create(corpus, tagset, initial_resources, max_span_size, excluded_mention_POS, options);
 			corpus.texts.forEach(text ->
 			{
 				Stopwatch timer = Stopwatch.createStarted();
@@ -166,13 +175,13 @@ public class ExtractiveEvaluation
 				final DocumentResourcesFactory resources = all_resources.get(text);
 				if (!is_meaning_ranked)
 				{
-					EvaluationTools.rankMeanings(text, resources, options);
-					EvaluationTools.disambiguate(text, options);
+					Disambiguator.rankMeanings(text, resources, options);
+					Disambiguator.disambiguate(text, options);
 				}
 				if (!is_mention_ranked)
-					EvaluationTools.rankMentions(text, use_dependencies, context_size, options);
+					Planner.rankMentions(text, use_dependencies, context_size, options);
 				if (!is_planned)
-					EvaluationTools.plan(text, resources, use_dependencies, context_size, options);
+					Planner.plan(text, resources, use_dependencies, context_size, options);
 				log.info("Text processed in " + timer.toString());
 			});
 			log.info("Corpus processed in " + process_timer.stop());

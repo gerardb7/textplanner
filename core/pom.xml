@@ -77,6 +77,12 @@
             <artifactId>icu4j</artifactId>
             <version>63.1</version>
         </dependency>
+        <dependency>
+            <!--command line helper-->
+            <groupId>com.beust</groupId>
+            <artifactId>jcommander</artifactId>
+            <version>1.58</version>
+        </dependency>
         <!--XML parsing-->
         <dependency>
             <groupId>javax.xml.bind</groupId>

@@ -1,16 +1,15 @@
 package edu.upf.taln.textplanning.tools.evaluation;
 
-import edu.upf.taln.textplanning.common.FileUtils;
-import edu.upf.taln.textplanning.uima.io.TextParser;
+
+import edu.upf.taln.textplanning.core.utils.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.stream.IntStream;
 
-import static edu.upf.taln.textplanning.common.FileUtils.getFilesInFolder;
+import static edu.upf.taln.textplanning.core.utils.FileUtils.getFilesInFolder;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.joining;
 
@@ -19,9 +18,8 @@ public class DeepMind
 	private static final String document_extension = ".story";
 	private static final String summary_extension = ".summ";
 
-	public static class DeepMindSourceParser extends TextParser
+	public static class DeepMindSourceParser
 	{
-		@Override
 		protected String parse(String file_contents)
 		{
 			final String[] parts = file_contents.split("@highlight");
@@ -33,9 +31,8 @@ public class DeepMind
 		}
 	}
 
-	public static class DeepMindSummaryParser extends TextParser
+	public static class DeepMindSummaryParser
 	{
-		@Override
 		protected String parse(String file_contents)
 		{
 			final String[] parts = file_contents.split("^\\s*@highlight\\s*$");

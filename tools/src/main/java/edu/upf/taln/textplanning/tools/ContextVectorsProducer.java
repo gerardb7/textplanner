@@ -1,24 +1,7 @@
 package edu.upf.taln.textplanning.tools;
 
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.Lists;
-import edu.upf.taln.textplanning.common.FileUtils;
-import edu.upf.taln.textplanning.common.InitialResourcesFactory;
-import edu.upf.taln.textplanning.common.Serializer;
-import edu.upf.taln.textplanning.core.similarity.vectors.SentenceVectors;
-import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.nio.file.Path;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 
 public class ContextVectorsProducer
 {

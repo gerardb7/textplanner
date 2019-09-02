@@ -1,8 +1,9 @@
 package edu.upf.taln.textplanning.tools.evaluation;
 
-import edu.upf.taln.textplanning.common.DocumentResourcesFactory;
-import edu.upf.taln.textplanning.common.FileUtils;
-import edu.upf.taln.textplanning.common.InitialResourcesFactory;
+import edu.upf.taln.textplanning.core.resources.CorpusResourcesFactory;
+import edu.upf.taln.textplanning.core.resources.DocumentResourcesFactory;
+import edu.upf.taln.textplanning.core.utils.FileUtils;
+import edu.upf.taln.textplanning.core.resources.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
@@ -49,7 +50,7 @@ public class GoldDisambiguationEvaluation extends DisambiguationEvaluation
 		this.eval_POS = Set.of(POS.Tag.NOUN, POS.Tag.ADJ, POS.Tag.VERB, POS.Tag.ADV);
 
 		this.corpus = Corpora.createFromXML(xml_file);
-		texts2resources = EvaluationTools.createResources(corpus, tagset, resources_factory, max_span_size, excluded_mention_POS, options);
+		texts2resources = CorpusResourcesFactory.create(corpus, tagset, resources_factory, max_span_size, excluded_mention_POS, options);
 		this.gold = parseGoldFile(gold_file);
 
 		// Check gold anns

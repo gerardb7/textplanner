@@ -1,9 +1,10 @@
 package edu.upf.taln.textplanning.tools.evaluation;
 
 import com.ibm.icu.util.ULocale;
-import edu.upf.taln.textplanning.common.DocumentResourcesFactory;
-import edu.upf.taln.textplanning.common.FileUtils;
-import edu.upf.taln.textplanning.common.InitialResourcesFactory;
+import edu.upf.taln.textplanning.core.resources.CorpusResourcesFactory;
+import edu.upf.taln.textplanning.core.resources.DocumentResourcesFactory;
+import edu.upf.taln.textplanning.core.utils.FileUtils;
+import edu.upf.taln.textplanning.core.resources.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Mention;
@@ -64,7 +65,7 @@ public class SemEvalEvaluation extends DisambiguationEvaluation
 				.collect(toMap(a -> a[0].equals(a[1]) ? a[0] : (a[0] + "-" + a[1]), a -> a[2]));
 		log.info(gold.keySet().size() + " lines read from gold");
 
-		resources = EvaluationTools.createJointResources(corpus, tagset, initial_resources, max_span_size, excluded_mention_POS, options);
+		resources = CorpusResourcesFactory.createJointResources(corpus, tagset, initial_resources, max_span_size, excluded_mention_POS, options);
 	}
 
 	@Override

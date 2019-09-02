@@ -106,7 +106,7 @@ public class CompactDictionary implements Serializable
 		this.language = language;
 
 		final Stopwatch timer = Stopwatch.createStarted();
-		CandidatesCollector.collect(dictionary, language, file, this::addMeaning, this::addForm, this::getLabel,
+		CachePopulator.populate(dictionary, language, file, this::addMeaning, this::addForm, this::getLabel,
 				this::getGlosses, this::getMeanings, this::serialize);
 		log.info("Cache created in "  + timer.stop());
 	}
@@ -117,9 +117,15 @@ public class CompactDictionary implements Serializable
 		this.language = language;
 
 		final Stopwatch timer = Stopwatch.createStarted();
-		CandidatesCollector.collect(forms, dictionary, language, file, this::addMeaning, this::addForm, this::getLabel,
+		CachePopulator.populate(forms, dictionary, language, file, this::addMeaning, this::addForm, this::getLabel,
 				this::getGlosses, this::getMeanings, this::serialize);
 		log.info("Cache created in "  + timer.stop());
+	}
+
+	public void update(MeaningDictionary dictionary, Path file)
+	{
+		CachePopulator.populate(dictionary, language, file, this::addMeaning, this::addForm, this::getLabel,
+				this::getGlosses, this::getMeanings, this::serialize);
 	}
 
 	public ULocale getLanguage()

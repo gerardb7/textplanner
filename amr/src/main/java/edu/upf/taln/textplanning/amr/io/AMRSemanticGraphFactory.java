@@ -8,7 +8,7 @@ import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
 import edu.upf.taln.textplanning.amr.structures.CoreferenceChain;
 import edu.upf.taln.textplanning.core.Options;
 import edu.upf.taln.textplanning.core.structures.SemanticGraphFactory;
-import edu.upf.taln.textplanning.core.ranking.Disambiguation;
+import edu.upf.taln.textplanning.core.disambiguation.DisambiguationStrategies;
 import edu.upf.taln.textplanning.core.structures.*;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -43,7 +43,7 @@ public class AMRSemanticGraphFactory implements SemanticGraphFactory<AMRGraphLis
 		Map<String, String> concepts = remove_concepts(graphs);
 
 		// 2- disambiguate candidates
-		Disambiguation disambiguation = new Disambiguation(options.disambiguation_lambda);
+		DisambiguationStrategies disambiguation = new DisambiguationStrategies(options.disambiguation_lambda);
 		final Map<Mention, Candidate> selected_candidates = disambiguation.disambiguate(List.copyOf(graphs.getCandidates()));
 
 		// 3- create merged graph and assign to it disambiguated meanings

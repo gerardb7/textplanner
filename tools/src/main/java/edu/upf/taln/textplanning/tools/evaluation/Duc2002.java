@@ -1,6 +1,6 @@
 package edu.upf.taln.textplanning.tools.evaluation;
 
-import edu.upf.taln.textplanning.common.FileUtils;
+import edu.upf.taln.textplanning.core.utils.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

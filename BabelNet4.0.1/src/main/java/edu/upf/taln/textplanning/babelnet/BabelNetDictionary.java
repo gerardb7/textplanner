@@ -157,7 +157,12 @@ public class BabelNetDictionary implements MeaningDictionary
 				log.error("Failed to map language tag " + language.toLanguageTag());
 
 			final List<BabelSynset> synsets = bn.getSynsets(form, bnLang, bnPOS);
-			synsets.sort(new BabelSynsetComparator(form, bnLang));
+			try
+			{
+				synsets.sort(new BabelSynsetComparator(form, bnLang));
+			}
+			catch (Exception ignored)
+			{ }
 			return synsets.stream()
 					.map(BabelSynset::getID)
 					.map(BabelSynsetID::getID)

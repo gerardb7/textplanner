@@ -6,13 +6,12 @@ import com.beust.jcommander.Parameters;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
 import edu.upf.taln.textplanning.amr.structures.AMRGraphList;
-import edu.upf.taln.textplanning.common.CMLCheckers;
+import edu.upf.taln.textplanning.core.utils.CMLCheckers;
 import edu.upf.taln.textplanning.core.similarity.vectors.TextVectors;
-import edu.upf.taln.textplanning.core.similarity.vectors.Vectors;
 import edu.upf.taln.textplanning.core.similarity.vectors.Vectors.VectorType;
 import edu.upf.taln.textplanning.core.structures.Candidate;
 import edu.upf.taln.textplanning.core.structures.Meaning;
-import edu.upf.taln.textplanning.common.Serializer;
+import edu.upf.taln.textplanning.core.utils.Serializer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

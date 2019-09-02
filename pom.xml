@@ -22,9 +22,7 @@
 
     <modules>
         <module>core</module>
-        <module>common</module>
         <module>amr</module>
-        <module>uima-dsynt</module>
         <module>tools</module>
         <module>optimization</module>
         <module>BabelNet3.7</module>
