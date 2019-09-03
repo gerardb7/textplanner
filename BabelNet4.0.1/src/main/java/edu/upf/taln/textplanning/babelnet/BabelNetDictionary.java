@@ -2,7 +2,6 @@ package edu.upf.taln.textplanning.babelnet;
 
 import com.babelscape.util.UniversalPOS;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Iterators;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.dictionaries.MeaningDictionary;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
@@ -23,6 +22,7 @@ import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -78,9 +78,23 @@ public class BabelNetDictionary implements MeaningDictionary
 	}
 
 	@Override
-	public Iterator<String> meaning_iterator()
+	public Stream<String> getMeaningsStream()
 	{
-		return Iterators.transform(bn.iterator(), s -> Objects.requireNonNull(s).getID().getID());
+		return bn.stream()
+				.filter(Objects::nonNull)
+				.map(BabelSynset::getID)
+				.map(BabelSynsetID::getID);
+	}
+
+	@Override
+	public Stream<String> getMeaningsStream(ULocale language)
+	{
+		final Language bnLang = Language.fromISO(language.toLanguageTag());
+		return bn.stream()
+				.filter(Objects::nonNull)
+				.filter(s -> s.getLanguages().contains(bnLang))
+				.map(BabelSynset::getID)
+				.map(BabelSynsetID::getID);
 	}
 
 	@Override
@@ -263,12 +277,21 @@ public class BabelNetDictionary implements MeaningDictionary
 	}
 
 	@Override
-	public Iterator<Triple<String, POS.Tag, ULocale>> lexicon_iterator()
+	public Stream<Triple<String, POS.Tag, ULocale>> getLexicalizationsStream()
 	{
-		return Iterators.transform(bn.getLexiconIterator(), w -> {
-			Objects.requireNonNull(w);
-			return Triple.of(w.getWord(), POS.BabelNet.get(w.getPOS().getTag()), new ULocale(w.getLanguage().name()));
-		});
+		return bn.lexiconStream()
+				.filter(Objects::nonNull)
+				.map(w -> Triple.of(w.getWord(), POS.BabelNet.get(w.getPOS().getTag()), new ULocale(w.getLanguage().name())));
+	}
+
+	@Override
+	public Stream<Pair<String, POS.Tag>> getLexicalizationsStream(ULocale language)
+	{
+		final Language bnLang = Language.fromISO(language.toLanguageTag());
+		return bn.lexiconStream()
+				.filter(Objects::nonNull)
+				.filter(w -> w.getLanguage().equals(bnLang))
+				.map(w -> Pair.of(w.getWord(), POS.BabelNet.get(w.getPOS().getTag())));
 	}
 
 	@Override

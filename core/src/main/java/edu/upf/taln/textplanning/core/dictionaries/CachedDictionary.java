@@ -6,6 +6,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 /**
  * Uses space-efficient cache. Calls not supported by the cache are (optionally) diverted to a base dictionary
@@ -27,12 +28,21 @@ public class CachedDictionary implements MeaningDictionary
 		this.cache = cache;
 	}
 
+
 	@Override
-	public Iterator<String> meaning_iterator()
+	public Stream<String> getMeaningsStream()
 	{
 		if (base == null)
-			return Collections.emptyIterator();
-		return base.meaning_iterator();
+			return Stream.empty();
+		return base.getMeaningsStream();
+	}
+
+	@Override
+	public Stream<String> getMeaningsStream(ULocale language)
+	{
+		if (base == null)
+			return Stream.empty();
+		return base.getMeaningsStream(language);
 	}
 
 	@Override
@@ -124,13 +134,22 @@ public class CachedDictionary implements MeaningDictionary
 	}
 
 	@Override
-	public Iterator<Triple<String, POS.Tag, ULocale>> lexicon_iterator()
+	public Stream<Triple<String, POS.Tag, ULocale>> getLexicalizationsStream()
 	{
 		if (base == null)
-			return Collections.emptyIterator();
-		else
-			return base.lexicon_iterator();
+			return Stream.empty();
+		return base.getLexicalizationsStream();
+
 	}
+
+	@Override
+	public Stream<Pair<String, POS.Tag>> getLexicalizationsStream(ULocale language)
+	{
+		if (base == null)
+			return Stream.empty();
+		return base.getLexicalizationsStream(language);
+	}
+
 
 	@Override
 	public Set<Pair<String, POS.Tag>> getLexicalizations(ULocale language)

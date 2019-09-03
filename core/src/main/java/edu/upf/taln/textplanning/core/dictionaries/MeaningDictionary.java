@@ -6,10 +6,12 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 public interface MeaningDictionary
 {
-	Iterator<String> meaning_iterator();
+	Stream<String> getMeaningsStream();
+	Stream<String> getMeaningsStream(ULocale language);
 	Set<String> getMeanings(ULocale language);
 	// List of meanings sorted according to dictionary criteria, e.g. frequency, best sense first, etc.
 	List<String> getMeanings(String form, ULocale language);
@@ -20,7 +22,8 @@ public interface MeaningDictionary
 	Optional<Boolean> isNE(String id);
 	List<String> getGlosses(String id, ULocale language);
 
-	Iterator<Triple<String, POS.Tag, ULocale>> lexicon_iterator();
+	Stream<Triple<String, POS.Tag, ULocale>> getLexicalizationsStream();
+	Stream<Pair<String, POS.Tag>> getLexicalizationsStream(ULocale language);
 	Set<Pair<String, POS.Tag>> getLexicalizations(ULocale language);
 	// List of lexicalizations sorted according to dictionary criteria
 	List<Pair<String, POS.Tag>> getLexicalizations(String id);

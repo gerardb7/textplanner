@@ -1,6 +1,7 @@
 package edu.upf.taln.textplanning.core.dictionaries;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.Iterators;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.utils.DebugUtils;
 import edu.upf.taln.textplanning.core.utils.POS;
@@ -18,6 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -41,7 +43,7 @@ public class CachePopulator
 	                             Consumer<Path> serializer)
 	{
 		populateMeanings(dictionary, language, file, meanings_consumer, label_function, glosses_function, serializer);
-		//collectLexicalizations(dictionary, language, file, lexicalizations_consumer, meanings_function, serializer);
+		populateLexicalizations(dictionary, language, file, lexicalizations_consumer, meanings_function, serializer);
 	}
 
 	// Collects all meanings for a given set of lexicalizations from a dictionary.
@@ -75,26 +77,22 @@ public class CachePopulator
 	                                     Function<String, List<String>> glosses_function,
 	                                     Consumer<Path> serializer)
 	{
-		final Stopwatch gtimer = Stopwatch.createStarted();
-		int iterate_counter = 0;
-		final Iterator<String> meaning_it = dictionary.meaning_iterator();
+		final Stopwatch timer = Stopwatch.createStarted();
+		AtomicInteger iterate_counter = new AtomicInteger();
+		final Stream<String> stream = dictionary.getMeaningsStream(language);
 
-		while (meaning_it.hasNext())
+		Iterators.partition(stream.iterator(), CHUNK_SIZE).forEachRemaining(chunk ->
 		{
-			final Stopwatch timer = Stopwatch.createStarted();
-
 			// Collect meanings
 			log.info("\nCollecting meaning ids for language " + language);
 			final List<String> meanings = new ArrayList<>();
-			int i = 0;
-			while(i < CHUNK_SIZE && meaning_it.hasNext())
+			for (String s : chunk)
 			{
-				meanings.add(meaning_it.next());
-				if (++i % LOGGING_STEP_SIZE == 0)
-					log.info("\t" + i + " meanings iterated in " + gtimer);
+				meanings.add(s);
+				if (iterate_counter.incrementAndGet() % LOGGING_STEP_SIZE == 0)
+					log.info("\t" + iterate_counter.get() + " meanings iterated in " + timer);
 			}
-			iterate_counter += i;
-			log.info(iterate_counter + " meanings iterated and collected from dictionary");
+			log.info(iterate_counter.get() + " meanings iterated from dictionary");
 
 			// Query meanings in dictionary and add them to cache
 			final List<Triple<String, String, List<String>>> meanings_info =
@@ -102,9 +100,9 @@ public class CachePopulator
 			checkMeanings(meanings_info, label_function, glosses_function);
 			serializer.accept(file);
 
-			log.info("Chunk completed in " + timer.stop());
-		}
-		log.info("\n***All meanings collected in " + gtimer.stop() + "***\n");
+			log.info("Chunk completed in " + timer);
+		});
+		log.info("\n***All meanings collected in " + timer.stop() + "***\n");
 	}
 
 	private static List<Triple<String, String, List<String>>> addMeanings( Collection<String> meanings,
@@ -186,29 +184,22 @@ public class CachePopulator
 	                                            BiFunction<String, Character, List<String>> meanings_function,
 	                                            Consumer<Path> serializer)
 	{
-		final Stopwatch gtimer = Stopwatch.createStarted();
-		int iterate_counter = 0;
-		final Iterator<Triple<String, POS.Tag, ULocale>> lexicon_it = dictionary.lexicon_iterator();
+		final Stopwatch timer = Stopwatch.createStarted();
+		final AtomicInteger iterate_counter = new AtomicInteger();
+		final Stream<Pair<String, POS.Tag>> stream = dictionary.getLexicalizationsStream(language);
 
-		while (lexicon_it.hasNext())
+		Iterators.partition(stream.iterator(), CHUNK_SIZE).forEachRemaining(chunk ->
 		{
-			final Stopwatch timer = Stopwatch.createStarted();
-
 			// Collect lexicalizations
 			log.info("\nCollecting lexicalizations for language " + language);
 			final List<Pair<String, POS.Tag>> lexicalizations = new ArrayList<>();
-			int i = 0;
-			while(i < CHUNK_SIZE && lexicon_it.hasNext())
+			for (Pair<String, POS.Tag> s : chunk)
 			{
-				final Triple<String, POS.Tag, ULocale> entry = lexicon_it.next();
-				if (++i % LOGGING_STEP_SIZE == 0)
-					log.info("\t" + i + " lexicalizations iterated in " + gtimer);
-
-				if (entry.getRight().equals(language))
-					lexicalizations.add(Pair.of(entry.getLeft(), entry.getMiddle()));
+				lexicalizations.add(s);
+				if (iterate_counter.incrementAndGet() % LOGGING_STEP_SIZE == 0)
+					log.info("\t" + iterate_counter.get() + " lexicalizations iterated in " + timer);
 			}
-			iterate_counter += i;
-			log.info(iterate_counter + " lexicalizations iterated and " + lexicalizations.size() + " collected");
+			log.info(iterate_counter.get() + " lexicalizations iterated from dictionary");
 
 			// Query lexicalizations in dictionary and add to cache
 			final List<Triple<String, Character, List<String>>> lexicalizations_info =
@@ -216,9 +207,9 @@ public class CachePopulator
 			checkLexicalizations(lexicalizations_info, meanings_function);
 			serializer.accept(file);
 
-			log.info("Chunk completed in " + timer.stop());
-		}
-		log.info("All lexicalizations collected in " + gtimer.stop() + "\n");
+			log.info("Chunk completed in " + timer);
+		});
+		log.info("All lexicalizations collected in " + timer.stop() + "\n");
 	}
 
 	private static List<Triple<String, Character, List<String>>> addLexicalizations(Collection<Pair<String, POS.Tag>> lexicalizations,
