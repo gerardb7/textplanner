@@ -148,9 +148,12 @@ public class Stanford2SemEvalXML
 //		final Path docs_in = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_subset_100/texts/stories");
 //		final Path doc_out = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_subset_100/corpus.xml");
 //		final String texts_suffix = "story";
-		final Path docs_in = Paths.get("/home/gerard/ownCloud/varis_tesi/duc2002/texts/");
-		final Path doc_out = Paths.get("/home/gerard/ownCloud/varis_tesi/duc2002/corpus.xml");
-		final String texts_suffix = "txt";
+		final Path docs_in = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_subset_500/texts/stories");
+		final Path doc_out = Paths.get("/home/gerard/ownCloud/varis_tesi/deep_mind_subset_500/corpus.xml");
+		final String texts_suffix = "story";
+//		final Path docs_in = Paths.get("/home/gerard/ownCloud/varis_tesi/duc2002/texts/");
+//		final Path doc_out = Paths.get("/home/gerard/ownCloud/varis_tesi/duc2002/corpus.xml");
+//		final String texts_suffix = "txt";
 		final Stanford2SemEvalXML converter = new Stanford2SemEvalXML();
 		converter.convert(docs_in, texts_suffix, doc_out);
 	}

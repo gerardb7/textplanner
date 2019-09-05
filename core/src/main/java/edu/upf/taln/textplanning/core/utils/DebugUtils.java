@@ -5,6 +5,7 @@ import org.apache.commons.lang3.tuple.Triple;
 import org.apache.logging.log4j.Logger;
 
 import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -40,21 +41,27 @@ public class DebugUtils
 		}
 	}
 
-	private final static NumberFormat format = NumberFormat.getInstance();
+	private final static NumberFormat double_format = NumberFormat.getInstance();
 	static {
-		format.setRoundingMode(RoundingMode.UP);
-		format.setMaximumFractionDigits(4);
-		format.setMinimumFractionDigits(4);
+		double_format.setRoundingMode(RoundingMode.UP);
+		double_format.setMaximumFractionDigits(4);
+		double_format.setMinimumFractionDigits(4);
+	}
+	private final static NumberFormat int_format = new DecimalFormat("#,###");
+	public static String printInteger(int i)
+	{
+		return int_format.format(i);
 	}
 
-	public static String printDouble(double w) { return format.format(w); }
+
+	public static String printDouble(double w) { return double_format.format(w); }
 	public static String printDouble(double w, int fraction_digits)
 	{
-		format.setRoundingMode(RoundingMode.CEILING);
-		final int old = format.getMaximumFractionDigits();
-		format.setMaximumFractionDigits(fraction_digits);
-		final String s = DebugUtils.format.format(w);
-		format.setMaximumFractionDigits(old);
+		double_format.setRoundingMode(RoundingMode.CEILING);
+		final int old = double_format.getMaximumFractionDigits();
+		double_format.setMaximumFractionDigits(fraction_digits);
+		final String s = DebugUtils.double_format.format(w);
+		double_format.setMaximumFractionDigits(old);
 		return s;
 	}
 
@@ -105,7 +112,7 @@ public class DebugUtils
 		}
 		sorted_items.sort(Comparator.comparingDouble(Triple<String, Double, Double>::getMiddle).reversed());
 		return 	sorted_items.subList(0, n).stream()
-				.map(p -> format.format(p.getMiddle()) + "\t(" + format.format(p.getRight()) + ")\t" + p.getLeft())
+				.map(p -> double_format.format(p.getMiddle()) + "\t(" + double_format.format(p.getRight()) + ")\t" + p.getLeft())
 				.collect(Collectors.joining("\n"));
 	}
 
@@ -138,7 +145,7 @@ public class DebugUtils
 				.mapToDouble(d -> d)
 				.summaryStatistics().toString();
 
-		return "Subgraph " + i + " value=" + format.format(s.getValue()) + " " + stats + "\n\t" +
+		return "Subgraph " + i + " value=" + double_format.format(s.getValue()) + " " + stats + "\n\t" +
 				"root node " + s.getRoot() + "\n" +	printVertex(t, "root", t.getRoot(), 1);
 	}
 
@@ -148,7 +155,7 @@ public class DebugUtils
 				.mapToObj(i -> "\t")
 				.collect(Collectors.joining());
 		String s = tabs + role + " -> " + DebugUtils.createLabelForVariable(v, t.getMeaning(v).orElse(null), t.getMentions(v)) +
-				" " + t.getWeight(v).map(format::format).orElse("") + "\n";
+				" " + t.getWeight(v).map(double_format::format).orElse("") + "\n";
 
 		return s + t.outgoingEdgesOf(v).stream()
 				.map(e -> printVertex(t, e.getLabel(), t.getEdgeTarget(e), depth + 1))

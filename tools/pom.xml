@@ -16,11 +16,17 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>core</artifactId>
             <version>${project.version}</version>
-        </dependency>
+         </dependency>
         <dependency>
             <groupId>edu.upf.taln.textplanning</groupId>
             <artifactId>BabelNet4.0.1</artifactId>
             <version>0.3.0-SNAPSHOT</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>slf4j-api</artifactId>
+                    <groupId>org.slf4j</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.rxnlp.tools</groupId>
@@ -28,32 +34,14 @@
             <version>1.2.1</version>
             <exclusions>
                 <exclusion>
-                    <artifactId>lucene-analyzers-common</artifactId>
-                    <groupId>org.apache.lucene</groupId>
+                    <groupId>edu.stanford.nlp</groupId>
+                    <artifactId>stanford-corenlp</artifactId>
                 </exclusion>
                 <exclusion>
                     <artifactId>lucene-core</artifactId>
                     <groupId>org.apache.lucene</groupId>
                 </exclusion>
-                <exclusion>
-                    <artifactId>lucene-queries</artifactId>
-                    <groupId>org.apache.lucene</groupId>
-                </exclusion>
-                <exclusion>
-                    <artifactId>lucene-queryparser</artifactId>
-                    <groupId>org.apache.lucene</groupId>
-                </exclusion>
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.ujmp</groupId>
-            <artifactId>ujmp-core</artifactId>
-            <version>0.3.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.ujmp</groupId>
-            <artifactId>ujmp-gui</artifactId>
-            <version>0.3.0</version>
         </dependency>
         <dependency>
             <groupId>edu.stanford.nlp</groupId>
@@ -76,7 +64,29 @@
                     <artifactId>lucene-queryparser</artifactId>
                     <groupId>org.apache.lucene</groupId>
                 </exclusion>
+                <exclusion>
+                    <groupId>javax.xml.bind</groupId>
+                    <artifactId>jaxb-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>joda-time</artifactId>
+                    <groupId>joda-time</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>commons-lang3</artifactId>
+                    <groupId>org.apache.commons</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>xml-apis</artifactId>
+                    <groupId>xml-apis</groupId>
+                </exclusion>
             </exclusions>
+        </dependency>
+        <!-- import this to avoid conflict within stanford dependency-->
+        <dependency>
+            <artifactId>joda-time</artifactId>
+            <groupId>joda-time</groupId>
+            <version>2.9.4</version>
         </dependency>
         <dependency>
             <groupId>edu.stanford.nlp</groupId>
@@ -99,6 +109,18 @@
                 <exclusion>
                     <artifactId>lucene-queryparser</artifactId>
                     <groupId>org.apache.lucene</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>joda-time</artifactId>
+                    <groupId>joda-time</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>commons-lang3</artifactId>
+                    <groupId>org.apache.commons</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>xml-apis</artifactId>
+                    <groupId>xml-apis</groupId>
                 </exclusion>
             </exclusions>
         </dependency>

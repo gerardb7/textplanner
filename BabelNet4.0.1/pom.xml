@@ -21,6 +21,44 @@
             <groupId>it.uniroma1.lcl.babelnet</groupId>
             <artifactId>babelnet-api</artifactId>
             <version>4.0.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>guava</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.ibm.icu</groupId>
+                    <artifactId>icu4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>commons-codec</artifactId>
+                    <groupId>commons-codec</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>commons-logging</artifactId>
+                    <groupId>commons-logging</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>commons-collections</artifactId>
+                    <groupId>commons-collections</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>commons-lang3</artifactId>
+                    <groupId>org.apache.commons</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- import this to avoid conflict within babelnet-->
+        <dependency>
+            <artifactId>commons-codec</artifactId>
+            <groupId>commons-codec</groupId>
+            <version>1.8</version>
+        </dependency>
+        <!-- import this to avoid conflict within babelnet-->
+        <dependency>
+            <artifactId>commons-logging</artifactId>
+            <groupId>commons-logging</groupId>
+            <version>1.1</version>
         </dependency>
     </dependencies>
 

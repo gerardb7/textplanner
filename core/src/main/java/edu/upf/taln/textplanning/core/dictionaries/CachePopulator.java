@@ -14,7 +14,10 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.util.TriConsumer;
 
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -77,32 +80,27 @@ public class CachePopulator
 	                                     Function<String, List<String>> glosses_function,
 	                                     Consumer<Path> serializer)
 	{
+		log.info("\nCollecting meaning ids for language " + language);
+		final Stopwatch gtimer = Stopwatch.createStarted();
 		final Stopwatch timer = Stopwatch.createStarted();
 		AtomicInteger iterate_counter = new AtomicInteger();
-		final Stream<String> stream = dictionary.getMeaningsStream(language);
 
+		// Collect meanings
+		final Stream<String> stream = dictionary.getMeaningsStream(language);
 		Iterators.partition(stream.iterator(), CHUNK_SIZE).forEachRemaining(chunk ->
 		{
-			// Collect meanings
-			log.info("\nCollecting meaning ids for language " + language);
-			final List<String> meanings = new ArrayList<>();
-			for (String s : chunk)
-			{
-				meanings.add(s);
-				if (iterate_counter.incrementAndGet() % LOGGING_STEP_SIZE == 0)
-					log.info("\t" + iterate_counter.get() + " meanings iterated in " + timer);
-			}
-			log.info(iterate_counter.get() + " meanings iterated from dictionary");
+			log.info(DebugUtils.printInteger(iterate_counter.get()) + " meanings iterated from dictionary in " + timer);
 
 			// Query meanings in dictionary and add them to cache
 			final List<Triple<String, String, List<String>>> meanings_info =
-					addMeanings(meanings, dictionary, language, meanings_consumer);
+					addMeanings(chunk, dictionary, language, meanings_consumer);
 			checkMeanings(meanings_info, label_function, glosses_function);
 			serializer.accept(file);
 
-			log.info("Chunk completed in " + timer);
+			log.info("Chunk completed in " + gtimer);
+			timer.reset();
 		});
-		log.info("\n***All meanings collected in " + timer.stop() + "***\n");
+		log.info("\n***All meanings collected in " + gtimer.stop() + "***\n");
 	}
 
 	private static List<Triple<String, String, List<String>>> addMeanings( Collection<String> meanings,
@@ -139,20 +137,18 @@ public class CachePopulator
 							label_str = meaning; // if there are absolutely no labels, then use the meaning ref...
 					}
 
-					if (chunk_counter.incrementAndGet() % LOGGING_STEP_SIZE == 0)
-						log.info("\t" + chunk_counter.get() + " meanings queried in " + timer);
-
 					return Triple.of(meaning, label_str, glosses);
 				})
 				.filter(t -> StringUtils.isNotBlank(t.getMiddle()) || !t.getRight().isEmpty())
 				.collect(toList());
-		log.info(chunk_counter.get() + " meanings queried in " + timer.stop());
+		log.info(DebugUtils.printInteger(chunk_counter.get()) + " meanings queried in " + timer.stop());
+		timer.reset();timer.start();
 
 		// add meanings to cache
 		meanings_info.forEach(info ->
 				meanings_consumer.accept(info.getLeft(), info.getMiddle(), info.getRight())
 		);
-		log.info(meanings_info.size() + " meanings passed to cache");
+		log.info(DebugUtils.printInteger(meanings_info.size()) + " meanings passed to cache in " + timer.stop());
 
 		return meanings_info;
 	}
@@ -184,32 +180,27 @@ public class CachePopulator
 	                                            BiFunction<String, Character, List<String>> meanings_function,
 	                                            Consumer<Path> serializer)
 	{
-		final Stopwatch timer = Stopwatch.createStarted();
+		log.info("\nCollecting lexicalizations for language " + language);
+		final Stopwatch gtimer = Stopwatch.createStarted();
 		final AtomicInteger iterate_counter = new AtomicInteger();
 		final Stream<Pair<String, POS.Tag>> stream = dictionary.getLexicalizationsStream(language);
+		final Stopwatch timer = Stopwatch.createStarted();
 
 		Iterators.partition(stream.iterator(), CHUNK_SIZE).forEachRemaining(chunk ->
 		{
 			// Collect lexicalizations
-			log.info("\nCollecting lexicalizations for language " + language);
-			final List<Pair<String, POS.Tag>> lexicalizations = new ArrayList<>();
-			for (Pair<String, POS.Tag> s : chunk)
-			{
-				lexicalizations.add(s);
-				if (iterate_counter.incrementAndGet() % LOGGING_STEP_SIZE == 0)
-					log.info("\t" + iterate_counter.get() + " lexicalizations iterated in " + timer);
-			}
-			log.info(iterate_counter.get() + " lexicalizations iterated from dictionary");
+			log.info(DebugUtils.printInteger(iterate_counter.get()) + " lexicalizations iterated from dictionary in " + timer);
 
 			// Query lexicalizations in dictionary and add to cache
 			final List<Triple<String, Character, List<String>>> lexicalizations_info =
-					addLexicalizations(lexicalizations, dictionary, language, lexicalizations_consumer);
+					addLexicalizations(chunk, dictionary, language, lexicalizations_consumer);
 			checkLexicalizations(lexicalizations_info, meanings_function);
 			serializer.accept(file);
 
-			log.info("Chunk completed in " + timer);
+			log.info("Chunk completed in " + gtimer);
+			timer.reset();
 		});
-		log.info("All lexicalizations collected in " + timer.stop() + "\n");
+		log.info("All lexicalizations collected in " + gtimer.stop() + "\n");
 	}
 
 	private static List<Triple<String, Character, List<String>>> addLexicalizations(Collection<Pair<String, POS.Tag>> lexicalizations,
@@ -231,14 +222,12 @@ public class CachePopulator
 					final String word = p.getLeft();
 					final Character pos_tag = POS.toTag.get(p.getRight());
 					final List<String> dict_meanings = dictionary.getMeanings(word, p.getRight(), language);
-					if (chunk_counter.incrementAndGet() % LOGGING_STEP_SIZE == 0)
-						log.info("\t" + chunk_counter.get() + " lexicalizations queried in " + timer);
-
 					return Triple.of(word, pos_tag, dict_meanings);
 				})
 				.filter(t -> !t.getRight().isEmpty())
 				.collect(toList());
-		log.info(chunk_counter.get() + " lexicalizations queried in " + timer.stop());
+		log.info(DebugUtils.printInteger(chunk_counter.get()) + " lexicalizations queried in " + timer.stop());
+		timer.reset();timer.start();
 
 		// add lexicalizations to cache
 		lexicalizations_info.forEach(info ->
@@ -248,7 +237,7 @@ public class CachePopulator
 			final List<String> l_meanings = info.getRight();
 			lexicalizations_consumer.accept(word, pos_tag, l_meanings);
 		});
-		log.info(lexicalizations_info.size() + " lexicalizations passed to cache");
+		log.info(DebugUtils.printInteger(lexicalizations_info.size()) + " lexicalizations passed to cache in " + timer.stop());
 
 		return lexicalizations_info;
 	}
