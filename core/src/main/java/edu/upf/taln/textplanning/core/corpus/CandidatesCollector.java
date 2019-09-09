@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
@@ -33,7 +34,7 @@ public class CandidatesCollector
 		SubMentionMatcher(List<Mention> mentions)
 		{
 			mentions2tokens = mentions.stream()
-					.collect(toMap(m -> m, m -> m.getTokens().stream().map(String::toLowerCase).map(String::trim).collect(toList())));
+					.collect(toMap(m -> m, m -> m.getTokens().stream().map(s -> s.toLowerCase(Locale.ENGLISH)).map(String::trim).collect(toList())));
 		}
 
 		// Does mention1 contain mention2?

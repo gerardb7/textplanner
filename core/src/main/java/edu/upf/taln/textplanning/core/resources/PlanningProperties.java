@@ -43,7 +43,8 @@ public class PlanningProperties
 
 		//get the property value and print it out
 		dictionaryPath = checkValidFolder(prop.getProperty("tp.dictionary.folder"));
-		cachePath = Paths.get(prop.getProperty("tp.dictionary.cache"));
+		final String cache_prop = prop.getProperty("tp.dictionary.cache");
+		cachePath = cache_prop != null ? Paths.get(cache_prop) : null;
 		senseVectorsType = Enums.getIfPresent(VectorType.class, prop.getProperty("tp.vectors.sense.type")).orNull();
 		senseVectorsPath = checkValidPath(prop.getProperty("tp.vectors.sense.path"));
 		wordVectorsType = Enums.getIfPresent(VectorType.class, prop.getProperty("tp.vectors.word.type")).orNull();

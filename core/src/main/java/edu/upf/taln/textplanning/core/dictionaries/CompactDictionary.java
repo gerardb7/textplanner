@@ -65,7 +65,7 @@ public class CompactDictionary implements Serializable
 
 		public Lexicalization(String form, char pos)
 		{
-			this.form = form.replace(' ', '_').toLowerCase().getBytes(Charsets.UTF_8);
+			this.form = form.replace(' ', '_').toLowerCase(Locale.ENGLISH).getBytes(Charsets.UTF_8);
 			this.pos = Character.getNumericValue(pos);
 		}
 
@@ -193,7 +193,7 @@ public class CompactDictionary implements Serializable
 		meanings_info.get(bytes);
 
 		meanings_info.position(old_pos);
-		return Optional.of(new String(bytes, Charsets.UTF_8));
+		return Optional.of(new String(bytes, Charsets.UTF_8).toLowerCase(Locale.ENGLISH));
 	}
 
 	public List<String> getGlosses(String meaning)
@@ -309,7 +309,7 @@ public class CompactDictionary implements Serializable
 		// create byte arrays for label and glosses
 		final List<byte[]> bytes_list = new ArrayList<>(glosses.size() + 1);
 		{
-			final byte[] bytes_string = label.getBytes(Charsets.UTF_8);
+			final byte[] bytes_string = label.toLowerCase(Locale.ENGLISH).getBytes(Charsets.UTF_8);
 			final byte[] bytes_count = Shorts.toByteArray((short) bytes_string.length);
 
 			byte[] bytes = ArrayUtils.addAll(bytes_count, bytes_string);

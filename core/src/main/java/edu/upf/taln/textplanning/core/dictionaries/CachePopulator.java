@@ -89,7 +89,7 @@ public class CachePopulator
 		final Stream<String> stream = dictionary.getMeaningsStream(language);
 		Iterators.partition(stream.iterator(), CHUNK_SIZE).forEachRemaining(chunk ->
 		{
-			log.info(DebugUtils.printInteger(iterate_counter.get()) + " meanings iterated from dictionary in " + timer);
+			log.info(DebugUtils.printInteger(iterate_counter.addAndGet(chunk.size())) + " meanings iterated from dictionary in " + timer);
 
 			// Query meanings in dictionary and add them to cache
 			final List<Triple<String, String, List<String>>> meanings_info =
@@ -98,7 +98,7 @@ public class CachePopulator
 			serializer.accept(file);
 
 			log.info("Chunk completed in " + gtimer);
-			timer.reset();
+			timer.reset();timer.start();
 		});
 		log.info("\n***All meanings collected in " + gtimer.stop() + "***\n");
 	}
@@ -112,7 +112,6 @@ public class CachePopulator
 
 		// query meanings info
 		log.info("Querying meanings info from dictionary");
-		AtomicInteger chunk_counter = new AtomicInteger();
 		final List<Triple<String, String, List<String>>> meanings_info = meanings.parallelStream()
 				.peek(meaning -> reporter.report())
 				.map(meaning ->
@@ -141,7 +140,7 @@ public class CachePopulator
 				})
 				.filter(t -> StringUtils.isNotBlank(t.getMiddle()) || !t.getRight().isEmpty())
 				.collect(toList());
-		log.info(DebugUtils.printInteger(chunk_counter.get()) + " meanings queried in " + timer.stop());
+		log.info(DebugUtils.printInteger(meanings.size()) + " meanings queried in " + timer.stop());
 		timer.reset();timer.start();
 
 		// add meanings to cache

@@ -5,10 +5,12 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.babelnet.BabelNetDictionary;
+import edu.upf.taln.textplanning.core.dictionaries.MeaningDictionary;
 import edu.upf.taln.textplanning.core.utils.CMLCheckers;
 import edu.upf.taln.textplanning.core.resources.InitialResourcesFactory;
 import edu.upf.taln.textplanning.core.resources.PlanningProperties;
 import edu.upf.taln.textplanning.core.dictionaries.CompactDictionary;
+import edu.upf.taln.textplanning.core.utils.POS;
 import edu.upf.taln.textplanning.tools.evaluation.ExtractiveEvaluation;
 import edu.upf.taln.textplanning.tools.evaluation.GoldDisambiguationEvaluation;
 import edu.upf.taln.textplanning.tools.evaluation.RankingEvaluation;
@@ -16,10 +18,12 @@ import edu.upf.taln.textplanning.tools.evaluation.SemEvalEvaluation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.awt.event.WindowFocusListener;
 import java.nio.file.Path;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 public class Driver
 {
@@ -29,6 +33,7 @@ public class Driver
 	private static final String extract_eval_command = "extracteval";
 	private static final String collect_meanings_vectors = "meanings";
 	private static final String create_context_vectors = "context";
+	public static final String test_command = "test";
 	private final static Logger log = LogManager.getLogger();
 
 	private static abstract class BaseCommand
@@ -116,6 +121,12 @@ public class Driver
 		private int chunk_size = 0;
 	}
 
+	@SuppressWarnings("unused")
+	@Parameters(commandDescription = "Test")
+	private static class TestCommand extends BaseCommand
+	{
+	}
+
 	public static void main(String[] args) throws Exception
 	{
 		SemEvalEvaluationCommand semEval = new SemEvalEvaluationCommand();
@@ -124,6 +135,7 @@ public class Driver
 		ExtractiveEvaluationCommand extractEval = new ExtractiveEvaluationCommand();
 		CollectMeaningsCommand meanings = new CollectMeaningsCommand();
 		CreateContextVectorsCommand context = new CreateContextVectorsCommand();
+		TestCommand test = new TestCommand();
 
 		JCommander jc = new JCommander();
 		jc.addCommand(semeval_command, semEval);
@@ -132,6 +144,7 @@ public class Driver
 		jc.addCommand(extract_eval_command, extractEval);
 		jc.addCommand(collect_meanings_vectors, meanings);
 		jc.addCommand(create_context_vectors, context);
+		jc.addCommand(test_command, test);
 		jc.parse(args);
 
 		DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
@@ -190,6 +203,46 @@ public class Driver
 				//PlanningProperties properties = new PlanningProperties(context.properties);
 				//InitialResourcesFactory resources = new InitialResourcesFactory(context.language, properties);
 				//ContextVectorsProducer.createVectors(context.meanings, context.chunk_size, context.output, resources, context.glosses_only);
+				break;
+			}
+			case test_command:
+			{
+				PlanningProperties properties = new PlanningProperties(test.properties);
+				InitialResourcesFactory resources = new InitialResourcesFactory(test.language, properties, BabelNetDictionary::new);
+				final MeaningDictionary base = resources.getBase();
+				final CompactDictionary cache = resources.getCache();
+				{
+					final String str = "20 years";
+					final List<String> base_meanings = base.getMeanings(str, POS.Tag.NOUN, test.language);
+					final List<String> cache_meanings = cache.getMeanings(str, POS.toTag.get(POS.Tag.NOUN));
+					log.info("\n" + str);
+					log.info("\tBase meanings " + base_meanings);
+					log.info("\tCache meanings " + cache_meanings);
+				}
+				{
+					final String str = "20 Years";
+					final List<String> base_meanings = base.getMeanings(str, POS.Tag.NOUN, test.language);
+					final List<String> cache_meanings = cache.getMeanings(str, POS.toTag.get(POS.Tag.NOUN));
+					log.info("\n" + str);
+					log.info("\tBase meanings " + base_meanings);
+					log.info("\tCache meanings " + cache_meanings);
+				}
+				{
+					final String str = "20_years";
+					final List<String> base_meanings = base.getMeanings(str, POS.Tag.NOUN, test.language);
+					final List<String> cache_meanings = cache.getMeanings(str, POS.toTag.get(POS.Tag.NOUN));
+					log.info("\n" + str);
+					log.info("\tBase meanings " + base_meanings);
+					log.info("\tCache meanings " + cache_meanings);
+				}
+				{
+					final String str = "20_Years";
+					final List<String> base_meanings = base.getMeanings(str, POS.Tag.NOUN, test.language);
+					final List<String> cache_meanings = cache.getMeanings(str, POS.toTag.get(POS.Tag.NOUN));
+					log.info("\n" + str);
+					log.info("\tBase meanings " + base_meanings);
+					log.info("\tCache meanings " + cache_meanings);
+				}
 				break;
 			}
 			default:

@@ -133,16 +133,16 @@ public class BabelNetDictionary implements MeaningDictionary
 		// Get candidate entities using strict matching
 		try
 		{
+			final String key = form.toLowerCase(Locale.ENGLISH);
 			final Language bnLang = Language.fromISO(language.toLanguageTag());
-			final List<BabelSynset> synsets = bn.getSynsets(form, bnLang);
+			final List<BabelSynset> synsets = bn.getSynsets(key, bnLang);
 
 			try
 			{
-				synsets.sort(new BabelSynsetComparator(form, bnLang));
+				synsets.sort(new BabelSynsetComparator(key, bnLang));
 			}
-			catch (Exception e)
+			catch (Exception ignored)
 			{
-				log.warn("Sorting failed for synsets of \"" + form + "\":" + e);
 			}
 
 			return synsets.stream()
@@ -163,6 +163,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		// Get candidate entities using strict matching
 		try
 		{
+			final String key = form.toLowerCase(Locale.ENGLISH);
 			UniversalPOS bnPOS = UniversalPOS.valueOf(POS.toTag.get(pos));
 			if (bnPOS == null)
 				log.error("Failed to map Tag tag " + pos);
@@ -170,10 +171,10 @@ public class BabelNetDictionary implements MeaningDictionary
 			if (bnLang == null)
 				log.error("Failed to map language tag " + language.toLanguageTag());
 
-			final List<BabelSynset> synsets = bn.getSynsets(form, bnLang, bnPOS);
+			final List<BabelSynset> synsets = bn.getSynsets(key, bnLang, bnPOS);
 			try
 			{
-				synsets.sort(new BabelSynsetComparator(form, bnLang));
+				synsets.sort(new BabelSynsetComparator(key, bnLang));
 			}
 			catch (Exception ignored)
 			{ }
@@ -215,7 +216,8 @@ public class BabelNetDictionary implements MeaningDictionary
 			if (synset == null)
 				return Optional.empty();
 			return synset.getMainSense(Language.fromISO(language.toLanguageTag()))
-					.map(BabelSense::getSimpleLemma);
+					.map(BabelSense::getSimpleLemma)
+					.map(s -> s.toLowerCase(Locale.ENGLISH));
 		}
 		catch (Exception e)
 		{
@@ -281,7 +283,7 @@ public class BabelNetDictionary implements MeaningDictionary
 	{
 		return bn.lexiconStream()
 				.filter(Objects::nonNull)
-				.map(w -> Triple.of(w.getWord(), POS.BabelNet.get(w.getPOS().getTag()), new ULocale(w.getLanguage().name())));
+				.map(w -> Triple.of(w.getWord().toLowerCase(Locale.ENGLISH), POS.BabelNet.get(w.getPOS().getTag()), new ULocale(w.getLanguage().name())));
 	}
 
 	@Override
@@ -291,7 +293,7 @@ public class BabelNetDictionary implements MeaningDictionary
 		return bn.lexiconStream()
 				.filter(Objects::nonNull)
 				.filter(w -> w.getLanguage().equals(bnLang))
-				.map(w -> Pair.of(w.getWord(), POS.BabelNet.get(w.getPOS().getTag())));
+				.map(w -> Pair.of(w.getWord().toLowerCase(Locale.ENGLISH), POS.BabelNet.get(w.getPOS().getTag())));
 	}
 
 	@Override
@@ -312,7 +314,7 @@ public class BabelNetDictionary implements MeaningDictionary
 						if (i % LOGGING_STEP_SIZE == 0)
 							log.info("\t" + i + " senses iterated in " + timer);
 					})
-					.map(w -> Pair.of(w.getWord(), POS.BabelNet.get(w.getPOS().getTag()))) // senses of different synsets may have the same word form and POS tag
+					.map(w -> Pair.of(w.getWord().toLowerCase(Locale.ENGLISH), POS.BabelNet.get(w.getPOS().getTag()))) // senses of different synsets may have the same word form and POS tag
 					.collect(toSet());
 		}
 		catch (Exception e)
@@ -331,7 +333,7 @@ public class BabelNetDictionary implements MeaningDictionary
 			if (synset == null)
 				return new ArrayList<>();
 			return synset.getSenses().stream()
-					.map(sense -> Pair.of(sense.getSimpleLemma(), POS.BabelNet.get(sense.getPOS().getTag())))
+					.map(sense -> Pair.of(sense.getSimpleLemma().toLowerCase(Locale.ENGLISH), POS.BabelNet.get(sense.getPOS().getTag())))
 					.collect(toList());
 		}
 		catch (Exception e)
@@ -350,7 +352,7 @@ public class BabelNetDictionary implements MeaningDictionary
 			if (synset == null)
 				return new ArrayList<>();
 			return synset.getSenses(Language.fromISO(language.toLanguageTag())).stream()
-					.map(sense -> Pair.of(sense.getSimpleLemma(), POS.BabelNet.get(sense.getPOS().getTag())))
+					.map(sense -> Pair.of(sense.getSimpleLemma().toLowerCase(Locale.ENGLISH), POS.BabelNet.get(sense.getPOS().getTag())))
 					.collect(toList());
 		}
 		catch (Exception e)

@@ -4,10 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 
 /**
@@ -90,7 +87,7 @@ public class SemEvalScorer
 			if (docs != null && docs.size() > 0 && !docs.contains(d)) continue;
 			// Update the map with a new set of answers.
 			if (!map.containsKey(ll[0]+ll[1])) map.put(ll[0]+ll[1], new HashSet<String>()); 
-			for (int i = 2; i < ll.length; i++) map.get(ll[0]+ll[1]).add(ll[i].toLowerCase().replaceAll("_", " "));
+			for (int i = 2; i < ll.length; i++) map.get(ll[0]+ll[1]).add(ll[i].toLowerCase(Locale.ENGLISH).replaceAll("_", " "));
 		}
 		in.close();
 	}

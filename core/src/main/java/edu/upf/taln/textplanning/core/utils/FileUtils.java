@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 public class FileUtils
@@ -18,7 +19,7 @@ public class FileUtils
 
 	public static File[] getFilesInFolder(Path input_folder, String suffix)
 	{
-		final File[] text_files = input_folder.toFile().listFiles(pathname -> pathname.getName().toLowerCase().endsWith(suffix));
+		final File[] text_files = input_folder.toFile().listFiles(pathname -> pathname.getName().toLowerCase(Locale.ENGLISH).endsWith(suffix));
 		if (text_files == null)
 		{
 			log.error("Failed to find in any text files in " + input_folder);

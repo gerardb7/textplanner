@@ -2,6 +2,8 @@ package edu.upf.taln.textplanning.core.ranking;
 
 import com.ibm.icu.util.ULocale;
 import edu.upf.taln.textplanning.core.structures.Mention;
+
+import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -28,19 +30,19 @@ public class FunctionWordsFilter
 
 		if (language.equals(ULocale.ENGLISH))
 		{
-			return !en_list.contains(form.toLowerCase());
+			return !en_list.contains(form.toLowerCase(Locale.ENGLISH));
 		}
 		else if (language.toLanguageTag().equalsIgnoreCase("es"))
 		{
-			return !es_list.contains(form.toLowerCase());
+			return !es_list.contains(form.toLowerCase(Locale.forLanguageTag("es")));
 		}
 		else if (language.equals(ULocale.ITALIAN))
 		{
-			return !it_list.contains(form.toLowerCase());
+			return !it_list.contains(form.toLowerCase(Locale.ITALIAN));
 		}
 		else if (ULocale.FRENCH.equals(language))
 		{
-			return !fr_list.contains(form.toLowerCase());
+			return !fr_list.contains(form.toLowerCase(Locale.FRENCH));
 		}
 		else
 			throw new RuntimeException("Language " + language.toLanguageTag() + " not supported");

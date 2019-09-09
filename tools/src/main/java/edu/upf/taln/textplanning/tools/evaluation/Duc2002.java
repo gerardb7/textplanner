@@ -39,8 +39,8 @@ public class Duc2002
 							final String contents = FileUtils.readTextFile(f);
 							final String contents_f = contents.replace("<P>", "").replace("</P>", "");
 							final String text = getMatch(contents_f, text_pattern).orElseThrow().trim();
-							final String id = getMatch(contents_f, id_pattern).orElseThrow().trim().toLowerCase();
-							final String group_id = FilenameUtils.getName(f.getParent().toString()).trim().toLowerCase();
+							final String id = getMatch(contents_f, id_pattern).orElseThrow().trim().toLowerCase(Locale.ENGLISH);
+							final String group_id = FilenameUtils.getName(f.getParent().toString()).trim().toLowerCase(Locale.ENGLISH);
 							FileUtils.writeTextToFile(output.resolve(group_id + "-" + id + doc_extension), text);
 						}
 						catch (Exception e)
@@ -77,9 +77,9 @@ public class Duc2002
 							matcher.results()
 									.forEach(r -> {
 										final String header = r.group(1);
-										final String id = getMatch(header, id_pattern).orElseThrow().trim().toLowerCase();
-										final String group = getMatch(header, group_pattern).orElseThrow().trim().toLowerCase();
-										final String selector = getMatch(header, selector_pattern).orElseThrow().trim().toLowerCase();
+										final String id = getMatch(header, id_pattern).orElseThrow().trim().toLowerCase(Locale.ENGLISH);
+										final String group = getMatch(header, group_pattern).orElseThrow().trim().toLowerCase(Locale.ENGLISH);
+										final String selector = getMatch(header, selector_pattern).orElseThrow().trim().toLowerCase(Locale.ENGLISH);
 										final String text = r.group(2)
 												.trim()
 												.replace("<\\/?\\S+>", "")
